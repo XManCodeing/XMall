@@ -176,4 +176,4 @@ reseller:
 # 二开版本默认关闭远程更新，避免覆盖本地修改。
 # 仅在自己的发布仓库和升级包完成验证后填写 owner/repository。
 update:
-  repository: ""
+  repository: "homles698698-lab/dujiao-auv"

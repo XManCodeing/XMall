@@ -621,7 +621,7 @@ watch(
             <TableHead class="px-6 py-3">{{ t('admin.products.table.price') }}</TableHead>
             <TableHead class="px-6 py-3 min-w-[220px]">{{ t('admin.products.table.category') }}</TableHead>
             <TableHead class="px-6 py-3">{{ t('admin.products.table.sort') }}</TableHead>
-            <TableHead class="px-6 py-3">{{ t('admin.products.table.status') }}</TableHead>
+            <TableHead class="min-w-[100px] whitespace-nowrap px-6 py-3">{{ t('admin.products.table.status') }}</TableHead>
             <TableHead class="px-6 py-3 text-right">{{ t('admin.products.table.action') }}</TableHead>
           </TableRow>
         </TableHeader>
@@ -753,9 +753,9 @@ watch(
                 {{ product.sort_order || 0 }}
               </span>
             </TableCell>
-            <TableCell class="px-6 py-4">
+            <TableCell class="min-w-[100px] whitespace-nowrap px-6 py-4">
               <span
-                class="inline-flex cursor-pointer rounded-full border px-2.5 py-1 text-xs transition-colors"
+                class="inline-flex shrink-0 items-center justify-center whitespace-nowrap cursor-pointer rounded-full border px-2.5 py-1 text-xs transition-colors"
                 :class="product.is_active ? 'text-emerald-700 border-emerald-200 bg-emerald-50 hover:bg-emerald-100' : 'text-muted-foreground border-border bg-muted/30 hover:bg-muted/50'"
                 :title="product.is_active ? t('admin.products.status.clickToDeactivate') : t('admin.products.status.clickToActivate')"
                 @click="toggleStatus(product)"

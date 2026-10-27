@@ -37,8 +37,11 @@ def check(skip_git=False):
             value = value["secret_key"]
         if value != "":
             raise ValueError(f"Public template must have empty {section}.{key}")
-    if config["update"]["repository"] != "":
-        raise ValueError("Public template must not enable an implicit update repository")
+    # Allow updates to this fork only; an empty value explicitly disables updates.
+    if config["update"]["repository"] not in ("", "homles698698-lab/dujiao-auv"):
+        raise ValueError(
+            "Public template update.repository must be empty or homles698698-lab/dujiao-auv"
+        )
     release = yaml.safe_load((ROOT / ".goreleaser.yaml").read_text())
     files = release["archives"][0]["files"]
     for name in ["LICENSE", "README.md", "config.yml.example", "scripts/dujiao-next-manager.sh"]:
