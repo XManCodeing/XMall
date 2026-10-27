@@ -1,0 +1,179 @@
+# 可公开发布的配置示例；依据 internal/config/config.go 手工整理，未复制运行配置。
+# 首次部署时复制为 config.yml；不要覆盖已有部署配置。
+# 空密钥必须先填写，不能直接用于生产，也不能依赖默认密钥。
+# 分别运行三次 openssl rand -hex 32，填写以下三个不同的随机密钥。
+# 已使用的 app.secret_key 不要随意更换，否则可能无法解密已有数据。
+# config.yml.example 不会被程序自动加载；不要提交运行 config.yml 或业务数据。
+
+app:
+  secret_key: ""
+  totp_issuer: "Dujiao-Next"
+
+server:
+  host: "127.0.0.1" # 容器内需按部署方式改为 0.0.0.0
+  port: "8080"
+  mode: "release"
+  trusted_proxies: []
+
+log:
+  dir: "./logs"
+  filename: "app.log"
+  max_size_mb: 100
+  max_backups: 7
+  max_age_days: 30
+  compress: true
+
+# 默认 SQLite；无需远程数据库账号。
+# MySQL 示例（替换 driver/dsn，并按容量调整连接池）：
+# driver: "mysql"
+# dsn: "demo_user:REPLACE_WITH_PASSWORD@tcp(127.0.0.1:3306)/demo_db"
+# PostgreSQL 示例：
+# driver: "postgres"
+# dsn: "host=127.0.0.1 port=5432 user=demo_user password=REPLACE_WITH_PASSWORD dbname=demo_db sslmode=require"
+database:
+  driver: "sqlite"
+  dsn: "./db/dujiao.db"
+  pool:
+    max_open_conns: 1 # SQLite 保持单连接
+    max_idle_conns: 1
+    conn_max_lifetime_seconds: 0
+    conn_max_idle_time_seconds: 0
+
+jwt:
+  secret: "" # 必填：管理员 JWT 独立随机密钥
+  expire_hours: 24
+
+user_jwt:
+  secret: "" # 必填：用户 JWT 独立随机密钥
+  expire_hours: 24
+  remember_me_expire_hours: 168
+
+bootstrap:
+  default_admin_username: "" # 首次部署按需填写
+  default_admin_password: "" # 首次部署按需填写强密码，不使用公共默认密码
+
+telegram_auth:
+  enabled: false
+  bot_username: ""
+  bot_token: ""
+  client_secret: ""
+  oidc_redirect_uri: ""
+  mini_app_url: ""
+  login_expire_seconds: 300
+  replay_ttl_seconds: 300
+
+google_auth:
+  enabled: false
+  client_id: ""
+
+redis:
+  enabled: false
+  host: "127.0.0.1"
+  port: 6379
+  password: ""
+  db: 0
+  prefix: "demo:"
+
+queue:
+  enabled: false
+  host: "127.0.0.1"
+  port: 6379
+  password: ""
+  db: 1
+  concurrency: 10
+  queues:
+    default: 10
+    critical: 5
+  upstream_sync_interval: "5m"
+
+upload:
+  max_size: 10485760
+  allowed_types: ["image/jpeg", "image/png", "image/gif", "image/webp"]
+  allowed_extensions: [".jpg", ".jpeg", ".png", ".gif", ".webp"]
+  max_width: 4096
+  max_height: 4096
+
+# 跨域开发时仅添加实际前端地址，生产使用对应网站地址。
+cors:
+  allowed_origins: ["http://127.0.0.1:8080"]
+  allowed_methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"]
+  allowed_headers:
+    - "Content-Type"
+    - "Content-Length"
+    - "Accept-Encoding"
+    - "Authorization"
+    - "Cache-Control"
+    - "X-Requested-With"
+    - "X-CSRF-Token"
+  allow_credentials: true
+  max_age: 600
+
+security:
+  login_rate_limit:
+    window_seconds: 300
+    max_attempts: 5
+    block_seconds: 900
+  password_policy:
+    min_length: 12
+    require_upper: true
+    require_lower: true
+    require_number: true
+    require_special: true
+
+email:
+  enabled: false
+  host: ""
+  port: 587
+  username: ""
+  password: ""
+  from: ""
+  from_name: ""
+  use_tls: true
+  use_ssl: false
+  verify_code:
+    expire_minutes: 10
+    send_interval_seconds: 60
+    max_attempts: 5
+    length: 6
+
+order:
+  payment_expire_minutes: 15
+  max_refund_days: 30
+
+captcha:
+  provider: "image"
+  scenes:
+    login: true
+    register_send_code: true
+    reset_send_code: true
+    guest_create_order: true
+    gift_card_redeem: true
+  image:
+    length: 5
+    width: 240
+    height: 80
+    noise_count: 2
+    show_line: 2
+    expire_seconds: 300
+    max_store: 10240
+  turnstile:
+    site_key: ""
+    secret_key: ""
+    verify_url: "https://challenges.cloudflare.com/turnstile/v0/siteverify"
+    timeout_ms: 2000
+
+web:
+  admin_path: "/admin"
+
+reseller:
+  enabled: false
+  main_hosts: ["localhost", "127.0.0.1", "::1"]
+  trusted_forwarded_host: false
+  subdomain_base: ""
+  self_apply_enabled: false
+  settlement_confirm_days: 7
+
+# 二开版本默认关闭远程更新，避免覆盖本地修改。
+# 仅在自己的发布仓库和升级包完成验证后填写 owner/repository。
+update:
+  repository: ""
