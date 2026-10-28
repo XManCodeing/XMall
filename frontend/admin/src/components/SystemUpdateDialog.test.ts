@@ -6,7 +6,10 @@ vi.mock('@/api/admin', () => ({ adminAPI: {
   startSystemUpdate: vi.fn(), restartSystemService: vi.fn(), rollbackSystemUpdate: vi.fn(),
   getPublicConfig: vi.fn(),
 } }))
-vi.mock('vue-i18n', () => ({ useI18n: () => ({ t: (key: string) => key }) }))
+vi.mock('vue-i18n', async importOriginal => ({
+  ...await importOriginal<typeof import('vue-i18n')>(),
+  useI18n: () => ({ t: (key: string) => key }),
+}))
 vi.mock('@/utils/confirm', () => ({ confirmAction: vi.fn().mockResolvedValue(true) }))
 vi.mock('@/utils/notify', () => ({ notifySuccess: vi.fn(), notifyError: vi.fn() }))
 vi.mock('@/components/ui/dialog', async () => {
@@ -18,6 +21,7 @@ import { adminAPI } from '@/api/admin'
 import { notifyError } from '@/utils/notify'
 import { confirmAction } from '@/utils/confirm'
 import SystemUpdateDialog from './SystemUpdateDialog.vue'
+import i18n from '@/i18n'
 
 const response = (data: unknown) => ({ data: { data } })
 const state = (restart_required = true, target_version = 'v2.0.0') => ({
@@ -75,6 +79,76 @@ afterEach(() => {
   vi.clearAllTimers()
   vi.useRealTimers()
   vi.resetAllMocks()
+})
+
+const restartReasons = [
+  'systemd_policy_unknown', 'systemd_policy_disabled', 'exec_preflight_failed',
+  'unsupported_os', 'container',
+]
+
+describe('system update restart block reasons', () => {
+  it.each(restartReasons)('shows the localized %s hint without a restart action', async reason => {
+    vi.mocked(adminAPI.getUpdateCapability).mockResolvedValue(response({
+      capability: { ...capability(), can_restart: false, restart_block_reason: reason }, state: state(),
+    }))
+    await mount()
+    expect(root.textContent).toContain(`admin.systemUpdate.restartBlockReason.${reason}`)
+    expect(root.textContent).not.toContain('admin.systemUpdate.manualRestartHint')
+    expect(root.textContent).not.toContain('admin.systemUpdate.restartNow')
+    expect(adminAPI.restartSystemService).not.toHaveBeenCalled()
+  })
+
+  it.each([undefined, null, ''])('keeps the legacy generic hint for %s', async reason => {
+    vi.mocked(adminAPI.getUpdateCapability).mockResolvedValue(response({
+      capability: { ...capability(), can_restart: false, ...(reason === undefined ? {} : { restart_block_reason: reason }) }, state: state(),
+    }))
+    await mount()
+    expect(root.textContent).toContain('admin.systemUpdate.manualRestartHint')
+    expect(root.textContent).not.toContain('admin.systemUpdate.restartNow')
+  })
+
+  it.each(['future_reason', '__proto__', 'constructor', '<script>alert(1)</script>'])('safely falls back for %s', async reason => {
+    vi.mocked(adminAPI.getUpdateCapability).mockResolvedValue(response({
+      capability: { ...capability(), can_restart: false, restart_block_reason: reason }, state: state(),
+    }))
+    await mount()
+    expect(root.textContent).toContain('admin.systemUpdate.restartBlockReason.unknown')
+    expect(root.textContent).not.toContain(reason)
+    expect(root.textContent).not.toContain('admin.systemUpdate.restartNow')
+    expect(root.querySelector('script')).toBeNull()
+  })
+
+  it('ignores a stale reason when the backend allows restart', async () => {
+    vi.mocked(adminAPI.getUpdateCapability).mockResolvedValue(response({
+      capability: { ...capability(), restart_block_reason: 'systemd_policy_unknown' }, state: state(),
+    }))
+    await mount()
+    expect(root.textContent).toContain('admin.systemUpdate.restartNow')
+    expect(root.textContent).not.toContain('admin.systemUpdate.restartBlockReason')
+  })
+
+  it('does not show restart guidance when no restart is required', async () => {
+    vi.mocked(adminAPI.getUpdateCapability).mockResolvedValue(response({
+      capability: { ...capability(), can_restart: false, restart_block_reason: 'unsupported_os' }, state: state(false),
+    }))
+    await mount()
+    expect(root.textContent).not.toContain('admin.systemUpdate.restartBlockReason')
+  })
+
+  it('has matching, nonempty translations in every supported locale', () => {
+    for (const locale of i18n.global.availableLocales) {
+      const messages = i18n.global.getLocaleMessage(locale)
+      const reasons = messages.admin.systemUpdate.restartBlockReason
+      expect(Object.keys(reasons).sort()).toEqual([...restartReasons, 'unknown'].sort())
+      for (const reason of [...restartReasons, 'unknown']) {
+        const key = `admin.systemUpdate.restartBlockReason.${reason}`
+        expect(i18n.global.te(key, locale)).toBe(true)
+        const text = i18n.global.t(key, {}, { locale })
+        expect(text.trim()).not.toBe('')
+        expect(text).not.toBe(key)
+      }
+    }
+  })
 })
 
 describe('system update restart readiness', () => {

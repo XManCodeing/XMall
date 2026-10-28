@@ -58,6 +58,7 @@ interface BackupInfo {
 interface UpdateCapability {
   can_update: boolean
   can_restart: boolean
+  restart_block_reason?: string
   block_reason?: BlockReason
   deployment: 'binary' | 'container'
   supervisor: 'systemd' | 'none'
@@ -125,6 +126,22 @@ const isUpdating = computed(() => updateState.value?.status === 'running')
 
 // 二进制已替换但进程仍是旧版本 —— 无论本次会话内升级的还是上次遗留的，都需要重启
 const needsRestart = computed(() => updateState.value?.restart_required === true)
+
+const manualRestartHint = computed(() => {
+  const reason = capability.value?.restart_block_reason
+  // 旧后端没有原因字段时保留原提示；未知值不能直接作为翻译键或文案展示。
+  if (!reason) return t('admin.systemUpdate.manualRestartHint')
+  switch (reason) {
+    case 'systemd_policy_unknown':
+    case 'systemd_policy_disabled':
+    case 'exec_preflight_failed':
+    case 'unsupported_os':
+    case 'container':
+      return t(`admin.systemUpdate.restartBlockReason.${reason}`)
+    default:
+      return t('admin.systemUpdate.restartBlockReason.unknown')
+  }
+})
 
 const canOneClickUpgrade = computed(
   () => checkResult.value?.has_update === true && capability.value?.can_update === true,
@@ -518,7 +535,7 @@ onBeforeUnmount(() => {
               </span>
             </div>
             <p v-if="!capability?.can_restart" class="text-xs text-muted-foreground">
-              {{ t('admin.systemUpdate.manualRestartHint') }}
+              {{ manualRestartHint }}
             </p>
           </div>
 

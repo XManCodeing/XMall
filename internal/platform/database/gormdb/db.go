@@ -16,6 +16,7 @@ import (
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	gormlogger "gorm.io/gorm/logger"
+	"gorm.io/gorm/migrator"
 	"gorm.io/gorm/schema"
 )
 
@@ -29,7 +30,7 @@ type mysqlDialector struct {
 }
 
 func (d mysqlDialector) Migrator(db *gorm.DB) gorm.Migrator {
-	return mysqlMigrator{Migrator: d.Dialector.Migrator(db), database: d.migrationDatabase}
+	return mysqlMigrator{Migrator: d.Dialector.Migrator(db).(mysql.Migrator), database: d.migrationDatabase}
 }
 
 // WithMigrationDatabase resolves the selected schema once on the lock-owning
@@ -57,10 +58,20 @@ func WithMigrationDatabase(db *gorm.DB) (*gorm.DB, error) {
 	return local, nil
 }
 
+// Embed the concrete driver migrator, not gorm.Migrator: GORM's CreateTable
+// and CreateIndex assert BuildIndexOptionsInterface on cloned sessions. The
+// concrete method set also preserves other driver/generic migration extensions.
 type mysqlMigrator struct {
-	gorm.Migrator
+	mysql.Migrator
 	database string
 }
+
+var (
+	_ gorm.Migrator                       = mysqlMigrator{}
+	_ migrator.BuildIndexOptionsInterface = mysqlMigrator{}
+	_ gorm.ErrorTranslator                = mysqlDialector{}
+	_ gorm.SavePointerDialectorInterface  = mysqlDialector{}
+)
 
 func (m mysqlMigrator) CurrentDatabase() string {
 	if m.database != "" {
@@ -70,6 +81,10 @@ func (m mysqlMigrator) CurrentDatabase() string {
 }
 
 func (m mysqlMigrator) MigrateColumn(value interface{}, field *schema.Field, columnType gorm.ColumnType) error {
+	return m.Migrator.MigrateColumn(value, normalizeMySQLColumnDefault(field, columnType), columnType)
+}
+
+func normalizeMySQLColumnDefault(field *schema.Field, columnType gorm.ColumnType) *schema.Field {
 	if !field.IgnoreMigration && field.HasDefaultValue {
 		switch strings.ToLower(columnType.DatabaseTypeName()) {
 		case "decimal", "numeric":
@@ -91,7 +106,7 @@ func (m mysqlMigrator) MigrateColumn(value interface{}, field *schema.Field, col
 			}
 		}
 	}
-	return m.Migrator.MigrateColumn(value, field, columnType)
+	return field
 }
 
 var DB *gorm.DB

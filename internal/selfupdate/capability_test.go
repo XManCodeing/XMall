@@ -1,8 +1,10 @@
 package selfupdate
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
+	"slices"
 	"testing"
 
 	"github.com/XManCodeing/XMall/internal/version"
@@ -52,9 +54,10 @@ func TestDetectReleaseBuild(t *testing.T) {
 	if c.Deployment != DeploymentBinary {
 		t.Errorf("Deployment = %q, want binary", c.Deployment)
 	}
-	// 没有 systemd 托管时不能自动重启——退出即停服
-	if c.Supervisor == SupervisorNone && c.CanRestart {
-		t.Error("CanRestart must be false without a supervisor")
+	// Without direct systemd supervision, Linux restarts must replace the
+	// process via exec rather than exit and hope a supervisor relaunches it.
+	if c.Supervisor == SupervisorNone && c.CanRestart && c.RestartMethod != RestartExec {
+		t.Error("restart without a supervisor must use exec")
 	}
 }
 
@@ -158,6 +161,86 @@ func TestDirWritable(t *testing.T) {
 	}
 	if dirWritable(readonly) {
 		t.Error("0500 dir should not be writable")
+	}
+}
+
+func TestSystemdUnitFromCgroup(t *testing.T) {
+	for _, tc := range []struct{ input, want string }{
+		{"0::/system.slice/xmall.service", "xmall.service"},
+		{"1:name=systemd:/system.slice/bt.service/child", "bt.service"},
+		{"2:cpu:/misleading.service\n1:name=systemd:/system.slice/panel.service", "panel.service"},
+		{"0::/user.slice/user-1000.slice/user@1000.service/app.slice/xmall.service", "xmall.service"},
+		{"0::/user.slice/session-1.scope", ""},
+		{"invalid", ""},
+	} {
+		if got := systemdUnitFromCgroup(tc.input); got != tc.want {
+			t.Errorf("%q: got %q, want %q", tc.input, got, tc.want)
+		}
+	}
+}
+
+func TestSystemdManagerScope(t *testing.T) {
+	for _, tc := range []struct {
+		cgroup string
+		name   string
+		user   bool
+	}{
+		{"0::/system.slice/xmall.service", "xmall.service", false},
+		{"0::/user.slice/user-1000.slice/user@1000.service", "user@1000.service", false},
+		{"0::/user.slice/user-1000.slice/user@1000.service/app.slice/xmall.service", "xmall.service", true},
+		{"1:name=systemd:/user.slice/user-1000.slice/user@1000.service/app.slice/xmall.service", "xmall.service", true},
+	} {
+		t.Run(tc.cgroup, func(t *testing.T) {
+			service := systemdServiceFromCgroup(tc.cgroup)
+			if service.name != tc.name || service.user != tc.user {
+				t.Fatalf("wrong scope: %+v", service)
+			}
+			c := Capability{Supervisor: SupervisorSystemd}
+			configureRestart(&c, "linux", 100, func() (unitRestartConfig, bool) {
+				return querySystemdRestartConfig(service, 1000, func(args []string) ([]byte, error) {
+					if args[len(args)-1] != tc.name {
+						t.Fatalf("wrong unit: %v", args)
+					}
+					if slices.Contains(args, "--user") != tc.user || slices.Contains(args, "--system") == tc.user {
+						t.Fatalf("wrong manager: %v", args)
+					}
+					// Same unit name in the two managers, different MainPIDs.
+					if slices.Contains(args, "--user") {
+						return []byte("MainPID=100\nRestart=no"), nil
+					}
+					return []byte("MainPID=50\nRestart=always"), nil
+				})
+			}, func(string) error { return nil })
+			if tc.user && (c.CanRestart || c.RestartBlockReason != "systemd_policy_disabled") {
+				t.Fatalf("bypassed user's disabled policy: %+v", c)
+			}
+			if !tc.user && c.RestartMethod != RestartExec {
+				t.Fatalf("system child must exec: %+v", c)
+			}
+		})
+	}
+	service := systemdServiceFromCgroup("0::/user.slice/user-1000.slice/user@1000.service/app.slice/xmall.service")
+	if _, ok := querySystemdRestartConfig(service, 0, func([]string) ([]byte, error) { t.Fatal("queried wrong user manager"); return nil, nil }); ok {
+		t.Fatal("accepted mismatched user")
+	}
+	calls := 0
+	if _, ok := querySystemdRestartConfig(service, 1000, func([]string) ([]byte, error) { calls++; return nil, errors.New("user bus unavailable") }); ok || calls != 1 {
+		t.Fatal("must fail closed without manager fallback")
+	}
+}
+
+func TestParseSystemdRestartConfig(t *testing.T) {
+	cfg, ok := parseSystemdRestartConfig("MainPID=123\nRestart=always\nSuccessExitStatus=70 SIGTERM\nRestartPreventExitStatus=75\n")
+	if !ok || cfg.MainPID != 123 || cfg.Restart != "always" || !cfg.SuccessExitStatus[70] || !cfg.RestartPreventExitStatus[75] {
+		t.Fatalf("unexpected config: %+v, valid=%v", cfg, ok)
+	}
+	for _, input := range []string{
+		"Restart=no", "MainPID=0\nRestart=no", "MainPID=-1\nRestart=no",
+		"MainPID=invalid\nRestart=no", "MainPID=123", "",
+	} {
+		if _, ok := parseSystemdRestartConfig(input); ok {
+			t.Errorf("accepted incomplete ownership: %q", input)
+		}
 	}
 }
 

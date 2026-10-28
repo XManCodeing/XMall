@@ -55,7 +55,17 @@ func TestExecReplacementSubprocess(t *testing.T) {
 			t.Fatal(err)
 		}
 		m := NewManager()
-		m.detect = func() Capability { return Capability{CanRestart: true, RestartMethod: RestartExec, ExecPath: path} }
+		m.detect = func() Capability {
+			c := Capability{Supervisor: SupervisorSystemd, ExecPath: path}
+			configureRestart(&c, "linux", os.Getpid(), func() (unitRestartConfig, bool) {
+				// Simulate inherited systemd metadata from the panel parent.
+				return unitRestartConfig{MainPID: os.Getppid(), Restart: "no"}, true
+			}, preflightExec)
+			if !c.CanRestart || c.RestartMethod != RestartExec {
+				t.Fatalf("panel child must use exec: %+v", c)
+			}
+			return c
+		}
 		plan, err := m.PrepareRestart()
 		if err != nil {
 			t.Fatal(err)

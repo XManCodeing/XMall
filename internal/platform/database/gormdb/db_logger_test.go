@@ -16,9 +16,133 @@ import (
 	"gorm.io/driver/mysql"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
+	"gorm.io/gorm/logger"
 	"gorm.io/gorm/migrator"
 	"gorm.io/gorm/schema"
 )
+
+type migrationSQLLog struct {
+	logger.Interface
+	statements []string
+}
+
+func (l *migrationSQLLog) Trace(_ context.Context, _ time.Time, fc func() (string, int64), _ error) {
+	query, _ := fc()
+	l.statements = append(l.statements, query)
+}
+
+// The real MySQL dialector/migrator builds every DDL statement. SQLite is only
+// used to answer SELECT DATABASE() for the cached migration-session variant;
+// DryRun prevents MySQL DDL execution and no network connection is opened.
+func mysqlIndexTestDB(t *testing.T) (*gorm.DB, *migrationSQLLog) {
+	t.Helper()
+	backing, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	pool, err := backing.DB()
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = pool.Close() })
+	logs := &migrationSQLLog{Interface: logger.Discard}
+	db, err := gorm.Open(mysqlDialector{Dialector: &mysql.Dialector{Config: &mysql.Config{
+		Conn: &migrationMetadataPool{ConnPool: pool}, SkipInitializeWithVersion: true, DefaultStringSize: 255,
+	}}}, &gorm.Config{DisableAutomaticPing: true, Logger: logs})
+	if err != nil {
+		t.Fatal(err)
+	}
+	return db, logs
+}
+
+func TestMySQLMigratorPreservesExtensionMethods(t *testing.T) {
+	// Cover all exported driver methods, not just BuildIndexOptionsInterface,
+	// so upgrades cannot silently narrow the wrapper's method set.
+	for _, pair := range [][2]reflect.Type{
+		{reflect.TypeOf(mysql.Migrator{}), reflect.TypeOf(mysqlMigrator{})},
+		{reflect.TypeOf(&mysql.Dialector{}), reflect.TypeOf(mysqlDialector{})},
+	} {
+		for i := 0; i < pair[0].NumMethod(); i++ {
+			original := pair[0].Method(i)
+			wrapped, ok := pair[1].MethodByName(original.Name)
+			if !ok {
+				t.Errorf("%s loses %s", pair[1], original.Name)
+				continue
+			}
+			// Ignore receiver types, but check full argument/return signatures.
+			a, b := original.Type, wrapped.Type
+			if a.NumIn() != b.NumIn() || a.NumOut() != b.NumOut() || a.IsVariadic() != b.IsVariadic() {
+				t.Errorf("%s changes %s signature", pair[1], original.Name)
+				continue
+			}
+			for j := 1; j < a.NumIn(); j++ {
+				if a.In(j) != b.In(j) {
+					t.Errorf("%s changes %s argument %d", pair[1], original.Name, j)
+				}
+			}
+			for j := 0; j < a.NumOut(); j++ {
+				if a.Out(j) != b.Out(j) {
+					t.Errorf("%s changes %s return %d", pair[1], original.Name, j)
+				}
+			}
+		}
+	}
+}
+
+// Keep platform regression fixtures local: no business-domain dependencies.
+type mysqlIndexOptionsModel struct {
+	ID     uint   `gorm:"primaryKey"`
+	Tenant uint   `gorm:"uniqueIndex:idx_tenant_name,priority:1"`
+	Name   string `gorm:"size:128;uniqueIndex:idx_tenant_name,priority:2,length:32,sort:desc"`
+	Status string `gorm:"size:24;index:idx_status"`
+}
+
+func TestMySQLMigratorRealIndexSQL(t *testing.T) {
+	for _, cached := range []bool{false, true} {
+		name := "business session"
+		if cached {
+			name = "cached migration session"
+		}
+		t.Run(name, func(t *testing.T) {
+			db, logs := mysqlIndexTestDB(t)
+			if cached {
+				var err error
+				db, err = WithMigrationDatabase(db)
+				if err != nil {
+					t.Fatal(err)
+				}
+			}
+			db = db.Session(&gorm.Session{DryRun: true, NewDB: true})
+			logs.statements = nil
+			m := db.Session(&gorm.Session{}).Migrator()
+			if err := m.CreateTable(&mysqlIndexOptionsModel{}); err != nil {
+				t.Fatal(err)
+			}
+			if err := m.CreateIndex(&mysqlIndexOptionsModel{}, "idx_tenant_name"); err != nil {
+				t.Fatal(err)
+			}
+			if err := m.CreateIndex(&mysqlIndexOptionsModel{}, "idx_status"); err != nil {
+				t.Fatal(err)
+			}
+			if len(logs.statements) != 3 {
+				t.Fatalf("unexpected SQL: %v", logs.statements)
+			}
+			if !strings.HasPrefix(logs.statements[0], "CREATE TABLE `mysql_index_options_models`") ||
+				!strings.Contains(logs.statements[0], "UNIQUE INDEX `idx_tenant_name` (`tenant`,`name`(32) desc)") ||
+				!strings.Contains(logs.statements[0], "INDEX `idx_status` (`status`)") {
+				t.Fatalf("inline index options lost: %s", logs.statements[0])
+			}
+			for i, want := range []string{
+				"CREATE UNIQUE INDEX `idx_tenant_name` ON `mysql_index_options_models`(`tenant`,`name`(32) desc)",
+				"CREATE INDEX `idx_status` ON `mysql_index_options_models`(`status`)",
+			} {
+				if logs.statements[i+1] != want {
+					t.Fatalf("index SQL = %q, want %q", logs.statements[i+1], want)
+				}
+			}
+		})
+	}
+}
 
 type migrationMetadataPool struct {
 	gorm.ConnPool
@@ -126,17 +250,6 @@ func TestMigrationDatabaseResolvedOnceAndSessionIsolated(t *testing.T) {
 	}
 }
 
-type recordingColumnMigrator struct {
-	gorm.Migrator
-	field *schema.Field
-	err   error
-}
-
-func (m *recordingColumnMigrator) MigrateColumn(_ interface{}, field *schema.Field, _ gorm.ColumnType) error {
-	m.field = field
-	return m.err
-}
-
 func TestMySQLMigrateColumnDecimalDefault(t *testing.T) {
 	for _, tc := range []struct {
 		name, dataType, modelDefault, dbDefault string
@@ -167,12 +280,7 @@ func TestMySQLMigrateColumnDecimalDefault(t *testing.T) {
 				DataTypeValue:     sql.NullString{String: tc.dataType, Valid: true},
 				DefaultValueValue: sql.NullString{String: tc.dbDefault, Valid: tc.validDefault},
 			}
-			wantErr := errors.New("underlying migration error")
-			recorder := &recordingColumnMigrator{err: wantErr}
-			err := (mysqlMigrator{Migrator: recorder}).MigrateColumn(nil, field, column)
-			if !errors.Is(err, wantErr) {
-				t.Fatalf("migration error was lost: %v", err)
-			}
+			normalized := normalizeMySQLColumnDefault(field, column)
 			if !reflect.DeepEqual(*field, original) {
 				t.Fatal("shared schema field was mutated")
 			}
@@ -180,14 +288,14 @@ func TestMySQLMigrateColumnDecimalDefault(t *testing.T) {
 			if tc.normalize {
 				expected.DefaultValue = tc.dbDefault
 				expected.GORMDataType = schema.String
-				if recorder.field == field {
+				if normalized == field {
 					t.Fatal("expected a private field copy")
 				}
-			} else if recorder.field != field {
+			} else if normalized != field {
 				t.Fatal("unexpected field replacement")
 			}
-			if !reflect.DeepEqual(*recorder.field, expected) {
-				t.Fatalf("unexpected delegated field: %+v", recorder.field)
+			if !reflect.DeepEqual(*normalized, expected) {
+				t.Fatalf("unexpected delegated field: %+v", normalized)
 			}
 		})
 	}
@@ -197,20 +305,22 @@ func TestMySQLMigrateColumnDecimalDefault(t *testing.T) {
 // AutoMigrate/MigrateColumn delegation in place. No database is contacted.
 type offlineMySQLDialector struct {
 	mysqlDialector
-	column gorm.ColumnType
-	alters *int
+	column   gorm.ColumnType
+	alters   *int
+	alterErr error
 }
 
 func (d offlineMySQLDialector) Migrator(db *gorm.DB) gorm.Migrator {
 	return offlineMySQLMigrator{
-		Migrator: d.mysqlDialector.Migrator(db), column: d.column, alters: d.alters,
+		mysqlMigrator: d.mysqlDialector.Migrator(db).(mysqlMigrator), column: d.column, alters: d.alters, alterErr: d.alterErr,
 	}
 }
 
 type offlineMySQLMigrator struct {
-	gorm.Migrator
-	column gorm.ColumnType
-	alters *int
+	mysqlMigrator
+	column   gorm.ColumnType
+	alters   *int
+	alterErr error
 }
 
 func (m offlineMySQLMigrator) HasTable(interface{}) bool { return true }
@@ -219,7 +329,7 @@ func (m offlineMySQLMigrator) ColumnTypes(interface{}) ([]gorm.ColumnType, error
 }
 func (m offlineMySQLMigrator) AlterColumn(interface{}, string) error {
 	*m.alters++
-	return nil
+	return m.alterErr
 }
 
 func TestMySQLAutoMigratePreservesRealChanges(t *testing.T) {
@@ -280,6 +390,16 @@ func TestMySQLAutoMigratePreservesRealChanges(t *testing.T) {
 			}
 			if alters != tc.wantAlters {
 				t.Fatalf("AlterColumn calls = %d, want %d", alters, tc.wantAlters)
+			}
+			if tc.wantAlters > 0 {
+				// Keep error propagation covered through the real MySQL/GORM
+				// MigrateColumn chain, not an interface-only migrator stub.
+				wantErr := errors.New("underlying alteration failed")
+				d.alterErr = wantErr
+				db.Config.Dialector = d
+				if err := db.Table("decimal_migration_test").AutoMigrate(tc.model); !errors.Is(err, wantErr) {
+					t.Fatalf("migration error was lost: %v", err)
+				}
 			}
 		})
 	}

@@ -1,5 +1,5 @@
 // Package selfupdate 实现后台一键升级：从 GitHub Release 拉取当前平台的二进制归档，
-// 校验 sha256 后原子替换正在运行的可执行文件，并在具备进程守护时自动重启。
+// 校验 sha256 后原子替换正在运行的可执行文件，通过 systemd 或 Linux exec 重启。
 //
 // 明确不支持容器部署。容器内替换 /app/xmall 只对当前容器生命周期有效，
 // 一旦 docker restart / compose up / 宿主重启，进程又会回到镜像层里的旧二进制，
@@ -137,12 +137,10 @@ func Detect() (c Capability) {
 	c.CanUpdate = true
 	c.AssetName = PlatformAssetSuffix()
 	c.Supervisor = detectSupervisor()
-	// 只确认「由 systemd 启动」是不够的：unit 的 Restart= 策略才决定进程退出后会不会被拉起。
-	// Restart=no 的 unit 一样会注入 INVOCATION_ID，但点重启就是永久停服。
-	//
-	// 查不到配置时一律判定为不能重启：查询失败证明不了任何事，而两种猜错的代价不对称——
-	// 猜「能重启」猜错是服务直接下线，猜「不能重启」猜错只是让用户多敲一条 systemctl restart。
-	configureRestart(&c, runtime.GOOS, systemdRestartConfig, preflightExec)
+	// Direct systemd supervision requires a policy that relaunches our exit.
+	// Children of a panel service instead need exec; inherited environment alone
+	// cannot distinguish these cases. Unknown ownership stays blocked.
+	configureRestart(&c, runtime.GOOS, os.Getpid(), systemdRestartConfig, preflightExec)
 	if _, err := os.Stat(backupPath(execPath)); err == nil {
 		c.HasBackup = true
 		info, known, err := ReadBackupInfo(execPath)
@@ -158,23 +156,32 @@ func Detect() (c Capability) {
 	return c
 }
 
-func configureRestart(c *Capability, goos string, systemd func() (unitRestartConfig, bool), preflight func(string) error) {
+func configureRestart(c *Capability, goos string, pid int, systemd func() (unitRestartConfig, bool), preflight func(string) error) {
 	c.RestartMethod = RestartNone
 	c.CanRestart = false
 	c.RestartBlockReason = ""
+	c.RestartPolicy = ""
 	if c.Supervisor == SupervisorSystemd {
 		cfg, ok := systemd()
-		if !ok {
+		// Environment and cgroup membership also belong to panel-launched children.
+		// Only a positive, queried MainPID can distinguish them safely. Unknown
+		// ownership must not bypass a real service's restart restrictions.
+		if !ok || cfg.MainPID <= 0 || pid <= 0 {
 			c.RestartBlockReason = "systemd_policy_unknown"
 			return
 		}
-		c.RestartPolicy = cfg.Restart
-		if !restartConfigRelaunches(cfg) {
-			c.RestartBlockReason = "systemd_policy_disabled"
+		if cfg.MainPID == pid {
+			c.RestartPolicy = cfg.Restart
+			if !restartConfigRelaunches(cfg) {
+				c.RestartBlockReason = "systemd_policy_disabled"
+				return
+			}
+			c.RestartMethod, c.CanRestart = RestartSystemd, true
 			return
 		}
-		c.RestartMethod, c.CanRestart = RestartSystemd, true
-		return
+		// Exiting this child would not restart the enclosing panel service,
+		// even with Restart=always. Replace this process in place instead.
+		c.Supervisor = SupervisorNone
 	}
 	if goos != "linux" {
 		c.RestartBlockReason = "unsupported_os"
@@ -237,11 +244,11 @@ func InContainer() bool {
 	return false
 }
 
-// detectSupervisor 判断进程是否被 systemd 托管。
-// INVOCATION_ID 由 systemd 235+ 为每个服务单元注入，JOURNAL_STREAM 在日志接管时注入，
-// 二者都是用户态可读的可靠判据，比解析 /proc/1/comm 更准（容器里 PID 1 也可能是 systemd）。
+// detectSupervisor identifies possible systemd ownership, not direct supervision.
+// Panel children inherit both the environment and cgroup; configureRestart checks
+// the unit's MainPID before choosing an exit-based restart.
 func detectSupervisor() Supervisor {
-	if os.Getenv("INVOCATION_ID") != "" || os.Getenv("JOURNAL_STREAM") != "" {
+	if systemdUnit() != "" || os.Getenv("INVOCATION_ID") != "" || os.Getenv("JOURNAL_STREAM") != "" {
 		return SupervisorSystemd
 	}
 	return SupervisorNone
@@ -263,22 +270,52 @@ func systemdUnit() string {
 	if err != nil {
 		return ""
 	}
-	for _, line := range strings.Split(string(data), "\n") {
+	return systemdUnitFromCgroup(string(data))
+}
+
+func systemdUnitFromCgroup(data string) string {
+	return systemdServiceFromCgroup(data).name
+}
+
+type systemdService struct {
+	name string
+	user bool
+	uid  int
+}
+
+func systemdServiceFromCgroup(data string) systemdService {
+	for _, line := range strings.Split(data, "\n") {
 		fields := strings.SplitN(line, ":", 3)
-		if len(fields) != 3 {
+		if len(fields) != 3 || (fields[1] != "" && !strings.Contains(","+fields[1]+",", ",name=systemd,")) {
 			continue
 		}
-		for _, seg := range strings.Split(fields[2], "/") {
-			if strings.HasSuffix(seg, ".service") {
-				return seg
+		// The innermost service owns the process (e.g. a user service below
+		// user@1000.service), not the first enclosing manager service.
+		segments := strings.Split(fields[2], "/")
+		for i := len(segments) - 1; i >= 0; i-- {
+			if !strings.HasSuffix(segments[i], ".service") {
+				continue
 			}
+			service := systemdService{name: segments[i]}
+			for _, parent := range segments[:i] {
+				if strings.HasPrefix(parent, "user@") && strings.HasSuffix(parent, ".service") {
+					uid, err := strconv.Atoi(strings.TrimSuffix(strings.TrimPrefix(parent, "user@"), ".service"))
+					if err != nil || uid < 0 {
+						return systemdService{}
+					}
+					service.user, service.uid = true, uid
+				}
+			}
+			return service
 		}
 	}
-	return ""
+	return systemdService{}
 }
 
 // unitRestartConfig 决定「以 RestartExitCode 退出后会不会被拉起」所需的全部 unit 配置。
 type unitRestartConfig struct {
+	// MainPID distinguishes the service itself from inherited panel children.
+	MainPID int
 	// Restart unit 的 Restart= 取值
 	Restart string
 	// SuccessExitStatus 声明为「成功」的额外退出码集合
@@ -287,39 +324,58 @@ type unitRestartConfig struct {
 	RestartPreventExitStatus map[int]bool
 }
 
-// systemdRestartConfig 查询当前 unit 与重启判定相关的三项配置。
+// systemdRestartConfig queries ownership and exit-based restart policy together.
 // 查询失败时返回 (零值, false) —— 调用方必须按「无法证明能重启」处理。
 func systemdRestartConfig() (unitRestartConfig, bool) {
-	unit := systemdUnit()
-	if unit == "" {
-		return unitRestartConfig{}, false
-	}
-	ctx, cancel := context.WithTimeout(context.Background(), systemctlTimeout)
-	defer cancel()
-
-	// 一次取三项：只看 Restart= 不足以判断退出码 70 会不会被拉起——
-	// SuccessExitStatus=70 会把它变成「成功退出」从而绕过 on-failure，
-	// RestartPreventExitStatus=70 则会直接压过 always/on-failure 阻止重启。
-	// --value 需要 systemd 230+；INVOCATION_ID 本身就要 232+，走到这里必然满足。
-	out, err := exec.CommandContext(ctx, "systemctl", "show",
-		"--property=Restart",
-		"--property=SuccessExitStatus",
-		"--property=RestartPreventExitStatus",
-		unit).Output()
+	data, err := os.ReadFile("/proc/self/cgroup")
 	if err != nil {
 		return unitRestartConfig{}, false
 	}
+	return querySystemdRestartConfig(systemdServiceFromCgroup(string(data)), os.Geteuid(), func(args []string) ([]byte, error) {
+		ctx, cancel := context.WithTimeout(context.Background(), systemctlTimeout)
+		defer cancel()
+		return exec.CommandContext(ctx, "systemctl", args...).Output()
+	})
+}
 
+func querySystemdRestartConfig(service systemdService, uid int, query func([]string) ([]byte, error)) (unitRestartConfig, bool) {
+	// Never query another manager's same-named unit. If credentials changed
+	// since launch, we cannot safely address the owning user manager.
+	if service.name == "" || (service.user && service.uid != uid) {
+		return unitRestartConfig{}, false
+	}
+	args := []string{"show", "--property=MainPID", "--property=Restart", "--property=SuccessExitStatus", "--property=RestartPreventExitStatus"}
+	if service.user {
+		args = append(args, "--user")
+	} else {
+		args = append(args, "--system")
+	}
+	args = append(args, "--", service.name)
+	out, err := query(args)
+	if err != nil {
+		// Do not fall back to the system manager when the user bus is unavailable.
+		return unitRestartConfig{}, false
+	}
+	return parseSystemdRestartConfig(string(out))
+}
+
+func parseSystemdRestartConfig(out string) (unitRestartConfig, bool) {
 	cfg := unitRestartConfig{
 		SuccessExitStatus:        map[int]bool{},
 		RestartPreventExitStatus: map[int]bool{},
 	}
-	for _, line := range strings.Split(string(out), "\n") {
+	for _, line := range strings.Split(out, "\n") {
 		key, value, ok := strings.Cut(strings.TrimSpace(line), "=")
 		if !ok {
 			continue
 		}
 		switch key {
+		case "MainPID":
+			pid, err := strconv.Atoi(strings.TrimSpace(value))
+			if err != nil || pid <= 0 {
+				return unitRestartConfig{}, false
+			}
+			cfg.MainPID = pid
 		case "Restart":
 			cfg.Restart = strings.TrimSpace(value)
 		case "SuccessExitStatus":
@@ -328,7 +384,7 @@ func systemdRestartConfig() (unitRestartConfig, bool) {
 			cfg.RestartPreventExitStatus = parseExitStatusSet(value)
 		}
 	}
-	if cfg.Restart == "" {
+	if cfg.Restart == "" || cfg.MainPID <= 0 {
 		// 属性拿不到值说明查询结果不可信，不能当成「systemd 返回了默认值」
 		return unitRestartConfig{}, false
 	}

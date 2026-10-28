@@ -28,7 +28,7 @@ func TestRestartSelection(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			c := Capability{Supervisor: tc.supervisor}
-			configureRestart(&c, tc.goos, func() (unitRestartConfig, bool) { return unitRestartConfig{Restart: tc.policy}, tc.known }, func(string) error {
+			configureRestart(&c, tc.goos, 100, func() (unitRestartConfig, bool) { return unitRestartConfig{MainPID: 100, Restart: tc.policy}, tc.known }, func(string) error {
 				if tc.supervisor == SupervisorSystemd {
 					t.Fatal("systemd must not fall back to exec")
 				}
@@ -44,10 +44,53 @@ func TestRestartSelection(t *testing.T) {
 		{Restart: "on-failure", SuccessExitStatus: map[int]bool{RestartExitCode: true}},
 	} {
 		c := Capability{Supervisor: SupervisorSystemd}
-		configureRestart(&c, "linux", func() (unitRestartConfig, bool) { return cfg, true }, func(string) error { t.Fatal("exec bypass"); return nil })
+		cfg.MainPID = 100
+		configureRestart(&c, "linux", 100, func() (unitRestartConfig, bool) { return cfg, true }, func(string) error { t.Fatal("exec bypass"); return nil })
 		if c.CanRestart {
 			t.Fatal("explicit systemd exit restrictions ignored")
 		}
+	}
+}
+
+func TestRestartSelectionForPanelChildren(t *testing.T) {
+	for _, tc := range []struct {
+		name, policy string
+		mainPID      int
+		known        bool
+		preflightErr error
+		method       RestartMethod
+		reason       string
+	}{
+		{"panel no restart", "no", 50, true, nil, RestartExec, ""},
+		{"panel always must not exit", "always", 50, true, nil, RestartExec, ""},
+		{"panel bad executable", "no", 50, true, errors.New("invalid ELF"), RestartNone, "exec_preflight_failed"},
+		{"main process disabled", "no", 100, true, nil, RestartNone, "systemd_policy_disabled"},
+		{"unknown owner", "no", 0, true, nil, RestartNone, "systemd_policy_unknown"},
+		{"query failed", "no", 50, false, nil, RestartNone, "systemd_policy_unknown"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			c := Capability{Supervisor: SupervisorSystemd, ExecPath: "/opt/xmall", RestartPolicy: "stale"}
+			preflightCalled := false
+			configureRestart(&c, "linux", 100, func() (unitRestartConfig, bool) {
+				return unitRestartConfig{MainPID: tc.mainPID, Restart: tc.policy}, tc.known
+			}, func(path string) error {
+				preflightCalled = true
+				if path != c.ExecPath {
+					t.Fatal("wrong exec path")
+				}
+				return tc.preflightErr
+			})
+			child := tc.known && tc.mainPID > 0 && tc.mainPID != 100
+			if preflightCalled != child {
+				t.Fatalf("preflight=%v, child=%v", preflightCalled, child)
+			}
+			if c.RestartMethod != tc.method || c.RestartBlockReason != tc.reason || c.CanRestart != (tc.method != RestartNone) {
+				t.Fatalf("unexpected capability: %+v", c)
+			}
+			if child && (c.Supervisor != SupervisorNone || c.RestartPolicy != "") {
+				t.Fatalf("leaked parent policy: %+v", c)
+			}
+		})
 	}
 }
 
