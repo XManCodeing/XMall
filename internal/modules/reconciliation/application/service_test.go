@@ -8,10 +8,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/dujiao-next/internal/constants"
-	reconciliationcontract "github.com/dujiao-next/internal/modules/reconciliation/contract"
-	reconciliationdomain "github.com/dujiao-next/internal/modules/reconciliation/domain"
-	"github.com/dujiao-next/internal/shared/money"
+	"github.com/homles698698-lab/XMall/internal/constants"
+	reconciliationcontract "github.com/homles698698-lab/XMall/internal/modules/reconciliation/contract"
+	reconciliationdomain "github.com/homles698698-lab/XMall/internal/modules/reconciliation/domain"
+	"github.com/homles698698-lab/XMall/internal/shared/money"
 
 	"github.com/shopspring/decimal"
 )

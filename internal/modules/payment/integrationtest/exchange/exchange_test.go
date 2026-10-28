@@ -5,29 +5,29 @@ import (
 	"testing"
 	"time"
 
-	paymentapp "github.com/dujiao-next/internal/modules/payment/application"
+	paymentapp "github.com/homles698698-lab/XMall/internal/modules/payment/application"
 
-	paymentgormstore "github.com/dujiao-next/internal/modules/payment/infrastructure/gormstore"
+	paymentgormstore "github.com/homles698698-lab/XMall/internal/modules/payment/infrastructure/gormstore"
 
-	paymentdomain "github.com/dujiao-next/internal/modules/payment/domain"
+	paymentdomain "github.com/homles698698-lab/XMall/internal/modules/payment/domain"
 
-	fulfillmentdomain "github.com/dujiao-next/internal/modules/fulfillment/domain"
-	orderdomain "github.com/dujiao-next/internal/modules/order/domain"
-	ordergormstore "github.com/dujiao-next/internal/modules/order/infrastructure/gormstore"
+	fulfillmentdomain "github.com/homles698698-lab/XMall/internal/modules/fulfillment/domain"
+	orderdomain "github.com/homles698698-lab/XMall/internal/modules/order/domain"
+	ordergormstore "github.com/homles698698-lab/XMall/internal/modules/order/infrastructure/gormstore"
 
-	walletdomain "github.com/dujiao-next/internal/modules/wallet/domain"
+	walletdomain "github.com/homles698698-lab/XMall/internal/modules/wallet/domain"
 
-	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
-	productgormstore "github.com/dujiao-next/internal/modules/catalog/product/store/gormstore"
+	productdomain "github.com/homles698698-lab/XMall/internal/modules/catalog/product/domain"
+	productgormstore "github.com/homles698698-lab/XMall/internal/modules/catalog/product/store/gormstore"
 
-	userdomain "github.com/dujiao-next/internal/modules/identity/user/domain"
-	walletapp "github.com/dujiao-next/internal/modules/wallet/application"
-	walletgormstore "github.com/dujiao-next/internal/modules/wallet/infrastructure/gormstore"
+	userdomain "github.com/homles698698-lab/XMall/internal/modules/identity/user/domain"
+	walletapp "github.com/homles698698-lab/XMall/internal/modules/wallet/application"
+	walletgormstore "github.com/homles698698-lab/XMall/internal/modules/wallet/infrastructure/gormstore"
 
-	"github.com/dujiao-next/internal/constants"
-	"github.com/dujiao-next/internal/platform/database/gormdb"
-	"github.com/dujiao-next/internal/shared/jsonmap"
-	"github.com/dujiao-next/internal/shared/money"
+	"github.com/homles698698-lab/XMall/internal/constants"
+	"github.com/homles698698-lab/XMall/internal/platform/database/gormdb"
+	"github.com/homles698698-lab/XMall/internal/shared/jsonmap"
+	"github.com/homles698698-lab/XMall/internal/shared/money"
 
 	"github.com/glebarez/sqlite"
 	"github.com/shopspring/decimal"

@@ -4,6 +4,15 @@ import test from 'node:test'
 
 const source = (path: string) => readFileSync(new URL(`../src/${path}`, import.meta.url), 'utf8')
 
+test('Orbit header omits desktop branding while preserving centered navigation and mobile titles', () => {
+  const layout = source('templates/orbit/layout/OrbitLayout.vue')
+  assert.doesNotMatch(layout, /orbit-desktop-brand|BrandMark|brandLogo/)
+  assert.match(layout, /orbit-mobile-page-title/)
+  const css = source('templates/orbit/styles/orbit.css')
+  assert.match(css, /\.orbit-desktop-nav \{ grid-column: 2;/)
+  assert.match(css, /\.orbit-header-actions \{ grid-column: 3;/)
+})
+
 test('Orbit list mode delegates Home to the full catalogue instead of six featured products', () => {
   const home = source('templates/orbit/Home.vue')
   assert.match(home, /template_mode === 'list'/)

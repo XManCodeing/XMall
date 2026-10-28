@@ -4,25 +4,25 @@ import (
 	"errors"
 	"flag"
 	"fmt"
-	"github.com/dujiao-next/internal/cache"
+	"github.com/homles698698-lab/XMall/internal/cache"
 	"os"
 	"path/filepath"
 	"strings"
 	"syscall"
 	"time"
 
-	"github.com/dujiao-next/internal/admincmd"
-	"github.com/dujiao-next/internal/app"
-	databasemigrations "github.com/dujiao-next/internal/bootstrap/database/migrations"
-	"github.com/dujiao-next/internal/config"
-	"github.com/dujiao-next/internal/logger"
-	adminapplication "github.com/dujiao-next/internal/modules/identity/admin/application"
-	adminstore "github.com/dujiao-next/internal/modules/identity/admin/infrastructure/gormstore"
-	"github.com/dujiao-next/internal/platform/database/gormdb"
-	"github.com/dujiao-next/internal/selfupdate"
-	"github.com/dujiao-next/internal/shared/passwordpolicy"
-	"github.com/dujiao-next/internal/version"
-	"github.com/dujiao-next/internal/web"
+	"github.com/homles698698-lab/XMall/internal/admincmd"
+	"github.com/homles698698-lab/XMall/internal/app"
+	databasemigrations "github.com/homles698698-lab/XMall/internal/bootstrap/database/migrations"
+	"github.com/homles698698-lab/XMall/internal/config"
+	"github.com/homles698698-lab/XMall/internal/logger"
+	adminapplication "github.com/homles698698-lab/XMall/internal/modules/identity/admin/application"
+	adminstore "github.com/homles698698-lab/XMall/internal/modules/identity/admin/infrastructure/gormstore"
+	"github.com/homles698698-lab/XMall/internal/platform/database/gormdb"
+	"github.com/homles698698-lab/XMall/internal/selfupdate"
+	"github.com/homles698698-lab/XMall/internal/shared/passwordpolicy"
+	"github.com/homles698698-lab/XMall/internal/version"
+	"github.com/homles698698-lab/XMall/internal/web"
 
 	"github.com/gin-gonic/gin"
 )
@@ -33,7 +33,7 @@ const (
 )
 
 func main() {
-	// admin 子命令短路：./dujiao-api admin <subcommand>
+	// admin 子命令短路：./xmall admin <subcommand>
 	// 在 web 提示 / migrate / default admin / app.Run 之前处理，
 	// 避免运维操作时打印一堆无关日志。
 	if len(os.Args) >= 2 && os.Args[1] == "admin" {
@@ -190,7 +190,7 @@ func main() {
 // 之后一次普通回滚就会被错误放行。停在这里是对的 —— 但光报一句 permission denied，
 // 运维根本不知道该动哪个文件，服务就会一直起不来。
 func printUpdateStateRecoveryHint() {
-	backup, metadata := "<安装目录>/dujiao-next.backup", "<安装目录>/dujiao-next.backup.json"
+	backup, metadata := "<安装目录>/xmall.backup", "<安装目录>/xmall.backup.json"
 	if execPath, err := selfupdate.ExecutablePath(); err == nil {
 		backup = execPath + ".backup"
 		metadata = execPath + ".backup.json"
@@ -280,7 +280,7 @@ func unsafeBootstrapAdminPassword(cfg *config.Config, password string) bool {
 	return cfg == nil || passwordpolicy.Validate(cfg.Security.PasswordPolicy.ValidationPolicy(), password) != nil
 }
 
-// runRollbackCommand 处理 ./dujiao-next rollback [--force]，把二进制换回升级前的备份。
+// runRollbackCommand 处理 ./xmall rollback [--force]，把二进制换回升级前的备份。
 //
 // 这是「新版本起不来」时唯一还能用的恢复路径：后台的回滚接口挂在 HTTP 服务上，
 // 而 HTTP 服务恰恰就是起不来的那部分。所以这里刻意不加载 config、不连数据库，
@@ -329,7 +329,7 @@ func runRollbackCommand(args []string) {
 		} else {
 			fmt.Fprintln(os.Stderr, "已拒绝回滚：元数据不可信，无法确认数据库结构是否已升级。")
 		}
-		fmt.Fprintln(os.Stderr, "确认要承担不兼容风险时，请先备份数据库，再执行：dujiao-next rollback --force")
+		fmt.Fprintln(os.Stderr, "确认要承担不兼容风险时，请先备份数据库，再执行：xmall rollback --force")
 		os.Exit(1)
 	default:
 		fmt.Fprintf(os.Stderr, "回滚失败: %v\n", err)
@@ -337,7 +337,7 @@ func runRollbackCommand(args []string) {
 	}
 }
 
-// runAdminSubcommand 处理 ./dujiao-api admin <subcommand>，仅初始化 DB
+// runAdminSubcommand 处理 ./xmall admin <subcommand>，仅初始化 DB
 // 后委托给 internal/admincmd 包，不启动 HTTP / worker / web 等服务。
 func runAdminSubcommand(args []string) {
 	cfg := config.Load()

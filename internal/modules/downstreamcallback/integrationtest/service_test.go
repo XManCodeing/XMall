@@ -6,9 +6,9 @@ import (
 	"testing"
 	"time"
 
-	downstreamapp "github.com/dujiao-next/internal/modules/downstreamcallback/application"
-	downstreamcontract "github.com/dujiao-next/internal/modules/downstreamcallback/contract"
-	downstreamdomain "github.com/dujiao-next/internal/modules/downstreamcallback/domain"
+	downstreamapp "github.com/homles698698-lab/XMall/internal/modules/downstreamcallback/application"
+	downstreamcontract "github.com/homles698698-lab/XMall/internal/modules/downstreamcallback/contract"
+	downstreamdomain "github.com/homles698698-lab/XMall/internal/modules/downstreamcallback/domain"
 )
 
 type refRepositoryStub struct {

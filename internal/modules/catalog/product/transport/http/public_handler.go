@@ -5,21 +5,21 @@ import (
 	"errors"
 	"strings"
 
-	promotiondomain "github.com/dujiao-next/internal/modules/promotion/domain"
+	promotiondomain "github.com/homles698698-lab/XMall/internal/modules/promotion/domain"
 
-	memberleveldomain "github.com/dujiao-next/internal/modules/memberlevel/domain"
+	memberleveldomain "github.com/homles698698-lab/XMall/internal/modules/memberlevel/domain"
 
-	mappingdomain "github.com/dujiao-next/internal/modules/catalog/mapping/domain"
+	mappingdomain "github.com/homles698698-lab/XMall/internal/modules/catalog/mapping/domain"
 
-	productcontract "github.com/dujiao-next/internal/modules/catalog/product/contract"
-	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
-	productpresenter "github.com/dujiao-next/internal/modules/catalog/product/transport/presenter"
+	productcontract "github.com/homles698698-lab/XMall/internal/modules/catalog/product/contract"
+	productdomain "github.com/homles698698-lab/XMall/internal/modules/catalog/product/domain"
+	productpresenter "github.com/homles698698-lab/XMall/internal/modules/catalog/product/transport/presenter"
 
-	contentcontract "github.com/dujiao-next/internal/modules/content/contract"
-	reseller "github.com/dujiao-next/internal/modules/reseller/contract"
-	"github.com/dujiao-next/internal/platform/http/ginutil"
-	"github.com/dujiao-next/internal/platform/http/response"
-	"github.com/dujiao-next/internal/shared/money"
+	contentcontract "github.com/homles698698-lab/XMall/internal/modules/content/contract"
+	reseller "github.com/homles698698-lab/XMall/internal/modules/reseller/contract"
+	"github.com/homles698698-lab/XMall/internal/platform/http/ginutil"
+	"github.com/homles698698-lab/XMall/internal/platform/http/response"
+	"github.com/homles698698-lab/XMall/internal/shared/money"
 
 	"github.com/gin-gonic/gin"
 	"github.com/shopspring/decimal"

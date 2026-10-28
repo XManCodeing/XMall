@@ -5,12 +5,12 @@ import (
 	"errors"
 	"mime/multipart"
 
-	"github.com/dujiao-next/internal/logger"
-	contentapp "github.com/dujiao-next/internal/modules/content/application"
-	contentdomain "github.com/dujiao-next/internal/modules/content/domain"
-	uploadcontract "github.com/dujiao-next/internal/modules/upload/contract"
-	"github.com/dujiao-next/internal/platform/http/ginutil"
-	"github.com/dujiao-next/internal/platform/http/response"
+	"github.com/homles698698-lab/XMall/internal/logger"
+	contentapp "github.com/homles698698-lab/XMall/internal/modules/content/application"
+	contentdomain "github.com/homles698698-lab/XMall/internal/modules/content/domain"
+	uploadcontract "github.com/homles698698-lab/XMall/internal/modules/upload/contract"
+	"github.com/homles698698-lab/XMall/internal/platform/http/ginutil"
+	"github.com/homles698698-lab/XMall/internal/platform/http/response"
 
 	"github.com/gin-gonic/gin"
 )

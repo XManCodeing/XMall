@@ -1,6 +1,6 @@
 package contract
 
-import fulfillmentdomain "github.com/dujiao-next/internal/modules/fulfillment/domain"
+import fulfillmentdomain "github.com/homles698698-lab/XMall/internal/modules/fulfillment/domain"
 
 // Store 是交付记录持久化端口。
 type Store interface {

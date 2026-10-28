@@ -10,12 +10,12 @@ import (
 	"strings"
 	"testing"
 
-	resellerdomain "github.com/dujiao-next/internal/modules/reseller/domain"
+	resellerdomain "github.com/homles698698-lab/XMall/internal/modules/reseller/domain"
 
-	resellermodule "github.com/dujiao-next/internal/modules/reseller/application"
-	resellercontract "github.com/dujiao-next/internal/modules/reseller/contract"
-	uploadcontract "github.com/dujiao-next/internal/modules/upload/contract"
-	"github.com/dujiao-next/internal/platform/http/response"
+	resellermodule "github.com/homles698698-lab/XMall/internal/modules/reseller/application"
+	resellercontract "github.com/homles698698-lab/XMall/internal/modules/reseller/contract"
+	uploadcontract "github.com/homles698698-lab/XMall/internal/modules/upload/contract"
+	"github.com/homles698698-lab/XMall/internal/platform/http/response"
 
 	"github.com/gin-gonic/gin"
 )

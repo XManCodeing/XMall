@@ -5,43 +5,43 @@ import (
 	"testing"
 	"time"
 
-	paymentgormstore "github.com/dujiao-next/internal/modules/payment/infrastructure/gormstore"
+	paymentgormstore "github.com/homles698698-lab/XMall/internal/modules/payment/infrastructure/gormstore"
 
-	paymentdomain "github.com/dujiao-next/internal/modules/payment/domain"
+	paymentdomain "github.com/homles698698-lab/XMall/internal/modules/payment/domain"
 
-	orderdomain "github.com/dujiao-next/internal/modules/order/domain"
-	ordergormstore "github.com/dujiao-next/internal/modules/order/infrastructure/gormstore"
+	orderdomain "github.com/homles698698-lab/XMall/internal/modules/order/domain"
+	ordergormstore "github.com/homles698698-lab/XMall/internal/modules/order/infrastructure/gormstore"
 
-	resellergormstore "github.com/dujiao-next/internal/modules/reseller/infrastructure/gormstore"
+	resellergormstore "github.com/homles698698-lab/XMall/internal/modules/reseller/infrastructure/gormstore"
 
-	resellerdomain "github.com/dujiao-next/internal/modules/reseller/domain"
+	resellerdomain "github.com/homles698698-lab/XMall/internal/modules/reseller/domain"
 
-	cardsecretdomain "github.com/dujiao-next/internal/modules/cardsecret/domain"
-	cardsecretgormstore "github.com/dujiao-next/internal/modules/cardsecret/infrastructure/gormstore"
-	memberleveldomain "github.com/dujiao-next/internal/modules/memberlevel/domain"
+	cardsecretdomain "github.com/homles698698-lab/XMall/internal/modules/cardsecret/domain"
+	cardsecretgormstore "github.com/homles698698-lab/XMall/internal/modules/cardsecret/infrastructure/gormstore"
+	memberleveldomain "github.com/homles698698-lab/XMall/internal/modules/memberlevel/domain"
 
-	mappingdomain "github.com/dujiao-next/internal/modules/catalog/mapping/domain"
+	mappingdomain "github.com/homles698698-lab/XMall/internal/modules/catalog/mapping/domain"
 
-	catalogproductbootstrap "github.com/dujiao-next/internal/bootstrap/catalogproduct"
-	productcontract "github.com/dujiao-next/internal/modules/catalog/product/contract"
-	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
+	catalogproductbootstrap "github.com/homles698698-lab/XMall/internal/bootstrap/catalogproduct"
+	productcontract "github.com/homles698698-lab/XMall/internal/modules/catalog/product/contract"
+	productdomain "github.com/homles698698-lab/XMall/internal/modules/catalog/product/domain"
 
-	categorydomain "github.com/dujiao-next/internal/modules/catalog/category/domain"
+	categorydomain "github.com/homles698698-lab/XMall/internal/modules/catalog/category/domain"
 
-	productgormstore "github.com/dujiao-next/internal/modules/catalog/product/store/gormstore"
+	productgormstore "github.com/homles698698-lab/XMall/internal/modules/catalog/product/store/gormstore"
 
-	userdomain "github.com/dujiao-next/internal/modules/identity/user/domain"
+	userdomain "github.com/homles698698-lab/XMall/internal/modules/identity/user/domain"
 
-	"github.com/dujiao-next/internal/constants"
-	cartdomain "github.com/dujiao-next/internal/modules/cart/domain"
-	cartgormstore "github.com/dujiao-next/internal/modules/cart/infrastructure/gormstore"
-	categorygormstore "github.com/dujiao-next/internal/modules/catalog/category/infrastructure/gormstore"
-	mappinggormstore "github.com/dujiao-next/internal/modules/catalog/mapping/infrastructure/gormstore"
-	memberlevelgormstore "github.com/dujiao-next/internal/modules/memberlevel/infrastructure/gormstore"
-	reseller "github.com/dujiao-next/internal/modules/reseller/contract"
-	"github.com/dujiao-next/internal/shared/jsonmap"
-	"github.com/dujiao-next/internal/shared/money"
 	"github.com/glebarez/sqlite"
+	"github.com/homles698698-lab/XMall/internal/constants"
+	cartdomain "github.com/homles698698-lab/XMall/internal/modules/cart/domain"
+	cartgormstore "github.com/homles698698-lab/XMall/internal/modules/cart/infrastructure/gormstore"
+	categorygormstore "github.com/homles698698-lab/XMall/internal/modules/catalog/category/infrastructure/gormstore"
+	mappinggormstore "github.com/homles698698-lab/XMall/internal/modules/catalog/mapping/infrastructure/gormstore"
+	memberlevelgormstore "github.com/homles698698-lab/XMall/internal/modules/memberlevel/infrastructure/gormstore"
+	reseller "github.com/homles698698-lab/XMall/internal/modules/reseller/contract"
+	"github.com/homles698698-lab/XMall/internal/shared/jsonmap"
+	"github.com/homles698698-lab/XMall/internal/shared/money"
 	"github.com/shopspring/decimal"
 	"gorm.io/gorm"
 )

@@ -5,14 +5,14 @@ import (
 	"testing"
 	"time"
 
-	userdomain "github.com/dujiao-next/internal/modules/identity/user/domain"
+	userdomain "github.com/homles698698-lab/XMall/internal/modules/identity/user/domain"
 
-	"github.com/dujiao-next/internal/constants"
-	walletapp "github.com/dujiao-next/internal/modules/wallet/application"
-	walletcontract "github.com/dujiao-next/internal/modules/wallet/contract"
-	walletdomain "github.com/dujiao-next/internal/modules/wallet/domain"
-	walletgormstore "github.com/dujiao-next/internal/modules/wallet/infrastructure/gormstore"
-	"github.com/dujiao-next/internal/shared/money"
+	"github.com/homles698698-lab/XMall/internal/constants"
+	walletapp "github.com/homles698698-lab/XMall/internal/modules/wallet/application"
+	walletcontract "github.com/homles698698-lab/XMall/internal/modules/wallet/contract"
+	walletdomain "github.com/homles698698-lab/XMall/internal/modules/wallet/domain"
+	walletgormstore "github.com/homles698698-lab/XMall/internal/modules/wallet/infrastructure/gormstore"
+	"github.com/homles698698-lab/XMall/internal/shared/money"
 
 	"github.com/glebarez/sqlite"
 	"github.com/shopspring/decimal"

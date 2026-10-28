@@ -11,16 +11,16 @@ import (
 	"testing"
 	"time"
 
-	"github.com/dujiao-next/internal/authz"
-	"github.com/dujiao-next/internal/bootstrap/database/migrations"
-	adminapp "github.com/dujiao-next/internal/modules/identity/admin/application"
-	admindomain "github.com/dujiao-next/internal/modules/identity/admin/domain"
-	adminstore "github.com/dujiao-next/internal/modules/identity/admin/infrastructure/gormstore"
-	userdomain "github.com/dujiao-next/internal/modules/identity/user/domain"
-	resellerdomain "github.com/dujiao-next/internal/modules/reseller/domain"
-	"github.com/dujiao-next/internal/persistence/gormutil"
-	"github.com/dujiao-next/internal/platform/database/gormdb"
 	mysqldriver "github.com/go-sql-driver/mysql"
+	"github.com/homles698698-lab/XMall/internal/authz"
+	"github.com/homles698698-lab/XMall/internal/bootstrap/database/migrations"
+	adminapp "github.com/homles698698-lab/XMall/internal/modules/identity/admin/application"
+	admindomain "github.com/homles698698-lab/XMall/internal/modules/identity/admin/domain"
+	adminstore "github.com/homles698698-lab/XMall/internal/modules/identity/admin/infrastructure/gormstore"
+	userdomain "github.com/homles698698-lab/XMall/internal/modules/identity/user/domain"
+	resellerdomain "github.com/homles698698-lab/XMall/internal/modules/reseller/domain"
+	"github.com/homles698698-lab/XMall/internal/persistence/gormutil"
+	"github.com/homles698698-lab/XMall/internal/platform/database/gormdb"
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
@@ -56,7 +56,7 @@ func setupMySQLIntegrationDB(t *testing.T) *gorm.DB {
 	if !strings.HasPrefix(version, "8.") || strings.Contains(strings.ToLower(version), "mariadb") {
 		t.Fatal("this compatibility suite requires MySQL 8.x")
 	}
-	name := fmt.Sprintf("dujiao_mysql_test_%d", time.Now().UnixNano())
+	name := fmt.Sprintf("xmall_mysql_test_%d", time.Now().UnixNano())
 	if err := server.Exec("CREATE DATABASE `" + name + "` CHARACTER SET utf8mb4 COLLATE utf8mb4_bin").Error; err != nil {
 		t.Fatal(err)
 	}

@@ -7,11 +7,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/dujiao-next/internal/cache"
-	dashboardcontract "github.com/dujiao-next/internal/modules/dashboard/contract"
-	reportingapp "github.com/dujiao-next/internal/modules/reporting/application"
-	reportingdomain "github.com/dujiao-next/internal/modules/reporting/domain"
-	settingsstorefront "github.com/dujiao-next/internal/modules/settings/schema/storefront"
+	"github.com/homles698698-lab/XMall/internal/cache"
+	dashboardcontract "github.com/homles698698-lab/XMall/internal/modules/dashboard/contract"
+	reportingapp "github.com/homles698698-lab/XMall/internal/modules/reporting/application"
+	reportingdomain "github.com/homles698698-lab/XMall/internal/modules/reporting/domain"
+	settingsstorefront "github.com/homles698698-lab/XMall/internal/modules/settings/schema/storefront"
 )
 
 const dashboardCacheTTL = 45 * time.Second

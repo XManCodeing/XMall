@@ -8,15 +8,15 @@ import (
 	"strings"
 	"time"
 
-	paymentdomain "github.com/dujiao-next/internal/modules/payment/domain"
+	paymentdomain "github.com/homles698698-lab/XMall/internal/modules/payment/domain"
 
-	orderdomain "github.com/dujiao-next/internal/modules/order/domain"
+	orderdomain "github.com/homles698698-lab/XMall/internal/modules/order/domain"
 
-	walletdomain "github.com/dujiao-next/internal/modules/wallet/domain"
+	walletdomain "github.com/homles698698-lab/XMall/internal/modules/wallet/domain"
 
-	ginutil "github.com/dujiao-next/internal/platform/http/ginutil"
+	ginutil "github.com/homles698698-lab/XMall/internal/platform/http/ginutil"
 
-	"github.com/dujiao-next/internal/platform/http/response"
+	"github.com/homles698698-lab/XMall/internal/platform/http/response"
 
 	"github.com/gin-gonic/gin"
 )

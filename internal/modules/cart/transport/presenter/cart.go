@@ -1,9 +1,9 @@
 package presenter
 
 import (
-	"github.com/dujiao-next/internal/shared/jsonmap"
-	"github.com/dujiao-next/internal/shared/jsonslice"
-	"github.com/dujiao-next/internal/shared/money"
+	"github.com/homles698698-lab/XMall/internal/shared/jsonmap"
+	"github.com/homles698698-lab/XMall/internal/shared/jsonslice"
+	"github.com/homles698698-lab/XMall/internal/shared/money"
 )
 
 // CartProductResp 购物车商品摘要

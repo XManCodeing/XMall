@@ -5,8 +5,8 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/dujiao-next/internal/config"
-	"github.com/dujiao-next/internal/constants"
+	"github.com/homles698698-lab/XMall/internal/config"
+	"github.com/homles698698-lab/XMall/internal/constants"
 )
 
 func TestUpdateOrderSettingNormalized(t *testing.T) {
@@ -192,7 +192,7 @@ func TestUpdateSiteSettingNormalized(t *testing.T) {
 					"en-US": "  About Us  ",
 				},
 				"subtitle": map[string]interface{}{
-					"zh-CN": "  欢迎来到独角工作室  ",
+					"zh-CN": "  欢迎来到 X商城  ",
 				},
 			},
 			"introduction": map[string]interface{}{

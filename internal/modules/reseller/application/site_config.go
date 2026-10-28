@@ -9,17 +9,17 @@ import (
 	"net/url"
 	"strings"
 
-	resellercontract "github.com/dujiao-next/internal/modules/reseller/contract"
+	resellercontract "github.com/homles698698-lab/XMall/internal/modules/reseller/contract"
 
-	resellerdomain "github.com/dujiao-next/internal/modules/reseller/domain"
+	resellerdomain "github.com/homles698698-lab/XMall/internal/modules/reseller/domain"
 
-	productcontract "github.com/dujiao-next/internal/modules/catalog/product/contract"
+	productcontract "github.com/homles698698-lab/XMall/internal/modules/catalog/product/contract"
 
-	"github.com/dujiao-next/internal/cache"
-	"github.com/dujiao-next/internal/constants"
-	"github.com/dujiao-next/internal/shared/contactlink"
-	"github.com/dujiao-next/internal/shared/jsonmap"
-	"github.com/dujiao-next/internal/shared/mailbrand"
+	"github.com/homles698698-lab/XMall/internal/cache"
+	"github.com/homles698698-lab/XMall/internal/constants"
+	"github.com/homles698698-lab/XMall/internal/shared/contactlink"
+	"github.com/homles698698-lab/XMall/internal/shared/jsonmap"
+	"github.com/homles698698-lab/XMall/internal/shared/mailbrand"
 )
 
 type LocalizedTextInput map[string]string

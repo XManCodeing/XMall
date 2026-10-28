@@ -4,12 +4,12 @@ import (
 	"strings"
 	"time"
 
-	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
-	promotioncontract "github.com/dujiao-next/internal/modules/promotion/contract"
-	promotiondomain "github.com/dujiao-next/internal/modules/promotion/domain"
+	productdomain "github.com/homles698698-lab/XMall/internal/modules/catalog/product/domain"
+	promotioncontract "github.com/homles698698-lab/XMall/internal/modules/promotion/contract"
+	promotiondomain "github.com/homles698698-lab/XMall/internal/modules/promotion/domain"
 
-	"github.com/dujiao-next/internal/constants"
-	"github.com/dujiao-next/internal/shared/money"
+	"github.com/homles698698-lab/XMall/internal/constants"
+	"github.com/homles698698-lab/XMall/internal/shared/money"
 
 	"github.com/shopspring/decimal"
 )

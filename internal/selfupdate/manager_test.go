@@ -6,7 +6,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/dujiao-next/internal/version"
+	"github.com/homles698698-lab/XMall/internal/version"
 )
 
 // TestManagerStartRejectsUnsupportedEnv 环境不支持时必须在发起任何网络请求前拒绝。

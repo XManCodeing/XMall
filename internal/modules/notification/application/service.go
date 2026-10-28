@@ -4,10 +4,10 @@ import (
 	"context"
 	"strings"
 
-	"github.com/dujiao-next/internal/constants"
-	"github.com/dujiao-next/internal/modules/notification/application/format"
-	"github.com/dujiao-next/internal/modules/notification/contract"
-	"github.com/dujiao-next/internal/queue"
+	"github.com/homles698698-lab/XMall/internal/constants"
+	"github.com/homles698698-lab/XMall/internal/modules/notification/application/format"
+	"github.com/homles698698-lab/XMall/internal/modules/notification/contract"
+	"github.com/homles698698-lab/XMall/internal/queue"
 )
 
 // Service 通知中心服务。

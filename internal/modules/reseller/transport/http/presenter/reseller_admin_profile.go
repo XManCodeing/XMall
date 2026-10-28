@@ -3,9 +3,9 @@ package presenter
 import (
 	"time"
 
-	resellerdomain "github.com/dujiao-next/internal/modules/reseller/domain"
+	resellerdomain "github.com/homles698698-lab/XMall/internal/modules/reseller/domain"
 
-	resellermodule "github.com/dujiao-next/internal/modules/reseller/contract"
+	resellermodule "github.com/homles698698-lab/XMall/internal/modules/reseller/contract"
 )
 
 type AdminResellerProfileUserResp struct {

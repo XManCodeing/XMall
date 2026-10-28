@@ -19,7 +19,7 @@
 <script setup lang="ts">
 import { useI18n } from 'vue-i18n'
 import InviteCodeDialog from '../../components/InviteCodeDialog.vue'
-import { useGoogleRedirectCallback } from '../../composables/useGoogleRedirectCallback'
+import { useGoogleRedirectCallback } from '../../composables/useGoogleRedirectCallback.ts'
 
 const { t } = useI18n()
 const { loading, errMsg, retryPath, continueAfterLogin, cancelInvite } = useGoogleRedirectCallback()

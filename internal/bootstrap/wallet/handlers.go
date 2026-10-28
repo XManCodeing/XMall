@@ -1,9 +1,9 @@
 package walletbootstrap
 
 import (
-	"github.com/dujiao-next/internal/app/container"
-	channeluserwiring "github.com/dujiao-next/internal/bootstrap/channeluser"
-	wallettransport "github.com/dujiao-next/internal/modules/wallet/transport/http"
+	"github.com/homles698698-lab/XMall/internal/app/container"
+	channeluserwiring "github.com/homles698698-lab/XMall/internal/bootstrap/channeluser"
+	wallettransport "github.com/homles698698-lab/XMall/internal/modules/wallet/transport/http"
 )
 
 type Handlers struct {

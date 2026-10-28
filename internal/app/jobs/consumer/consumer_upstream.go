@@ -4,8 +4,8 @@ import (
 	"context"
 	"encoding/json"
 
-	"github.com/dujiao-next/internal/logger"
-	"github.com/dujiao-next/internal/queue"
+	"github.com/homles698698-lab/XMall/internal/logger"
+	"github.com/homles698698-lab/XMall/internal/queue"
 
 	"github.com/hibiken/asynq"
 )

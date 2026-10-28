@@ -153,13 +153,13 @@ import ResellerPageState from '../../components/reseller-console/ResellerPageSta
 import ResellerRecordCard from '../../components/reseller-console/ResellerRecordCard.vue'
 import ResellerSectionHeader from '../../components/reseller-console/ResellerSectionHeader.vue'
 import ResellerStatusBadge, { type ResellerBadgeTone } from '../../components/reseller-console/ResellerStatusBadge.vue'
-import { useResellerOrders } from '../../composables/reseller/useResellerOrders'
+import { useResellerOrders } from '../../composables/reseller/useResellerOrders.ts'
 import {
   formatResellerConsoleAmount,
   formatResellerConsoleDate,
   resellerOrderStatusTone,
   resellerProfitStatusKey,
-} from '../../utils/resellerConsole'
+} from '../../utils/resellerConsole.ts'
 
 const { t, te } = useI18n()
 const router = useRouter()

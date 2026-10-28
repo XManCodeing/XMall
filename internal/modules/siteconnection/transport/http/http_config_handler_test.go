@@ -5,8 +5,8 @@ import (
 	"strings"
 	"testing"
 
-	app "github.com/dujiao-next/internal/modules/siteconnection/application"
 	"github.com/gin-gonic/gin"
+	app "github.com/homles698698-lab/XMall/internal/modules/siteconnection/application"
 )
 
 func TestHTTPConfigCapabilityMessagesAreLocalized(t *testing.T) {

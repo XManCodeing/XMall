@@ -9,9 +9,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/dujiao-next/internal/constants"
-	siteconnectioncontract "github.com/dujiao-next/internal/modules/siteconnection/contract"
-	siteconnectiondomain "github.com/dujiao-next/internal/modules/siteconnection/domain"
+	"github.com/homles698698-lab/XMall/internal/constants"
+	siteconnectioncontract "github.com/homles698698-lab/XMall/internal/modules/siteconnection/contract"
+	siteconnectiondomain "github.com/homles698698-lab/XMall/internal/modules/siteconnection/domain"
 
 	"github.com/glebarez/sqlite"
 	"github.com/shopspring/decimal"

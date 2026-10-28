@@ -6,10 +6,10 @@ import (
 	"strings"
 	"time"
 
-	affiliatedomain "github.com/dujiao-next/internal/modules/affiliate/domain"
-	"github.com/dujiao-next/internal/shared/dberror"
+	affiliatedomain "github.com/homles698698-lab/XMall/internal/modules/affiliate/domain"
+	"github.com/homles698698-lab/XMall/internal/shared/dberror"
 
-	"github.com/dujiao-next/internal/constants"
+	"github.com/homles698698-lab/XMall/internal/constants"
 )
 
 // UpdateAffiliateProfileStatus 管理端更新返利用户状态

@@ -4,10 +4,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/dujiao-next/internal/constants"
-	couponcontract "github.com/dujiao-next/internal/modules/coupon/contract"
-	coupondomain "github.com/dujiao-next/internal/modules/coupon/domain"
-	"github.com/dujiao-next/internal/shared/money"
+	"github.com/homles698698-lab/XMall/internal/constants"
+	couponcontract "github.com/homles698698-lab/XMall/internal/modules/coupon/contract"
+	coupondomain "github.com/homles698698-lab/XMall/internal/modules/coupon/domain"
+	"github.com/homles698698-lab/XMall/internal/shared/money"
 
 	"github.com/shopspring/decimal"
 )

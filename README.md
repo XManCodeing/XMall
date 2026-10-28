@@ -1,24 +1,20 @@
-# Dujiao AUV — 非官方二次开发版
+# XMall — 非官方二次开发版
 
-基于 [Dujiao-Next](https://github.com/dujiao-next/dujiao-next) 的数字商品商城，包含 Go 后端、Vue 用户商城和管理后台。发行包将两端前端资源嵌入 `dujiao-next` 可执行文件，一个进程即可提供完整网站，无需在部署服务器安装 Go、Node.js 或 pnpm。
-
-- **维护账号**：[homles698698-lab](https://github.com/homles698698-lab)
-- **源码仓库**：[homles698698-lab/dujiao-auv](https://github.com/homles698698-lab/dujiao-auv)
-- **版本下载**：[Releases](https://github.com/homles698698-lab/dujiao-auv/releases)
-- **问题反馈**：[Issues](https://github.com/homles698698-lab/dujiao-auv/issues)
-
-本项目不是上游官方发行版，不代表上游维护者或其合作伙伴。请使用本仓库的发行包，不要使用上游安装包或 Docker 镜像替换本版，否则会丢失定制功能。尚未公开正式 Release 时，下载页面可能没有可安装版本。
+本项目基于 [Dujiao-Next](https://github.com/dujiao-next/dujiao-next) 二次开发，包含 Go 后端、用户商城和管理后台。本项目不是上游官方发行版，也不代表上游维护者或其合作伙伴。
 
 ## 来源、修改声明与许可证
 
 - **上游项目**：Dujiao-Next，<https://github.com/dujiao-next/dujiao-next>。
-- **来源说明**：本版从名为 `dujiao-next-1.5.0` 的源码工作副本继续开发；目录名不是精确上游 tag / commit 的核验依据，当前没有可确认的原始提交记录。本版的可追溯版本以本仓库的 tag、构建提交和对应源码为准，不宣称与某个上游 tag 完全一致。
-- **修改记录日期**：2026-10-26 至 2026-10-27；发行日期与版本号以对应 Release 为准。
+- **基础版本核验状态**：当前工作副本来自名为 `dujiao-next-1.5.0` 的目录；该名称仅作来源线索，尚未通过上游 tag 或 commit 核实。正式发布前须补充准确的上游版本及提交号，不应将目录名当作已核验版本。
+- **修改声明日期**：2026-10-26。本工作副本已作修改，下方列出本轮二次开发的主要内容；此日期不是所有文件的修改时间，也不是正式发布日期。
+- **维护账号与发布地址**：[homles698698-lab](https://github.com/homles698698-lab) · [XMall 源码仓库](https://github.com/homles698698-lab/XMall) · [版本下载](https://github.com/homles698698-lab/XMall/releases)。仓库由 `dujiao-auv` 重命名而来，保留历史提交和版本；新品牌发行包使用 `xmall` 前缀，实际版本以已发布的 tag 为准。
 - **许可**：本修改版作为衍生作品整体依照 **GNU GPL v3** 发布，完整条款见 [LICENSE](LICENSE)。保留上游及其他权利人的版权、许可和免责声明；新增修改不改变原代码的权利归属。不对 GPL 授予的商用、修改和再分发权利另加限制。
 - **第三方组件**：独立第三方组件和素材仍遵循各自许可证及署名要求。根目录许可证不能代替第三方授权核验，也不授予上游或第三方的商标使用权。
 - **无担保**：除适用法律或书面约定另有要求外，本软件按 GPL v3 所述不附带担保。请在部署前自行测试和备份。
 
-## 本版主要修改
+### 本轮主要修改（截至 2026-10-26）
+
+以下仅概述已知改动，不替代正式发布时的完整提交记录和变更清单：
 
 - 增加 MySQL 适配，保留 SQLite / PostgreSQL 支持。
 - 优化数据库迁移：版本记录、已完成迁移跳过、MySQL 元数据查询与 decimal 默认值比较，以及迁移进度日志。
@@ -148,17 +144,17 @@ does not compile `embed_fullstack.go` — after touching `internal/web/`, verify
 ## Run Modes
 
 ```bash
-./dujiao-next                 # all    — HTTP server + background worker (default)
-./dujiao-next -mode api       # HTTP server only
-./dujiao-next -mode worker    # background worker only
+./xmall                 # all    — HTTP server + background worker (default)
+./xmall -mode api       # HTTP server only
+./xmall -mode worker    # background worker only
 ```
 
 Operator subcommands ship in the same binary, so a container needs no extra tooling:
 
 ```bash
-./dujiao-next admin list-admins
-./dujiao-next admin reset-password
-./dujiao-next admin reset-2fa
+./xmall admin list-admins
+./xmall admin reset-password
+./xmall admin reset-2fa
 ```
 
 ## Frontend Notes
@@ -187,7 +183,7 @@ version; see `src/templates/registry.ts`. Append `?template=vault` to preview on
 **i18n.** Both frontends and all API responses are localized — Simplified Chinese, Traditional
 Chinese, and English. Do not hard-code user-facing strings on either side.
 
-## 配置说明
+## 本二开版：配置与部署准备
 
 当前提供可公开提交的 [config.yml.example](config.yml.example)。程序实际读取 `config.yml`，不会自动读取 demo。
 
@@ -195,99 +191,87 @@ Chinese, and English. Do not hard-code user-facing strings on either side.
 - 分别运行三次 `openssl rand -hex 32`，把三个不同的随机值填入 `app.secret_key`、`jwt.secret`、`user_jwt.secret`。这些字段在示例中为空，必须先填写，不能直接用于生产。
 - 已有部署不要随意更换 `app.secret_key`，否则可能无法解密已有敏感数据。管理员初始化参数及第三方凭据仅在私有运行配置中填写。
 - demo 默认监听 `127.0.0.1:8080`，使用 SQLite；容器部署需按需修改监听地址，其他部署按实际情况设置数据库、可信代理、CORS 和邮件等参数。
-- demo 默认关闭远程更新。不要将上游更新源直接作为本二开版的升级源，以免覆盖定制功能。
+- 公开模板的 `update.repository` 默认是 `homles698698-lab/XMall`，填写空字符串可关闭远程更新。修改模板不会修改既有运行配置。仓库改名后历史 Release 仍然保留，不代表旧附件兼容新的 `xmall_*` 更新器；须发布并验证 XMall 发行包后再使用更新功能，不要切到上游更新源。
 
 ### GitHub Actions 云端打包与发布
 
 正式发行无需本地构建。将源码上传到自己的 GitHub 仓库并启用 Actions 后：
 
 1. 在 Actions 的 `goreleaser` 工作流选择 **Run workflow**：运行发布输入检查、安装脚本测试、后端检查与前端测试，然后构建所有配置的平台快照。下载工作流中的 snapshot artifact 检查包内容；手动运行不会创建 Release。
-2. 修复检查发现的问题后，为通过验证的提交推送独立的 `v*` 版本 tag，例如 `v1.5.1`（仅为命名示例，请按自己的仓库版本序列选择，不表示已发布）。若使用 `v1.5.1-rc.1` 等预发布版本并在 GitHub 标为 prerelease，安装器的 latest release 接口不会选中它。
+2. 修复检查发现的问题后，为通过验证的提交推送独立的 `v*` 版本 tag，例如 `v1.1.0`（请按自己的仓库版本序列选择）。若使用 `v1.1.0-rc.1` 等预发布版本并在 GitHub 标为 prerelease，安装器的 latest release 接口不会选中它。
 3. tag 触发同样的检查并生成 **草稿 Release**，包含 Windows / Linux / macOS 的 amd64 / arm64 安装包、校验和，以及指向本仓库构建提交的源码、许可证和部署说明链接。
 4. 检查对应源码、许可证和包内配置示例，并在目标系统验证安装 / 启动后，再手动公开草稿。草稿不供安装器的 latest release 接口下载。
 
 发布 token 使用 Actions 自带的 `GITHUB_TOKEN`，不需要将个人 token 或运行配置写进仓库。工作流需要仓库允许 `contents: write`；仓库或组织策略可能需要管理员授权。
 
-配置模板统一为 `config.yml.example`。GoReleaser 归档和 Docker 最终镜像均包含 `LICENSE`；构建前使用 `go mod tidy -diff` 检查依赖而不静默改写。本版安装脚本已要求显式设置 `DUJIAO_UPDATE_REPOSITORY=owner/repository`，不会默认下载上游。运行自己的安装脚本时，在同一条 sudo 命令中通过 `env` 传入此变量，仓库名须替换成你实际信任的仓库。
+配置模板统一为 `config.yml.example`。GoReleaser 归档和 Docker 最终镜像均包含 `LICENSE`；构建前使用 `go mod tidy -diff` 检查依赖而不静默改写。本版安装脚本要求显式设置 `XMALL_UPDATE_REPOSITORY=homles698698-lab/XMall`，不会默认下载上游。运行本仓库安装脚本时，在同一条 sudo 命令中通过 `env` 传入此变量；自行 fork 后应改为经过验证的自有发行仓库。
 
 当前工作流只发布二进制安装包，**不会自动推送 Docker 镜像**。Dockerfile 已补许可证及可传入的 `SOURCE_URL`、`VCS_REF`、`APP_VERSION` 元数据参数；若以后发布镜像，需要另行配置镜像构建、推送及源码说明。本地检查不等于 GitHub Actions 和目标系统安装已通过。
 
-## 二进制部署（推荐）
+## 上游部署文档（仅供参考，不安装本二开版）
 
-从[本仓库 Releases](https://github.com/homles698698-lab/dujiao-auv/releases) 下载与你的系统和 CPU 架构匹配的归档，并核对同一 Release 提供的 SHA-256 校验文件。Linux 的 `uname -m` 输出 `x86_64` 时选择 `Linux_x86_64`，输出 `aarch64` 时选择 `Linux_arm64`。不要运行 Windows 或 macOS 的安装包。
+> 下列安装器、Release 和 Docker 镜像链接均指向上游，安装得到的不是本目录的二开代码。保留这些说明是为了说明原项目的部署方式；部署本二开版应使用经过验证的自身发布物，或从本版源码构建。上游示例中的 `config.yml.example` 属于上游发布包，具体默认值可能与本工作副本不同。
 
-解压后进入包含 `dujiao-next` 的目录。仅首次部署执行：
+### 上游官方一键安装器（Ubuntu / Debian）
+
+On a fresh Ubuntu 22.04+ or Debian 12+ server, download and run the official
+interactive installer:
 
 ```bash
-cp -n config.yml.example config.yml
-chmod 600 config.yml
-chmod +x dujiao-next
-openssl rand -hex 32
-openssl rand -hex 32
-openssl rand -hex 32
+curl -fsSL https://raw.githubusercontent.com/dujiao-next/dujiao-next/main/scripts/dujiao-next-manager.sh \
+  -o /tmp/dujiao-next-manager.sh
+sudo bash /tmp/dujiao-next-manager.sh install
 ```
 
-手动编辑 `config.yml`，将三个不同随机值分别填入 `app.secret_key`、`jwt.secret`、`user_jwt.secret`；设置 `bootstrap.default_admin_username` 和符合密码策略的 `bootstrap.default_admin_password`。初始化账号配置用于首次创建管理员，不应作为已有管理员的改密方式。
-
-模板默认使用 SQLite、监听 `127.0.0.1:8080`，可在完成配置后直接启动：
+The installer deploys the release binary with systemd, an isolated local Redis,
+Nginx, SQLite, and a Let's Encrypt certificate. After installation, reopen the
+management menu with:
 
 ```bash
+sudo dujiao-next-manager
+```
+
+Common automation-friendly commands are also available:
+
+```bash
+sudo dujiao-next-manager status
+sudo dujiao-next-manager logs app
+sudo dujiao-next-manager restart
+sudo dujiao-next-manager configure-domain
+sudo dujiao-next-manager configure-admin-path
+sudo dujiao-next-manager renew-cert
+sudo dujiao-next-manager admin-reset-password
+sudo dujiao-next-manager admin-reset-2fa
+sudo dujiao-next-manager uninstall
+```
+
+The first release supports a single non-wildcard domain on Ubuntu/Debian only.
+It does not adopt an existing manual installation. If SMTP is skipped, configure
+it in the admin panel before enabling email-verification registration. Application
+data lives in `/opt/dujiao-next`; installer state is stored in
+`/etc/dujiao-next/install-state.json`. TLS failures leave only the ACME challenge
+endpoint enabled, and `install` can be rerun after DNS or firewall repair. Safe
+uninstall creates and verifies a `0600` recovery archive under
+`/var/backups/dujiao-next` before deleting managed data.
+
+### 上游二进制安装（非本二开版）
+
+Download the latest `dujiao-next_*.tar.gz` from [Releases](https://github.com/dujiao-next/dujiao-next/releases):
+
+```bash
+tar -xzf dujiao-next_*.tar.gz
+cp config.yml.example config.yml
+# edit config.yml: set app.secret_key, jwt.secret, user_jwt.secret, and web.admin_path
 ./dujiao-next
 ```
 
-另开一个服务器终端检查：
+Full instructions: https://dujiao-next.com/deploy/
+
+Or with the upstream Docker image (not this modified edition):
 
 ```bash
-curl -i http://127.0.0.1:8080/health
+docker run -d -p 8080:8080 -v $PWD/config.yml:/app/config.yml:ro dujiaonext/dujiao-next:latest
 ```
-
-- 商城入口：`/`。
-- 后台入口：默认 `/admin`，由 `web.admin_path` 控制；修改后重启，无需重新编译。
-- 生产访问：使用 Nginx / aaPanel 反向代理至 `http://127.0.0.1:8080`，配置域名及 HTTPS；`cors.allowed_origins` 填实际网站来源地址。
-- IP 临时内测：监听改为 `0.0.0.0`，按实际端口放行防火墙和云安全组，尽量限制访问来源。HTTP 不应用于真实敏感业务；正式部署后恢复仅本机监听。
-- 使用 systemd 或面板守护进程维持服务。前台运行时关闭终端可能导致服务停止。
-
-### aaPanel Go 项目
-
-选择已编译的 `dujiao-next` 作为 Executable File，执行命令直接运行该文件；不要使用 `go run`、`nohup` 或末尾的 `&`。项目端口与配置保持一致。域名反向代理模式不需要开放公网后端端口。
-
-工作目录必须是实际部署目录，以便正确读取 `config.yml` 和访问 `uploads`。运行用户（例如 `www`）必须能够读取配置、写入数据库及日志和上传目录。`chmod 600 config.yml` 后应将文件所有者设置为实际运行用户；不要使用 `777` 解决权限问题。面板的具体工作目录和守护行为以运行日志及实际设置为准。
-
-### 数据和图片迁移
-
-数据库保存商品和图片路径，上传文件独立保存在程序工作目录下的 `uploads/`，不会嵌入发行二进制或随远程数据库自动迁移。
-
-迁移部署必须一起保留：
-
-- 私有 `config.yml`，尤其是已有的 `app.secret_key`；不要重新生成后覆盖。
-- 数据库：SQLite 的 `db/` 或远程 MySQL / PostgreSQL 的一致性备份。
-- 完整 `uploads/` 目录及子目录结构。目标已有文件时先备份，避免盲目覆盖。
-
-迁移后若图片 404，检查文件、工作目录及读取权限；若数据库保存的是旧站完整 URL，还需处理旧域名地址。不要让测试实例和生产实例共用数据库、同时运行后台任务来进行隔离验收。
-
-## 版本更新与回滚
-
-默认公开模板的 `update.repository` 为空，禁用远程更新。更新接口仍然保留，配置不会回退到上游仓库。
-
-要启用本仓库的版本检查和二进制更新，在私有 `config.yml` 中将 `update.repository` 设为 `"homles698698-lab/dujiao-auv"`，保存并重启。值是 `owner/repository`，不是完整 URL。
-
-启用条件与限制：
-
-- 当前实现匿名访问 GitHub API，仓库及发行附件须可公开访问；不支持通过配置私有仓库 token 下载。
-- 必须先发布非草稿、非预发布的稳定 Release。只有 tag、Actions snapshot 或 Draft Release 不构成可用更新源。
-- 使用 SemVer 版本号（如 `v1.5.1`）；候选版本必须高于当前版本。非标准快照版本号可能无法比较，建议首次手动安装正式版本包。
-- 保留当前 GoReleaser 平台归档命名、归档内的 `dujiao-next` 文件名及校验文件；不要只重命名附件而不调整升级器。
-- 自动替换要求受支持的平台、release 构建、非容器部署，并且运行用户能写入二进制所在目录。只有二进制文件可写还不够。
-- 自动重启仅在程序识别到受支持的 systemd 重启策略时启用。aaPanel 的内置守护不能直接视为已兼容，可能需要在面板手动重启；先确认更新能力提示，不要强行跳过检测。
-- 更新会替换内嵌前端和后端的二进制，不会替你合并配置或迁移上传文件；新版本启动可能执行数据库迁移。升级前同时备份配置、数据库及上传目录。二进制回滚不等于数据库回滚。
-
-已有 aaPanel 部署建议首次采用手动升级：备份数据、停止项目、替换匹配平台的二进制、保留配置和上传文件、恢复执行权限、启动并检查 `/health`、商城和后台。
-
-### 安装脚本与 Docker
-
-归档附带 `scripts/dujiao-next-manager.sh`，安装脚本要求显式传入 `DUJIAO_UPDATE_REPOSITORY=homles698698-lab/dujiao-auv`，只从已公开的稳定发行版安装。该脚本用于受支持的全新 Ubuntu / Debian 环境，不用于接管已有 aaPanel 部署；不要在已有部署上直接运行安装流程。
-
-本仓库提供 Dockerfile，但当前发布工作流不自动推送 Docker 镜像。上游的 `dujiaonext/dujiao-next` 镜像不包含本版定制。自行构建镜像时应保留许可证和对应源码说明；容器更新通过新镜像重建完成，不使用后台二进制自更新。
 
 ## Quick Start (Develop)
 
@@ -328,7 +312,7 @@ CI uses for releases. The manual equivalent:
 rm -rf internal/web/dist && mkdir -p internal/web/dist
 cp -r frontend/admin/dist internal/web/dist/admin
 cp -r frontend/user/dist  internal/web/dist/user
-go build -tags release,fullstack -o dujiao-next ./cmd/server
+go build -tags release,fullstack -o xmall ./cmd/server
 ```
 
 Note that admin uses `build:fullstack`, not `build`. Plain `build` produces a bundle pinned to

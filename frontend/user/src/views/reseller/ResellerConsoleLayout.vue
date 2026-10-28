@@ -72,8 +72,8 @@ import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import ResellerConsoleTopbar from '../../components/reseller-console/ResellerConsoleTopbar.vue'
 import ResellerPageState from '../../components/reseller-console/ResellerPageState.vue'
-import { useResellerProfile } from '../../composables/reseller/useResellerProfile'
-import { canRenderResellerConsoleModule } from '../../utils/resellerConsole'
+import { useResellerProfile } from '../../composables/reseller/useResellerProfile.ts'
+import { canRenderResellerConsoleModule } from '../../utils/resellerConsole.ts'
 
 const { t } = useI18n()
 const route = useRoute()

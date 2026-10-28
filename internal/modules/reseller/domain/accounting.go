@@ -3,11 +3,11 @@ package domain
 import (
 	"time"
 
-	orderdomain "github.com/dujiao-next/internal/modules/order/domain"
+	orderdomain "github.com/homles698698-lab/XMall/internal/modules/order/domain"
 
-	admindomain "github.com/dujiao-next/internal/modules/identity/admin/domain"
-	"github.com/dujiao-next/internal/shared/jsonmap"
-	"github.com/dujiao-next/internal/shared/money"
+	admindomain "github.com/homles698698-lab/XMall/internal/modules/identity/admin/domain"
+	"github.com/homles698698-lab/XMall/internal/shared/jsonmap"
+	"github.com/homles698698-lab/XMall/internal/shared/money"
 )
 
 // LedgerEntry 分销商资金流水。

@@ -4,12 +4,12 @@ import (
 	"strings"
 	"testing"
 
-	siteconnectionapp "github.com/dujiao-next/internal/modules/siteconnection/application"
-	siteconnectioncontract "github.com/dujiao-next/internal/modules/siteconnection/contract"
-	siteconnectiondomain "github.com/dujiao-next/internal/modules/siteconnection/domain"
+	siteconnectionapp "github.com/homles698698-lab/XMall/internal/modules/siteconnection/application"
+	siteconnectioncontract "github.com/homles698698-lab/XMall/internal/modules/siteconnection/contract"
+	siteconnectiondomain "github.com/homles698698-lab/XMall/internal/modules/siteconnection/domain"
 
-	"github.com/dujiao-next/internal/constants"
-	"github.com/dujiao-next/internal/crypto"
+	"github.com/homles698698-lab/XMall/internal/constants"
+	"github.com/homles698698-lab/XMall/internal/crypto"
 
 	"github.com/shopspring/decimal"
 )

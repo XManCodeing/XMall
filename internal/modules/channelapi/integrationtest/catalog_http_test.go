@@ -8,24 +8,24 @@ import (
 	"testing"
 	"time"
 
-	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
+	productdomain "github.com/homles698698-lab/XMall/internal/modules/catalog/product/domain"
 
-	categoryapp "github.com/dujiao-next/internal/modules/catalog/category/application"
-	categorydomain "github.com/dujiao-next/internal/modules/catalog/category/domain"
+	categoryapp "github.com/homles698698-lab/XMall/internal/modules/catalog/category/application"
+	categorydomain "github.com/homles698698-lab/XMall/internal/modules/catalog/category/domain"
 
-	productgormstore "github.com/dujiao-next/internal/modules/catalog/product/store/gormstore"
+	productgormstore "github.com/homles698698-lab/XMall/internal/modules/catalog/product/store/gormstore"
 
-	settingsapp "github.com/dujiao-next/internal/modules/settings/application"
-	settingsstore "github.com/dujiao-next/internal/modules/settings/infrastructure/gormstore"
+	settingsapp "github.com/homles698698-lab/XMall/internal/modules/settings/application"
+	settingsstore "github.com/homles698698-lab/XMall/internal/modules/settings/infrastructure/gormstore"
 
-	"github.com/dujiao-next/internal/constants"
-	categorygormstore "github.com/dujiao-next/internal/modules/catalog/category/infrastructure/gormstore"
-	productapplication "github.com/dujiao-next/internal/modules/catalog/product/application"
-	channeltransport "github.com/dujiao-next/internal/modules/channelapi/transport/http"
-	"github.com/dujiao-next/internal/shared/jsonmap"
-	"github.com/dujiao-next/internal/shared/money"
 	"github.com/gin-gonic/gin"
 	"github.com/glebarez/sqlite"
+	"github.com/homles698698-lab/XMall/internal/constants"
+	categorygormstore "github.com/homles698698-lab/XMall/internal/modules/catalog/category/infrastructure/gormstore"
+	productapplication "github.com/homles698698-lab/XMall/internal/modules/catalog/product/application"
+	channeltransport "github.com/homles698698-lab/XMall/internal/modules/channelapi/transport/http"
+	"github.com/homles698698-lab/XMall/internal/shared/jsonmap"
+	"github.com/homles698698-lab/XMall/internal/shared/money"
 	"github.com/shopspring/decimal"
 	"gorm.io/gorm"
 )

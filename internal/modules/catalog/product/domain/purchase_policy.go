@@ -5,9 +5,9 @@ import (
 	"strconv"
 	"strings"
 
-	categorydomain "github.com/dujiao-next/internal/modules/catalog/category/domain"
+	categorydomain "github.com/homles698698-lab/XMall/internal/modules/catalog/category/domain"
 
-	"github.com/dujiao-next/internal/constants"
+	"github.com/homles698698-lab/XMall/internal/constants"
 )
 
 var (

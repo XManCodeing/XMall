@@ -1,12 +1,12 @@
 package catalogproductbootstrap
 
 import (
-	productapplication "github.com/dujiao-next/internal/modules/catalog/product/application"
-	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
-	producthttp "github.com/dujiao-next/internal/modules/catalog/product/transport/http"
-	promotionapp "github.com/dujiao-next/internal/modules/promotion/application"
-	promotioncontract "github.com/dujiao-next/internal/modules/promotion/contract"
-	reseller "github.com/dujiao-next/internal/modules/reseller/contract"
+	productapplication "github.com/homles698698-lab/XMall/internal/modules/catalog/product/application"
+	productdomain "github.com/homles698698-lab/XMall/internal/modules/catalog/product/domain"
+	producthttp "github.com/homles698698-lab/XMall/internal/modules/catalog/product/transport/http"
+	promotionapp "github.com/homles698698-lab/XMall/internal/modules/promotion/application"
+	promotioncontract "github.com/homles698698-lab/XMall/internal/modules/promotion/contract"
+	reseller "github.com/homles698698-lab/XMall/internal/modules/reseller/contract"
 )
 
 // PublicHTTPDependencies 是公开 Product HTTP 入口的显式装配依赖。

@@ -7,14 +7,14 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	resellerdomain "github.com/dujiao-next/internal/modules/reseller/domain"
+	resellerdomain "github.com/homles698698-lab/XMall/internal/modules/reseller/domain"
 
-	productcontract "github.com/dujiao-next/internal/modules/catalog/product/contract"
+	productcontract "github.com/homles698698-lab/XMall/internal/modules/catalog/product/contract"
 
-	resellermodule "github.com/dujiao-next/internal/modules/reseller/contract"
-	adminhttp "github.com/dujiao-next/internal/modules/reseller/transport/http/admin"
-	userhttp "github.com/dujiao-next/internal/modules/reseller/transport/http/user"
-	"github.com/dujiao-next/internal/platform/http/response"
+	resellermodule "github.com/homles698698-lab/XMall/internal/modules/reseller/contract"
+	adminhttp "github.com/homles698698-lab/XMall/internal/modules/reseller/transport/http/admin"
+	userhttp "github.com/homles698698-lab/XMall/internal/modules/reseller/transport/http/user"
+	"github.com/homles698698-lab/XMall/internal/platform/http/response"
 
 	"github.com/gin-gonic/gin"
 )

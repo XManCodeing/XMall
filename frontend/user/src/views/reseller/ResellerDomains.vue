@@ -218,7 +218,7 @@
 import { computed, onMounted, reactive, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { CircleAlert, ExternalLink, Globe2, Link2, Plus, RotateCw } from 'lucide-vue-next'
-import { resellerAPI, type ResellerDomainData, type ResellerManagementSnapshotData } from '../../api'
+import { resellerAPI, type ResellerDomainData, type ResellerManagementSnapshotData } from '../../api/index.ts'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -236,10 +236,10 @@ import {
   RESELLER_DOMAIN_VERIFICATION_PENDING,
   RESELLER_DOMAIN_VERIFICATION_VERIFIED,
   RESELLER_PROFILE_STATUS_ACTIVE,
-} from '../../constants/reseller'
-import { type PageAlert } from '../../utils/alerts'
-import { formatResellerConsoleDate } from '../../utils/resellerConsole'
-import { getResellerDomainStatusKey } from '../../utils/resellerManagement'
+} from '../../constants/reseller.ts'
+import { type PageAlert } from '../../utils/alerts.ts'
+import { formatResellerConsoleDate } from '../../utils/resellerConsole.ts'
+import { getResellerDomainStatusKey } from '../../utils/resellerManagement.ts'
 
 const { t } = useI18n()
 const loading = ref(false)

@@ -46,7 +46,7 @@
 <script setup lang="ts">
 import { nextTick, onUnmounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { useUserAuthStore } from '../stores/userAuth'
+import { useUserAuthStore } from '../stores/userAuth.ts'
 import FormField from './FormField.vue'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'

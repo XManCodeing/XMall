@@ -1,6 +1,6 @@
 package productadmin
 
-import productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
+import productdomain "github.com/homles698698-lab/XMall/internal/modules/catalog/product/domain"
 
 // ProductRepository 是商品管理用例所需的最小商品端口。
 type ProductRepository interface {

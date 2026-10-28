@@ -4,16 +4,16 @@ import (
 	"fmt"
 	"time"
 
-	orderdomain "github.com/dujiao-next/internal/modules/order/domain"
+	orderdomain "github.com/homles698698-lab/XMall/internal/modules/order/domain"
 
-	walletdomain "github.com/dujiao-next/internal/modules/wallet/domain"
+	walletdomain "github.com/homles698698-lab/XMall/internal/modules/wallet/domain"
 
-	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
+	productdomain "github.com/homles698698-lab/XMall/internal/modules/catalog/product/domain"
 
-	userdomain "github.com/dujiao-next/internal/modules/identity/user/domain"
+	userdomain "github.com/homles698698-lab/XMall/internal/modules/identity/user/domain"
 
-	"github.com/dujiao-next/internal/constants"
-	dashboard "github.com/dujiao-next/internal/modules/dashboard/contract"
+	"github.com/homles698698-lab/XMall/internal/constants"
+	dashboard "github.com/homles698698-lab/XMall/internal/modules/dashboard/contract"
 )
 
 // GetOverview 获取总览统计

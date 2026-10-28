@@ -6,19 +6,19 @@ import (
 	"testing"
 	"time"
 
-	cardsecretdomain "github.com/dujiao-next/internal/modules/cardsecret/domain"
-	mappingdomain "github.com/dujiao-next/internal/modules/catalog/mapping/domain"
+	cardsecretdomain "github.com/homles698698-lab/XMall/internal/modules/cardsecret/domain"
+	mappingdomain "github.com/homles698698-lab/XMall/internal/modules/catalog/mapping/domain"
 
-	siteconnectiondomain "github.com/dujiao-next/internal/modules/siteconnection/domain"
+	siteconnectiondomain "github.com/homles698698-lab/XMall/internal/modules/siteconnection/domain"
 
-	productcontract "github.com/dujiao-next/internal/modules/catalog/product/contract"
-	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
+	productcontract "github.com/homles698698-lab/XMall/internal/modules/catalog/product/contract"
+	productdomain "github.com/homles698698-lab/XMall/internal/modules/catalog/product/domain"
 
-	categorydomain "github.com/dujiao-next/internal/modules/catalog/category/domain"
+	categorydomain "github.com/homles698698-lab/XMall/internal/modules/catalog/category/domain"
 
-	"github.com/dujiao-next/internal/constants"
-	"github.com/dujiao-next/internal/shared/jsonmap"
-	"github.com/dujiao-next/internal/shared/money"
+	"github.com/homles698698-lab/XMall/internal/constants"
+	"github.com/homles698698-lab/XMall/internal/shared/jsonmap"
+	"github.com/homles698698-lab/XMall/internal/shared/money"
 
 	"github.com/glebarez/sqlite"
 	"github.com/shopspring/decimal"

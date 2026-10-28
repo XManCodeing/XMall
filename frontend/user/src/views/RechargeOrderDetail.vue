@@ -151,7 +151,7 @@ import { ExternalLink } from 'lucide-vue-next'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import EmptyState from '../components/EmptyState.vue'
-import { useRechargeOrderDetail } from '../composables/useRechargeOrderDetail'
+import { useRechargeOrderDetail } from '../composables/useRechargeOrderDetail.ts'
 
 const { t } = useI18n()
 

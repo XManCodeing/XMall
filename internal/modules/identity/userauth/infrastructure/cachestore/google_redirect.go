@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/dujiao-next/internal/cache"
-	userauthapp "github.com/dujiao-next/internal/modules/identity/userauth/application"
+	"github.com/homles698698-lab/XMall/internal/cache"
+	userauthapp "github.com/homles698698-lab/XMall/internal/modules/identity/userauth/application"
 )
 
 const googleRedirectKeyPrefix = "user_auth:google_redirect"

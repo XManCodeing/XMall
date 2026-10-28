@@ -3,14 +3,14 @@ package gormstore
 import (
 	"context"
 	"errors"
-	"github.com/dujiao-next/internal/persistence/gormutil"
+	"github.com/homles698698-lab/XMall/internal/persistence/gormutil"
 	"strconv"
 	"strings"
 
-	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
+	productdomain "github.com/homles698698-lab/XMall/internal/modules/catalog/product/domain"
 
-	"github.com/dujiao-next/internal/modules/content/contract"
-	"github.com/dujiao-next/internal/modules/content/domain"
+	"github.com/homles698698-lab/XMall/internal/modules/content/contract"
+	"github.com/homles698698-lab/XMall/internal/modules/content/domain"
 	"gorm.io/gorm"
 )
 

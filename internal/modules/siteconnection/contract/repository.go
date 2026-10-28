@@ -1,6 +1,6 @@
 package contract
 
-import siteconnectiondomain "github.com/dujiao-next/internal/modules/siteconnection/domain"
+import siteconnectiondomain "github.com/homles698698-lab/XMall/internal/modules/siteconnection/domain"
 
 // ListFilter 是连接列表查询条件。
 type ListFilter struct {

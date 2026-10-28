@@ -14,9 +14,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/dujiao-next/internal/config"
-	"github.com/dujiao-next/internal/constants"
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/homles698698-lab/XMall/internal/config"
+	"github.com/homles698698-lab/XMall/internal/constants"
 )
 
 func newTestTelegramAuthServiceOIDC(t *testing.T) *Service {

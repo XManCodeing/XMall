@@ -4,12 +4,12 @@ import (
 	"strings"
 	"time"
 
-	"github.com/dujiao-next/internal/constants"
-	"github.com/dujiao-next/internal/logger"
-	ordercontract "github.com/dujiao-next/internal/modules/order/contract"
-	orderdomain "github.com/dujiao-next/internal/modules/order/domain"
-	walletcontract "github.com/dujiao-next/internal/modules/wallet/contract"
-	"github.com/dujiao-next/internal/shared/money"
+	"github.com/homles698698-lab/XMall/internal/constants"
+	"github.com/homles698698-lab/XMall/internal/logger"
+	ordercontract "github.com/homles698698-lab/XMall/internal/modules/order/contract"
+	orderdomain "github.com/homles698698-lab/XMall/internal/modules/order/domain"
+	walletcontract "github.com/homles698698-lab/XMall/internal/modules/wallet/contract"
+	"github.com/homles698698-lab/XMall/internal/shared/money"
 
 	"github.com/shopspring/decimal"
 )

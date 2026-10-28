@@ -3,8 +3,8 @@ package settingscurrency
 import (
 	"strings"
 
-	"github.com/dujiao-next/internal/constants"
-	settingsapp "github.com/dujiao-next/internal/modules/settings/application"
+	"github.com/homles698698-lab/XMall/internal/constants"
+	settingsapp "github.com/homles698698-lab/XMall/internal/modules/settings/application"
 )
 
 type Provider struct {

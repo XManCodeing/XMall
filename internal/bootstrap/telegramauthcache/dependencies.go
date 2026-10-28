@@ -4,8 +4,8 @@ import (
 	"context"
 	"time"
 
-	"github.com/dujiao-next/internal/cache"
-	telegramauthapp "github.com/dujiao-next/internal/modules/identity/telegramauth/application"
+	"github.com/homles698698-lab/XMall/internal/cache"
+	telegramauthapp "github.com/homles698698-lab/XMall/internal/modules/identity/telegramauth/application"
 )
 
 func Options() []telegramauthapp.Option {

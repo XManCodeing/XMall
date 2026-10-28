@@ -3,7 +3,7 @@ package channelclientcontract
 import (
 	"time"
 
-	channelclientdomain "github.com/dujiao-next/internal/modules/channelclient/domain"
+	channelclientdomain "github.com/homles698698-lab/XMall/internal/modules/channelclient/domain"
 )
 
 type Store interface {

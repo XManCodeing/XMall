@@ -5,22 +5,22 @@ import (
 	"testing"
 	"time"
 
-	paymentdomain "github.com/dujiao-next/internal/modules/payment/domain"
+	paymentdomain "github.com/homles698698-lab/XMall/internal/modules/payment/domain"
 
-	cardsecretdomain "github.com/dujiao-next/internal/modules/cardsecret/domain"
-	fulfillmentdomain "github.com/dujiao-next/internal/modules/fulfillment/domain"
-	. "github.com/dujiao-next/internal/modules/order/application"
-	orderdomain "github.com/dujiao-next/internal/modules/order/domain"
-	ordergormstore "github.com/dujiao-next/internal/modules/order/infrastructure/gormstore"
+	cardsecretdomain "github.com/homles698698-lab/XMall/internal/modules/cardsecret/domain"
+	fulfillmentdomain "github.com/homles698698-lab/XMall/internal/modules/fulfillment/domain"
+	. "github.com/homles698698-lab/XMall/internal/modules/order/application"
+	orderdomain "github.com/homles698698-lab/XMall/internal/modules/order/domain"
+	ordergormstore "github.com/homles698698-lab/XMall/internal/modules/order/infrastructure/gormstore"
 
-	coupondomain "github.com/dujiao-next/internal/modules/coupon/domain"
+	coupondomain "github.com/homles698698-lab/XMall/internal/modules/coupon/domain"
 
-	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
-	productgormstore "github.com/dujiao-next/internal/modules/catalog/product/store/gormstore"
+	productdomain "github.com/homles698698-lab/XMall/internal/modules/catalog/product/domain"
+	productgormstore "github.com/homles698698-lab/XMall/internal/modules/catalog/product/store/gormstore"
 
-	"github.com/dujiao-next/internal/constants"
-	coupongormstore "github.com/dujiao-next/internal/modules/coupon/infrastructure/gormstore"
-	"github.com/dujiao-next/internal/shared/money"
+	"github.com/homles698698-lab/XMall/internal/constants"
+	coupongormstore "github.com/homles698698-lab/XMall/internal/modules/coupon/infrastructure/gormstore"
+	"github.com/homles698698-lab/XMall/internal/shared/money"
 
 	"github.com/glebarez/sqlite"
 	"github.com/shopspring/decimal"

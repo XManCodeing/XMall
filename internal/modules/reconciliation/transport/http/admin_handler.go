@@ -4,10 +4,10 @@ import (
 	"errors"
 	"strings"
 
-	reconciliationcontract "github.com/dujiao-next/internal/modules/reconciliation/contract"
-	reconciliationdomain "github.com/dujiao-next/internal/modules/reconciliation/domain"
-	"github.com/dujiao-next/internal/platform/http/ginutil"
-	"github.com/dujiao-next/internal/platform/http/response"
+	reconciliationcontract "github.com/homles698698-lab/XMall/internal/modules/reconciliation/contract"
+	reconciliationdomain "github.com/homles698698-lab/XMall/internal/modules/reconciliation/domain"
+	"github.com/homles698698-lab/XMall/internal/platform/http/ginutil"
+	"github.com/homles698698-lab/XMall/internal/platform/http/response"
 
 	"github.com/gin-gonic/gin"
 )

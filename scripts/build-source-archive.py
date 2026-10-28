@@ -66,7 +66,7 @@ def main():
 
     output = ROOT / 'dist' / 'source-upload'
     output.mkdir(parents=True, exist_ok=True)
-    archive = output / 'dujiao-auv-source.zip'
+    archive = output / 'xmall-source.zip'
     with zipfile.ZipFile(archive, 'w', compression=zipfile.ZIP_DEFLATED) as bundle:
         for path in sorted(paths):
             bundle.write(path, str(path.relative_to(ROOT)))

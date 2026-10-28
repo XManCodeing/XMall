@@ -5,17 +5,17 @@ import (
 	"strings"
 	"time"
 
-	paymentdomain "github.com/dujiao-next/internal/modules/payment/domain"
+	paymentdomain "github.com/homles698698-lab/XMall/internal/modules/payment/domain"
 
-	orderdomain "github.com/dujiao-next/internal/modules/order/domain"
+	orderdomain "github.com/homles698698-lab/XMall/internal/modules/order/domain"
 
-	resellercontract "github.com/dujiao-next/internal/modules/reseller/contract"
+	resellercontract "github.com/homles698698-lab/XMall/internal/modules/reseller/contract"
 
-	resellerdomain "github.com/dujiao-next/internal/modules/reseller/domain"
+	resellerdomain "github.com/homles698698-lab/XMall/internal/modules/reseller/domain"
 
-	"github.com/dujiao-next/internal/logger"
-	"github.com/dujiao-next/internal/shared/jsonmap"
-	"github.com/dujiao-next/internal/shared/money"
+	"github.com/homles698698-lab/XMall/internal/logger"
+	"github.com/homles698698-lab/XMall/internal/shared/jsonmap"
+	"github.com/homles698698-lab/XMall/internal/shared/money"
 	"github.com/shopspring/decimal"
 )
 

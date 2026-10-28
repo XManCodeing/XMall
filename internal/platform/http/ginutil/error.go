@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/dujiao-next/internal/i18n"
-	"github.com/dujiao-next/internal/logger"
-	"github.com/dujiao-next/internal/platform/http/response"
+	"github.com/homles698698-lab/XMall/internal/i18n"
+	"github.com/homles698698-lab/XMall/internal/logger"
+	"github.com/homles698698-lab/XMall/internal/platform/http/response"
 
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator/v10"

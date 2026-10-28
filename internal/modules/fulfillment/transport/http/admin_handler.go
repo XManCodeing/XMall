@@ -4,12 +4,12 @@ import (
 	"errors"
 	"strings"
 
-	fulfillmentdomain "github.com/dujiao-next/internal/modules/fulfillment/domain"
-	orderdomain "github.com/dujiao-next/internal/modules/order/domain"
+	fulfillmentdomain "github.com/homles698698-lab/XMall/internal/modules/fulfillment/domain"
+	orderdomain "github.com/homles698698-lab/XMall/internal/modules/order/domain"
 
-	"github.com/dujiao-next/internal/platform/http/ginutil"
-	"github.com/dujiao-next/internal/platform/http/response"
-	"github.com/dujiao-next/internal/shared/jsonmap"
+	"github.com/homles698698-lab/XMall/internal/platform/http/ginutil"
+	"github.com/homles698698-lab/XMall/internal/platform/http/response"
+	"github.com/homles698698-lab/XMall/internal/shared/jsonmap"
 
 	"github.com/gin-gonic/gin"
 )

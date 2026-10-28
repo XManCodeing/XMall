@@ -3,7 +3,7 @@ package domain
 import (
 	"time"
 
-	siteconnectiondomain "github.com/dujiao-next/internal/modules/siteconnection/domain"
+	siteconnectiondomain "github.com/homles698698-lab/XMall/internal/modules/siteconnection/domain"
 )
 
 // Job 是对账任务聚合根。

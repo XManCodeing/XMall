@@ -6,10 +6,10 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/dujiao-next/internal/constants"
-	"github.com/dujiao-next/internal/logger"
-	"github.com/dujiao-next/internal/modules/procurement/application/execution"
-	procurementcontract "github.com/dujiao-next/internal/modules/procurement/contract"
+	"github.com/homles698698-lab/XMall/internal/constants"
+	"github.com/homles698698-lab/XMall/internal/logger"
+	"github.com/homles698698-lab/XMall/internal/modules/procurement/application/execution"
+	procurementcontract "github.com/homles698698-lab/XMall/internal/modules/procurement/contract"
 )
 
 // RetryManual 手动重试失败的采购单

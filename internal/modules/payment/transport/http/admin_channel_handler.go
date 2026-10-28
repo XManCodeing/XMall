@@ -5,15 +5,15 @@ import (
 	"errors"
 	"strings"
 
-	paymentcontract "github.com/dujiao-next/internal/modules/payment/contract"
-	paymentdomain "github.com/dujiao-next/internal/modules/payment/domain"
+	paymentcontract "github.com/homles698698-lab/XMall/internal/modules/payment/contract"
+	paymentdomain "github.com/homles698698-lab/XMall/internal/modules/payment/domain"
 
-	ginutil "github.com/dujiao-next/internal/platform/http/ginutil"
+	ginutil "github.com/homles698698-lab/XMall/internal/platform/http/ginutil"
 
-	"github.com/dujiao-next/internal/cache"
-	"github.com/dujiao-next/internal/platform/http/response"
-	"github.com/dujiao-next/internal/shared/jsonmap"
-	"github.com/dujiao-next/internal/shared/money"
+	"github.com/homles698698-lab/XMall/internal/cache"
+	"github.com/homles698698-lab/XMall/internal/platform/http/response"
+	"github.com/homles698698-lab/XMall/internal/shared/jsonmap"
+	"github.com/homles698698-lab/XMall/internal/shared/money"
 
 	"github.com/gin-gonic/gin"
 )

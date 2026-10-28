@@ -3,7 +3,7 @@ package contract
 import (
 	"time"
 
-	promotiondomain "github.com/dujiao-next/internal/modules/promotion/domain"
+	promotiondomain "github.com/homles698698-lab/XMall/internal/modules/promotion/domain"
 )
 
 // ListFilter 定义管理端活动价列表的查询条件。

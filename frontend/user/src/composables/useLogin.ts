@@ -1,18 +1,18 @@
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { useUserAuthStore } from '../stores/userAuth'
+import { useUserAuthStore } from '../stores/userAuth.ts'
 import { useI18n } from 'vue-i18n'
-import { debounceAsync } from '../utils/debounce'
-import { useAppStore } from '../stores/app'
-import { useTelegramMiniAppStore } from '../stores/telegramMiniApp'
-import { buildTelegramMiniAppEntryLink, isTelegramUrlEnvironment, openTelegramCompatibleLink } from '../utils/telegramMiniApp'
-import { userAuthAPI } from '../api'
-import type { CaptchaPayload, TelegramAuthPayload } from '../api'
+import { debounceAsync } from '../utils/debounce.ts'
+import { useAppStore } from '../stores/app.ts'
+import { useTelegramMiniAppStore } from '../stores/telegramMiniApp.ts'
+import { buildTelegramMiniAppEntryLink, isTelegramUrlEnvironment, openTelegramCompatibleLink } from '../utils/telegramMiniApp.ts'
+import { userAuthAPI } from '../api/index.ts'
+import type { CaptchaPayload, TelegramAuthPayload } from '../api/index.ts'
 import {
   canShowGoogleIdentityButton,
   detectGoogleIdentityUXMode,
   hasThirdPartyLoginOption,
-} from '../utils/googleIdentity'
+} from '../utils/googleIdentity.ts'
 import {
   createGoogleRedirectIntent,
   createGoogleRedirectPreparedIntent,
@@ -20,10 +20,10 @@ import {
   shouldResumeGoogleRedirect2FA,
   storeGoogleRedirectIntent,
   tryBuildGoogleRedirectCredentialCallbackURL,
-} from '../utils/googleRedirect'
+} from '../utils/googleRedirect.ts'
 import ImageCaptcha from '../components/captcha/ImageCaptcha.vue'
 import TurnstileCaptcha from '../components/captcha/TurnstileCaptcha.vue'
-import { useFormValidation } from './useFormValidation'
+import { useFormValidation } from './useFormValidation.ts'
 
 /**
  * 用户登录页共享逻辑（classic + vault 双模板共用）。
@@ -115,7 +115,7 @@ export function useLogin() {
   ))
   const telegramMiniAppEntryLink = computed(() => buildTelegramMiniAppEntryLink(telegramBotUsername.value, telegramMiniAppURL.value))
   const showTelegramMiniAppEntry = computed(() => !isTelegramMiniApp.value && telegramMiniAppEntryLink.value !== '')
-  const telegramCallbackName = '__dujiaoUserTelegramLogin'
+  const telegramCallbackName = '__xmallUserTelegramLogin'
   const miniAppLoginAttempted = ref(false)
   const attemptingMiniAppLogin = ref(false)
 

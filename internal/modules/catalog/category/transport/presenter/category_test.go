@@ -5,9 +5,9 @@ import (
 	"strings"
 	"testing"
 
-	categorydomain "github.com/dujiao-next/internal/modules/catalog/category/domain"
+	categorydomain "github.com/homles698698-lab/XMall/internal/modules/catalog/category/domain"
 
-	"github.com/dujiao-next/internal/shared/jsonmap"
+	"github.com/homles698698-lab/XMall/internal/shared/jsonmap"
 )
 
 func TestCategoryRespOmitsSensitiveFields(t *testing.T) {

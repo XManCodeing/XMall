@@ -4,11 +4,11 @@ import (
 	"strconv"
 	"strings"
 
-	orderdomain "github.com/dujiao-next/internal/modules/order/domain"
+	orderdomain "github.com/homles698698-lab/XMall/internal/modules/order/domain"
 
-	productcontract "github.com/dujiao-next/internal/modules/catalog/product/contract"
+	productcontract "github.com/homles698698-lab/XMall/internal/modules/catalog/product/contract"
 
-	"github.com/dujiao-next/internal/constants"
+	"github.com/homles698698-lab/XMall/internal/constants"
 )
 
 type manualStockSummary struct {

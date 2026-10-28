@@ -6,13 +6,13 @@ import (
 	"testing"
 	"time"
 
-	"github.com/dujiao-next/internal/constants"
-	contentapp "github.com/dujiao-next/internal/modules/content/application"
-	contentcontract "github.com/dujiao-next/internal/modules/content/contract"
-	contentdomain "github.com/dujiao-next/internal/modules/content/domain"
-	"github.com/dujiao-next/internal/modules/content/infrastructure/gormstore"
-	"github.com/dujiao-next/internal/shared/jsonmap"
 	"github.com/glebarez/sqlite"
+	"github.com/homles698698-lab/XMall/internal/constants"
+	contentapp "github.com/homles698698-lab/XMall/internal/modules/content/application"
+	contentcontract "github.com/homles698698-lab/XMall/internal/modules/content/contract"
+	contentdomain "github.com/homles698698-lab/XMall/internal/modules/content/domain"
+	"github.com/homles698698-lab/XMall/internal/modules/content/infrastructure/gormstore"
+	"github.com/homles698698-lab/XMall/internal/shared/jsonmap"
 	"gorm.io/gorm"
 )
 

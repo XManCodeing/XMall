@@ -3,7 +3,7 @@ package settingsapp
 import (
 	"testing"
 
-	"github.com/dujiao-next/internal/constants"
+	"github.com/homles698698-lab/XMall/internal/constants"
 )
 
 func TestUpdateDashboardSettingNormalized(t *testing.T) {

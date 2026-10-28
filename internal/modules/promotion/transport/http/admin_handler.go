@@ -3,12 +3,12 @@ package promotionhttp
 import (
 	"errors"
 
-	promotionapp "github.com/dujiao-next/internal/modules/promotion/application"
-	promotioncontract "github.com/dujiao-next/internal/modules/promotion/contract"
-	promotiondomain "github.com/dujiao-next/internal/modules/promotion/domain"
-	ginutil "github.com/dujiao-next/internal/platform/http/ginutil"
-	"github.com/dujiao-next/internal/platform/http/response"
-	"github.com/dujiao-next/internal/shared/money"
+	promotionapp "github.com/homles698698-lab/XMall/internal/modules/promotion/application"
+	promotioncontract "github.com/homles698698-lab/XMall/internal/modules/promotion/contract"
+	promotiondomain "github.com/homles698698-lab/XMall/internal/modules/promotion/domain"
+	ginutil "github.com/homles698698-lab/XMall/internal/platform/http/ginutil"
+	"github.com/homles698698-lab/XMall/internal/platform/http/response"
+	"github.com/homles698698-lab/XMall/internal/shared/money"
 
 	"github.com/gin-gonic/gin"
 	"github.com/shopspring/decimal"

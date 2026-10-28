@@ -4,12 +4,12 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/dujiao-next/internal/i18n"
-	memberleveldomain "github.com/dujiao-next/internal/modules/memberlevel/domain"
-	memberlevelpresenter "github.com/dujiao-next/internal/modules/memberlevel/transport/presenter"
-	"github.com/dujiao-next/internal/platform/http/ginutil"
-	"github.com/dujiao-next/internal/platform/http/response"
-	"github.com/dujiao-next/internal/shared/jsonmap"
+	"github.com/homles698698-lab/XMall/internal/i18n"
+	memberleveldomain "github.com/homles698698-lab/XMall/internal/modules/memberlevel/domain"
+	memberlevelpresenter "github.com/homles698698-lab/XMall/internal/modules/memberlevel/transport/presenter"
+	"github.com/homles698698-lab/XMall/internal/platform/http/ginutil"
+	"github.com/homles698698-lab/XMall/internal/platform/http/response"
+	"github.com/homles698698-lab/XMall/internal/shared/jsonmap"
 
 	"github.com/gin-gonic/gin"
 )

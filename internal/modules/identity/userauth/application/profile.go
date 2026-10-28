@@ -5,12 +5,12 @@ import (
 	"strings"
 	"time"
 
-	userdomain "github.com/dujiao-next/internal/modules/identity/user/domain"
-	"github.com/dujiao-next/internal/shared/passwordpolicy"
+	userdomain "github.com/homles698698-lab/XMall/internal/modules/identity/user/domain"
+	"github.com/homles698698-lab/XMall/internal/shared/passwordpolicy"
 
-	"github.com/dujiao-next/internal/cache"
-	"github.com/dujiao-next/internal/constants"
-	"github.com/dujiao-next/internal/telegramidentity"
+	"github.com/homles698698-lab/XMall/internal/cache"
+	"github.com/homles698698-lab/XMall/internal/constants"
+	"github.com/homles698698-lab/XMall/internal/telegramidentity"
 
 	"golang.org/x/crypto/bcrypt"
 )

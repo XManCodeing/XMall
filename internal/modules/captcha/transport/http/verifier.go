@@ -1,7 +1,7 @@
 package captchahttp
 
 import (
-	captchaapp "github.com/dujiao-next/internal/modules/captcha/application"
+	captchaapp "github.com/homles698698-lab/XMall/internal/modules/captcha/application"
 )
 
 // Verifier adapts the captcha module to HTTP transport contracts.

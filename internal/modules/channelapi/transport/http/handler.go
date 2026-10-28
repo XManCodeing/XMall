@@ -5,21 +5,21 @@ import (
 	"errors"
 	"time"
 
-	paymentdomain "github.com/dujiao-next/internal/modules/payment/domain"
+	paymentdomain "github.com/homles698698-lab/XMall/internal/modules/payment/domain"
 
-	orderdomain "github.com/dujiao-next/internal/modules/order/domain"
+	orderdomain "github.com/homles698698-lab/XMall/internal/modules/order/domain"
 
-	mappingdomain "github.com/dujiao-next/internal/modules/catalog/mapping/domain"
+	mappingdomain "github.com/homles698698-lab/XMall/internal/modules/catalog/mapping/domain"
 
-	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
+	productdomain "github.com/homles698698-lab/XMall/internal/modules/catalog/product/domain"
 
-	categorydomain "github.com/dujiao-next/internal/modules/catalog/category/domain"
+	categorydomain "github.com/homles698698-lab/XMall/internal/modules/catalog/category/domain"
 
-	userdomain "github.com/dujiao-next/internal/modules/identity/user/domain"
+	userdomain "github.com/homles698698-lab/XMall/internal/modules/identity/user/domain"
 
-	externalidentitydomain "github.com/dujiao-next/internal/modules/identity/externalidentity/domain"
-	"github.com/dujiao-next/internal/shared/jsonmap"
-	"github.com/dujiao-next/internal/shared/money"
+	externalidentitydomain "github.com/homles698698-lab/XMall/internal/modules/identity/externalidentity/domain"
+	"github.com/homles698698-lab/XMall/internal/shared/jsonmap"
+	"github.com/homles698698-lab/XMall/internal/shared/money"
 
 	"github.com/shopspring/decimal"
 )

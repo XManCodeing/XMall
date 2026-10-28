@@ -4,10 +4,10 @@ import (
 	"net/http"
 	"time"
 
-	settingsmessaging "github.com/dujiao-next/internal/modules/settings/schema/messaging"
-	"github.com/dujiao-next/internal/platform/http/channelresponse"
-	"github.com/dujiao-next/internal/platform/http/ginutil"
-	"github.com/dujiao-next/internal/platform/http/response"
+	settingsmessaging "github.com/homles698698-lab/XMall/internal/modules/settings/schema/messaging"
+	"github.com/homles698698-lab/XMall/internal/platform/http/channelresponse"
+	"github.com/homles698698-lab/XMall/internal/platform/http/ginutil"
+	"github.com/homles698698-lab/XMall/internal/platform/http/response"
 
 	"github.com/gin-gonic/gin"
 )

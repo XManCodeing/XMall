@@ -205,7 +205,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
-import { useLogin } from '../../../composables/useLogin'
+import { useLogin } from '../../../composables/useLogin.ts'
 
 const { t } = useI18n()
 

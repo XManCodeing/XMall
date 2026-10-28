@@ -3,8 +3,8 @@ package broadcaststore
 import (
 	"errors"
 
-	broadcastcontract "github.com/dujiao-next/internal/modules/telegram/broadcast/contract"
-	broadcastdomain "github.com/dujiao-next/internal/modules/telegram/broadcast/domain"
+	broadcastcontract "github.com/homles698698-lab/XMall/internal/modules/telegram/broadcast/contract"
+	broadcastdomain "github.com/homles698698-lab/XMall/internal/modules/telegram/broadcast/domain"
 
 	"gorm.io/gorm"
 )

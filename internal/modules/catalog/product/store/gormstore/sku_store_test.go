@@ -5,12 +5,12 @@ import (
 	"testing"
 	"time"
 
-	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
+	productdomain "github.com/homles698698-lab/XMall/internal/modules/catalog/product/domain"
 
-	"github.com/dujiao-next/internal/constants"
-	"github.com/dujiao-next/internal/shared/jsonmap"
-	"github.com/dujiao-next/internal/shared/money"
 	"github.com/glebarez/sqlite"
+	"github.com/homles698698-lab/XMall/internal/constants"
+	"github.com/homles698698-lab/XMall/internal/shared/jsonmap"
+	"github.com/homles698698-lab/XMall/internal/shared/money"
 	"github.com/shopspring/decimal"
 	"gorm.io/gorm"
 )

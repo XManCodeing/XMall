@@ -1,7 +1,7 @@
 // Package selfupdate 实现后台一键升级：从 GitHub Release 拉取当前平台的二进制归档，
 // 校验 sha256 后原子替换正在运行的可执行文件，并在具备进程守护时自动重启。
 //
-// 明确不支持容器部署。容器内替换 /app/dujiao-next 只对当前容器生命周期有效，
+// 明确不支持容器部署。容器内替换 /app/xmall 只对当前容器生命周期有效，
 // 一旦 docker restart / compose up / 宿主重启，进程又会回到镜像层里的旧二进制，
 // 表现为「升级成功后过几天自己变回旧版」。容器的正确升级路径是拉新镜像重建容器，
 // 因此这里探测到容器环境时直接阻断，由前端改为展示 compose 升级命令。
@@ -18,7 +18,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/dujiao-next/internal/version"
+	"github.com/homles698698-lab/XMall/internal/version"
 )
 
 // Deployment 当前进程的部署形态
@@ -106,7 +106,7 @@ func Detect() Capability {
 		return c
 	}
 
-	// 本地 go build 的版本号是占位值 v1.0.0，任何线上发行版都会被判定为「有新版本」，
+	// 本地 go build 的版本号是占位值 v1.1.0，任何线上发行版都会被判定为「有新版本」，
 	// 放开升级等于把开发者自己编译的二进制悄悄换掉。
 	if !version.IsReleaseBuild() {
 		c.BlockReason = BlockSourceBuild
@@ -156,7 +156,7 @@ func Detect() Capability {
 }
 
 // ExecutablePath 返回当前可执行文件解析软链后的绝对路径。
-// 必须解析软链：常见部署会用 /usr/local/bin/dujiao-next -> /opt/dujiao-next/dujiao-next，
+// 必须解析软链：常见部署会用 /usr/local/bin/xmall -> /opt/xmall/xmall，
 // 直接替换软链会把链接本身变成普通文件。
 func ExecutablePath() (string, error) {
 	exe, err := os.Executable()
@@ -213,10 +213,10 @@ const systemctlTimeout = 2 * time.Second
 
 // systemdUnit 从 cgroup 路径解析当前进程所属的 systemd service 名。
 //
-//	cgroup v2: "0::/system.slice/dujiao-next.service"
-//	cgroup v1: "1:name=systemd:/system.slice/dujiao-next.service"
+//	cgroup v2: "0::/system.slice/xmall.service"
+//	cgroup v1: "1:name=systemd:/system.slice/xmall.service"
 //
-// 用 cgroup 而不是猜固定名字：unit 名由用户自己定，文档里叫 dujiao-next.service，
+// 用 cgroup 而不是猜固定名字：unit 名由用户自己定，文档里叫 xmall.service，
 // 实际部署可能是任意名称。
 func systemdUnit() string {
 	data, err := os.ReadFile("/proc/self/cgroup")
@@ -338,7 +338,7 @@ func restartConfigRelaunches(cfg unitRestartConfig) bool {
 // 不用 unix.Access：进程可能以非 root 运行且属主/属组与 stat 位的组合难以准确推断，
 // 直接试一次最可靠。
 func dirWritable(dir string) bool {
-	f, err := os.CreateTemp(dir, ".dujiao-update-probe-*")
+	f, err := os.CreateTemp(dir, ".xmall-update-probe-*")
 	if err != nil {
 		return false
 	}
@@ -353,7 +353,7 @@ func dirWritable(dir string) bool {
 //
 //	{{ProjectName}}_{{.Tag}}_{{title .Os}}_{{x86_64|i386|其它原样}}
 //
-// 例：dujiao-next_v1.5.0_Linux_x86_64.tar.gz
+// 例：xmall_v1.5.0_Linux_x86_64.tar.gz
 func PlatformAssetSuffix() string {
 	osPart := strings.ToUpper(runtime.GOOS[:1]) + runtime.GOOS[1:]
 

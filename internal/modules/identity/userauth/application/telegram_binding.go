@@ -4,9 +4,9 @@ import (
 	"context"
 	"time"
 
-	"github.com/dujiao-next/internal/constants"
-	externalidentitydomain "github.com/dujiao-next/internal/modules/identity/externalidentity/domain"
-	telegramauthapp "github.com/dujiao-next/internal/modules/identity/telegramauth/application"
+	"github.com/homles698698-lab/XMall/internal/constants"
+	externalidentitydomain "github.com/homles698698-lab/XMall/internal/modules/identity/externalidentity/domain"
+	telegramauthapp "github.com/homles698698-lab/XMall/internal/modules/identity/telegramauth/application"
 )
 
 // BindTelegramInput 绑定 Telegram 输入

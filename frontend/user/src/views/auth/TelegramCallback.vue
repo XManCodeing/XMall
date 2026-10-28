@@ -12,7 +12,7 @@
 <script setup lang="ts">
 import { useI18n } from 'vue-i18n'
 import InviteCodeDialog from '../../components/InviteCodeDialog.vue'
-import { useTelegramCallback } from '../../composables/useTelegramCallback'
+import { useTelegramCallback } from '../../composables/useTelegramCallback.ts'
 
 const { t } = useI18n()
 

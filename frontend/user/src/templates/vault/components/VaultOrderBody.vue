@@ -146,7 +146,7 @@ import { useI18n } from 'vue-i18n'
 import { Badge } from '@/components/ui/badge'
 import VaultOrderItem from './VaultOrderItem.vue'
 import VaultOrderFulfillment from './VaultOrderFulfillment.vue'
-import { useOrderDisplayHelpers } from '../../../composables/useOrderDisplayHelpers'
+import { useOrderDisplayHelpers } from '../../../composables/useOrderDisplayHelpers.ts'
 
 const props = defineProps<{
   order: any

@@ -12,7 +12,7 @@
 
       <section>
         <header class="auth-heading">
-          <img src="/dj.svg" alt="" width="48" height="48" class="mx-auto mb-6 h-12 w-12 object-contain" />
+          <BrandMark class="mx-auto mb-6 flex h-12 w-12" />
           <h1 class="text-[28px] font-semibold leading-tight tracking-tight text-foreground">{{ t('auth.forgot.title') }}</h1>
           <p class="mx-auto mt-3 max-w-xs text-sm leading-relaxed text-muted-foreground">{{ t('auth.forgot.subtitle') }}</p>
         </header>
@@ -123,6 +123,7 @@
 </template>
 
 <script setup lang="ts">
+import BrandMark from '@/components/BrandMark.vue'
 import { useI18n } from 'vue-i18n'
 import ImageCaptcha from '../../components/captcha/ImageCaptcha.vue'
 import TurnstileCaptcha from '../../components/captcha/TurnstileCaptcha.vue'
@@ -130,7 +131,7 @@ import { ArrowLeft, Mail, ShieldCheck, KeyRound } from 'lucide-vue-next'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { useForgot } from '../../composables/useForgot'
+import { useForgot } from '../../composables/useForgot.ts'
 
 const { t } = useI18n()
 

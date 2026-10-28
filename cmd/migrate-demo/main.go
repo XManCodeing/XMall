@@ -15,10 +15,10 @@ import (
 	"strings"
 	"time"
 
-	category "github.com/dujiao-next/internal/modules/catalog/category/domain"
-	product "github.com/dujiao-next/internal/modules/catalog/product/domain"
-	"github.com/dujiao-next/internal/platform/database/gormdb"
 	"github.com/glebarez/sqlite"
+	category "github.com/homles698698-lab/XMall/internal/modules/catalog/category/domain"
+	product "github.com/homles698698-lab/XMall/internal/modules/catalog/product/domain"
+	"github.com/homles698698-lab/XMall/internal/platform/database/gormdb"
 	"gopkg.in/yaml.v3"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"

@@ -7,21 +7,21 @@ import (
 	"strings"
 	"time"
 
-	walletdomain "github.com/dujiao-next/internal/modules/wallet/domain"
+	walletdomain "github.com/homles698698-lab/XMall/internal/modules/wallet/domain"
 
-	coupondomain "github.com/dujiao-next/internal/modules/coupon/domain"
+	coupondomain "github.com/homles698698-lab/XMall/internal/modules/coupon/domain"
 
-	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
+	productdomain "github.com/homles698698-lab/XMall/internal/modules/catalog/product/domain"
 
-	userdomain "github.com/dujiao-next/internal/modules/identity/user/domain"
+	userdomain "github.com/homles698698-lab/XMall/internal/modules/identity/user/domain"
 
-	"github.com/dujiao-next/internal/constants"
-	couponcontract "github.com/dujiao-next/internal/modules/coupon/contract"
-	externalidentitydomain "github.com/dujiao-next/internal/modules/identity/externalidentity/domain"
-	"github.com/dujiao-next/internal/platform/http/ginutil"
-	"github.com/dujiao-next/internal/platform/http/response"
-	"github.com/dujiao-next/internal/shared/jsonmap"
-	"github.com/dujiao-next/internal/shared/money"
+	"github.com/homles698698-lab/XMall/internal/constants"
+	couponcontract "github.com/homles698698-lab/XMall/internal/modules/coupon/contract"
+	externalidentitydomain "github.com/homles698698-lab/XMall/internal/modules/identity/externalidentity/domain"
+	"github.com/homles698698-lab/XMall/internal/platform/http/ginutil"
+	"github.com/homles698698-lab/XMall/internal/platform/http/response"
+	"github.com/homles698698-lab/XMall/internal/shared/jsonmap"
+	"github.com/homles698698-lab/XMall/internal/shared/money"
 
 	"github.com/gin-gonic/gin"
 	"github.com/shopspring/decimal"

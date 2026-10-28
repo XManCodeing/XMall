@@ -4,16 +4,16 @@ import (
 	"fmt"
 	"strings"
 
-	orderdomain "github.com/dujiao-next/internal/modules/order/domain"
+	orderdomain "github.com/homles698698-lab/XMall/internal/modules/order/domain"
 
-	resellercontract "github.com/dujiao-next/internal/modules/reseller/contract"
+	resellercontract "github.com/homles698698-lab/XMall/internal/modules/reseller/contract"
 
-	resellerdomain "github.com/dujiao-next/internal/modules/reseller/domain"
+	resellerdomain "github.com/homles698698-lab/XMall/internal/modules/reseller/domain"
 
-	productcontract "github.com/dujiao-next/internal/modules/catalog/product/contract"
+	productcontract "github.com/homles698698-lab/XMall/internal/modules/catalog/product/contract"
 
-	"github.com/dujiao-next/internal/constants"
-	"github.com/dujiao-next/internal/shared/jsonmap"
+	"github.com/homles698698-lab/XMall/internal/constants"
+	"github.com/homles698698-lab/XMall/internal/shared/jsonmap"
 	"github.com/shopspring/decimal"
 )
 

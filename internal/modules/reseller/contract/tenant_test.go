@@ -4,7 +4,7 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/dujiao-next/internal/config"
+	"github.com/homles698698-lab/XMall/internal/config"
 )
 
 func TestNormalizeHost(t *testing.T) {

@@ -4,16 +4,16 @@ import (
 	"errors"
 	"time"
 
-	affiliatecontract "github.com/dujiao-next/internal/modules/affiliate/contract"
-	cardsecretcontract "github.com/dujiao-next/internal/modules/cardsecret/contract"
-	productcontract "github.com/dujiao-next/internal/modules/catalog/product/contract"
-	couponcontract "github.com/dujiao-next/internal/modules/coupon/contract"
-	fulfillmentcontract "github.com/dujiao-next/internal/modules/fulfillment/contract"
-	orderdomain "github.com/dujiao-next/internal/modules/order/domain"
-	resellercontract "github.com/dujiao-next/internal/modules/reseller/contract"
-	resellerdomain "github.com/dujiao-next/internal/modules/reseller/domain"
-	walletcontract "github.com/dujiao-next/internal/modules/wallet/contract"
-	"github.com/dujiao-next/internal/shared/money"
+	affiliatecontract "github.com/homles698698-lab/XMall/internal/modules/affiliate/contract"
+	cardsecretcontract "github.com/homles698698-lab/XMall/internal/modules/cardsecret/contract"
+	productcontract "github.com/homles698698-lab/XMall/internal/modules/catalog/product/contract"
+	couponcontract "github.com/homles698698-lab/XMall/internal/modules/coupon/contract"
+	fulfillmentcontract "github.com/homles698698-lab/XMall/internal/modules/fulfillment/contract"
+	orderdomain "github.com/homles698698-lab/XMall/internal/modules/order/domain"
+	resellercontract "github.com/homles698698-lab/XMall/internal/modules/reseller/contract"
+	resellerdomain "github.com/homles698698-lab/XMall/internal/modules/reseller/domain"
+	walletcontract "github.com/homles698698-lab/XMall/internal/modules/wallet/contract"
+	"github.com/homles698698-lab/XMall/internal/shared/money"
 )
 
 var ErrProcurementRefundBlocked = errors.New("active upstream procurement blocks local refund")

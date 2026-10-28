@@ -3,13 +3,13 @@ package catalogmappingbootstrap
 import (
 	"errors"
 
-	productcontract "github.com/dujiao-next/internal/modules/catalog/product/contract"
+	productcontract "github.com/homles698698-lab/XMall/internal/modules/catalog/product/contract"
 
-	categorycontract "github.com/dujiao-next/internal/modules/catalog/category/contract"
+	categorycontract "github.com/homles698698-lab/XMall/internal/modules/catalog/category/contract"
 
-	mappingapp "github.com/dujiao-next/internal/modules/catalog/mapping/application"
-	mappingcontract "github.com/dujiao-next/internal/modules/catalog/mapping/contract"
-	siteconnectionapp "github.com/dujiao-next/internal/modules/siteconnection/application"
+	mappingapp "github.com/homles698698-lab/XMall/internal/modules/catalog/mapping/application"
+	mappingcontract "github.com/homles698698-lab/XMall/internal/modules/catalog/mapping/contract"
+	siteconnectionapp "github.com/homles698698-lab/XMall/internal/modules/siteconnection/application"
 
 	"gorm.io/gorm"
 )

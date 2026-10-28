@@ -6,10 +6,10 @@ import (
 	"strings"
 	"time"
 
-	externalidentitydomain "github.com/dujiao-next/internal/modules/identity/externalidentity/domain"
-	invitecodestore "github.com/dujiao-next/internal/modules/identity/invitecode/infrastructure/gormstore"
-	userdomain "github.com/dujiao-next/internal/modules/identity/user/domain"
-	userauthapp "github.com/dujiao-next/internal/modules/identity/userauth/application"
+	externalidentitydomain "github.com/homles698698-lab/XMall/internal/modules/identity/externalidentity/domain"
+	invitecodestore "github.com/homles698698-lab/XMall/internal/modules/identity/invitecode/infrastructure/gormstore"
+	userdomain "github.com/homles698698-lab/XMall/internal/modules/identity/user/domain"
+	userauthapp "github.com/homles698698-lab/XMall/internal/modules/identity/userauth/application"
 
 	"github.com/go-sql-driver/mysql"
 	"github.com/jackc/pgx/v5/pgconn"

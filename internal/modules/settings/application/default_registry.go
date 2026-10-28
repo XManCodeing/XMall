@@ -1,12 +1,12 @@
 package settingsapp
 
 import (
-	"github.com/dujiao-next/internal/constants"
-	settingsintegration "github.com/dujiao-next/internal/modules/settings/schema/integration"
-	settingsmessaging "github.com/dujiao-next/internal/modules/settings/schema/messaging"
-	settingssecurity "github.com/dujiao-next/internal/modules/settings/schema/security"
-	settingsstorefront "github.com/dujiao-next/internal/modules/settings/schema/storefront"
-	"github.com/dujiao-next/internal/shared/jsonmap"
+	"github.com/homles698698-lab/XMall/internal/constants"
+	settingsintegration "github.com/homles698698-lab/XMall/internal/modules/settings/schema/integration"
+	settingsmessaging "github.com/homles698698-lab/XMall/internal/modules/settings/schema/messaging"
+	settingssecurity "github.com/homles698698-lab/XMall/internal/modules/settings/schema/security"
+	settingsstorefront "github.com/homles698698-lab/XMall/internal/modules/settings/schema/storefront"
+	"github.com/homles698698-lab/XMall/internal/shared/jsonmap"
 )
 
 // defaultSettingRegistry 显式登记通用 Update API 支持的归一化策略。

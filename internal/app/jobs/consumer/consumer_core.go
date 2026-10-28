@@ -1,10 +1,10 @@
 package consumer
 
 import (
-	"github.com/dujiao-next/internal/app/container"
-	"github.com/dujiao-next/internal/logger"
-	orderdomain "github.com/dujiao-next/internal/modules/order/domain"
-	"github.com/dujiao-next/internal/queue"
+	"github.com/homles698698-lab/XMall/internal/app/container"
+	"github.com/homles698698-lab/XMall/internal/logger"
+	orderdomain "github.com/homles698698-lab/XMall/internal/modules/order/domain"
+	"github.com/homles698698-lab/XMall/internal/queue"
 
 	"github.com/hibiken/asynq"
 )

@@ -3,10 +3,10 @@ package productdomain
 import (
 	"time"
 
-	categorydomain "github.com/dujiao-next/internal/modules/catalog/category/domain"
-	"github.com/dujiao-next/internal/shared/jsonmap"
-	"github.com/dujiao-next/internal/shared/jsonslice"
-	"github.com/dujiao-next/internal/shared/money"
+	categorydomain "github.com/homles698698-lab/XMall/internal/modules/catalog/category/domain"
+	"github.com/homles698698-lab/XMall/internal/shared/jsonmap"
+	"github.com/homles698698-lab/XMall/internal/shared/jsonslice"
+	"github.com/homles698698-lab/XMall/internal/shared/money"
 )
 
 // Product 商品表

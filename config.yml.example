@@ -7,7 +7,7 @@
 
 app:
   secret_key: ""
-  totp_issuer: "Dujiao-Next"
+  totp_issuer: "XMall"
 
 server:
   host: "127.0.0.1" # 容器内需按部署方式改为 0.0.0.0
@@ -32,7 +32,7 @@ log:
 # dsn: "host=127.0.0.1 port=5432 user=demo_user password=REPLACE_WITH_PASSWORD dbname=demo_db sslmode=require"
 database:
   driver: "sqlite"
-  dsn: "./db/dujiao.db"
+  dsn: "./db/xmall.db"
   pool:
     max_open_conns: 1 # SQLite 保持单连接
     max_idle_conns: 1
@@ -173,7 +173,7 @@ reseller:
   self_apply_enabled: false
   settlement_confirm_days: 7
 
-# 二开版本默认关闭远程更新，避免覆盖本地修改。
-# 仅在自己的发布仓库和升级包完成验证后填写 owner/repository。
+# 默认更新源为本项目仓库；填写空字符串可关闭远程更新。
+# 仓库改名不代表已有 XMall 兼容发行包，发布前须验证新包及更新兼容性。
 update:
-  repository: "homles698698-lab/dujiao-auv"
+  repository: "homles698698-lab/XMall"

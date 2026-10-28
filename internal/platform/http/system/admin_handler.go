@@ -5,11 +5,11 @@ import (
 	"errors"
 	"time"
 
-	ginutil "github.com/dujiao-next/internal/platform/http/ginutil"
+	ginutil "github.com/homles698698-lab/XMall/internal/platform/http/ginutil"
 
-	"github.com/dujiao-next/internal/platform/http/response"
-	"github.com/dujiao-next/internal/selfupdate"
-	"github.com/dujiao-next/internal/version"
+	"github.com/homles698698-lab/XMall/internal/platform/http/response"
+	"github.com/homles698698-lab/XMall/internal/selfupdate"
+	"github.com/homles698698-lab/XMall/internal/version"
 
 	"github.com/gin-gonic/gin"
 )

@@ -3,9 +3,9 @@ package gormstore
 import (
 	"time"
 
-	"github.com/dujiao-next/internal/constants"
-	reconciliationcontract "github.com/dujiao-next/internal/modules/reconciliation/contract"
-	reconciliationdomain "github.com/dujiao-next/internal/modules/reconciliation/domain"
+	"github.com/homles698698-lab/XMall/internal/constants"
+	reconciliationcontract "github.com/homles698698-lab/XMall/internal/modules/reconciliation/contract"
+	reconciliationdomain "github.com/homles698698-lab/XMall/internal/modules/reconciliation/domain"
 
 	"gorm.io/gorm"
 )

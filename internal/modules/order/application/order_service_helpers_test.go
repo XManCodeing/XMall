@@ -3,12 +3,12 @@ package application
 import (
 	"testing"
 
-	orderdomain "github.com/dujiao-next/internal/modules/order/domain"
+	orderdomain "github.com/homles698698-lab/XMall/internal/modules/order/domain"
 
-	coupondomain "github.com/dujiao-next/internal/modules/coupon/domain"
+	coupondomain "github.com/homles698698-lab/XMall/internal/modules/coupon/domain"
 
-	"github.com/dujiao-next/internal/constants"
-	"github.com/dujiao-next/internal/shared/jsonmap"
+	"github.com/homles698698-lab/XMall/internal/constants"
+	"github.com/homles698698-lab/XMall/internal/shared/jsonmap"
 
 	"github.com/shopspring/decimal"
 )

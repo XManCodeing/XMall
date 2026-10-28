@@ -3,7 +3,7 @@ package common
 import (
 	"context"
 
-	"github.com/dujiao-next/internal/shared/outboundctx"
+	"github.com/homles698698-lab/XMall/internal/shared/outboundctx"
 )
 
 // DefaultTimeout 支付请求默认超时。

@@ -8,8 +8,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/dujiao-next/internal/constants"
-	userdomain "github.com/dujiao-next/internal/modules/identity/user/domain"
+	"github.com/homles698698-lab/XMall/internal/constants"
+	userdomain "github.com/homles698698-lab/XMall/internal/modules/identity/user/domain"
 
 	"github.com/gin-gonic/gin"
 )

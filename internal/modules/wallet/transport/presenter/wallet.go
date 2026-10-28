@@ -3,12 +3,12 @@ package presenter
 import (
 	"time"
 
-	paymentdomain "github.com/dujiao-next/internal/modules/payment/domain"
-	paymentpresenter "github.com/dujiao-next/internal/modules/payment/transport/presenter"
+	paymentdomain "github.com/homles698698-lab/XMall/internal/modules/payment/domain"
+	paymentpresenter "github.com/homles698698-lab/XMall/internal/modules/payment/transport/presenter"
 
-	walletdomain "github.com/dujiao-next/internal/modules/wallet/domain"
+	walletdomain "github.com/homles698698-lab/XMall/internal/modules/wallet/domain"
 
-	"github.com/dujiao-next/internal/shared/money"
+	"github.com/homles698698-lab/XMall/internal/shared/money"
 )
 
 // WalletAccountResp 钱包账户响应

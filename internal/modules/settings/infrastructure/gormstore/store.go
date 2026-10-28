@@ -3,7 +3,7 @@ package settingsstore
 import (
 	"errors"
 
-	"github.com/dujiao-next/internal/shared/jsonmap"
+	"github.com/homles698698-lab/XMall/internal/shared/jsonmap"
 	"gorm.io/gorm"
 )
 

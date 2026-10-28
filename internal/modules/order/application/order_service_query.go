@@ -5,12 +5,12 @@ import (
 	"strings"
 	"time"
 
-	orderdomain "github.com/dujiao-next/internal/modules/order/domain"
+	orderdomain "github.com/homles698698-lab/XMall/internal/modules/order/domain"
 
-	"github.com/dujiao-next/internal/constants"
-	ordercontract "github.com/dujiao-next/internal/modules/order/contract"
-	resellercontract "github.com/dujiao-next/internal/modules/reseller/contract"
-	"github.com/dujiao-next/internal/shared/jsonmap"
+	"github.com/homles698698-lab/XMall/internal/constants"
+	ordercontract "github.com/homles698698-lab/XMall/internal/modules/order/contract"
+	resellercontract "github.com/homles698698-lab/XMall/internal/modules/reseller/contract"
+	"github.com/homles698698-lab/XMall/internal/shared/jsonmap"
 
 	"github.com/shopspring/decimal"
 )

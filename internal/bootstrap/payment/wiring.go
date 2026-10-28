@@ -1,9 +1,9 @@
 package paymentbootstrap
 
 import (
-	"github.com/dujiao-next/internal/app/container"
-	paymenttransport "github.com/dujiao-next/internal/modules/payment/transport/http"
-	paymentcallbacktransport "github.com/dujiao-next/internal/modules/payment/transport/http/callback"
+	"github.com/homles698698-lab/XMall/internal/app/container"
+	paymenttransport "github.com/homles698698-lab/XMall/internal/modules/payment/transport/http"
+	paymentcallbacktransport "github.com/homles698698-lab/XMall/internal/modules/payment/transport/http/callback"
 )
 
 // Handlers is the complete payment HTTP entrypoint set assembled at the

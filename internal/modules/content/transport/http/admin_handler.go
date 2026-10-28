@@ -5,12 +5,12 @@ import (
 	"errors"
 	"strconv"
 
-	contentapp "github.com/dujiao-next/internal/modules/content/application"
-	contentcontract "github.com/dujiao-next/internal/modules/content/contract"
-	contentdomain "github.com/dujiao-next/internal/modules/content/domain"
-	"github.com/dujiao-next/internal/platform/http/ginutil"
-	"github.com/dujiao-next/internal/platform/http/response"
 	"github.com/gin-gonic/gin"
+	contentapp "github.com/homles698698-lab/XMall/internal/modules/content/application"
+	contentcontract "github.com/homles698698-lab/XMall/internal/modules/content/contract"
+	contentdomain "github.com/homles698698-lab/XMall/internal/modules/content/domain"
+	"github.com/homles698698-lab/XMall/internal/platform/http/ginutil"
+	"github.com/homles698698-lab/XMall/internal/platform/http/response"
 )
 
 // AdminPostUseCases 是后台 Content Handler 实际需要的文章能力。

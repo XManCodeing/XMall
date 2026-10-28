@@ -4,13 +4,13 @@ import (
 	"context"
 	"errors"
 
-	dashboardapp "github.com/dujiao-next/internal/modules/dashboard/application"
-	dashboardcontract "github.com/dujiao-next/internal/modules/dashboard/contract"
-	reportingdomain "github.com/dujiao-next/internal/modules/reporting/domain"
-	reportinghttp "github.com/dujiao-next/internal/modules/reporting/transport/http"
-	settingsstorefront "github.com/dujiao-next/internal/modules/settings/schema/storefront"
-	"github.com/dujiao-next/internal/platform/http/ginutil"
-	"github.com/dujiao-next/internal/platform/http/response"
+	dashboardapp "github.com/homles698698-lab/XMall/internal/modules/dashboard/application"
+	dashboardcontract "github.com/homles698698-lab/XMall/internal/modules/dashboard/contract"
+	reportingdomain "github.com/homles698698-lab/XMall/internal/modules/reporting/domain"
+	reportinghttp "github.com/homles698698-lab/XMall/internal/modules/reporting/transport/http"
+	settingsstorefront "github.com/homles698698-lab/XMall/internal/modules/settings/schema/storefront"
+	"github.com/homles698698-lab/XMall/internal/platform/http/ginutil"
+	"github.com/homles698698-lab/XMall/internal/platform/http/response"
 
 	"github.com/gin-gonic/gin"
 )

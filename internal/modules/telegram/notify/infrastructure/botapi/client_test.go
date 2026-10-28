@@ -13,7 +13,7 @@ import (
 	"strings"
 	"testing"
 
-	notifycontract "github.com/dujiao-next/internal/modules/telegram/notify/contract"
+	notifycontract "github.com/homles698698-lab/XMall/internal/modules/telegram/notify/contract"
 )
 
 type rewriteTelegramTransport struct {

@@ -4,15 +4,15 @@ import (
 	"errors"
 	"strings"
 
-	ordercontract "github.com/dujiao-next/internal/modules/order/contract"
-	orderdomain "github.com/dujiao-next/internal/modules/order/domain"
+	ordercontract "github.com/homles698698-lab/XMall/internal/modules/order/contract"
+	orderdomain "github.com/homles698698-lab/XMall/internal/modules/order/domain"
 
-	walletdomain "github.com/dujiao-next/internal/modules/wallet/domain"
+	walletdomain "github.com/homles698698-lab/XMall/internal/modules/wallet/domain"
 
-	"github.com/dujiao-next/internal/logger"
-	"github.com/dujiao-next/internal/platform/http/ginutil"
-	"github.com/dujiao-next/internal/platform/http/response"
-	"github.com/dujiao-next/internal/shared/money"
+	"github.com/homles698698-lab/XMall/internal/logger"
+	"github.com/homles698698-lab/XMall/internal/platform/http/ginutil"
+	"github.com/homles698698-lab/XMall/internal/platform/http/response"
+	"github.com/homles698698-lab/XMall/internal/shared/money"
 
 	"github.com/gin-gonic/gin"
 )

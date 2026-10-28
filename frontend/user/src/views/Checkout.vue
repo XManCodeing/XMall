@@ -312,7 +312,7 @@
 
 <script setup lang="ts">
 import { useI18n } from 'vue-i18n'
-import { pageAlertVariant, pageAlertToneClass } from '../utils/alerts'
+import { pageAlertVariant, pageAlertToneClass } from '../utils/alerts.ts'
 import ImageCaptcha from '../components/captcha/ImageCaptcha.vue'
 import TurnstileCaptcha from '../components/captcha/TurnstileCaptcha.vue'
 import CheckoutManualForm from '../components/checkout/CheckoutManualForm.vue'
@@ -322,7 +322,7 @@ import CheckoutSteps from '../components/checkout/CheckoutSteps.vue'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import { useCheckout } from '../composables/useCheckout'
+import { useCheckout } from '../composables/useCheckout.ts'
 
 const { t } = useI18n()
 

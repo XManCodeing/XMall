@@ -91,9 +91,9 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { giftCardAPI, type CaptchaPayload, type GiftCardRedeemResult } from '../../api'
-import { useAppStore } from '../../stores/app'
-import { pageAlertVariant, pageAlertToneClass, type PageAlert } from '../../utils/alerts'
+import { giftCardAPI, type CaptchaPayload, type GiftCardRedeemResult } from '../../api/index.ts'
+import { useAppStore } from '../../stores/app.ts'
+import { pageAlertVariant, pageAlertToneClass, type PageAlert } from '../../utils/alerts.ts'
 import ImageCaptcha from '../../components/captcha/ImageCaptcha.vue'
 import TurnstileCaptcha from '../../components/captcha/TurnstileCaptcha.vue'
 import { Check, Gift } from 'lucide-vue-next'

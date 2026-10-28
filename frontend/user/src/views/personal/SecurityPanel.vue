@@ -101,26 +101,26 @@ import { computed, onMounted, onUnmounted, reactive, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
 import { ShieldCheck } from 'lucide-vue-next'
-import { pageAlertVariant, pageAlertToneClass, type PageAlert } from '../../utils/alerts'
+import { pageAlertVariant, pageAlertToneClass, type PageAlert } from '../../utils/alerts.ts'
 import PanelHeading from '../../components/shared/PanelHeading.vue'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
-import { userProfileAPI } from '../../api/user'
-import type { TelegramAuthPayload } from '../../api'
-import { useAppStore } from '../../stores/app'
-import { useTelegramMiniAppStore } from '../../stores/telegramMiniApp'
-import { useUserProfileStore } from '../../stores/userProfile'
-import { useUserAuthStore } from '../../stores/userAuth'
-import { buildTelegramMiniAppEntryLink, isTelegramUrlEnvironment, openTelegramCompatibleLink } from '../../utils/telegramMiniApp'
-import { canUnbindExternalIdentity } from '../../utils/externalIdentity'
-import { detectGoogleIdentityUXMode } from '../../utils/googleIdentity'
+import { userProfileAPI } from '../../api/user.ts'
+import type { TelegramAuthPayload } from '../../api/index.ts'
+import { useAppStore } from '../../stores/app.ts'
+import { useTelegramMiniAppStore } from '../../stores/telegramMiniApp.ts'
+import { useUserProfileStore } from '../../stores/userProfile.ts'
+import { useUserAuthStore } from '../../stores/userAuth.ts'
+import { buildTelegramMiniAppEntryLink, isTelegramUrlEnvironment, openTelegramCompatibleLink } from '../../utils/telegramMiniApp.ts'
+import { canUnbindExternalIdentity } from '../../utils/externalIdentity.ts'
+import { detectGoogleIdentityUXMode } from '../../utils/googleIdentity.ts'
 import {
   createGoogleRedirectIntent,
   createGoogleRedirectPreparedIntent,
   getGoogleRedirectSessionStorage,
   storeGoogleRedirectIntent,
   tryBuildGoogleRedirectCredentialCallbackURL,
-} from '../../utils/googleRedirect'
+} from '../../utils/googleRedirect.ts'
 import TelegramBindingSection from '../../components/security/TelegramBindingSection.vue'
 import GoogleBindingSection from '../../components/security/GoogleBindingSection.vue'
 import EmailChangeForm from '../../components/security/EmailChangeForm.vue'
@@ -153,7 +153,7 @@ const oldCodeCooldown = ref(0)
 const newCodeCooldown = ref(0)
 const telegramSectionRef = ref<InstanceType<typeof TelegramBindingSection> | null>(null)
 let cooldownTimer: number | null = null
-const telegramCallbackName = '__dujiaoSecurityTelegramBind'
+const telegramCallbackName = '__xmallSecurityTelegramBind'
 
 const telegramConfig = computed(() => appStore.config?.telegram_auth || null)
 const telegramBotUsername = computed(() => String(telegramConfig.value?.bot_username || '').trim())

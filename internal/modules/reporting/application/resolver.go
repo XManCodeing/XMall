@@ -4,7 +4,7 @@ import (
 	"strings"
 	"time"
 
-	reportingdomain "github.com/dujiao-next/internal/modules/reporting/domain"
+	reportingdomain "github.com/homles698698-lab/XMall/internal/modules/reporting/domain"
 )
 
 const CustomMaxDays = 90

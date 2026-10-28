@@ -257,7 +257,7 @@ import { Input } from '@/components/ui/input'
 import PaymentAmountBreakdown from '../../components/payment/PaymentAmountBreakdown.vue'
 import PaymentChannelSelector from '../../components/payment/PaymentChannelSelector.vue'
 import VaultCheckoutSteps from './components/VaultCheckoutSteps.vue'
-import { usePayment } from '../../composables/usePayment'
+import { usePayment } from '../../composables/usePayment.ts'
 
 const { t } = useI18n()
 

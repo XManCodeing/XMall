@@ -7,11 +7,11 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/dujiao-next/internal/platform/http/response"
-	systemhttp "github.com/dujiao-next/internal/platform/http/system"
-	"github.com/dujiao-next/internal/selfupdate"
-	"github.com/dujiao-next/internal/version"
 	"github.com/gin-gonic/gin"
+	"github.com/homles698698-lab/XMall/internal/platform/http/response"
+	systemhttp "github.com/homles698698-lab/XMall/internal/platform/http/system"
+	"github.com/homles698698-lab/XMall/internal/selfupdate"
+	"github.com/homles698698-lab/XMall/internal/version"
 )
 
 type neverReleaseChecker struct{ t *testing.T }

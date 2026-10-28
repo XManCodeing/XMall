@@ -80,19 +80,19 @@
 import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ExternalLink, Globe, LifeBuoy, Palette, RotateCw } from 'lucide-vue-next'
-import { resellerAPI } from '../../api'
-import type { ResellerDomainData, ResellerSiteConfigSnapshotData } from '../../api/types'
+import { resellerAPI } from '../../api/index.ts'
+import type { ResellerDomainData, ResellerSiteConfigSnapshotData } from '../../api/types.ts'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import ResellerSectionHeader from '../../components/reseller-console/ResellerSectionHeader.vue'
 import ResellerStatusBadge from '../../components/reseller-console/ResellerStatusBadge.vue'
 import ResellerSiteConfigPanel from '../../components/reseller/ResellerSiteConfigPanel.vue'
-import { useResellerProfile } from '../../composables/reseller/useResellerProfile'
+import { useResellerProfile } from '../../composables/reseller/useResellerProfile.ts'
 import {
   RESELLER_DOMAIN_STATUS_ACTIVE,
   RESELLER_DOMAIN_VERIFICATION_VERIFIED,
-} from '../../constants/reseller'
-import { isResellerSiteSeoConfigured } from '../../utils/resellerSiteConfig'
+} from '../../constants/reseller.ts'
+import { isResellerSiteSeoConfigured } from '../../utils/resellerSiteConfig.ts'
 
 const { t } = useI18n()
 const { snapshot: profileSnapshot, load: loadProfile } = useResellerProfile()

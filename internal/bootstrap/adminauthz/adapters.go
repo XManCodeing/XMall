@@ -5,14 +5,14 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/dujiao-next/internal/authz"
-	"github.com/dujiao-next/internal/cache"
-	auditlogapp "github.com/dujiao-next/internal/modules/auditlog/application"
-	admincontract "github.com/dujiao-next/internal/modules/identity/admin/contract"
-	admindomain "github.com/dujiao-next/internal/modules/identity/admin/domain"
-	adminauthapp "github.com/dujiao-next/internal/modules/identity/adminauth/application"
-	adminauthztransport "github.com/dujiao-next/internal/modules/identity/adminauthorization/transport/http"
-	"github.com/dujiao-next/internal/shared/passwordpolicy"
+	"github.com/homles698698-lab/XMall/internal/authz"
+	"github.com/homles698698-lab/XMall/internal/cache"
+	auditlogapp "github.com/homles698698-lab/XMall/internal/modules/auditlog/application"
+	admincontract "github.com/homles698698-lab/XMall/internal/modules/identity/admin/contract"
+	admindomain "github.com/homles698698-lab/XMall/internal/modules/identity/admin/domain"
+	adminauthapp "github.com/homles698698-lab/XMall/internal/modules/identity/adminauth/application"
+	adminauthztransport "github.com/homles698698-lab/XMall/internal/modules/identity/adminauthorization/transport/http"
+	"github.com/homles698698-lab/XMall/internal/shared/passwordpolicy"
 )
 
 type adminAuthzRolePolicyAdapter struct {

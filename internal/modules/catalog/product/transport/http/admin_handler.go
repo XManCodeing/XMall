@@ -5,17 +5,17 @@ import (
 	"strconv"
 	"strings"
 
-	mappingdomain "github.com/dujiao-next/internal/modules/catalog/mapping/domain"
+	mappingdomain "github.com/homles698698-lab/XMall/internal/modules/catalog/mapping/domain"
 
-	productcontract "github.com/dujiao-next/internal/modules/catalog/product/contract"
+	productcontract "github.com/homles698698-lab/XMall/internal/modules/catalog/product/contract"
 
-	"github.com/dujiao-next/internal/constants"
-	"github.com/dujiao-next/internal/i18n"
-	productwrite "github.com/dujiao-next/internal/modules/catalog/product/application/write"
-	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
-	"github.com/dujiao-next/internal/modules/catalog/product/manualform"
-	"github.com/dujiao-next/internal/platform/http/ginutil"
-	"github.com/dujiao-next/internal/platform/http/response"
+	"github.com/homles698698-lab/XMall/internal/constants"
+	"github.com/homles698698-lab/XMall/internal/i18n"
+	productwrite "github.com/homles698698-lab/XMall/internal/modules/catalog/product/application/write"
+	productdomain "github.com/homles698698-lab/XMall/internal/modules/catalog/product/domain"
+	"github.com/homles698698-lab/XMall/internal/modules/catalog/product/manualform"
+	"github.com/homles698698-lab/XMall/internal/platform/http/ginutil"
+	"github.com/homles698698-lab/XMall/internal/platform/http/response"
 
 	"github.com/gin-gonic/gin"
 	"github.com/shopspring/decimal"

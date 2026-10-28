@@ -5,11 +5,11 @@ import (
 	"testing"
 	"time"
 
-	memberlevelcontract "github.com/dujiao-next/internal/modules/memberlevel/contract"
-	memberleveldomain "github.com/dujiao-next/internal/modules/memberlevel/domain"
-	"github.com/dujiao-next/internal/shared/jsonmap"
-	"github.com/dujiao-next/internal/shared/money"
 	"github.com/glebarez/sqlite"
+	memberlevelcontract "github.com/homles698698-lab/XMall/internal/modules/memberlevel/contract"
+	memberleveldomain "github.com/homles698698-lab/XMall/internal/modules/memberlevel/domain"
+	"github.com/homles698698-lab/XMall/internal/shared/jsonmap"
+	"github.com/homles698698-lab/XMall/internal/shared/money"
 	"github.com/shopspring/decimal"
 	"gorm.io/gorm"
 )

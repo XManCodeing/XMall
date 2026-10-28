@@ -3,8 +3,8 @@ package shared
 import (
 	"strings"
 
-	resellerapplication "github.com/dujiao-next/internal/modules/reseller/application"
-	dto "github.com/dujiao-next/internal/modules/reseller/transport/http/presenter"
+	resellerapplication "github.com/homles698698-lab/XMall/internal/modules/reseller/application"
+	dto "github.com/homles698698-lab/XMall/internal/modules/reseller/transport/http/presenter"
 	"github.com/shopspring/decimal"
 )
 

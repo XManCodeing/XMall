@@ -12,10 +12,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/dujiao-next/internal/logger"
-	channelclientapp "github.com/dujiao-next/internal/modules/channelclient/application"
-	"github.com/dujiao-next/internal/queue"
-	"github.com/dujiao-next/internal/upstream"
+	"github.com/homles698698-lab/XMall/internal/logger"
+	channelclientapp "github.com/homles698698-lab/XMall/internal/modules/channelclient/application"
+	"github.com/homles698698-lab/XMall/internal/queue"
+	"github.com/homles698698-lab/XMall/internal/upstream"
 
 	"github.com/hibiken/asynq"
 )

@@ -5,7 +5,7 @@
       <div class="mx-auto flex h-[70px] w-full max-w-[1180px] items-center gap-3 px-4 sm:gap-5 sm:px-6">
         <RouterLink class="inline-flex min-w-0 items-center gap-2.5 text-[19px] font-extrabold tracking-[-0.02em] text-foreground" to="/" :title="brandName">
           <img v-if="brandLogo" :src="brandLogo" :alt="brandName" class="h-8 max-w-[120px] object-contain sm:max-w-[160px]" />
-          <span v-else class="truncate">{{ brandName }}</span>
+          <template v-else><BrandMark class="h-8 w-8" /><span class="truncate">{{ brandName }}</span></template>
         </RouterLink>
 
         <nav class="flex gap-0.5 max-[900px]:hidden">
@@ -132,6 +132,7 @@
 </template>
 
 <script setup lang="ts">
+import BrandMark from '@/components/BrandMark.vue'
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import {

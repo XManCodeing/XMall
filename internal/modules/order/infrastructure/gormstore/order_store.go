@@ -10,12 +10,12 @@ import (
 	"strings"
 	"time"
 
-	"github.com/dujiao-next/internal/constants"
-	userdomain "github.com/dujiao-next/internal/modules/identity/user/domain"
-	ordercontract "github.com/dujiao-next/internal/modules/order/contract"
-	orderdomain "github.com/dujiao-next/internal/modules/order/domain"
-	orderriskdomain "github.com/dujiao-next/internal/modules/orderrisk/domain"
-	"github.com/dujiao-next/internal/persistence/gormutil"
+	"github.com/homles698698-lab/XMall/internal/constants"
+	userdomain "github.com/homles698698-lab/XMall/internal/modules/identity/user/domain"
+	ordercontract "github.com/homles698698-lab/XMall/internal/modules/order/contract"
+	orderdomain "github.com/homles698698-lab/XMall/internal/modules/order/domain"
+	orderriskdomain "github.com/homles698698-lab/XMall/internal/modules/orderrisk/domain"
+	"github.com/homles698698-lab/XMall/internal/persistence/gormutil"
 
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"

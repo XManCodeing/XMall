@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/dujiao-next/internal/version"
+	"github.com/homles698698-lab/XMall/internal/version"
 )
 
 // BackupInfo 一次升级留下的元数据，与 <exec>.backup 同目录持久化。
@@ -246,7 +246,7 @@ func acquireStartupGuardAt(execPath, currentVersion string) (*StartupGuard, erro
 		// 这份元数据描述的是另一个版本，用它判断当前二进制没有任何依据。
 		//
 		// 绝不能据此拒绝启动。最常见的来源是文档里那条手工升级流程：用户只替换
-		// dujiao-next，上一次一键升级留下的 .backup / .backup.json 原封不动留在目录里。
+		// xmall，上一次一键升级留下的 .backup / .backup.json 原封不动留在目录里。
 		// .backup 会无限期存在，把「元数据目标对不上」当成「当前版本已被回滚取代」，
 		// 等于每次手工升级之后服务永久起不来，而日志里只会说自己被回滚了。
 		//

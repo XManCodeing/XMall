@@ -4,18 +4,18 @@ import (
 	"errors"
 	"strings"
 
-	paymentdomain "github.com/dujiao-next/internal/modules/payment/domain"
+	paymentdomain "github.com/homles698698-lab/XMall/internal/modules/payment/domain"
 
-	orderapp "github.com/dujiao-next/internal/modules/order/application"
-	orderdomain "github.com/dujiao-next/internal/modules/order/domain"
-	paymentcontract "github.com/dujiao-next/internal/modules/payment/contract"
+	orderapp "github.com/homles698698-lab/XMall/internal/modules/order/application"
+	orderdomain "github.com/homles698698-lab/XMall/internal/modules/order/domain"
+	paymentcontract "github.com/homles698698-lab/XMall/internal/modules/payment/contract"
 
-	walletdomain "github.com/dujiao-next/internal/modules/wallet/domain"
+	walletdomain "github.com/homles698698-lab/XMall/internal/modules/wallet/domain"
 
-	"github.com/dujiao-next/internal/constants"
-	notificationformat "github.com/dujiao-next/internal/modules/notification/application/format"
-	notificationcontract "github.com/dujiao-next/internal/modules/notification/contract"
-	procurementcontract "github.com/dujiao-next/internal/modules/procurement/contract"
+	"github.com/homles698698-lab/XMall/internal/constants"
+	notificationformat "github.com/homles698698-lab/XMall/internal/modules/notification/application/format"
+	notificationcontract "github.com/homles698698-lab/XMall/internal/modules/notification/contract"
+	procurementcontract "github.com/homles698698-lab/XMall/internal/modules/procurement/contract"
 	"go.uber.org/zap"
 )
 

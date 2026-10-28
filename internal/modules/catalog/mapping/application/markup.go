@@ -3,11 +3,11 @@ package application
 import (
 	"strconv"
 
-	siteconnectioncontract "github.com/dujiao-next/internal/modules/siteconnection/contract"
+	siteconnectioncontract "github.com/homles698698-lab/XMall/internal/modules/siteconnection/contract"
 
-	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
+	productdomain "github.com/homles698698-lab/XMall/internal/modules/catalog/product/domain"
 
-	"github.com/dujiao-next/internal/shared/money"
+	"github.com/homles698698-lab/XMall/internal/shared/money"
 )
 
 // ReapplyMarkup 对指定连接的所有映射商品重新应用加价规则

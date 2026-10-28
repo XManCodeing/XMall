@@ -7,21 +7,21 @@ import (
 	"strings"
 	"time"
 
-	usercontract "github.com/dujiao-next/internal/modules/identity/user/contract"
+	usercontract "github.com/homles698698-lab/XMall/internal/modules/identity/user/contract"
 
-	userdomain "github.com/dujiao-next/internal/modules/identity/user/domain"
+	userdomain "github.com/homles698698-lab/XMall/internal/modules/identity/user/domain"
 
-	"github.com/dujiao-next/internal/cache"
-	"github.com/dujiao-next/internal/config"
-	"github.com/dujiao-next/internal/crypto"
-	totpapplication "github.com/dujiao-next/internal/modules/identity/totp/application"
+	"github.com/homles698698-lab/XMall/internal/cache"
+	"github.com/homles698698-lab/XMall/internal/config"
+	"github.com/homles698698-lab/XMall/internal/crypto"
+	totpapplication "github.com/homles698698-lab/XMall/internal/modules/identity/totp/application"
 
 	"github.com/pquerna/otp/totp"
 	"github.com/redis/go-redis/v9"
 )
 
 const (
-	userTotpIssuerDefault     = "Dujiao-Next-User"
+	userTotpIssuerDefault     = "XMall"
 	userTotpPendingTTL        = 10 * time.Minute
 	userTotpEnableMaxFailures = 5
 	RecoveryCodeCount         = 10

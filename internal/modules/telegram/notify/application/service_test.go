@@ -5,9 +5,9 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/dujiao-next/internal/config"
-	settingssecurity "github.com/dujiao-next/internal/modules/settings/schema/security"
-	notifycontract "github.com/dujiao-next/internal/modules/telegram/notify/contract"
+	"github.com/homles698698-lab/XMall/internal/config"
+	settingssecurity "github.com/homles698698-lab/XMall/internal/modules/settings/schema/security"
+	notifycontract "github.com/homles698698-lab/XMall/internal/modules/telegram/notify/contract"
 )
 
 type settingReaderStub struct {

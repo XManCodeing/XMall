@@ -93,12 +93,12 @@
 <script setup lang="ts">
 import { useI18n } from 'vue-i18n'
 import { ArrowRight, BookOpen, Search } from 'lucide-vue-next'
-import { getImageUrl } from '../utils/image'
+import { getImageUrl } from '../utils/image.ts'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import EmptyState from '../components/EmptyState.vue'
 import PaginationNav from '../components/PaginationNav.vue'
-import { usePostList } from '../composables/usePostList'
+import { usePostList } from '../composables/usePostList.ts'
 
 const { t } = useI18n()
 

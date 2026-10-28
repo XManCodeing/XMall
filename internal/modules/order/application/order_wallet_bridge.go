@@ -3,12 +3,12 @@ package application
 import (
 	"time"
 
-	ordercontract "github.com/dujiao-next/internal/modules/order/contract"
-	orderdomain "github.com/dujiao-next/internal/modules/order/domain"
+	ordercontract "github.com/homles698698-lab/XMall/internal/modules/order/contract"
+	orderdomain "github.com/homles698698-lab/XMall/internal/modules/order/domain"
 
-	walletapp "github.com/dujiao-next/internal/modules/wallet/application"
-	walletcontract "github.com/dujiao-next/internal/modules/wallet/contract"
-	"github.com/dujiao-next/internal/shared/money"
+	walletapp "github.com/homles698698-lab/XMall/internal/modules/wallet/application"
+	walletcontract "github.com/homles698698-lab/XMall/internal/modules/wallet/contract"
+	"github.com/homles698698-lab/XMall/internal/shared/money"
 
 	"github.com/shopspring/decimal"
 )

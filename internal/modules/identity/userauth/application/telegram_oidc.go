@@ -3,8 +3,8 @@ package application
 import (
 	"context"
 
-	externalidentitydomain "github.com/dujiao-next/internal/modules/identity/externalidentity/domain"
-	telegramauthapp "github.com/dujiao-next/internal/modules/identity/telegramauth/application"
+	externalidentitydomain "github.com/homles698698-lab/XMall/internal/modules/identity/externalidentity/domain"
+	telegramauthapp "github.com/homles698698-lab/XMall/internal/modules/identity/telegramauth/application"
 )
 
 // StartTelegramOIDCInput 启动 Telegram OIDC 流程输入

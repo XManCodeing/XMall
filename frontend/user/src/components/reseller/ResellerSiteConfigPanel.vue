@@ -378,7 +378,7 @@ import {
     type ResellerSiteConfigData,
     type ResellerSiteConfigPayload,
     type ResellerSiteConfigSnapshotData,
-} from '../../api'
+} from '../../api/index.ts'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
@@ -390,9 +390,9 @@ import ResellerImageField from './ResellerImageField.vue'
 import ResellerLocaleTabs from './ResellerLocaleTabs.vue'
 // TipTap 体积较大，异步加载，进入公告编辑时才拉取对应 chunk
 const ResellerRichText = defineAsyncComponent(() => import('./ResellerRichText.vue'))
-import { useAppStore } from '../../stores/app'
-import { type PageAlert } from '../../utils/alerts'
-import { processHtmlForDisplay } from '../../utils/content'
+import { useAppStore } from '../../stores/app.ts'
+import { type PageAlert } from '../../utils/alerts.ts'
+import { processHtmlForDisplay } from '../../utils/content.ts'
 import DOMPurify from 'dompurify'
 import {
     blankLocalizedText,
@@ -400,7 +400,7 @@ import {
     normalizeFooterLinksForForm,
     normalizeLocalizedTextForForm,
     type ResellerLocale,
-} from '../../utils/resellerSiteConfig'
+} from '../../utils/resellerSiteConfig.ts'
 
 withDefaults(defineProps<{ embedded?: boolean }>(), { embedded: false })
 

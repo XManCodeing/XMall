@@ -14,7 +14,7 @@ import (
 
 const (
 	githubAPIBaseURL = "https://api.github.com"
-	releaseUserAgent = "dujiao-next-update-checker"
+	releaseUserAgent = "xmall-update-checker"
 )
 
 // releasePayload GitHub Releases API 响应中本检测器关心的字段

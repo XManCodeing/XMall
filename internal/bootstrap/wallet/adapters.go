@@ -4,18 +4,18 @@ import (
 	"errors"
 	"fmt"
 
-	paymentapp "github.com/dujiao-next/internal/modules/payment/application"
+	paymentapp "github.com/homles698698-lab/XMall/internal/modules/payment/application"
 
-	paymentdomain "github.com/dujiao-next/internal/modules/payment/domain"
+	paymentdomain "github.com/homles698698-lab/XMall/internal/modules/payment/domain"
 
-	"github.com/dujiao-next/internal/constants"
-	userdomain "github.com/dujiao-next/internal/modules/identity/user/domain"
-	orderapp "github.com/dujiao-next/internal/modules/order/application"
-	walletapp "github.com/dujiao-next/internal/modules/wallet/application"
-	walletcontract "github.com/dujiao-next/internal/modules/wallet/contract"
-	walletdomain "github.com/dujiao-next/internal/modules/wallet/domain"
-	wallettransport "github.com/dujiao-next/internal/modules/wallet/transport/http"
-	"github.com/dujiao-next/internal/shared/money"
+	"github.com/homles698698-lab/XMall/internal/constants"
+	userdomain "github.com/homles698698-lab/XMall/internal/modules/identity/user/domain"
+	orderapp "github.com/homles698698-lab/XMall/internal/modules/order/application"
+	walletapp "github.com/homles698698-lab/XMall/internal/modules/wallet/application"
+	walletcontract "github.com/homles698698-lab/XMall/internal/modules/wallet/contract"
+	walletdomain "github.com/homles698698-lab/XMall/internal/modules/wallet/domain"
+	wallettransport "github.com/homles698698-lab/XMall/internal/modules/wallet/transport/http"
+	"github.com/homles698698-lab/XMall/internal/shared/money"
 )
 
 // walletTransportAdapter composes wallet use cases with payment capabilities

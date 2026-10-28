@@ -4,8 +4,8 @@ import (
 	"errors"
 	"strings"
 
-	externalidentitycontract "github.com/dujiao-next/internal/modules/identity/externalidentity/contract"
-	externalidentitydomain "github.com/dujiao-next/internal/modules/identity/externalidentity/domain"
+	externalidentitycontract "github.com/homles698698-lab/XMall/internal/modules/identity/externalidentity/contract"
+	externalidentitydomain "github.com/homles698698-lab/XMall/internal/modules/identity/externalidentity/domain"
 
 	"gorm.io/gorm"
 )

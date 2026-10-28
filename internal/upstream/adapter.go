@@ -6,12 +6,12 @@ import (
 	"fmt"
 	"time"
 
-	siteconnectiondomain "github.com/dujiao-next/internal/modules/siteconnection/domain"
+	siteconnectiondomain "github.com/homles698698-lab/XMall/internal/modules/siteconnection/domain"
 
-	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
+	productdomain "github.com/homles698698-lab/XMall/internal/modules/catalog/product/domain"
 
-	"github.com/dujiao-next/internal/constants"
-	"github.com/dujiao-next/internal/shared/jsonmap"
+	"github.com/homles698698-lab/XMall/internal/constants"
+	"github.com/homles698698-lab/XMall/internal/shared/jsonmap"
 )
 
 // 上游商品状态相关哨兵错误（adapter 层归一化）

@@ -4,12 +4,12 @@ import (
 	"net/http"
 	"strings"
 
-	settingsapp "github.com/dujiao-next/internal/modules/settings/application"
+	settingsapp "github.com/homles698698-lab/XMall/internal/modules/settings/application"
 
-	"github.com/dujiao-next/internal/constants"
-	paymenttransport "github.com/dujiao-next/internal/modules/payment/transport/http"
-	paymentcallbacktransport "github.com/dujiao-next/internal/modules/payment/transport/http/callback"
-	upstreamtransport "github.com/dujiao-next/internal/modules/upstreamapi/transport/http"
+	"github.com/homles698698-lab/XMall/internal/constants"
+	paymenttransport "github.com/homles698698-lab/XMall/internal/modules/payment/transport/http"
+	paymentcallbacktransport "github.com/homles698698-lab/XMall/internal/modules/payment/transport/http/callback"
+	upstreamtransport "github.com/homles698698-lab/XMall/internal/modules/upstreamapi/transport/http"
 
 	"github.com/gin-gonic/gin"
 )

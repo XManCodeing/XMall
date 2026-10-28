@@ -1,11 +1,11 @@
 package application
 
 import (
-	productcontract "github.com/dujiao-next/internal/modules/catalog/product/contract"
-	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
-	settingsapp "github.com/dujiao-next/internal/modules/settings/application"
+	productcontract "github.com/homles698698-lab/XMall/internal/modules/catalog/product/contract"
+	productdomain "github.com/homles698698-lab/XMall/internal/modules/catalog/product/domain"
+	settingsapp "github.com/homles698698-lab/XMall/internal/modules/settings/application"
 
-	"github.com/dujiao-next/internal/constants"
+	"github.com/homles698698-lab/XMall/internal/constants"
 )
 
 func resolveSiteCurrency(settingService *settingsapp.Service) string {

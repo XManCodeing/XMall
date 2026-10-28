@@ -1,11 +1,11 @@
 package notificationadapter
 
 import (
-	"github.com/dujiao-next/internal/constants"
-	notificationcontract "github.com/dujiao-next/internal/modules/notification/contract"
-	procurementcontract "github.com/dujiao-next/internal/modules/procurement/contract"
-	procurementdomain "github.com/dujiao-next/internal/modules/procurement/domain"
-	"github.com/dujiao-next/internal/shared/jsonmap"
+	"github.com/homles698698-lab/XMall/internal/constants"
+	notificationcontract "github.com/homles698698-lab/XMall/internal/modules/notification/contract"
+	procurementcontract "github.com/homles698698-lab/XMall/internal/modules/procurement/contract"
+	procurementdomain "github.com/homles698698-lab/XMall/internal/modules/procurement/domain"
+	"github.com/homles698698-lab/XMall/internal/shared/jsonmap"
 )
 
 type Notifier struct {

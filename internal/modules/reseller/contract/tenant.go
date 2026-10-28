@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/dujiao-next/internal/config"
+	"github.com/homles698698-lab/XMall/internal/config"
 )
 
 type tenantContextKey struct{}

@@ -37,9 +37,9 @@
 <script setup lang="ts">
 import { computed, defineAsyncComponent, watch } from 'vue'
 import { useRoute } from 'vue-router'
-import { useAppStore } from './stores/app'
-import { getActiveTemplate } from './templates/registry'
-import { useTheme } from './utils/theme'
+import { useAppStore } from './stores/app.ts'
+import { getActiveTemplate } from './templates/registry.ts'
+import { useTheme } from './utils/theme.ts'
 import Navbar from './components/Navbar.vue'
 import Footer from './components/Footer.vue'
 import Loading from './components/Loading.vue'

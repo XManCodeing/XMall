@@ -6,9 +6,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/dujiao-next/internal/constants"
-	settingsstorefront "github.com/dujiao-next/internal/modules/settings/schema/storefront"
-	"github.com/dujiao-next/internal/shared/jsonmap"
+	"github.com/homles698698-lab/XMall/internal/constants"
+	settingsstorefront "github.com/homles698698-lab/XMall/internal/modules/settings/schema/storefront"
+	"github.com/homles698698-lab/XMall/internal/shared/jsonmap"
 )
 
 func TestDashboardSettingCodecPreservesDefaultsAndAcceptedNumberShapes(t *testing.T) {

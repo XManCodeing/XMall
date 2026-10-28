@@ -5,7 +5,7 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/dujiao-next/internal/version"
+	"github.com/homles698698-lab/XMall/internal/version"
 )
 
 func TestDisabledManagerNeverDetectsOrFetches(t *testing.T) {

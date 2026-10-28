@@ -3,9 +3,9 @@ package userauthhttp
 import (
 	"errors"
 
-	"github.com/dujiao-next/internal/i18n"
-	"github.com/dujiao-next/internal/platform/http/ginutil"
-	"github.com/dujiao-next/internal/platform/http/response"
+	"github.com/homles698698-lab/XMall/internal/i18n"
+	"github.com/homles698698-lab/XMall/internal/platform/http/ginutil"
+	"github.com/homles698698-lab/XMall/internal/platform/http/response"
 
 	"github.com/gin-gonic/gin"
 )

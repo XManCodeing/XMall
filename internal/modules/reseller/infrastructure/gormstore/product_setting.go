@@ -6,10 +6,10 @@ import (
 	"strings"
 	"time"
 
-	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
-	resellercontract "github.com/dujiao-next/internal/modules/reseller/contract"
-	resellerdomain "github.com/dujiao-next/internal/modules/reseller/domain"
-	"github.com/dujiao-next/internal/persistence/gormutil"
+	productdomain "github.com/homles698698-lab/XMall/internal/modules/catalog/product/domain"
+	resellercontract "github.com/homles698698-lab/XMall/internal/modules/reseller/contract"
+	resellerdomain "github.com/homles698698-lab/XMall/internal/modules/reseller/domain"
+	"github.com/homles698698-lab/XMall/internal/persistence/gormutil"
 
 	"gorm.io/gorm"
 )

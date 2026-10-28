@@ -3,7 +3,7 @@ package contract
 import (
 	"errors"
 
-	settingssecurity "github.com/dujiao-next/internal/modules/settings/schema/security"
+	settingssecurity "github.com/homles698698-lab/XMall/internal/modules/settings/schema/security"
 )
 
 var (

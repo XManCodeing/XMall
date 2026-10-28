@@ -5,14 +5,14 @@ import (
 	"testing"
 	"time"
 
-	resellercontract "github.com/dujiao-next/internal/modules/reseller/contract"
+	resellercontract "github.com/homles698698-lab/XMall/internal/modules/reseller/contract"
 
-	resellerdomain "github.com/dujiao-next/internal/modules/reseller/domain"
+	resellerdomain "github.com/homles698698-lab/XMall/internal/modules/reseller/domain"
 
-	userdomain "github.com/dujiao-next/internal/modules/identity/user/domain"
+	userdomain "github.com/homles698698-lab/XMall/internal/modules/identity/user/domain"
 
-	"github.com/dujiao-next/internal/shared/jsonmap"
 	"github.com/glebarez/sqlite"
+	"github.com/homles698698-lab/XMall/internal/shared/jsonmap"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 )

@@ -1,4 +1,4 @@
-import type { CartItem } from '../stores/cart'
+import type { CartItem } from '../stores/cart.ts'
 import { amountToCents, centsToAmount } from './money.ts'
 
 // 购物车只同步目录基础价和批发阶梯；活动、会员与优惠券金额仍以服务端结算预览为准。

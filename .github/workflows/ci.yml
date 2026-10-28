@@ -31,12 +31,12 @@ jobs:
 
       - name: Check Bash syntax and ShellCheck
         run: |
-          bash -n scripts/dujiao-next-manager.sh
-          bash -n scripts/tests/dujiao-next-manager_test.sh
-          shellcheck -x -S warning scripts/dujiao-next-manager.sh scripts/tests/dujiao-next-manager_test.sh
+          bash -n scripts/xmall-manager.sh
+          bash -n scripts/tests/xmall-manager_test.sh
+          shellcheck -x -S warning scripts/xmall-manager.sh scripts/tests/xmall-manager_test.sh
 
       - name: Run installer tests
-        run: sudo bash scripts/tests/dujiao-next-manager_test.sh
+        run: sudo bash scripts/tests/xmall-manager_test.sh
 
       - name: Validate public release inputs
         run: python3 scripts/check-release-inputs.py
@@ -49,7 +49,7 @@ jobs:
           with open('.goreleaser.yaml', encoding='utf-8') as handle:
               config = yaml.safe_load(handle)
           files = config['archives'][0]['files']
-          assert './scripts/dujiao-next-manager.sh' in files, files
+          assert './scripts/xmall-manager.sh' in files, files
           PY
 
   api:

@@ -3,14 +3,14 @@ package carthttp
 import (
 	"errors"
 
-	"github.com/dujiao-next/internal/constants"
-	cartapp "github.com/dujiao-next/internal/modules/cart/application"
-	cartcontract "github.com/dujiao-next/internal/modules/cart/contract"
-	cartpresenter "github.com/dujiao-next/internal/modules/cart/transport/presenter"
-	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
-	promotioncontract "github.com/dujiao-next/internal/modules/promotion/contract"
-	"github.com/dujiao-next/internal/platform/http/ginutil"
-	"github.com/dujiao-next/internal/platform/http/response"
+	"github.com/homles698698-lab/XMall/internal/constants"
+	cartapp "github.com/homles698698-lab/XMall/internal/modules/cart/application"
+	cartcontract "github.com/homles698698-lab/XMall/internal/modules/cart/contract"
+	cartpresenter "github.com/homles698698-lab/XMall/internal/modules/cart/transport/presenter"
+	productdomain "github.com/homles698698-lab/XMall/internal/modules/catalog/product/domain"
+	promotioncontract "github.com/homles698698-lab/XMall/internal/modules/promotion/contract"
+	"github.com/homles698698-lab/XMall/internal/platform/http/ginutil"
+	"github.com/homles698698-lab/XMall/internal/platform/http/response"
 
 	"github.com/gin-gonic/gin"
 )

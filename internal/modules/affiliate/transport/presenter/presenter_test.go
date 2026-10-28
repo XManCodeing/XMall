@@ -6,8 +6,8 @@ import (
 	"testing"
 	"time"
 
-	affiliatedomain "github.com/dujiao-next/internal/modules/affiliate/domain"
-	"github.com/dujiao-next/internal/shared/money"
+	affiliatedomain "github.com/homles698698-lab/XMall/internal/modules/affiliate/domain"
+	"github.com/homles698698-lab/XMall/internal/shared/money"
 
 	"github.com/shopspring/decimal"
 )

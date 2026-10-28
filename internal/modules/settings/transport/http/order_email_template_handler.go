@@ -3,10 +3,10 @@ package settingshttp
 import (
 	"errors"
 
-	ginutil "github.com/dujiao-next/internal/platform/http/ginutil"
+	ginutil "github.com/homles698698-lab/XMall/internal/platform/http/ginutil"
 
-	settingsmessaging "github.com/dujiao-next/internal/modules/settings/schema/messaging"
-	"github.com/dujiao-next/internal/platform/http/response"
+	settingsmessaging "github.com/homles698698-lab/XMall/internal/modules/settings/schema/messaging"
+	"github.com/homles698698-lab/XMall/internal/platform/http/response"
 
 	"github.com/gin-gonic/gin"
 )

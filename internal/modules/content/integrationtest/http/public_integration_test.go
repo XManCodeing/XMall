@@ -9,15 +9,15 @@ import (
 	"testing"
 	"time"
 
-	"github.com/dujiao-next/internal/constants"
-	contentapp "github.com/dujiao-next/internal/modules/content/application"
-	contentdomain "github.com/dujiao-next/internal/modules/content/domain"
-	"github.com/dujiao-next/internal/modules/content/infrastructure/gormstore"
-	contenttransport "github.com/dujiao-next/internal/modules/content/transport/http"
-	"github.com/dujiao-next/internal/platform/http/response"
-	"github.com/dujiao-next/internal/shared/jsonmap"
 	"github.com/gin-gonic/gin"
 	"github.com/glebarez/sqlite"
+	"github.com/homles698698-lab/XMall/internal/constants"
+	contentapp "github.com/homles698698-lab/XMall/internal/modules/content/application"
+	contentdomain "github.com/homles698698-lab/XMall/internal/modules/content/domain"
+	"github.com/homles698698-lab/XMall/internal/modules/content/infrastructure/gormstore"
+	contenttransport "github.com/homles698698-lab/XMall/internal/modules/content/transport/http"
+	"github.com/homles698698-lab/XMall/internal/platform/http/response"
+	"github.com/homles698698-lab/XMall/internal/shared/jsonmap"
 	"gorm.io/gorm"
 )
 

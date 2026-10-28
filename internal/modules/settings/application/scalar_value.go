@@ -6,7 +6,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/dujiao-next/internal/constants"
+	"github.com/homles698698-lab/XMall/internal/constants"
 )
 
 // parseSettingInt 解析设置中的整数值。

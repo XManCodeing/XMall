@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 224 224" fill="none" role="img" aria-labelledby="title desc">
+  <title id="title">XMall</title>
+  <desc id="desc">White interwoven M ribbons with transparent separation.</desc>
+  <defs>
+    <mask id="weave" maskUnits="userSpaceOnUse" x="0" y="0" width="224" height="224">
+      <rect width="224" height="224" fill="white"/>
+      <path d="M75 65L112 102L147 67" fill="none" stroke="black" stroke-width="36" stroke-linecap="round" stroke-linejoin="round"/>
+    </mask>
+  </defs>
+  <g stroke="#ffffff" stroke-width="24" stroke-linecap="round" stroke-linejoin="round">
+    <g mask="url(#weave)">
+      <path d="M36 179V45Q36 26 52 41L112 102L172 41Q188 26 188 45V179"/>
+      <path d="M36 45V179Q36 198 52 183L112 122L172 183Q188 198 188 179V45"/>
+    </g>
+    <path d="M75 65L112 102L147 67"/>
+  </g>
+</svg>

@@ -1,11 +1,11 @@
 package application
 
 import (
-	"github.com/dujiao-next/internal/constants"
+	"github.com/homles698698-lab/XMall/internal/constants"
 	"testing"
 	"time"
 
-	"github.com/dujiao-next/internal/shared/jsonmap"
+	"github.com/homles698698-lab/XMall/internal/shared/jsonmap"
 )
 
 // ── Unit tests for pure functions ──

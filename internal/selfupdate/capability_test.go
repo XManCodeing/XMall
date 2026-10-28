@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/dujiao-next/internal/version"
+	"github.com/homles698698-lab/XMall/internal/version"
 )
 
 // TestDetectBlocksSourceBuild 本地构建（BuildType=source）必须被阻断，
@@ -162,7 +162,7 @@ func TestDirWritable(t *testing.T) {
 }
 
 func TestBackupPath(t *testing.T) {
-	if got := backupPath("/opt/dujiao/dujiao-next"); got != "/opt/dujiao/dujiao-next.backup" {
+	if got := backupPath("/opt/xmall/xmall"); got != "/opt/xmall/xmall.backup" {
 		t.Errorf("backupPath = %q", got)
 	}
 }

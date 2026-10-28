@@ -3,12 +3,12 @@ package gormstore
 import (
 	"strings"
 
-	cardsecretdomain "github.com/dujiao-next/internal/modules/cardsecret/domain"
-	mappingdomain "github.com/dujiao-next/internal/modules/catalog/mapping/domain"
-	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
+	cardsecretdomain "github.com/homles698698-lab/XMall/internal/modules/cardsecret/domain"
+	mappingdomain "github.com/homles698698-lab/XMall/internal/modules/catalog/mapping/domain"
+	productdomain "github.com/homles698698-lab/XMall/internal/modules/catalog/product/domain"
 
-	"github.com/dujiao-next/internal/constants"
-	dashboard "github.com/dujiao-next/internal/modules/dashboard/contract"
+	"github.com/homles698698-lab/XMall/internal/constants"
+	dashboard "github.com/homles698698-lab/XMall/internal/modules/dashboard/contract"
 
 	"gorm.io/gorm"
 )

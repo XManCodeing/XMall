@@ -1,11 +1,11 @@
 package integrationtest
 
 import (
-	"github.com/dujiao-next/internal/config"
-	productcontract "github.com/dujiao-next/internal/modules/catalog/product/contract"
-	resellermodule "github.com/dujiao-next/internal/modules/reseller/application"
-	resellercontract "github.com/dujiao-next/internal/modules/reseller/contract"
-	resellergormstore "github.com/dujiao-next/internal/modules/reseller/infrastructure/gormstore"
+	"github.com/homles698698-lab/XMall/internal/config"
+	productcontract "github.com/homles698698-lab/XMall/internal/modules/catalog/product/contract"
+	resellermodule "github.com/homles698698-lab/XMall/internal/modules/reseller/application"
+	resellercontract "github.com/homles698698-lab/XMall/internal/modules/reseller/contract"
+	resellergormstore "github.com/homles698698-lab/XMall/internal/modules/reseller/infrastructure/gormstore"
 )
 
 // These aliases keep the integration scenarios concise while ensuring every

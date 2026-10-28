@@ -4,13 +4,13 @@ import (
 	"net/http"
 	"strings"
 
-	paymentpresenter "github.com/dujiao-next/internal/modules/payment/transport/presenter"
+	paymentpresenter "github.com/homles698698-lab/XMall/internal/modules/payment/transport/presenter"
 
-	"github.com/dujiao-next/internal/platform/http/channelresponse"
-	ginutil "github.com/dujiao-next/internal/platform/http/ginutil"
-	"github.com/dujiao-next/internal/shared/money"
+	"github.com/homles698698-lab/XMall/internal/platform/http/channelresponse"
+	ginutil "github.com/homles698698-lab/XMall/internal/platform/http/ginutil"
+	"github.com/homles698698-lab/XMall/internal/shared/money"
 
-	"github.com/dujiao-next/internal/constants"
+	"github.com/homles698698-lab/XMall/internal/constants"
 
 	"github.com/gin-gonic/gin"
 	"github.com/shopspring/decimal"

@@ -4,10 +4,10 @@ import (
 	"fmt"
 	"time"
 
-	orderdomain "github.com/dujiao-next/internal/modules/order/domain"
+	orderdomain "github.com/homles698698-lab/XMall/internal/modules/order/domain"
 
-	"github.com/dujiao-next/internal/constants"
-	dashboard "github.com/dujiao-next/internal/modules/dashboard/contract"
+	"github.com/homles698698-lab/XMall/internal/constants"
+	dashboard "github.com/homles698698-lab/XMall/internal/modules/dashboard/contract"
 )
 
 // GetOrderTrends 获取订单趋势

@@ -34,9 +34,9 @@ jobs:
 
       - name: Verify installer
         run: |
-          bash -n scripts/dujiao-next-manager.sh
-          shellcheck -x -S warning scripts/dujiao-next-manager.sh scripts/tests/dujiao-next-manager_test.sh
-          sudo bash scripts/tests/dujiao-next-manager_test.sh
+          bash -n scripts/xmall-manager.sh
+          shellcheck -x -S warning scripts/xmall-manager.sh scripts/tests/xmall-manager_test.sh
+          sudo bash scripts/tests/xmall-manager_test.sh
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4

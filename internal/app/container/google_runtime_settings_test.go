@@ -4,10 +4,10 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/dujiao-next/internal/config"
-	"github.com/dujiao-next/internal/constants"
-	settingsapp "github.com/dujiao-next/internal/modules/settings/application"
-	"github.com/dujiao-next/internal/shared/jsonmap"
+	"github.com/homles698698-lab/XMall/internal/config"
+	"github.com/homles698698-lab/XMall/internal/constants"
+	settingsapp "github.com/homles698698-lab/XMall/internal/modules/settings/application"
+	"github.com/homles698698-lab/XMall/internal/shared/jsonmap"
 )
 
 type googleRuntimeSettingStore struct {

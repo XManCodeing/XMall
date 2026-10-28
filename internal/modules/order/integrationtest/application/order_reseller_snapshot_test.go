@@ -8,40 +8,40 @@ import (
 	"testing"
 	"time"
 
-	paymentdomain "github.com/dujiao-next/internal/modules/payment/domain"
+	paymentdomain "github.com/homles698698-lab/XMall/internal/modules/payment/domain"
 
-	fulfillmentdomain "github.com/dujiao-next/internal/modules/fulfillment/domain"
-	. "github.com/dujiao-next/internal/modules/order/application"
-	ordercontract "github.com/dujiao-next/internal/modules/order/contract"
-	orderdomain "github.com/dujiao-next/internal/modules/order/domain"
-	ordergormstore "github.com/dujiao-next/internal/modules/order/infrastructure/gormstore"
+	fulfillmentdomain "github.com/homles698698-lab/XMall/internal/modules/fulfillment/domain"
+	. "github.com/homles698698-lab/XMall/internal/modules/order/application"
+	ordercontract "github.com/homles698698-lab/XMall/internal/modules/order/contract"
+	orderdomain "github.com/homles698698-lab/XMall/internal/modules/order/domain"
+	ordergormstore "github.com/homles698698-lab/XMall/internal/modules/order/infrastructure/gormstore"
 
-	resellergormstore "github.com/dujiao-next/internal/modules/reseller/infrastructure/gormstore"
+	resellergormstore "github.com/homles698698-lab/XMall/internal/modules/reseller/infrastructure/gormstore"
 
-	resellerdomain "github.com/dujiao-next/internal/modules/reseller/domain"
+	resellerdomain "github.com/homles698698-lab/XMall/internal/modules/reseller/domain"
 
-	coupondomain "github.com/dujiao-next/internal/modules/coupon/domain"
+	coupondomain "github.com/homles698698-lab/XMall/internal/modules/coupon/domain"
 
-	promotiondomain "github.com/dujiao-next/internal/modules/promotion/domain"
+	promotiondomain "github.com/homles698698-lab/XMall/internal/modules/promotion/domain"
 
-	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
+	productdomain "github.com/homles698698-lab/XMall/internal/modules/catalog/product/domain"
 
-	categorydomain "github.com/dujiao-next/internal/modules/catalog/category/domain"
+	categorydomain "github.com/homles698698-lab/XMall/internal/modules/catalog/category/domain"
 
-	productgormstore "github.com/dujiao-next/internal/modules/catalog/product/store/gormstore"
+	productgormstore "github.com/homles698698-lab/XMall/internal/modules/catalog/product/store/gormstore"
 
-	userstore "github.com/dujiao-next/internal/modules/identity/user/infrastructure/gormstore"
+	userstore "github.com/homles698698-lab/XMall/internal/modules/identity/user/infrastructure/gormstore"
 
-	userdomain "github.com/dujiao-next/internal/modules/identity/user/domain"
+	userdomain "github.com/homles698698-lab/XMall/internal/modules/identity/user/domain"
 
-	"github.com/dujiao-next/internal/constants"
-	coupongormstore "github.com/dujiao-next/internal/modules/coupon/infrastructure/gormstore"
-	promotiongormstore "github.com/dujiao-next/internal/modules/promotion/infrastructure/gormstore"
-	resellermodule "github.com/dujiao-next/internal/modules/reseller/application"
-	resellercontract "github.com/dujiao-next/internal/modules/reseller/contract"
-	"github.com/dujiao-next/internal/shared/jsonmap"
-	"github.com/dujiao-next/internal/shared/money"
 	"github.com/glebarez/sqlite"
+	"github.com/homles698698-lab/XMall/internal/constants"
+	coupongormstore "github.com/homles698698-lab/XMall/internal/modules/coupon/infrastructure/gormstore"
+	promotiongormstore "github.com/homles698698-lab/XMall/internal/modules/promotion/infrastructure/gormstore"
+	resellermodule "github.com/homles698698-lab/XMall/internal/modules/reseller/application"
+	resellercontract "github.com/homles698698-lab/XMall/internal/modules/reseller/contract"
+	"github.com/homles698698-lab/XMall/internal/shared/jsonmap"
+	"github.com/homles698698-lab/XMall/internal/shared/money"
 	"github.com/shopspring/decimal"
 	"gorm.io/gorm"
 )

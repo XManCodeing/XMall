@@ -5,17 +5,17 @@ import (
 	"testing"
 	"time"
 
-	ordercontract "github.com/dujiao-next/internal/modules/order/contract"
+	ordercontract "github.com/homles698698-lab/XMall/internal/modules/order/contract"
 
-	fulfillmentdomain "github.com/dujiao-next/internal/modules/fulfillment/domain"
-	orderdomain "github.com/dujiao-next/internal/modules/order/domain"
+	fulfillmentdomain "github.com/homles698698-lab/XMall/internal/modules/fulfillment/domain"
+	orderdomain "github.com/homles698698-lab/XMall/internal/modules/order/domain"
 
-	userdomain "github.com/dujiao-next/internal/modules/identity/user/domain"
+	userdomain "github.com/homles698698-lab/XMall/internal/modules/identity/user/domain"
 
-	"github.com/dujiao-next/internal/constants"
-	"github.com/dujiao-next/internal/shared/jsonmap"
-	"github.com/dujiao-next/internal/shared/money"
 	"github.com/glebarez/sqlite"
+	"github.com/homles698698-lab/XMall/internal/constants"
+	"github.com/homles698698-lab/XMall/internal/shared/jsonmap"
+	"github.com/homles698698-lab/XMall/internal/shared/money"
 	"github.com/shopspring/decimal"
 	"gorm.io/gorm"
 )

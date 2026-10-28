@@ -1,9 +1,9 @@
 package gormstore
 
 import (
-	"github.com/dujiao-next/internal/modules/auditlog/contract"
-	"github.com/dujiao-next/internal/modules/auditlog/domain"
-	"github.com/dujiao-next/internal/persistence/gormutil"
+	"github.com/homles698698-lab/XMall/internal/modules/auditlog/contract"
+	"github.com/homles698698-lab/XMall/internal/modules/auditlog/domain"
+	"github.com/homles698698-lab/XMall/internal/persistence/gormutil"
 
 	"gorm.io/gorm"
 )

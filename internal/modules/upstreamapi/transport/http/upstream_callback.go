@@ -9,10 +9,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/dujiao-next/internal/logger"
-	procurementcontract "github.com/dujiao-next/internal/modules/procurement/contract"
-	"github.com/dujiao-next/internal/shared/jsonmap"
-	upstreamadapter "github.com/dujiao-next/internal/upstream"
+	"github.com/homles698698-lab/XMall/internal/logger"
+	procurementcontract "github.com/homles698698-lab/XMall/internal/modules/procurement/contract"
+	"github.com/homles698698-lab/XMall/internal/shared/jsonmap"
+	upstreamadapter "github.com/homles698698-lab/XMall/internal/upstream"
 
 	"github.com/gin-gonic/gin"
 )

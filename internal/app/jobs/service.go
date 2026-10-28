@@ -4,11 +4,11 @@ import (
 	"context"
 	"errors"
 
-	jobconsumer "github.com/dujiao-next/internal/app/jobs/consumer"
-	"github.com/dujiao-next/internal/config"
-	"github.com/dujiao-next/internal/logger"
-	settingsintegration "github.com/dujiao-next/internal/modules/settings/schema/integration"
-	"github.com/dujiao-next/internal/queue"
+	jobconsumer "github.com/homles698698-lab/XMall/internal/app/jobs/consumer"
+	"github.com/homles698698-lab/XMall/internal/config"
+	"github.com/homles698698-lab/XMall/internal/logger"
+	settingsintegration "github.com/homles698698-lab/XMall/internal/modules/settings/schema/integration"
+	"github.com/homles698698-lab/XMall/internal/queue"
 
 	"github.com/hibiken/asynq"
 )

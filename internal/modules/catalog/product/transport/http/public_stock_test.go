@@ -3,9 +3,9 @@ package producthttp
 import (
 	"testing"
 
-	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
+	productdomain "github.com/homles698698-lab/XMall/internal/modules/catalog/product/domain"
 
-	"github.com/dujiao-next/internal/constants"
+	"github.com/homles698698-lab/XMall/internal/constants"
 )
 
 func TestDecorateProductStock_AutoSkipsInactiveSKUs(t *testing.T) {

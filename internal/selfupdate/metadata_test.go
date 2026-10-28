@@ -11,7 +11,7 @@ import (
 // TestBackupInfoRoundTrip 元数据要能原样写回读出——回滚提示全靠它，
 // 丢字段等于把「回滚到哪个版本、安不安全」这些信息一起丢掉。
 func TestBackupInfoRoundTrip(t *testing.T) {
-	exec := filepath.Join(t.TempDir(), "dujiao-next")
+	exec := filepath.Join(t.TempDir(), "xmall")
 	started := time.Now().Truncate(time.Second)
 	want := BackupInfo{
 		PreviousVersion:     "v1.4.0",
@@ -51,7 +51,7 @@ func TestBackupInfoRoundTrip(t *testing.T) {
 // TestReadBackupInfoMissingIsNotAnError 从旧版本升上来的那一次没有元数据文件，
 // 这属于正常情况，不能报错——否则回滚会被一个「信息缺失」挡住。
 func TestReadBackupInfoMissingIsNotAnError(t *testing.T) {
-	exec := filepath.Join(t.TempDir(), "dujiao-next")
+	exec := filepath.Join(t.TempDir(), "xmall")
 	info, known, err := ReadBackupInfo(exec)
 	if err != nil {
 		t.Fatalf("missing metadata should not error, got %v", err)
@@ -67,7 +67,7 @@ func TestReadBackupInfoMissingIsNotAnError(t *testing.T) {
 // TestReadBackupInfoCorruptedIsNotAnError 元数据损坏时不返回错误，但必须报 known=false：
 // 读不动的文件证明不了新版本没跑过，调用方要按 unsafe 处理。
 func TestReadBackupInfoCorruptedIsNotAnError(t *testing.T) {
-	exec := filepath.Join(t.TempDir(), "dujiao-next")
+	exec := filepath.Join(t.TempDir(), "xmall")
 	if err := os.WriteFile(metadataPath(exec), []byte("{not json"), 0o600); err != nil {
 		t.Fatal(err)
 	}
@@ -86,7 +86,7 @@ func TestReadBackupInfoCorruptedIsNotAnError(t *testing.T) {
 // seedUpgraded 造出一个「刚升级完」的现场：exec 是新二进制，.backup 是旧二进制。
 func seedUpgraded(t *testing.T, info BackupInfo) string {
 	t.Helper()
-	exec := filepath.Join(t.TempDir(), "dujiao-next")
+	exec := filepath.Join(t.TempDir(), "xmall")
 	if err := os.WriteFile(exec, []byte("new-binary"), 0o755); err != nil {
 		t.Fatal(err)
 	}
@@ -270,7 +270,7 @@ func TestStartupGuardTreatsForeignMetadataAsUnknown(t *testing.T) {
 // 一旦把「元数据目标对不上」当成「已被回滚取代」而退出，这条文档主路径会让服务
 // 每次启动都失败，且日志只会说自己被回滚了 —— 现场没有任何回滚发生过。
 func TestManualUpgradeAfterSelfUpdateStillBoots(t *testing.T) {
-	exec := filepath.Join(t.TempDir(), "dujiao-next")
+	exec := filepath.Join(t.TempDir(), "xmall")
 	if err := os.WriteFile(exec, []byte("v1.4.0-binary"), 0o755); err != nil {
 		t.Fatal(err)
 	}
@@ -376,7 +376,7 @@ func TestStartupGuardHonorsRollbackMarkerInReadOnlyInstallDir(t *testing.T) {
 		t.Skip("root 会无视目录权限位，无法在此模拟只读安装目录")
 	}
 	dir := t.TempDir()
-	exec := filepath.Join(dir, "dujiao-next")
+	exec := filepath.Join(dir, "xmall")
 	if err := os.WriteFile(exec+".lock", nil, 0o600); err != nil {
 		t.Fatal(err)
 	}
@@ -430,7 +430,7 @@ func TestStartupGuardAllowsReadOnlyInstallAfterUnsafeStatePersisted(t *testing.T
 // 这是回滚闸门第一次上线时**所有存量实例**都会走的路径。如果这里默认放行，
 // 那这道闸门对它最该保护的那批用户完全不起作用。
 func TestFirstUpgradeFromLegacyVersionIsUnsafe(t *testing.T) {
-	exec := filepath.Join(t.TempDir(), "dujiao-next")
+	exec := filepath.Join(t.TempDir(), "xmall")
 	if err := os.WriteFile(exec, []byte("new-binary"), 0o755); err != nil {
 		t.Fatal(err)
 	}
@@ -504,7 +504,7 @@ func TestFirstUpgradeFromLegacyVersionIsUnsafe(t *testing.T) {
 // StartupGuard，回滚标记可能一直留到下一次重新升级。它可以让首次启动安全退出一次，
 // 但必须被消费；否则同一版本之后每次重启都会被永久挡住。
 func TestConsumedRollbackMarkerDoesNotPermanentlyBlockSameVersion(t *testing.T) {
-	exec := filepath.Join(t.TempDir(), "dujiao-next")
+	exec := filepath.Join(t.TempDir(), "xmall")
 	if err := writeRollbackMarker(exec, "v1.5.0"); err != nil {
 		t.Fatal(err)
 	}
@@ -521,7 +521,7 @@ func TestConsumedRollbackMarkerDoesNotPermanentlyBlockSameVersion(t *testing.T) 
 
 // TestRollbackRefusesOnCorruptedMetadata 元数据损坏同样无法证明安全，默认必须拒绝。
 func TestRollbackRefusesOnCorruptedMetadata(t *testing.T) {
-	exec := filepath.Join(t.TempDir(), "dujiao-next")
+	exec := filepath.Join(t.TempDir(), "xmall")
 	if err := os.WriteFile(exec, []byte("new-binary"), 0o755); err != nil {
 		t.Fatal(err)
 	}
@@ -580,7 +580,7 @@ func TestStartupGuardBlocksConcurrentRollback(t *testing.T) {
 // 不仅不能写元数据，也不能创建锁文件。否则只读安装目录中的 release 二进制
 // 会因为一个本来不可用的自更新功能而连正常服务都启动不了。
 func TestStartupGuardNoBackupIsNoop(t *testing.T) {
-	exec := filepath.Join(t.TempDir(), "dujiao-next")
+	exec := filepath.Join(t.TempDir(), "xmall")
 	guard, err := acquireStartupGuardAt(exec, "v1.5.0")
 	if err != nil {
 		t.Fatalf("acquireStartupGuardAt: %v", err)

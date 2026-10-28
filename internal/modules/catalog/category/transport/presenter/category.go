@@ -1,8 +1,8 @@
 package categorypresenter
 
 import (
-	categorydomain "github.com/dujiao-next/internal/modules/catalog/category/domain"
-	"github.com/dujiao-next/internal/shared/jsonmap"
+	categorydomain "github.com/homles698698-lab/XMall/internal/modules/catalog/category/domain"
+	"github.com/homles698698-lab/XMall/internal/shared/jsonmap"
 )
 
 // Category 是公开分类响应；不暴露数据库软删除和内部时间字段。

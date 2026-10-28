@@ -6,7 +6,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/dujiao-next/internal/modules/upload/contract"
+	"github.com/homles698698-lab/XMall/internal/modules/upload/contract"
 )
 
 // Store 将上传文件写入本地 uploads 目录。

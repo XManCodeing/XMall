@@ -9,14 +9,14 @@ import (
 	"testing"
 	"time"
 
-	"github.com/dujiao-next/internal/constants"
-	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
-	downstreamcallbackdomain "github.com/dujiao-next/internal/modules/downstreamcallback/domain"
-	orderdomain "github.com/dujiao-next/internal/modules/order/domain"
-	procurementcontract "github.com/dujiao-next/internal/modules/procurement/contract"
-	procurementdomain "github.com/dujiao-next/internal/modules/procurement/domain"
-	siteconnectiondomain "github.com/dujiao-next/internal/modules/siteconnection/domain"
-	upstreamadapter "github.com/dujiao-next/internal/upstream"
+	"github.com/homles698698-lab/XMall/internal/constants"
+	productdomain "github.com/homles698698-lab/XMall/internal/modules/catalog/product/domain"
+	downstreamcallbackdomain "github.com/homles698698-lab/XMall/internal/modules/downstreamcallback/domain"
+	orderdomain "github.com/homles698698-lab/XMall/internal/modules/order/domain"
+	procurementcontract "github.com/homles698698-lab/XMall/internal/modules/procurement/contract"
+	procurementdomain "github.com/homles698698-lab/XMall/internal/modules/procurement/domain"
+	siteconnectiondomain "github.com/homles698698-lab/XMall/internal/modules/siteconnection/domain"
+	upstreamadapter "github.com/homles698698-lab/XMall/internal/upstream"
 
 	"github.com/gin-gonic/gin"
 )

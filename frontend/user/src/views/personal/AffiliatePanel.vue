@@ -207,7 +207,7 @@ import { computed, onMounted, reactive, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { Megaphone } from 'lucide-vue-next'
 import PanelHeading from '../../components/shared/PanelHeading.vue'
-import { affiliateAPI, type AffiliateCommissionData, type AffiliateDashboardData, type AffiliateWithdrawData } from '../../api'
+import { affiliateAPI, type AffiliateCommissionData, type AffiliateDashboardData, type AffiliateWithdrawData } from '../../api/index.ts'
 import {
   AFFILIATE_COMMISSION_STATUS_AVAILABLE,
   AFFILIATE_COMMISSION_STATUS_PENDING_CONFIRM,
@@ -216,10 +216,10 @@ import {
   AFFILIATE_WITHDRAW_STATUS_PAID,
   AFFILIATE_WITHDRAW_STATUS_PENDING_REVIEW,
   AFFILIATE_WITHDRAW_STATUS_REJECTED,
-} from '../../constants/affiliate'
-import { useAppStore } from '../../stores/app'
-import { pageAlertVariant, pageAlertToneClass, type PageAlert } from '../../utils/alerts'
-import type { BadgeTone } from '../../utils/status'
+} from '../../constants/affiliate.ts'
+import { useAppStore } from '../../stores/app.ts'
+import { pageAlertVariant, pageAlertToneClass, type PageAlert } from '../../utils/alerts.ts'
+import type { BadgeTone } from '../../utils/status.ts'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
 import { Label } from '@/components/ui/label'

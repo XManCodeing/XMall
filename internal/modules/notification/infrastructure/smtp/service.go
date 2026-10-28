@@ -13,14 +13,14 @@ import (
 	"strings"
 	"time"
 
-	"github.com/dujiao-next/internal/config"
-	"github.com/dujiao-next/internal/constants"
-	"github.com/dujiao-next/internal/i18n"
-	"github.com/dujiao-next/internal/logger"
-	notificationcontract "github.com/dujiao-next/internal/modules/notification/contract"
-	settingsmessaging "github.com/dujiao-next/internal/modules/settings/schema/messaging"
-	"github.com/dujiao-next/internal/shared/mailbrand"
-	"github.com/dujiao-next/internal/telegramidentity"
+	"github.com/homles698698-lab/XMall/internal/config"
+	"github.com/homles698698-lab/XMall/internal/constants"
+	"github.com/homles698698-lab/XMall/internal/i18n"
+	"github.com/homles698698-lab/XMall/internal/logger"
+	notificationcontract "github.com/homles698698-lab/XMall/internal/modules/notification/contract"
+	settingsmessaging "github.com/homles698698-lab/XMall/internal/modules/settings/schema/messaging"
+	"github.com/homles698698-lab/XMall/internal/shared/mailbrand"
+	"github.com/homles698698-lab/XMall/internal/telegramidentity"
 )
 
 // writeStandardHeaders 写入 RFC 5322 要求的通用邮件头（Date、Message-ID、From、To、Subject、MIME-Version）。
@@ -179,7 +179,7 @@ func (s *Service) SendCustomEmail(toEmail, subject, body string) error {
 	}
 	body = strings.TrimSpace(body)
 	if body == "" {
-		body = "这是一封来自 Dujiao-Next 的 SMTP 测试邮件，说明当前配置可正常发送。"
+		body = "这是一封来自 XMall 的 SMTP 测试邮件，说明当前配置可正常发送。"
 	}
 	return s.sendTextEmail(toEmail, subject, body)
 }
@@ -243,7 +243,7 @@ func (s *Service) sendSMTPMessage(addr, toEmail string, msg []byte) error {
 }
 
 func buildEmailMessageWithAttachment(from, to, subject, body, attachName, attachContent, replyTo string) string {
-	boundary := "----=_DujiaoNextBoundary_" + fmt.Sprintf("%d", len(body)+len(attachContent))
+	boundary := "----=_XMallBoundary_" + fmt.Sprintf("%d", len(body)+len(attachContent))
 
 	var buf bytes.Buffer
 	writeStandardHeaders(&buf, from, to, subject, replyTo)

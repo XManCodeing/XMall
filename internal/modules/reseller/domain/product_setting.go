@@ -3,8 +3,8 @@ package domain
 import (
 	"time"
 
-	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
-	"github.com/dujiao-next/internal/shared/money"
+	productdomain "github.com/homles698698-lab/XMall/internal/modules/catalog/product/domain"
+	"github.com/homles698698-lab/XMall/internal/shared/money"
 )
 
 // ProductSetting 分销商商品配置。

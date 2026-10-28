@@ -3,7 +3,7 @@ package gormstore
 import (
 	"testing"
 
-	mappingdomain "github.com/dujiao-next/internal/modules/catalog/mapping/domain"
+	mappingdomain "github.com/homles698698-lab/XMall/internal/modules/catalog/mapping/domain"
 )
 
 func TestSKUMappingStoreListByProductMappingIDs(t *testing.T) {

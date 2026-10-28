@@ -16,12 +16,12 @@ import (
 	"testing"
 	"time"
 
-	paymentcontract "github.com/dujiao-next/internal/modules/payment/contract"
-	"github.com/dujiao-next/internal/modules/payment/infrastructure/gateway/wechatpay"
+	paymentcontract "github.com/homles698698-lab/XMall/internal/modules/payment/contract"
+	"github.com/homles698698-lab/XMall/internal/modules/payment/infrastructure/gateway/wechatpay"
 
-	"github.com/dujiao-next/internal/constants"
-	"github.com/dujiao-next/internal/shared/jsonmap"
-	"github.com/dujiao-next/internal/shared/money"
+	"github.com/homles698698-lab/XMall/internal/constants"
+	"github.com/homles698698-lab/XMall/internal/shared/jsonmap"
+	"github.com/homles698698-lab/XMall/internal/shared/money"
 
 	"github.com/shopspring/decimal"
 )

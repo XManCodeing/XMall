@@ -7,17 +7,17 @@ import (
 	"testing"
 	"time"
 
-	paymentapp "github.com/dujiao-next/internal/modules/payment/application"
-	paymentdomain "github.com/dujiao-next/internal/modules/payment/domain"
-	paymentgormstore "github.com/dujiao-next/internal/modules/payment/infrastructure/gormstore"
-	settingsapp "github.com/dujiao-next/internal/modules/settings/application"
-	settingsstore "github.com/dujiao-next/internal/modules/settings/infrastructure/gormstore"
+	paymentapp "github.com/homles698698-lab/XMall/internal/modules/payment/application"
+	paymentdomain "github.com/homles698698-lab/XMall/internal/modules/payment/domain"
+	paymentgormstore "github.com/homles698698-lab/XMall/internal/modules/payment/infrastructure/gormstore"
+	settingsapp "github.com/homles698698-lab/XMall/internal/modules/settings/application"
+	settingsstore "github.com/homles698698-lab/XMall/internal/modules/settings/infrastructure/gormstore"
 
-	userdomain "github.com/dujiao-next/internal/modules/identity/user/domain"
+	userdomain "github.com/homles698698-lab/XMall/internal/modules/identity/user/domain"
 
-	"github.com/dujiao-next/internal/constants"
-	"github.com/dujiao-next/internal/shared/jsonslice"
-	"github.com/dujiao-next/internal/shared/money"
+	"github.com/homles698698-lab/XMall/internal/constants"
+	"github.com/homles698698-lab/XMall/internal/shared/jsonslice"
+	"github.com/homles698698-lab/XMall/internal/shared/money"
 
 	"github.com/glebarez/sqlite"
 	"github.com/shopspring/decimal"

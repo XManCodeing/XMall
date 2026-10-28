@@ -17,7 +17,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/dujiao-next/internal/config"
+	"github.com/homles698698-lab/XMall/internal/config"
 
 	"github.com/golang-jwt/jwt/v5"
 )

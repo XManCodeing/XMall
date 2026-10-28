@@ -5,9 +5,9 @@ import (
 	"testing"
 	"time"
 
-	categorydomain "github.com/dujiao-next/internal/modules/catalog/category/domain"
-	"github.com/dujiao-next/internal/shared/jsonmap"
 	"github.com/glebarez/sqlite"
+	categorydomain "github.com/homles698698-lab/XMall/internal/modules/catalog/category/domain"
+	"github.com/homles698698-lab/XMall/internal/shared/jsonmap"
 	"gorm.io/gorm"
 )
 

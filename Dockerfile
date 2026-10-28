@@ -34,7 +34,7 @@ FROM --platform=$BUILDPLATFORM golang:1.26.5-alpine AS builder
 ARG TARGETOS
 ARG TARGETARCH
 ARG TARGETVARIANT
-ARG APP_VERSION=v1.0.0
+ARG APP_VERSION=v1.1.0
 RUN echo "Building for $TARGETOS/$TARGETARCH$TARGETVARIANT"
 
 WORKDIR /src
@@ -54,7 +54,7 @@ RUN set -eux; \
     export GOOS="$TARGETOS" GOARCH="$TARGETARCH"; \
     if [ "$TARGETARCH" = "arm" ] && [ -n "$TARGETVARIANT" ]; then export GOARM="${TARGETVARIANT#v}"; fi; \
     if [ "$TARGETARCH" = "amd64" ] && [ -n "$TARGETVARIANT" ]; then export GOAMD64="${TARGETVARIANT#v}"; fi; \
-    go build -trimpath -tags release,fullstack -ldflags="-s -w -X github.com/dujiao-next/internal/version.Version=${APP_VERSION} -X github.com/dujiao-next/internal/version.BuildType=release" -o /out/dujiao-next ./cmd/server
+    go build -trimpath -tags release,fullstack -ldflags="-s -w -X github.com/homles698698-lab/XMall/internal/version.Version=${APP_VERSION} -X github.com/homles698698-lab/XMall/internal/version.BuildType=release" -o /out/xmall ./cmd/server
 
 # ---- 阶段 3：运行时 ----
 FROM alpine:latest
@@ -64,14 +64,14 @@ WORKDIR /app
 RUN apk --no-cache add ca-certificates tzdata \
     && mkdir -p /app/db /app/uploads /app/logs
 
-COPY --from=builder /out/dujiao-next /app/dujiao-next
+COPY --from=builder /out/xmall /app/xmall
 COPY config.yml.example /app/config.yml.example
 COPY LICENSE /app/LICENSE
 COPY README.md /app/README.md
 
 ARG SOURCE_URL=""
 ARG VCS_REF=""
-ARG APP_VERSION="dev"
+ARG APP_VERSION="v1.1.0"
 LABEL org.opencontainers.image.source="${SOURCE_URL}" \
       org.opencontainers.image.revision="${VCS_REF}" \
       org.opencontainers.image.version="${APP_VERSION}" \
@@ -79,4 +79,4 @@ LABEL org.opencontainers.image.source="${SOURCE_URL}" \
 
 EXPOSE 8080
 
-CMD ["./dujiao-next"]
+CMD ["./xmall"]

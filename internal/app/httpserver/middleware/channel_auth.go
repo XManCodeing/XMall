@@ -5,12 +5,12 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/dujiao-next/internal/app/container"
-	"github.com/dujiao-next/internal/i18n"
-	"github.com/dujiao-next/internal/logger"
-	channelclientapp "github.com/dujiao-next/internal/modules/channelclient/application"
-	"github.com/dujiao-next/internal/platform/http/response"
-	"github.com/dujiao-next/internal/upstream"
+	"github.com/homles698698-lab/XMall/internal/app/container"
+	"github.com/homles698698-lab/XMall/internal/i18n"
+	"github.com/homles698698-lab/XMall/internal/logger"
+	channelclientapp "github.com/homles698698-lab/XMall/internal/modules/channelclient/application"
+	"github.com/homles698698-lab/XMall/internal/platform/http/response"
+	"github.com/homles698698-lab/XMall/internal/upstream"
 
 	"github.com/gin-gonic/gin"
 )

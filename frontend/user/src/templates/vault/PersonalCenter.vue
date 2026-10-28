@@ -192,7 +192,7 @@ import { useI18n } from 'vue-i18n'
 import { Crown, ShoppingBag, ShieldCheck, Percent } from 'lucide-vue-next'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { getImageUrl } from '../../utils/image'
+import { getImageUrl } from '../../utils/image.ts'
 import ProfilePanel from '../../views/personal/ProfilePanel.vue'
 import SecurityPanel from '../../views/personal/SecurityPanel.vue'
 import OrdersPanel from '../../views/personal/OrdersPanel.vue'
@@ -200,7 +200,7 @@ import WalletPanel from '../../views/personal/WalletPanel.vue'
 import GiftCardPanel from '../../views/personal/GiftCardPanel.vue'
 import AffiliatePanel from '../../views/personal/AffiliatePanel.vue'
 import ApiPanel from '../../views/personal/ApiPanel.vue'
-import { usePersonalCenter, type PersonalSection } from '../../composables/usePersonalCenter'
+import { usePersonalCenter, type PersonalSection } from '../../composables/usePersonalCenter.ts'
 
 const { t } = useI18n()
 

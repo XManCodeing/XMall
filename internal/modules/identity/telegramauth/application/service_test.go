@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/dujiao-next/internal/config"
+	"github.com/homles698698-lab/XMall/internal/config"
 )
 
 func TestVerifyMiniAppInitDataSuccess(t *testing.T) {

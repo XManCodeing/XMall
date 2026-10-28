@@ -4,8 +4,8 @@ import (
 	"context"
 	"time"
 
-	procurementdomain "github.com/dujiao-next/internal/modules/procurement/domain"
-	"github.com/dujiao-next/internal/shared/jsonmap"
+	procurementdomain "github.com/homles698698-lab/XMall/internal/modules/procurement/domain"
+	"github.com/homles698698-lab/XMall/internal/shared/jsonmap"
 )
 
 type ListFilter struct {

@@ -5,8 +5,8 @@ import (
 	"errors"
 	"strings"
 
-	"github.com/dujiao-next/internal/shared/jsonmap"
-	"github.com/dujiao-next/internal/upstream"
+	"github.com/homles698698-lab/XMall/internal/shared/jsonmap"
+	"github.com/homles698698-lab/XMall/internal/upstream"
 	"github.com/shopspring/decimal"
 )
 

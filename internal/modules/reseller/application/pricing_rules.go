@@ -3,11 +3,11 @@ package application
 import (
 	"strings"
 
-	resellercontract "github.com/dujiao-next/internal/modules/reseller/contract"
+	resellercontract "github.com/homles698698-lab/XMall/internal/modules/reseller/contract"
 
-	resellerdomain "github.com/dujiao-next/internal/modules/reseller/domain"
+	resellerdomain "github.com/homles698698-lab/XMall/internal/modules/reseller/domain"
 
-	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
+	productdomain "github.com/homles698698-lab/XMall/internal/modules/catalog/product/domain"
 
 	"github.com/shopspring/decimal"
 )

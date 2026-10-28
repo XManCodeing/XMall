@@ -1,6 +1,6 @@
 version: 2
 
-project_name: dujiao-next
+project_name: xmall
 
 # 前端在这里构建并拷进 internal/web/dist/，随后由 -tags=fullstack 的 go:embed 打进二进制。
 # 放在 before hooks 而不是 CI step 里，是为了让本地 `goreleaser build --snapshot`
@@ -26,15 +26,15 @@ before:
 
 builds:
   # 单一产物：内嵌 admin + user SPA，一个二进制跑完整服务。
-  - id: dujiao-next
+  - id: xmall
     env:
       - CGO_ENABLED=0
     main: ./cmd/server
-    binary: dujiao-next
+    binary: xmall
     # BuildType=release 是后台一键升级的开关：只有 CI 正式产物才允许自我替换，
     # 本地 go build 的二进制版本号是占位值，放开会把开发者自己编译的产物覆盖掉。
     ldflags:
-      - -s -w -X github.com/dujiao-next/internal/version.Version={{.Tag}} -X github.com/dujiao-next/internal/version.BuildType=release
+      - -s -w -X github.com/homles698698-lab/XMall/internal/version.Version={{.Tag}} -X github.com/homles698698-lab/XMall/internal/version.BuildType=release
     flags:
       - "-tags=release,fullstack"
       - "-mod=readonly"
@@ -47,15 +47,15 @@ builds:
       - arm64
 
 archives:
-  - id: dujiao-next
+  - id: xmall
     ids:
-      - dujiao-next
+      - xmall
     formats: [tar.gz]
     files:
       - ./config.yml.example
       - ./README.md
       - ./LICENSE
-      - ./scripts/dujiao-next-manager.sh
+      - ./scripts/xmall-manager.sh
     name_template: >-
       {{ .ProjectName }}_
       {{- .Tag }}_
@@ -110,5 +110,5 @@ release:
     - [本版部署说明](https://github.com/{{ .Env.GITHUB_REPOSITORY }}/blob/{{ .FullCommit }}/README.md)
     - [许可证](https://github.com/{{ .Env.GITHUB_REPOSITORY }}/blob/{{ .FullCommit }}/LICENSE)
 
-    安装脚本需显式设置 DUJIAO_UPDATE_REPOSITORY={{ .Env.GITHUB_REPOSITORY }}，不会默认选择上游仓库。
+    安装脚本需显式设置 XMALL_UPDATE_REPOSITORY={{ .Env.GITHUB_REPOSITORY }}，不会默认选择上游仓库。
     发布前请核验安装包、对应源码与第三方许可材料。

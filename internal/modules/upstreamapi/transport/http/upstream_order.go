@@ -6,11 +6,11 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/dujiao-next/internal/constants"
-	"github.com/dujiao-next/internal/logger"
-	downstreamcallbackdomain "github.com/dujiao-next/internal/modules/downstreamcallback/domain"
-	"github.com/dujiao-next/internal/platform/http/ginutil"
-	"github.com/dujiao-next/internal/shared/jsonmap"
+	"github.com/homles698698-lab/XMall/internal/constants"
+	"github.com/homles698698-lab/XMall/internal/logger"
+	downstreamcallbackdomain "github.com/homles698698-lab/XMall/internal/modules/downstreamcallback/domain"
+	"github.com/homles698698-lab/XMall/internal/platform/http/ginutil"
+	"github.com/homles698698-lab/XMall/internal/shared/jsonmap"
 
 	"github.com/gin-gonic/gin"
 )

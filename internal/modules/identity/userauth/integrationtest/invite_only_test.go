@@ -6,13 +6,13 @@ import (
 	"testing"
 	"time"
 
-	"github.com/dujiao-next/internal/constants"
-	invitecodeapp "github.com/dujiao-next/internal/modules/identity/invitecode/application"
-	invitecodedomain "github.com/dujiao-next/internal/modules/identity/invitecode/domain"
-	invitecodestore "github.com/dujiao-next/internal/modules/identity/invitecode/infrastructure/gormstore"
-	telegramauthapp "github.com/dujiao-next/internal/modules/identity/telegramauth/application"
-	userdomain "github.com/dujiao-next/internal/modules/identity/user/domain"
-	userauthapp "github.com/dujiao-next/internal/modules/identity/userauth/application"
+	"github.com/homles698698-lab/XMall/internal/constants"
+	invitecodeapp "github.com/homles698698-lab/XMall/internal/modules/identity/invitecode/application"
+	invitecodedomain "github.com/homles698698-lab/XMall/internal/modules/identity/invitecode/domain"
+	invitecodestore "github.com/homles698698-lab/XMall/internal/modules/identity/invitecode/infrastructure/gormstore"
+	telegramauthapp "github.com/homles698698-lab/XMall/internal/modules/identity/telegramauth/application"
+	userdomain "github.com/homles698698-lab/XMall/internal/modules/identity/user/domain"
+	userauthapp "github.com/homles698698-lab/XMall/internal/modules/identity/userauth/application"
 
 	"gorm.io/gorm"
 )

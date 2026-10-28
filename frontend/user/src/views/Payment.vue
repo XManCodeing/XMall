@@ -491,7 +491,7 @@
 <script setup lang="ts">
 import { useI18n } from 'vue-i18n'
 import { Copy, ExternalLink } from 'lucide-vue-next'
-import { pageAlertVariant, pageAlertToneClass } from '../utils/alerts'
+import { pageAlertVariant, pageAlertToneClass } from '../utils/alerts.ts'
 import PaymentAmountBreakdown from '../components/payment/PaymentAmountBreakdown.vue'
 import PaymentChannelSelector from '../components/payment/PaymentChannelSelector.vue'
 import EmptyState from '../components/EmptyState.vue'
@@ -500,7 +500,7 @@ import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import { usePayment } from '../composables/usePayment'
+import { usePayment } from '../composables/usePayment.ts'
 
 const { t } = useI18n()
 

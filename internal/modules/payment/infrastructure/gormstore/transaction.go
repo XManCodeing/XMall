@@ -3,9 +3,9 @@ package gormstore
 import (
 	"strings"
 
-	ordercontract "github.com/dujiao-next/internal/modules/order/contract"
-	ordergormstore "github.com/dujiao-next/internal/modules/order/infrastructure/gormstore"
-	paymentcontract "github.com/dujiao-next/internal/modules/payment/contract"
+	ordercontract "github.com/homles698698-lab/XMall/internal/modules/order/contract"
+	ordergormstore "github.com/homles698698-lab/XMall/internal/modules/order/infrastructure/gormstore"
+	paymentcontract "github.com/homles698698-lab/XMall/internal/modules/payment/contract"
 
 	"gorm.io/gorm"
 )

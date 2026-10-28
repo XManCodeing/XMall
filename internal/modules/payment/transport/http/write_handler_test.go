@@ -7,7 +7,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/dujiao-next/internal/platform/http/response"
+	"github.com/homles698698-lab/XMall/internal/platform/http/response"
 
 	"github.com/gin-gonic/gin"
 )

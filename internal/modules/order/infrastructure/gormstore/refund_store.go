@@ -5,10 +5,10 @@ import (
 	"strings"
 	"time"
 
-	ordercontract "github.com/dujiao-next/internal/modules/order/contract"
-	orderdomain "github.com/dujiao-next/internal/modules/order/domain"
-	"github.com/dujiao-next/internal/persistence/gormutil"
-	"github.com/dujiao-next/internal/shared/money"
+	ordercontract "github.com/homles698698-lab/XMall/internal/modules/order/contract"
+	orderdomain "github.com/homles698698-lab/XMall/internal/modules/order/domain"
+	"github.com/homles698698-lab/XMall/internal/persistence/gormutil"
+	"github.com/homles698698-lab/XMall/internal/shared/money"
 
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"

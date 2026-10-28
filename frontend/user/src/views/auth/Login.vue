@@ -12,7 +12,7 @@
 
       <Card class="auth-card rounded-[28px]">
         <header class="auth-heading" :class="{ 'auth-login-heading': step !== 'totp' }">
-          <img src="/dj.svg" alt="" width="48" height="48" class="mx-auto mb-6 h-12 w-12 object-contain" />
+          <BrandMark class="mx-auto mb-6 flex h-12 w-12" />
           <h1 :class="{ 'auth-login-title': step !== 'totp' }" class="text-[28px] font-semibold leading-tight tracking-tight text-foreground">
             {{ step === 'totp' ? t('auth.login.totp.title') : t('auth.login.submit') }}
           </h1>
@@ -271,6 +271,7 @@
 </template>
 
 <script setup lang="ts">
+import BrandMark from '@/components/BrandMark.vue'
 import ImageCaptcha from '../../components/captcha/ImageCaptcha.vue'
 import TurnstileCaptcha from '../../components/captcha/TurnstileCaptcha.vue'
 import FormField from '../../components/FormField.vue'
@@ -282,7 +283,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
-import { useLogin } from '../../composables/useLogin'
+import { useLogin } from '../../composables/useLogin.ts'
 
 const { t } = useI18n()
 

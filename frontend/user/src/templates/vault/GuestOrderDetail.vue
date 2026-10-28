@@ -71,7 +71,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import VaultOrderBody from './components/VaultOrderBody.vue'
-import { useGuestOrderDetail } from '../../composables/useGuestOrderDetail'
+import { useGuestOrderDetail } from '../../composables/useGuestOrderDetail.ts'
 
 const { t } = useI18n()
 

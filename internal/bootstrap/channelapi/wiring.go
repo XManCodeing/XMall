@@ -4,25 +4,25 @@ import (
 	"errors"
 	"fmt"
 
-	paymentapp "github.com/dujiao-next/internal/modules/payment/application"
-	paymentcontract "github.com/dujiao-next/internal/modules/payment/contract"
+	paymentapp "github.com/homles698698-lab/XMall/internal/modules/payment/application"
+	paymentcontract "github.com/homles698698-lab/XMall/internal/modules/payment/contract"
 
-	paymentdomain "github.com/dujiao-next/internal/modules/payment/domain"
+	paymentdomain "github.com/homles698698-lab/XMall/internal/modules/payment/domain"
 
-	orderapp "github.com/dujiao-next/internal/modules/order/application"
-	ordercontract "github.com/dujiao-next/internal/modules/order/contract"
-	orderdomain "github.com/dujiao-next/internal/modules/order/domain"
+	orderapp "github.com/homles698698-lab/XMall/internal/modules/order/application"
+	ordercontract "github.com/homles698698-lab/XMall/internal/modules/order/contract"
+	orderdomain "github.com/homles698698-lab/XMall/internal/modules/order/domain"
 
-	userdomain "github.com/dujiao-next/internal/modules/identity/user/domain"
+	userdomain "github.com/homles698698-lab/XMall/internal/modules/identity/user/domain"
 
-	"github.com/dujiao-next/internal/app/container"
-	productcontract "github.com/dujiao-next/internal/modules/catalog/product/contract"
-	"github.com/dujiao-next/internal/modules/catalog/product/manualform"
-	channeltransport "github.com/dujiao-next/internal/modules/channelapi/transport/http"
-	externalidentitydomain "github.com/dujiao-next/internal/modules/identity/externalidentity/domain"
-	userauthapp "github.com/dujiao-next/internal/modules/identity/userauth/application"
-	orderriskcontract "github.com/dujiao-next/internal/modules/orderrisk/contract"
-	walletcontract "github.com/dujiao-next/internal/modules/wallet/contract"
+	"github.com/homles698698-lab/XMall/internal/app/container"
+	productcontract "github.com/homles698698-lab/XMall/internal/modules/catalog/product/contract"
+	"github.com/homles698698-lab/XMall/internal/modules/catalog/product/manualform"
+	channeltransport "github.com/homles698698-lab/XMall/internal/modules/channelapi/transport/http"
+	externalidentitydomain "github.com/homles698698-lab/XMall/internal/modules/identity/externalidentity/domain"
+	userauthapp "github.com/homles698698-lab/XMall/internal/modules/identity/userauth/application"
+	orderriskcontract "github.com/homles698698-lab/XMall/internal/modules/orderrisk/contract"
+	walletcontract "github.com/homles698698-lab/XMall/internal/modules/wallet/contract"
 )
 
 // NewHandler connects application services to the channel HTTP

@@ -5,13 +5,13 @@ import (
 	"strings"
 	"time"
 
-	ginutil "github.com/dujiao-next/internal/platform/http/ginutil"
+	ginutil "github.com/homles698698-lab/XMall/internal/platform/http/ginutil"
 
-	"github.com/dujiao-next/internal/constants"
-	reseller "github.com/dujiao-next/internal/modules/reseller/contract"
-	"github.com/dujiao-next/internal/platform/http/response"
-	"github.com/dujiao-next/internal/shared/jsonmap"
-	"github.com/dujiao-next/internal/version"
+	"github.com/homles698698-lab/XMall/internal/constants"
+	reseller "github.com/homles698698-lab/XMall/internal/modules/reseller/contract"
+	"github.com/homles698698-lab/XMall/internal/platform/http/response"
+	"github.com/homles698698-lab/XMall/internal/shared/jsonmap"
+	"github.com/homles698698-lab/XMall/internal/version"
 
 	"github.com/gin-gonic/gin"
 )

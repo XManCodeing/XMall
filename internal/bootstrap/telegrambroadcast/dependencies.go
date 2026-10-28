@@ -4,10 +4,10 @@ import (
 	"context"
 	"errors"
 
-	channelclientapp "github.com/dujiao-next/internal/modules/channelclient/application"
-	externalidentitycontract "github.com/dujiao-next/internal/modules/identity/externalidentity/contract"
-	broadcastapp "github.com/dujiao-next/internal/modules/telegram/broadcast/application"
-	"github.com/dujiao-next/internal/queue"
+	channelclientapp "github.com/homles698698-lab/XMall/internal/modules/channelclient/application"
+	externalidentitycontract "github.com/homles698698-lab/XMall/internal/modules/identity/externalidentity/contract"
+	broadcastapp "github.com/homles698698-lab/XMall/internal/modules/telegram/broadcast/application"
+	"github.com/homles698698-lab/XMall/internal/queue"
 )
 
 type UserDirectory struct {

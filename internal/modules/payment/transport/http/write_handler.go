@@ -6,15 +6,15 @@ import (
 	"fmt"
 	"strconv"
 
-	paymentpresenter "github.com/dujiao-next/internal/modules/payment/transport/presenter"
+	paymentpresenter "github.com/homles698698-lab/XMall/internal/modules/payment/transport/presenter"
 
-	paymentdomain "github.com/dujiao-next/internal/modules/payment/domain"
+	paymentdomain "github.com/homles698698-lab/XMall/internal/modules/payment/domain"
 
-	ginutil "github.com/dujiao-next/internal/platform/http/ginutil"
-	"github.com/dujiao-next/internal/shared/money"
+	ginutil "github.com/homles698698-lab/XMall/internal/platform/http/ginutil"
+	"github.com/homles698698-lab/XMall/internal/shared/money"
 
-	"github.com/dujiao-next/internal/i18n"
-	"github.com/dujiao-next/internal/platform/http/response"
+	"github.com/homles698698-lab/XMall/internal/i18n"
+	"github.com/homles698698-lab/XMall/internal/platform/http/response"
 
 	"github.com/gin-gonic/gin"
 )

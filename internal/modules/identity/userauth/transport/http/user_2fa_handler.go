@@ -5,10 +5,10 @@ import (
 	"errors"
 	"time"
 
-	"github.com/dujiao-next/internal/constants"
-	userpresenter "github.com/dujiao-next/internal/modules/identity/userauth/transport/presenter"
-	"github.com/dujiao-next/internal/platform/http/ginutil"
-	"github.com/dujiao-next/internal/platform/http/response"
+	"github.com/homles698698-lab/XMall/internal/constants"
+	userpresenter "github.com/homles698698-lab/XMall/internal/modules/identity/userauth/transport/presenter"
+	"github.com/homles698698-lab/XMall/internal/platform/http/ginutil"
+	"github.com/homles698698-lab/XMall/internal/platform/http/response"
 
 	"github.com/gin-gonic/gin"
 )

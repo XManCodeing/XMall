@@ -5,11 +5,11 @@ import (
 	"net/http"
 	"time"
 
-	apicredentialdomain "github.com/dujiao-next/internal/modules/apicredential/domain"
+	apicredentialdomain "github.com/homles698698-lab/XMall/internal/modules/apicredential/domain"
 
-	"github.com/dujiao-next/internal/constants"
-	"github.com/dujiao-next/internal/logger"
-	"github.com/dujiao-next/internal/upstream"
+	"github.com/homles698698-lab/XMall/internal/constants"
+	"github.com/homles698698-lab/XMall/internal/logger"
+	"github.com/homles698698-lab/XMall/internal/upstream"
 
 	"github.com/gin-gonic/gin"
 )

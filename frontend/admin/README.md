@@ -1,6 +1,8 @@
-# Dujiao-Next Admin
+# XMall Admin
 
 The management console for operating products, orders, users, payment channels, and system settings.
+
+This directory belongs to XMall; see the [project README](../../README.md). The original upstream repository note below and the upstream documentation link at the end are retained for attribution and reference, not as XMall release sources.
 
 > This directory is part of the [dujiao-next](https://github.com/dujiao-next/dujiao-next)
 > single repository and is no longer released on its own. Production assets are embedded

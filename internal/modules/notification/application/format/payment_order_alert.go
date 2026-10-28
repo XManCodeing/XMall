@@ -4,11 +4,11 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/dujiao-next/internal/constants"
-	dashboard "github.com/dujiao-next/internal/modules/dashboard/contract"
-	settingsmessaging "github.com/dujiao-next/internal/modules/settings/schema/messaging"
-	settingsstorefront "github.com/dujiao-next/internal/modules/settings/schema/storefront"
-	"github.com/dujiao-next/internal/queue"
+	"github.com/homles698698-lab/XMall/internal/constants"
+	dashboard "github.com/homles698698-lab/XMall/internal/modules/dashboard/contract"
+	settingsmessaging "github.com/homles698698-lab/XMall/internal/modules/settings/schema/messaging"
+	settingsstorefront "github.com/homles698698-lab/XMall/internal/modules/settings/schema/storefront"
+	"github.com/homles698698-lab/XMall/internal/queue"
 )
 
 // BuildPaymentOrderAlertDispatchPayloads 构建支付订单告警通知载荷。

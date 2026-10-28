@@ -16,9 +16,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/dujiao-next/internal/config"
-	"github.com/dujiao-next/internal/constants"
-	settingssecurity "github.com/dujiao-next/internal/modules/settings/schema/security"
+	"github.com/homles698698-lab/XMall/internal/config"
+	"github.com/homles698698-lab/XMall/internal/constants"
+	settingssecurity "github.com/homles698698-lab/XMall/internal/modules/settings/schema/security"
 )
 
 // LoginPayload is the Telegram Login Widget payload.

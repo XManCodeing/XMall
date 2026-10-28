@@ -12,6 +12,7 @@
           :alt="brandSiteName"
           class="h-8 max-w-[180px] shrink-0 object-contain"
         />
+        <BrandMark v-else class="h-8 w-8" />
         <span class="theme-wordmark-text">{{ brandSiteName }}</span>
       </router-link>
 
@@ -204,6 +205,7 @@
 </template>
 
 <script setup lang="ts">
+import BrandMark from '@/components/BrandMark.vue'
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useAppStore } from '../stores/app'

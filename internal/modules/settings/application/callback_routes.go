@@ -4,8 +4,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/dujiao-next/internal/constants"
-	settingsintegration "github.com/dujiao-next/internal/modules/settings/schema/integration"
+	"github.com/homles698698-lab/XMall/internal/constants"
+	settingsintegration "github.com/homles698698-lab/XMall/internal/modules/settings/schema/integration"
 )
 
 var callbackRoutesCache struct {

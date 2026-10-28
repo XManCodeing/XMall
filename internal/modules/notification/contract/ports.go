@@ -4,14 +4,14 @@ import (
 	"context"
 	"time"
 
-	dashboardcontract "github.com/dujiao-next/internal/modules/dashboard/contract"
-	"github.com/dujiao-next/internal/modules/notification/domain"
-	settingsmessaging "github.com/dujiao-next/internal/modules/settings/schema/messaging"
-	settingsstorefront "github.com/dujiao-next/internal/modules/settings/schema/storefront"
-	"github.com/dujiao-next/internal/queue"
-	"github.com/dujiao-next/internal/shared/jsonmap"
-	"github.com/dujiao-next/internal/shared/mailbrand"
-	"github.com/dujiao-next/internal/shared/money"
+	dashboardcontract "github.com/homles698698-lab/XMall/internal/modules/dashboard/contract"
+	"github.com/homles698698-lab/XMall/internal/modules/notification/domain"
+	settingsmessaging "github.com/homles698698-lab/XMall/internal/modules/settings/schema/messaging"
+	settingsstorefront "github.com/homles698698-lab/XMall/internal/modules/settings/schema/storefront"
+	"github.com/homles698698-lab/XMall/internal/queue"
+	"github.com/homles698698-lab/XMall/internal/shared/jsonmap"
+	"github.com/homles698698-lab/XMall/internal/shared/mailbrand"
+	"github.com/homles698698-lab/XMall/internal/shared/money"
 )
 
 type SettingsReader interface {

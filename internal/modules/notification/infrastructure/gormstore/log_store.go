@@ -1,9 +1,9 @@
 package gormstore
 
 import (
-	"github.com/dujiao-next/internal/modules/notification/contract"
-	"github.com/dujiao-next/internal/modules/notification/domain"
-	"github.com/dujiao-next/internal/persistence/gormutil"
+	"github.com/homles698698-lab/XMall/internal/modules/notification/contract"
+	"github.com/homles698698-lab/XMall/internal/modules/notification/domain"
+	"github.com/homles698698-lab/XMall/internal/persistence/gormutil"
 
 	"gorm.io/gorm"
 )

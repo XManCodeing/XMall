@@ -3,9 +3,9 @@ package channelclienthttp
 import (
 	"errors"
 
-	channelclientapp "github.com/dujiao-next/internal/modules/channelclient/application"
-	"github.com/dujiao-next/internal/platform/http/ginutil"
-	"github.com/dujiao-next/internal/platform/http/response"
+	channelclientapp "github.com/homles698698-lab/XMall/internal/modules/channelclient/application"
+	"github.com/homles698698-lab/XMall/internal/platform/http/ginutil"
+	"github.com/homles698698-lab/XMall/internal/platform/http/response"
 
 	"github.com/gin-gonic/gin"
 )

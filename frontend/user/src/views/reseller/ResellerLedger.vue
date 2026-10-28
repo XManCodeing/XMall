@@ -126,17 +126,17 @@ import ResellerPageState from '../../components/reseller-console/ResellerPageSta
 import ResellerRecordCard from '../../components/reseller-console/ResellerRecordCard.vue'
 import ResellerSectionHeader from '../../components/reseller-console/ResellerSectionHeader.vue'
 import ResellerStatusBadge, { type ResellerBadgeTone } from '../../components/reseller-console/ResellerStatusBadge.vue'
-import { useResellerFinance } from '../../composables/reseller/useResellerFinance'
-import type { ResellerLedgerData } from '../../api'
+import { useResellerFinance } from '../../composables/reseller/useResellerFinance.ts'
+import type { ResellerLedgerData } from '../../api/index.ts'
 import {
   RESELLER_LEDGER_STATUS_AVAILABLE,
   RESELLER_LEDGER_STATUS_CANCELED,
   RESELLER_LEDGER_STATUS_LOCKED,
   RESELLER_LEDGER_STATUS_PENDING_CONFIRM,
   RESELLER_LEDGER_STATUS_WITHDRAWN,
-} from '../../constants/reseller'
-import { formatResellerConsoleDate, resellerAmountSign } from '../../utils/resellerConsole'
-import { getResellerLedgerTypeKey } from '../../utils/resellerFinance'
+} from '../../constants/reseller.ts'
+import { formatResellerConsoleDate, resellerAmountSign } from '../../utils/resellerConsole.ts'
+import { getResellerLedgerTypeKey } from '../../utils/resellerFinance.ts'
 
 const { t } = useI18n()
 const { ledgerLoading, ledgerEntries, ledgerPagination, loadLedgerEntries } = useResellerFinance()

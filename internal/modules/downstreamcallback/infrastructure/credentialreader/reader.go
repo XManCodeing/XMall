@@ -1,8 +1,8 @@
 package credentialreader
 
 import (
-	apicredentialdomain "github.com/dujiao-next/internal/modules/apicredential/domain"
-	downstreamcontract "github.com/dujiao-next/internal/modules/downstreamcallback/contract"
+	apicredentialdomain "github.com/homles698698-lab/XMall/internal/modules/apicredential/domain"
+	downstreamcontract "github.com/homles698698-lab/XMall/internal/modules/downstreamcallback/contract"
 )
 
 // Source 是 API 凭证上下文暴露给防腐适配器的最小端口。

@@ -5,14 +5,14 @@ import (
 	"net/http"
 	"strings"
 
-	giftcardapp "github.com/dujiao-next/internal/modules/giftcard/application"
-	giftcardcontract "github.com/dujiao-next/internal/modules/giftcard/contract"
-	giftcardpresenter "github.com/dujiao-next/internal/modules/giftcard/transport/presenter"
-	telegramauthapp "github.com/dujiao-next/internal/modules/identity/telegramauth/application"
-	userauthapp "github.com/dujiao-next/internal/modules/identity/userauth/application"
-	"github.com/dujiao-next/internal/platform/http/channelresponse"
-	"github.com/dujiao-next/internal/platform/http/ginutil"
-	"github.com/dujiao-next/internal/platform/http/response"
+	giftcardapp "github.com/homles698698-lab/XMall/internal/modules/giftcard/application"
+	giftcardcontract "github.com/homles698698-lab/XMall/internal/modules/giftcard/contract"
+	giftcardpresenter "github.com/homles698698-lab/XMall/internal/modules/giftcard/transport/presenter"
+	telegramauthapp "github.com/homles698698-lab/XMall/internal/modules/identity/telegramauth/application"
+	userauthapp "github.com/homles698698-lab/XMall/internal/modules/identity/userauth/application"
+	"github.com/homles698698-lab/XMall/internal/platform/http/channelresponse"
+	"github.com/homles698698-lab/XMall/internal/platform/http/ginutil"
+	"github.com/homles698698-lab/XMall/internal/platform/http/response"
 
 	"github.com/gin-gonic/gin"
 )

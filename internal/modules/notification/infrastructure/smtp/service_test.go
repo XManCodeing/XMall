@@ -11,12 +11,12 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/dujiao-next/internal/config"
-	"github.com/dujiao-next/internal/i18n"
-	notificationcontract "github.com/dujiao-next/internal/modules/notification/contract"
-	settingsmessaging "github.com/dujiao-next/internal/modules/settings/schema/messaging"
-	"github.com/dujiao-next/internal/shared/mailbrand"
-	"github.com/dujiao-next/internal/shared/money"
+	"github.com/homles698698-lab/XMall/internal/config"
+	"github.com/homles698698-lab/XMall/internal/i18n"
+	notificationcontract "github.com/homles698698-lab/XMall/internal/modules/notification/contract"
+	settingsmessaging "github.com/homles698698-lab/XMall/internal/modules/settings/schema/messaging"
+	"github.com/homles698698-lab/XMall/internal/shared/mailbrand"
+	"github.com/homles698698-lab/XMall/internal/shared/money"
 
 	"github.com/shopspring/decimal"
 )
@@ -265,7 +265,7 @@ func TestBuildVerifyCodeContentUsesResolvedWhiteLabelBrand(t *testing.T) {
 	if !strings.Contains(body, "白标商店") || !strings.Contains(body, "https://shop.example.test") {
 		t.Fatalf("body should contain white-label brand only, got: %s", body)
 	}
-	if strings.Contains(body, "Dujiao-Next") || strings.Contains(body, "main.example.test") {
+	if strings.Contains(body, "XMall") || strings.Contains(body, "main.example.test") {
 		t.Fatalf("body leaked main-site brand: %s", body)
 	}
 }
@@ -463,7 +463,7 @@ func TestEmailServiceSendOffice365Integration(t *testing.T) {
 		Username: username,
 		Password: password,
 		From:     from,
-		FromName: "Dujiao Next",
+		FromName: "XMall",
 		UseTLS:   true,
 		UseSSL:   false,
 	})

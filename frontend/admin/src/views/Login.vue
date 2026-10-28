@@ -1,9 +1,9 @@
 <script setup lang="ts">
+import BrandMark from '@/components/BrandMark.vue'
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { useAdminAuthStore } from '@/stores/auth'
@@ -182,31 +182,34 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="min-h-screen bg-background text-foreground flex items-center justify-center px-6">
-    <div class="w-full max-w-md">
-      <Card class="border-border shadow-sm">
-        <CardHeader>
-          <CardTitle class="text-2xl">
+  <main class="admin-login min-h-screen bg-background text-foreground flex items-center justify-center px-6 py-16">
+    <section class="w-full max-w-[460px] rounded-[28px] border border-border/65 bg-card px-9 pb-8 pt-10 shadow-sm" aria-labelledby="login-title">
+        <header class="mb-8 text-center">
+          <BrandMark class="mx-auto mb-6 h-12 w-12" />
+          <h1 id="login-title" class="text-[28px] font-semibold leading-tight tracking-tight">
             {{ step === 'password' ? t('admin.login.title') : t('admin.login.totp.title') }}
-          </CardTitle>
-          <p class="text-sm text-muted-foreground mt-1">
+          </h1>
+          <p class="mt-3 text-sm leading-relaxed text-muted-foreground">
             {{ step === 'password' ? t('admin.login.subtitle') : t('admin.login.totp.subtitle') }}
           </p>
-        </CardHeader>
-        <CardContent>
-          <form v-if="step === 'password'" class="space-y-4" @submit.prevent="submitPassword">
-            <div class="space-y-2">
+        </header>
+          <form v-if="step === 'password'" class="space-y-6" :aria-busy="authStore.loading || loadingCaptcha" @submit.prevent="submitPassword">
+            <div class="login-credentials rounded-2xl bg-secondary/60 px-4">
+            <div class="login-field">
               <Label for="username">{{ t('admin.login.username') }}</Label>
-              <Input id="username" v-model="username" :placeholder="t('admin.login.username')" />
+              <Input id="username" v-model="username" autocomplete="username" autocapitalize="none" :spellcheck="false" required :placeholder="t('admin.login.username')" />
             </div>
-            <div class="space-y-2">
+            <div class="login-field">
               <Label for="password">{{ t('admin.login.password') }}</Label>
               <Input
                 id="password"
                 v-model="password"
                 type="password"
+                autocomplete="current-password"
+                required
                 :placeholder="t('admin.login.password')"
               />
+            </div>
             </div>
 
             <div v-if="loginCaptchaEnabled" class="space-y-2">
@@ -225,14 +228,14 @@ onUnmounted(() => {
               />
             </div>
 
-            <div v-if="error" class="text-sm text-destructive">{{ error }}</div>
-            <Button type="submit" class="w-full" :disabled="authStore.loading || loadingCaptcha">
+            <div v-if="error" role="alert" class="rounded-xl bg-destructive/10 px-3 py-2.5 text-sm text-destructive">{{ error }}</div>
+            <Button type="submit" class="h-11 w-full rounded-[14px] font-semibold" :disabled="authStore.loading || loadingCaptcha">
               {{ authStore.loading ? t('admin.login.submitting') : t('admin.login.submit') }}
             </Button>
           </form>
 
-          <form v-else class="space-y-4" @submit.prevent="submit2FA">
-            <p class="text-xs text-muted-foreground">
+          <form v-else class="space-y-6" :aria-busy="authStore.loading" @submit.prevent="submit2FA">
+            <p class="rounded-xl bg-secondary/60 px-3 py-2.5 text-center text-xs text-muted-foreground">
               {{ t('admin.login.totp.remaining', { seconds: challengeRemaining }) }}
             </p>
 
@@ -242,6 +245,7 @@ onUnmounted(() => {
                 <Input
                   id="totp"
                   v-model="totpCode"
+                  class="h-11 rounded-xl text-center tracking-[0.35em]"
                   inputmode="numeric"
                   maxlength="6"
                   pattern="[0-9]{6}"
@@ -254,30 +258,67 @@ onUnmounted(() => {
             <template v-else>
               <div class="space-y-2">
                 <Label for="rc">{{ t('admin.login.totp.recoveryLabel') }}</Label>
-                <Input id="rc" v-model="recoveryCode" autofocus placeholder="xxxx-xxxxxx" />
+                <Input id="rc" v-model="recoveryCode" class="h-11 rounded-xl" autofocus placeholder="xxxx-xxxxxx" />
               </div>
             </template>
 
             <button
               type="button"
-              class="text-xs text-primary underline"
+              class="text-sm text-muted-foreground underline-offset-4 hover:text-foreground hover:underline focus-visible:outline-2 focus-visible:outline-ring"
               @click="useRecovery = !useRecovery"
             >
               {{ useRecovery ? t('admin.login.totp.useCode') : t('admin.login.totp.useRecovery') }}
             </button>
 
-            <div v-if="error" class="text-sm text-destructive">{{ error }}</div>
+            <div v-if="error" role="alert" class="rounded-xl bg-destructive/10 px-3 py-2.5 text-sm text-destructive">{{ error }}</div>
             <div class="flex gap-2">
-              <Button type="button" variant="outline" class="flex-1" @click="backToPassword">
+              <Button type="button" variant="outline" class="h-11 flex-1 rounded-[14px]" @click="backToPassword">
                 {{ t('admin.login.totp.back') }}
               </Button>
-              <Button type="submit" class="flex-1" :disabled="authStore.loading">
+              <Button type="submit" class="h-11 flex-1 rounded-[14px]" :disabled="authStore.loading">
                 {{ authStore.loading ? t('admin.login.submitting') : t('admin.login.totp.submit') }}
               </Button>
             </div>
           </form>
-        </CardContent>
-      </Card>
-    </div>
-  </div>
+    </section>
+  </main>
 </template>
+
+<style scoped>
+.login-field {
+  display: grid;
+  grid-template-columns: minmax(64px, 0.3fr) minmax(0, 1fr);
+  align-items: center;
+  gap: 12px;
+  padding-block: 9px;
+}
+
+.login-field + .login-field {
+  border-top: 1px solid hsl(var(--border) / 0.65);
+}
+
+.login-field :deep(input) {
+  min-width: 0;
+  height: 44px;
+  padding-inline: 4px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  box-shadow: none;
+}
+
+.login-field :deep(input:focus-visible) {
+  outline: 2px solid hsl(var(--ring));
+  outline-offset: 2px;
+}
+
+@media (max-width: 480px) {
+  .admin-login {
+    padding: 32px 16px;
+  }
+
+  .admin-login > section {
+    padding: 32px 20px 24px;
+  }
+}
+</style>

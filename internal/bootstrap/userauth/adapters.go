@@ -4,29 +4,29 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	resellercontract "github.com/dujiao-next/internal/modules/reseller/contract"
+	resellercontract "github.com/homles698698-lab/XMall/internal/modules/reseller/contract"
 	"strings"
 	"time"
 
-	totpapplication "github.com/dujiao-next/internal/modules/identity/totp/application"
-	"github.com/dujiao-next/internal/shared/passwordpolicy"
+	totpapplication "github.com/homles698698-lab/XMall/internal/modules/identity/totp/application"
+	"github.com/homles698698-lab/XMall/internal/shared/passwordpolicy"
 
-	usercontract "github.com/dujiao-next/internal/modules/identity/user/contract"
+	usercontract "github.com/homles698698-lab/XMall/internal/modules/identity/user/contract"
 
-	userdomain "github.com/dujiao-next/internal/modules/identity/user/domain"
+	userdomain "github.com/homles698698-lab/XMall/internal/modules/identity/user/domain"
 
-	settingsapp "github.com/dujiao-next/internal/modules/settings/application"
+	settingsapp "github.com/homles698698-lab/XMall/internal/modules/settings/application"
 
-	"github.com/dujiao-next/internal/cache"
-	auditlogapp "github.com/dujiao-next/internal/modules/auditlog/application"
-	externalidentitydomain "github.com/dujiao-next/internal/modules/identity/externalidentity/domain"
-	googleauthapp "github.com/dujiao-next/internal/modules/identity/googleauth/application"
-	telegramauthapp "github.com/dujiao-next/internal/modules/identity/telegramauth/application"
-	userauthapp "github.com/dujiao-next/internal/modules/identity/userauth/application"
-	"github.com/dujiao-next/internal/modules/identity/userauth/challenge"
-	usertotpapp "github.com/dujiao-next/internal/modules/identity/userauth/totp/application"
-	userauthtransport "github.com/dujiao-next/internal/modules/identity/userauth/transport/http"
-	notificationcontract "github.com/dujiao-next/internal/modules/notification/contract"
+	"github.com/homles698698-lab/XMall/internal/cache"
+	auditlogapp "github.com/homles698698-lab/XMall/internal/modules/auditlog/application"
+	externalidentitydomain "github.com/homles698698-lab/XMall/internal/modules/identity/externalidentity/domain"
+	googleauthapp "github.com/homles698698-lab/XMall/internal/modules/identity/googleauth/application"
+	telegramauthapp "github.com/homles698698-lab/XMall/internal/modules/identity/telegramauth/application"
+	userauthapp "github.com/homles698698-lab/XMall/internal/modules/identity/userauth/application"
+	"github.com/homles698698-lab/XMall/internal/modules/identity/userauth/challenge"
+	usertotpapp "github.com/homles698698-lab/XMall/internal/modules/identity/userauth/totp/application"
+	userauthtransport "github.com/homles698698-lab/XMall/internal/modules/identity/userauth/transport/http"
+	notificationcontract "github.com/homles698698-lab/XMall/internal/modules/notification/contract"
 )
 
 // userProfileTransportAdapter 将用户认证服务适配为用户资料 transport 端口。

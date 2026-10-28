@@ -4,11 +4,11 @@ import (
 	"context"
 	"time"
 
-	categoryapp "github.com/dujiao-next/internal/modules/catalog/category/application"
-	categorydomain "github.com/dujiao-next/internal/modules/catalog/category/domain"
-	settingsintegration "github.com/dujiao-next/internal/modules/settings/schema/integration"
-	siteconnectiondomain "github.com/dujiao-next/internal/modules/siteconnection/domain"
-	"github.com/dujiao-next/internal/upstream"
+	categoryapp "github.com/homles698698-lab/XMall/internal/modules/catalog/category/application"
+	categorydomain "github.com/homles698698-lab/XMall/internal/modules/catalog/category/domain"
+	settingsintegration "github.com/homles698698-lab/XMall/internal/modules/settings/schema/integration"
+	siteconnectiondomain "github.com/homles698698-lab/XMall/internal/modules/siteconnection/domain"
+	"github.com/homles698698-lab/XMall/internal/upstream"
 )
 
 // ConnectionProvider 隔离连接读取与上游协议适配器构造。

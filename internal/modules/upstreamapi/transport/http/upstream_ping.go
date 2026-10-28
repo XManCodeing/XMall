@@ -3,7 +3,7 @@ package upstreamhttp
 import (
 	"net/http"
 
-	"github.com/dujiao-next/internal/constants"
+	"github.com/homles698698-lab/XMall/internal/constants"
 
 	"github.com/gin-gonic/gin"
 )

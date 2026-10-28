@@ -4,20 +4,20 @@ import (
 	"context"
 	"time"
 
-	paymentapp "github.com/dujiao-next/internal/modules/payment/application"
+	paymentapp "github.com/homles698698-lab/XMall/internal/modules/payment/application"
 
-	settingsapp "github.com/dujiao-next/internal/modules/settings/application"
-	settingsintegration "github.com/dujiao-next/internal/modules/settings/schema/integration"
+	settingsapp "github.com/homles698698-lab/XMall/internal/modules/settings/application"
+	settingsintegration "github.com/homles698698-lab/XMall/internal/modules/settings/schema/integration"
 
-	"github.com/dujiao-next/internal/cache"
-	"github.com/dujiao-next/internal/config"
-	"github.com/dujiao-next/internal/constants"
-	captchaapp "github.com/dujiao-next/internal/modules/captcha/application"
-	googleauthapp "github.com/dujiao-next/internal/modules/identity/googleauth/application"
-	telegramauthapp "github.com/dujiao-next/internal/modules/identity/telegramauth/application"
-	resellerapplication "github.com/dujiao-next/internal/modules/reseller/application"
-	resellercontract "github.com/dujiao-next/internal/modules/reseller/contract"
-	"github.com/dujiao-next/internal/shared/jsonmap"
+	"github.com/homles698698-lab/XMall/internal/cache"
+	"github.com/homles698698-lab/XMall/internal/config"
+	"github.com/homles698698-lab/XMall/internal/constants"
+	captchaapp "github.com/homles698698-lab/XMall/internal/modules/captcha/application"
+	googleauthapp "github.com/homles698698-lab/XMall/internal/modules/identity/googleauth/application"
+	telegramauthapp "github.com/homles698698-lab/XMall/internal/modules/identity/telegramauth/application"
+	resellerapplication "github.com/homles698698-lab/XMall/internal/modules/reseller/application"
+	resellercontract "github.com/homles698698-lab/XMall/internal/modules/reseller/contract"
+	"github.com/homles698698-lab/XMall/internal/shared/jsonmap"
 )
 
 type publicConfigCacheAdapter struct{}

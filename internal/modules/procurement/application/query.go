@@ -2,18 +2,18 @@ package application
 
 import (
 	"context"
-	"github.com/dujiao-next/internal/modules/procurement/application/execution"
+	"github.com/homles698698-lab/XMall/internal/modules/procurement/application/execution"
 	"sort"
 	"strings"
 	"sync"
 	"time"
 
-	"github.com/dujiao-next/internal/constants"
-	"github.com/dujiao-next/internal/logger"
-	procurementcontract "github.com/dujiao-next/internal/modules/procurement/contract"
-	procurementdomain "github.com/dujiao-next/internal/modules/procurement/domain"
-	"github.com/dujiao-next/internal/shared/jsonmap"
-	"github.com/dujiao-next/internal/shared/money"
+	"github.com/homles698698-lab/XMall/internal/constants"
+	"github.com/homles698698-lab/XMall/internal/logger"
+	procurementcontract "github.com/homles698698-lab/XMall/internal/modules/procurement/contract"
+	procurementdomain "github.com/homles698698-lab/XMall/internal/modules/procurement/domain"
+	"github.com/homles698698-lab/XMall/internal/shared/jsonmap"
+	"github.com/homles698698-lab/XMall/internal/shared/money"
 
 	"github.com/shopspring/decimal"
 )

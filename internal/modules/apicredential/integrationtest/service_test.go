@@ -6,12 +6,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/dujiao-next/internal/constants"
-	apicredentialapp "github.com/dujiao-next/internal/modules/apicredential/application"
-	apicredentialcontract "github.com/dujiao-next/internal/modules/apicredential/contract"
-	apicredentialdomain "github.com/dujiao-next/internal/modules/apicredential/domain"
-	apicredentialgormstore "github.com/dujiao-next/internal/modules/apicredential/infrastructure/gormstore"
 	"github.com/glebarez/sqlite"
+	"github.com/homles698698-lab/XMall/internal/constants"
+	apicredentialapp "github.com/homles698698-lab/XMall/internal/modules/apicredential/application"
+	apicredentialcontract "github.com/homles698698-lab/XMall/internal/modules/apicredential/contract"
+	apicredentialdomain "github.com/homles698698-lab/XMall/internal/modules/apicredential/domain"
+	apicredentialgormstore "github.com/homles698698-lab/XMall/internal/modules/apicredential/infrastructure/gormstore"
 	"gorm.io/gorm"
 )
 

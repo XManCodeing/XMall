@@ -10,9 +10,9 @@ import (
 	"strings"
 	"testing"
 
-	contentdomain "github.com/dujiao-next/internal/modules/content/domain"
-	"github.com/dujiao-next/internal/platform/http/response"
 	"github.com/gin-gonic/gin"
+	contentdomain "github.com/homles698698-lab/XMall/internal/modules/content/domain"
+	"github.com/homles698698-lab/XMall/internal/platform/http/response"
 )
 
 func TestBatchDeleteMediaReturnsCounts(t *testing.T) {

@@ -9,15 +9,15 @@ import (
 	"testing"
 	"time"
 
-	orderdomain "github.com/dujiao-next/internal/modules/order/domain"
+	orderdomain "github.com/homles698698-lab/XMall/internal/modules/order/domain"
 
-	"github.com/dujiao-next/internal/constants"
-	ordergormstore "github.com/dujiao-next/internal/modules/order/infrastructure/gormstore"
-	procurementapp "github.com/dujiao-next/internal/modules/procurement/application"
-	procurementgormstore "github.com/dujiao-next/internal/modules/procurement/infrastructure/gormstore"
-	procurementorder "github.com/dujiao-next/internal/modules/procurement/infrastructure/orderreader"
-	procurementupstream "github.com/dujiao-next/internal/modules/procurement/infrastructure/upstreamgateway"
-	siteconnectionapp "github.com/dujiao-next/internal/modules/siteconnection/application"
+	"github.com/homles698698-lab/XMall/internal/constants"
+	ordergormstore "github.com/homles698698-lab/XMall/internal/modules/order/infrastructure/gormstore"
+	procurementapp "github.com/homles698698-lab/XMall/internal/modules/procurement/application"
+	procurementgormstore "github.com/homles698698-lab/XMall/internal/modules/procurement/infrastructure/gormstore"
+	procurementorder "github.com/homles698698-lab/XMall/internal/modules/procurement/infrastructure/orderreader"
+	procurementupstream "github.com/homles698698-lab/XMall/internal/modules/procurement/infrastructure/upstreamgateway"
+	siteconnectionapp "github.com/homles698698-lab/XMall/internal/modules/siteconnection/application"
 )
 
 // ── PollUpstreamStatus test ──

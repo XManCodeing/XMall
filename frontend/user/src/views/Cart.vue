@@ -162,7 +162,7 @@ import { Button } from '@/components/ui/button'
 import EmptyState from '../components/EmptyState.vue'
 import SmartImage from '../components/SmartImage.vue'
 import CheckoutSteps from '../components/checkout/CheckoutSteps.vue'
-import { useCart } from '../composables/useCart'
+import { useCart } from '../composables/useCart.ts'
 
 const { t } = useI18n()
 

@@ -150,7 +150,7 @@
 <script setup lang="ts">
 import { nextTick, onMounted, reactive, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { resellerAPI } from '../../api/reseller'
+import { resellerAPI } from '../../api/reseller.ts'
 import type {
   ResellerProductSettingData,
   ResellerProductSettingDetailData,
@@ -158,14 +158,14 @@ import type {
   ResellerProductSettingPreviewData,
   ResellerProductSettingProductData,
   ResellerProductSettingSKUData,
-} from '../../api/types'
+} from '../../api/types.ts'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
-import { type PageAlert } from '../../utils/alerts'
-import { getLocalizedText } from '../../utils/resellerSiteConfig'
+import { type PageAlert } from '../../utils/alerts.ts'
+import { getLocalizedText } from '../../utils/resellerSiteConfig.ts'
 import {
   buildResellerProductSettingPayload,
   countActiveSkus,
@@ -175,8 +175,8 @@ import {
   normalizeResellerProductSettingForm,
   summarizeEffectivePrice,
   summarizeProductEffectivePrice,
-} from '../../utils/resellerProductSettings'
-import { formatSkuSpecValues } from '../../utils/sku'
+} from '../../utils/resellerProductSettings.ts'
+import { formatSkuSpecValues } from '../../utils/sku.ts'
 import ResellerProductRuleEditor from './ResellerProductRuleEditor.vue'
 
 withDefaults(defineProps<{ embedded?: boolean }>(), { embedded: false })

@@ -3,12 +3,12 @@ package contract
 import (
 	"time"
 
-	orderdomain "github.com/dujiao-next/internal/modules/order/domain"
+	orderdomain "github.com/homles698698-lab/XMall/internal/modules/order/domain"
 
-	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
+	productdomain "github.com/homles698698-lab/XMall/internal/modules/catalog/product/domain"
 
-	"github.com/dujiao-next/internal/modules/affiliate/domain"
-	settingsintegration "github.com/dujiao-next/internal/modules/settings/schema/integration"
+	"github.com/homles698698-lab/XMall/internal/modules/affiliate/domain"
+	settingsintegration "github.com/homles698698-lab/XMall/internal/modules/settings/schema/integration"
 	"github.com/shopspring/decimal"
 )
 

@@ -5,11 +5,11 @@ import (
 	"sync"
 	"time"
 
-	"github.com/dujiao-next/internal/config"
-	"github.com/dujiao-next/internal/constants"
-	"github.com/dujiao-next/internal/modules/captcha/contract"
-	settingssecurity "github.com/dujiao-next/internal/modules/settings/schema/security"
-	"github.com/dujiao-next/internal/shared/jsonmap"
+	"github.com/homles698698-lab/XMall/internal/config"
+	"github.com/homles698698-lab/XMall/internal/constants"
+	"github.com/homles698698-lab/XMall/internal/modules/captcha/contract"
+	settingssecurity "github.com/homles698698-lab/XMall/internal/modules/settings/schema/security"
+	"github.com/homles698698-lab/XMall/internal/shared/jsonmap"
 
 	"github.com/mojocn/base64Captcha"
 )

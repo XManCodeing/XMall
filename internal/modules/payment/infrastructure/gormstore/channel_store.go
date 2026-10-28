@@ -4,9 +4,9 @@ import (
 	"errors"
 	"time"
 
-	paymentcontract "github.com/dujiao-next/internal/modules/payment/contract"
-	paymentdomain "github.com/dujiao-next/internal/modules/payment/domain"
-	"github.com/dujiao-next/internal/persistence/gormutil"
+	paymentcontract "github.com/homles698698-lab/XMall/internal/modules/payment/contract"
+	paymentdomain "github.com/homles698698-lab/XMall/internal/modules/payment/domain"
+	"github.com/homles698698-lab/XMall/internal/persistence/gormutil"
 
 	"gorm.io/gorm"
 )

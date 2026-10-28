@@ -5,11 +5,11 @@ import (
 	"errors"
 	"strings"
 
-	broadcastapp "github.com/dujiao-next/internal/modules/telegram/broadcast/application"
-	broadcastdomain "github.com/dujiao-next/internal/modules/telegram/broadcast/domain"
-	"github.com/dujiao-next/internal/platform/http/ginutil"
-	"github.com/dujiao-next/internal/platform/http/response"
-	"github.com/dujiao-next/internal/shared/jsonmap"
+	broadcastapp "github.com/homles698698-lab/XMall/internal/modules/telegram/broadcast/application"
+	broadcastdomain "github.com/homles698698-lab/XMall/internal/modules/telegram/broadcast/domain"
+	"github.com/homles698698-lab/XMall/internal/platform/http/ginutil"
+	"github.com/homles698698-lab/XMall/internal/platform/http/response"
+	"github.com/homles698698-lab/XMall/internal/shared/jsonmap"
 
 	"github.com/gin-gonic/gin"
 )

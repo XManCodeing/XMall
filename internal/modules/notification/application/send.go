@@ -5,14 +5,14 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/dujiao-next/internal/constants"
-	"github.com/dujiao-next/internal/logger"
-	"github.com/dujiao-next/internal/modules/notification/application/format"
-	"github.com/dujiao-next/internal/modules/notification/contract"
-	settingsmessaging "github.com/dujiao-next/internal/modules/settings/schema/messaging"
-	"github.com/dujiao-next/internal/queue"
-	"github.com/dujiao-next/internal/shared/jsonmap"
-	"github.com/dujiao-next/internal/shared/outboundctx"
+	"github.com/homles698698-lab/XMall/internal/constants"
+	"github.com/homles698698-lab/XMall/internal/logger"
+	"github.com/homles698698-lab/XMall/internal/modules/notification/application/format"
+	"github.com/homles698698-lab/XMall/internal/modules/notification/contract"
+	settingsmessaging "github.com/homles698698-lab/XMall/internal/modules/settings/schema/messaging"
+	"github.com/homles698698-lab/XMall/internal/queue"
+	"github.com/homles698698-lab/XMall/internal/shared/jsonmap"
+	"github.com/homles698698-lab/XMall/internal/shared/outboundctx"
 )
 
 func detachOutboundRequestContext(parent context.Context) (context.Context, context.CancelFunc) {

@@ -9,32 +9,32 @@ import (
 	"testing"
 	"time"
 
-	orderdomain "github.com/dujiao-next/internal/modules/order/domain"
+	orderdomain "github.com/homles698698-lab/XMall/internal/modules/order/domain"
 
-	resellergormstore "github.com/dujiao-next/internal/modules/reseller/infrastructure/gormstore"
+	resellergormstore "github.com/homles698698-lab/XMall/internal/modules/reseller/infrastructure/gormstore"
 
-	resellerdomain "github.com/dujiao-next/internal/modules/reseller/domain"
+	resellerdomain "github.com/homles698698-lab/XMall/internal/modules/reseller/domain"
 
-	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
+	productdomain "github.com/homles698698-lab/XMall/internal/modules/catalog/product/domain"
 
-	categorydomain "github.com/dujiao-next/internal/modules/catalog/category/domain"
+	categorydomain "github.com/homles698698-lab/XMall/internal/modules/catalog/category/domain"
 
-	productgormstore "github.com/dujiao-next/internal/modules/catalog/product/store/gormstore"
+	productgormstore "github.com/homles698698-lab/XMall/internal/modules/catalog/product/store/gormstore"
 
-	userdomain "github.com/dujiao-next/internal/modules/identity/user/domain"
+	userdomain "github.com/homles698698-lab/XMall/internal/modules/identity/user/domain"
 
-	"github.com/dujiao-next/internal/app/container"
-	"github.com/dujiao-next/internal/config"
-	"github.com/dujiao-next/internal/constants"
-	auditlogapp "github.com/dujiao-next/internal/modules/auditlog/application"
-	auditlogdomain "github.com/dujiao-next/internal/modules/auditlog/domain"
-	auditloggormstore "github.com/dujiao-next/internal/modules/auditlog/infrastructure/gormstore"
-	admindomain "github.com/dujiao-next/internal/modules/identity/admin/domain"
-	resellermodule "github.com/dujiao-next/internal/modules/reseller/application"
-	resellerhttp "github.com/dujiao-next/internal/modules/reseller/transport/http/admin"
-	"github.com/dujiao-next/internal/platform/http/response"
-	"github.com/dujiao-next/internal/shared/jsonmap"
-	"github.com/dujiao-next/internal/shared/money"
+	"github.com/homles698698-lab/XMall/internal/app/container"
+	"github.com/homles698698-lab/XMall/internal/config"
+	"github.com/homles698698-lab/XMall/internal/constants"
+	auditlogapp "github.com/homles698698-lab/XMall/internal/modules/auditlog/application"
+	auditlogdomain "github.com/homles698698-lab/XMall/internal/modules/auditlog/domain"
+	auditloggormstore "github.com/homles698698-lab/XMall/internal/modules/auditlog/infrastructure/gormstore"
+	admindomain "github.com/homles698698-lab/XMall/internal/modules/identity/admin/domain"
+	resellermodule "github.com/homles698698-lab/XMall/internal/modules/reseller/application"
+	resellerhttp "github.com/homles698698-lab/XMall/internal/modules/reseller/transport/http/admin"
+	"github.com/homles698698-lab/XMall/internal/platform/http/response"
+	"github.com/homles698698-lab/XMall/internal/shared/jsonmap"
+	"github.com/homles698698-lab/XMall/internal/shared/money"
 
 	"github.com/gin-gonic/gin"
 	"github.com/glebarez/sqlite"

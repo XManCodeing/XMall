@@ -6,28 +6,28 @@ import (
 	"testing"
 	"time"
 
-	paymentapp "github.com/dujiao-next/internal/modules/payment/application"
-	paymentdomain "github.com/dujiao-next/internal/modules/payment/domain"
-	paymentgormstore "github.com/dujiao-next/internal/modules/payment/infrastructure/gormstore"
+	paymentapp "github.com/homles698698-lab/XMall/internal/modules/payment/application"
+	paymentdomain "github.com/homles698698-lab/XMall/internal/modules/payment/domain"
+	paymentgormstore "github.com/homles698698-lab/XMall/internal/modules/payment/infrastructure/gormstore"
 
-	fulfillmentdomain "github.com/dujiao-next/internal/modules/fulfillment/domain"
-	orderdomain "github.com/dujiao-next/internal/modules/order/domain"
-	ordergormstore "github.com/dujiao-next/internal/modules/order/infrastructure/gormstore"
+	fulfillmentdomain "github.com/homles698698-lab/XMall/internal/modules/fulfillment/domain"
+	orderdomain "github.com/homles698698-lab/XMall/internal/modules/order/domain"
+	ordergormstore "github.com/homles698698-lab/XMall/internal/modules/order/infrastructure/gormstore"
 
-	resellerapplication "github.com/dujiao-next/internal/modules/reseller/application"
-	resellercontract "github.com/dujiao-next/internal/modules/reseller/contract"
-	resellergormstore "github.com/dujiao-next/internal/modules/reseller/infrastructure/gormstore"
+	resellerapplication "github.com/homles698698-lab/XMall/internal/modules/reseller/application"
+	resellercontract "github.com/homles698698-lab/XMall/internal/modules/reseller/contract"
+	resellergormstore "github.com/homles698698-lab/XMall/internal/modules/reseller/infrastructure/gormstore"
 
-	resellerdomain "github.com/dujiao-next/internal/modules/reseller/domain"
+	resellerdomain "github.com/homles698698-lab/XMall/internal/modules/reseller/domain"
 
-	productgormstore "github.com/dujiao-next/internal/modules/catalog/product/store/gormstore"
+	productgormstore "github.com/homles698698-lab/XMall/internal/modules/catalog/product/store/gormstore"
 
-	userdomain "github.com/dujiao-next/internal/modules/identity/user/domain"
+	userdomain "github.com/homles698698-lab/XMall/internal/modules/identity/user/domain"
 
-	"github.com/dujiao-next/internal/constants"
-	"github.com/dujiao-next/internal/shared/jsonmap"
-	"github.com/dujiao-next/internal/shared/money"
 	"github.com/glebarez/sqlite"
+	"github.com/homles698698-lab/XMall/internal/constants"
+	"github.com/homles698698-lab/XMall/internal/shared/jsonmap"
+	"github.com/homles698698-lab/XMall/internal/shared/money"
 	"github.com/shopspring/decimal"
 	"gorm.io/gorm"
 )

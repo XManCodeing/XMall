@@ -3,10 +3,10 @@ package auditloghttp
 import (
 	"strings"
 
-	"github.com/dujiao-next/internal/modules/auditlog/contract"
-	"github.com/dujiao-next/internal/modules/auditlog/domain"
-	"github.com/dujiao-next/internal/platform/http/ginutil"
-	"github.com/dujiao-next/internal/platform/http/response"
+	"github.com/homles698698-lab/XMall/internal/modules/auditlog/contract"
+	"github.com/homles698698-lab/XMall/internal/modules/auditlog/domain"
+	"github.com/homles698698-lab/XMall/internal/platform/http/ginutil"
+	"github.com/homles698698-lab/XMall/internal/platform/http/response"
 
 	"github.com/gin-gonic/gin"
 )

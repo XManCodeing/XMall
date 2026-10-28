@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/dujiao-next/internal/constants"
-	"github.com/dujiao-next/internal/shared/jsonmap"
+	"github.com/homles698698-lab/XMall/internal/constants"
+	"github.com/homles698698-lab/XMall/internal/shared/jsonmap"
 )
 
 // CryptoWalletInfo 是二维码加密货币支付页需要直接展示的链上付款信息。

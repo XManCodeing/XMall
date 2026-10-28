@@ -8,20 +8,20 @@ import (
 	"sync"
 	"time"
 
-	mappingcontract "github.com/dujiao-next/internal/modules/catalog/mapping/contract"
-	mappingdomain "github.com/dujiao-next/internal/modules/catalog/mapping/domain"
-	siteconnectioncontract "github.com/dujiao-next/internal/modules/siteconnection/contract"
+	mappingcontract "github.com/homles698698-lab/XMall/internal/modules/catalog/mapping/contract"
+	mappingdomain "github.com/homles698698-lab/XMall/internal/modules/catalog/mapping/domain"
+	siteconnectioncontract "github.com/homles698698-lab/XMall/internal/modules/siteconnection/contract"
 
-	siteconnectiondomain "github.com/dujiao-next/internal/modules/siteconnection/domain"
+	siteconnectiondomain "github.com/homles698698-lab/XMall/internal/modules/siteconnection/domain"
 
-	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
+	productdomain "github.com/homles698698-lab/XMall/internal/modules/catalog/product/domain"
 
-	"github.com/dujiao-next/internal/cache"
-	"github.com/dujiao-next/internal/constants"
-	"github.com/dujiao-next/internal/logger"
-	settingsintegration "github.com/dujiao-next/internal/modules/settings/schema/integration"
-	"github.com/dujiao-next/internal/shared/money"
-	"github.com/dujiao-next/internal/upstream"
+	"github.com/homles698698-lab/XMall/internal/cache"
+	"github.com/homles698698-lab/XMall/internal/constants"
+	"github.com/homles698698-lab/XMall/internal/logger"
+	settingsintegration "github.com/homles698698-lab/XMall/internal/modules/settings/schema/integration"
+	"github.com/homles698698-lab/XMall/internal/shared/money"
+	"github.com/homles698698-lab/XMall/internal/upstream"
 
 	"github.com/shopspring/decimal"
 )

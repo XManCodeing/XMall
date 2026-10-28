@@ -3,44 +3,44 @@
 set -Eeuo pipefail
 umask 077
 
-readonly MANAGER_VERSION="1.0.0"
+readonly MANAGER_VERSION="1.1.0"
 # No implicit upstream: operators must explicitly select their own trusted release repository.
-readonly GITHUB_REPOSITORY="${DUJIAO_UPDATE_REPOSITORY:-}"
+readonly GITHUB_REPOSITORY="${XMALL_UPDATE_REPOSITORY:-}"
 readonly GITHUB_API_URL="https://api.github.com/repos/${GITHUB_REPOSITORY}/releases/latest"
-readonly SERVICE_USER="dujiao"
-readonly SERVICE_GROUP="dujiao"
-readonly APP_SERVICE="dujiao-next.service"
-readonly REDIS_SERVICE="dujiao-next-redis.service"
+readonly SERVICE_USER="xmall"
+readonly SERVICE_GROUP="xmall"
+readonly APP_SERVICE="xmall.service"
+readonly REDIS_SERVICE="xmall-redis.service"
 readonly MIN_ARCHIVE_BYTES=1048576
 readonly MAX_ARCHIVE_BYTES=536870912
 readonly MIN_BINARY_BYTES=1048576
 readonly MAX_BINARY_BYTES=314572800
 
-ROOT_PREFIX="${DUJIAO_ROOT_PREFIX:-}"
+ROOT_PREFIX="${XMALL_ROOT_PREFIX:-}"
 
 root_path() {
   printf '%s%s' "$ROOT_PREFIX" "$1"
 }
 
-INSTALL_DIR="$(root_path /opt/dujiao-next)"
+INSTALL_DIR="$(root_path /opt/xmall)"
 CONFIG_FILE="${INSTALL_DIR}/config.yml"
 CONFIG_EXAMPLE="${INSTALL_DIR}/config.yml.example"
-APP_BINARY="${INSTALL_DIR}/dujiao-next"
-ETC_DIR="$(root_path /etc/dujiao-next)"
+APP_BINARY="${INSTALL_DIR}/xmall"
+ETC_DIR="$(root_path /etc/xmall)"
 STATE_FILE="${ETC_DIR}/install-state.json"
 REDIS_CONFIG="${ETC_DIR}/redis.conf"
-REDIS_DATA_DIR="$(root_path /var/lib/dujiao-next/redis)"
-BACKUP_DIR="$(root_path /var/backups/dujiao-next)"
+REDIS_DATA_DIR="$(root_path /var/lib/xmall/redis)"
+BACKUP_DIR="$(root_path /var/backups/xmall)"
 APP_UNIT_FILE="$(root_path /etc/systemd/system/${APP_SERVICE})"
 REDIS_UNIT_FILE="$(root_path /etc/systemd/system/${REDIS_SERVICE})"
-NGINX_AVAILABLE="$(root_path /etc/nginx/sites-available/dujiao-next.conf)"
-NGINX_ENABLED="$(root_path /etc/nginx/sites-enabled/dujiao-next.conf)"
-NGINX_TRANSITION_AVAILABLE="$(root_path /etc/nginx/sites-available/dujiao-next-transition.conf)"
-NGINX_TRANSITION_ENABLED="$(root_path /etc/nginx/sites-enabled/dujiao-next-transition.conf)"
-ACME_ROOT="$(root_path /var/www/dujiao-next-acme)"
-CERTBOT_DEPLOY_HOOK="$(root_path /etc/letsencrypt/renewal-hooks/deploy/dujiao-next-nginx)"
-MANAGER_BIN="$(root_path /usr/local/sbin/dujiao-next-manager)"
-LOCK_FILE="$(root_path /run/dujiao-next-manager.lock)"
+NGINX_AVAILABLE="$(root_path /etc/nginx/sites-available/xmall.conf)"
+NGINX_ENABLED="$(root_path /etc/nginx/sites-enabled/xmall.conf)"
+NGINX_TRANSITION_AVAILABLE="$(root_path /etc/nginx/sites-available/xmall-transition.conf)"
+NGINX_TRANSITION_ENABLED="$(root_path /etc/nginx/sites-enabled/xmall-transition.conf)"
+ACME_ROOT="$(root_path /var/www/xmall-acme)"
+CERTBOT_DEPLOY_HOOK="$(root_path /etc/letsencrypt/renewal-hooks/deploy/xmall-nginx)"
+MANAGER_BIN="$(root_path /usr/local/sbin/xmall-manager)"
+LOCK_FILE="$(root_path /run/xmall-manager.lock)"
 
 RUN_TMP=""
 
@@ -75,14 +75,14 @@ on_error() {
 }
 
 init_runtime() {
-  [[ -n "$RUN_TMP" ]] || RUN_TMP="$(mktemp -d "${TMPDIR:-/tmp}/dujiao-next-manager.XXXXXX")"
+  [[ -n "$RUN_TMP" ]] || RUN_TMP="$(mktemp -d "${TMPDIR:-/tmp}/xmall-manager.XXXXXX")"
   trap cleanup EXIT
   trap 'on_error $LINENO' ERR
 }
 
 require_root() {
   if [[ ${EUID:-$(id -u)} -ne 0 ]]; then
-    die "请使用 root 运行，例如：sudo dujiao-next-manager"
+    die "请使用 root 运行，例如：sudo xmall-manager"
   fi
 }
 
@@ -90,7 +90,7 @@ acquire_lock() {
   mkdir -p -- "$(dirname "$LOCK_FILE")"
   exec 9>"$LOCK_FILE"
   if ! flock -n 9; then
-    die "另一个 Dujiao-Next 管理进程正在运行，请稍后重试。"
+    die "另一个 XMall 管理进程正在运行，请稍后重试。"
   fi
 }
 
@@ -272,7 +272,7 @@ validate_admin_password() {
 }
 
 validate_destroy_phrase() {
-  [[ "$1" == "DELETE DUJIAO DATA" ]]
+  [[ "$1" == "DELETE XMALL DATA" ]]
 }
 
 validate_admin_path() {
@@ -318,7 +318,7 @@ archive_name_for() {
   local arch=$2
   validate_release_tag "$tag" || return 1
   [[ "$arch" == "x86_64" || "$arch" == "arm64" ]] || return 1
-  printf 'dujiao-next_%s_Linux_%s.tar.gz' "$tag" "$arch"
+  printf 'xmall_%s_Linux_%s.tar.gz' "$tag" "$arch"
 }
 
 validate_update_repository() {
@@ -328,7 +328,7 @@ validate_update_repository() {
 }
 
 require_update_repository() {
-  validate_update_repository "$GITHUB_REPOSITORY" || die "请显式设置 DUJIAO_UPDATE_REPOSITORY 为可信 GitHub owner/repo；不支持 URL，也不会回退到默认仓库"
+  validate_update_repository "$GITHUB_REPOSITORY" || die "请显式设置 XMALL_UPDATE_REPOSITORY 为可信 GitHub owner/repo；不支持 URL，也不会回退到默认仓库"
 }
 
 validate_download_url() {
@@ -380,7 +380,7 @@ resolve_release_metadata() {
   tag=$(jq -er '.tag_name | select(type == "string")' "$metadata") || return 1
   validate_release_tag "$tag" || return 1
   asset_name=$(archive_name_for "$tag" "$arch") || return 1
-  checksum_name="dujiao-next_${tag#v}_checksums.txt"
+  checksum_name="xmall_${tag#v}_checksums.txt"
   archive_count=$(jq -r --arg name "$asset_name" '[.assets[] | select(.name == $name)] | length' "$metadata")
   checksum_count=$(jq -r --arg name "$checksum_name" '[.assets[] | select(.name == $name)] | length' "$metadata")
   [[ "$archive_count" == "1" && "$checksum_count" == "1" ]] || return 1
@@ -446,7 +446,7 @@ certificate_name_for_domain() {
   local domain=$1
   local digest
   digest=$(printf '%s' "$domain" | sha256sum | awk '{print substr($1,1,16)}')
-  printf 'dujiao-next-%s' "$digest"
+  printf 'xmall-%s' "$digest"
 }
 
 phase_rank() {
@@ -504,7 +504,7 @@ state_init() {
     --arg release_version "" \
     --arg user_created "false" \
     --arg redis_package_preexisting "false" \
-    --arg install_dir "/opt/dujiao-next" \
+    --arg install_dir "/opt/xmall" \
     --arg app_service "$APP_SERVICE" \
     --arg redis_service "$REDIS_SERVICE" \
     --arg app_unit "$APP_UNIT_FILE" \
@@ -606,11 +606,11 @@ if action == "generate":
         smtp_use_ssl,
     ) = fields
     data = load(template)
-    data.setdefault("app", {})["secret_key"] = app_secret
+    data.setdefault("app", {}).update({"secret_key": app_secret, "totp_issuer": "XMall"})
     data.setdefault("server", {}).update({"host": "127.0.0.1", "port": str(app_port), "mode": "release"})
     data["database"] = {
         "driver": "sqlite",
-        "dsn": "./db/dujiao.db",
+        "dsn": "./db/xmall.db",
         "pool": {
             "max_open_conns": 1,
             "max_idle_conns": 1,
@@ -630,7 +630,7 @@ if action == "generate":
         "port": int(redis_port),
         "password": redis_password,
         "db": 0,
-        "prefix": "dj",
+        "prefix": "xmall",
     }
     data["queue"] = {
         "enabled": True,
@@ -760,9 +760,9 @@ atomic_install_text() {
 }
 
 assert_safe_managed_paths() {
-  [[ "$INSTALL_DIR" == "$(root_path /opt/dujiao-next)" ]] || die "安装目录安全校验失败"
-  [[ "$ETC_DIR" == "$(root_path /etc/dujiao-next)" ]] || die "配置目录安全校验失败"
-  [[ "$REDIS_DATA_DIR" == "$(root_path /var/lib/dujiao-next/redis)" ]] || die "Redis 目录安全校验失败"
+  [[ "$INSTALL_DIR" == "$(root_path /opt/xmall)" ]] || die "安装目录安全校验失败"
+  [[ "$ETC_DIR" == "$(root_path /etc/xmall)" ]] || die "配置目录安全校验失败"
+  [[ "$REDIS_DATA_DIR" == "$(root_path /var/lib/xmall/redis)" ]] || die "Redis 目录安全校验失败"
   [[ -n "$INSTALL_DIR" && "$INSTALL_DIR" != "/" && "$INSTALL_DIR" != "$ROOT_PREFIX" ]] || die "拒绝使用危险安装目录"
 }
 
@@ -898,7 +898,7 @@ install_manager_copy() {
 
 create_service_user() {
   if ! getent passwd "$SERVICE_USER" >/dev/null 2>&1; then
-    useradd --system --user-group --home-dir /opt/dujiao-next --shell /usr/sbin/nologin "$SERVICE_USER"
+    useradd --system --user-group --home-dir /opt/xmall --shell /usr/sbin/nologin "$SERVICE_USER"
     state_set user_created "true"
   fi
   mkdir -p -- "$INSTALL_DIR" "${INSTALL_DIR}/db" "${INSTALL_DIR}/uploads" "${INSTALL_DIR}/logs" "$REDIS_DATA_DIR" "$ETC_DIR"
@@ -930,7 +930,7 @@ write_redis_config() {
 render_redis_unit() {
   cat <<EOF
 [Unit]
-Description=Dujiao-Next dedicated Redis
+Description=XMall dedicated Redis
 After=network.target
 Before=${APP_SERVICE}
 
@@ -956,7 +956,7 @@ EOF
 render_app_unit() {
   cat <<EOF
 [Unit]
-Description=Dujiao-Next
+Description=XMall
 Wants=network-online.target
 After=network-online.target ${REDIS_SERVICE}
 Requires=${REDIS_SERVICE}
@@ -1022,7 +1022,7 @@ fetch_release() {
   tar -tvzf "$archive" > "${RUN_TMP}/archive.verbose"
   validate_archive_types < "${RUN_TMP}/archive.verbose" || die "Release 归档包含符号链接、硬链接或设备文件"
   local binary_member config_member
-  binary_member=$(select_archive_member "${RUN_TMP}/archive.list" dujiao-next) || die "Release 归档缺少唯一的 dujiao-next 二进制"
+  binary_member=$(select_archive_member "${RUN_TMP}/archive.list" xmall) || die "Release 归档缺少唯一的 xmall 二进制"
   config_member=$(select_archive_member "${RUN_TMP}/archive.list" config.yml.example) || die "Release 归档缺少唯一的 config.yml.example"
   local extract_dir="${RUN_TMP}/extract"
   mkdir -p -- "$extract_dir"
@@ -1042,7 +1042,7 @@ fetch_release() {
 render_acme_site() {
   local domain=$1
   cat <<EOF
-# Managed by dujiao-next-manager. Do not edit by hand.
+# Managed by xmall-manager. Do not edit by hand.
 server {
     listen 80;
     listen [::]:80;
@@ -1073,7 +1073,7 @@ write_acme_site() {
 write_transition_acme_site() {
   local domain=$1
   cat <<EOF | atomic_install_text "$NGINX_TRANSITION_AVAILABLE" 0644 root root
-# Temporary ACME site managed by dujiao-next-manager.
+# Temporary ACME site managed by xmall-manager.
 server {
     listen 80;
     listen [::]:80;
@@ -1109,7 +1109,7 @@ render_final_nginx_site() {
   local live_dir
   live_dir="$(root_path "/etc/letsencrypt/live/${cert_name}")"
   cat <<EOF
-# Managed by dujiao-next-manager. Do not edit by hand.
+# Managed by xmall-manager. Do not edit by hand.
 server {
     listen 80;
     listen [::]:80;
@@ -1205,7 +1205,7 @@ issue_certificate() {
     -d "$domain" --cert-name "$cert_name"
     --email "$email" --agree-tos --no-eff-email --non-interactive
   )
-  if [[ "${DUJIAO_ACME_STAGING:-0}" == "1" ]]; then
+  if [[ "${XMALL_ACME_STAGING:-0}" == "1" ]]; then
     certbot_args+=(--staging)
   fi
   certbot "${certbot_args[@]}"
@@ -1282,7 +1282,7 @@ verify_public_site() {
 verify_admin_exists() {
   local username=$1
   local output="${RUN_TMP}/admins.txt"
-  if ! runuser -u "$SERVICE_USER" -- bash -c 'cd "$1" && ./dujiao-next admin list-admins' _ "$INSTALL_DIR" > "$output" 2>&1; then
+  if ! runuser -u "$SERVICE_USER" -- bash -c 'cd "$1" && ./xmall admin list-admins' _ "$INSTALL_DIR" > "$output" 2>&1; then
     cat "$output" >&2
     return 1
   fi
@@ -1312,7 +1312,7 @@ print(json.dumps({"username":parts[0].decode(),"password":parts[1].decode()}))
   printf '%s\0' "$recipient" | python3 -c '
 import json, sys
 recipient=sys.stdin.buffer.read().split(b"\0")[0].decode()
-print(json.dumps({"to_email":recipient,"subject":"Dujiao-Next SMTP 安装测试","body":"SMTP 配置测试成功。"}, ensure_ascii=False))
+print(json.dumps({"to_email":recipient,"subject":"XMall SMTP 安装测试","body":"SMTP 配置测试成功。"}, ensure_ascii=False))
 ' > "$test_request"
   chmod 0600 "$test_request"
   curl --fail --silent --show-error --max-time 45 \
@@ -1380,7 +1380,7 @@ collect_smtp_config() {
   SMTP_USERNAME=""
   SMTP_PASSWORD=""
   SMTP_FROM=""
-  SMTP_FROM_NAME="Dujiao-Next"
+  SMTP_FROM_NAME="XMall"
   SMTP_USE_TLS=true
   SMTP_USE_SSL=false
   SMTP_TEST_RECIPIENT=""
@@ -1394,7 +1394,7 @@ collect_smtp_config() {
   SMTP_USERNAME=$(ui_input "SMTP 用户名" "允许留空（取决于服务商）" "") || exit 130
   SMTP_PASSWORD=$(ui_password "SMTP 密码" "允许留空（取决于服务商）；推荐填写授权码而非账户登录密码") || exit 130
   SMTP_FROM=$(prompt_validated validate_email "发件地址" "请输入发件人邮箱" "")
-  SMTP_FROM_NAME=$(ui_input "发件人名称" "邮件中显示的名称" "Dujiao-Next") || exit 130
+  SMTP_FROM_NAME=$(ui_input "发件人名称" "邮件中显示的名称" "XMall") || exit 130
   local encryption
   encryption=$(ui_menu "SMTP 加密" "请选择连接方式" \
     starttls "STARTTLS（通常为 587）" \
@@ -1415,7 +1415,7 @@ collect_install_input() {
   ADMIN_USERNAME=$(prompt_validated validate_admin_username "管理员账号" "3-64 位，仅允许字母、数字、点、下划线、@ 和连字符" "admin")
   ADMIN_PASSWORD=$(prompt_password_pair)
   local generated_path
-  generated_path="/dj-$(openssl rand -hex 6)"
+  generated_path="/xmall-$(openssl rand -hex 6)"
   ADMIN_PATH=$(prompt_validated validate_admin_path "后台入口" "使用随机路径可减少自动化扫描；允许多级路径" "$generated_path")
   APP_PORT=$(pick_free_port "应用端口" 8080)
   REDIS_PORT=$(pick_free_port "Redis 端口" 6380)
@@ -1527,7 +1527,7 @@ run_install() {
     check_os_support
     resume_values_from_state
     if [[ "$(state_get phase)" == "installed" ]]; then
-      ui_message "已经安装" "Dujiao-Next 已安装完成。\n商城：https://${DOMAIN}\n后台：https://${DOMAIN}${ADMIN_PATH}/"
+      ui_message "已经安装" "XMall 已安装完成。\n商城：https://${DOMAIN}\n后台：https://${DOMAIN}${ADMIN_PATH}/"
       return 0
     fi
     install_dependencies
@@ -1576,7 +1576,7 @@ run_install() {
   if ! phase_at_least "$phase" services_ready; then
     systemctl enable --now "$REDIS_SERVICE"
     systemctl enable --now "$APP_SERVICE"
-    wait_for_local_health "$APP_PORT" || die "Dujiao-Next 本机健康检查失败"
+    wait_for_local_health "$APP_PORT" || die "XMall 本机健康检查失败"
     ensure_loopback_bindings "$APP_PORT" "$REDIS_PORT"
 
     ADMIN_USERNAME=$(config_read bootstrap.default_admin_username 2>/dev/null || true)
@@ -1612,11 +1612,11 @@ run_install() {
   if [[ "$(config_read email.enabled 2>/dev/null || printf 'false')" != "true" ]]; then
     smtp_note=$'\n\n注意：SMTP 尚未启用。请登录后台完成 SMTP 配置后再开放邮箱验证码注册。'
   fi
-  ui_message "安装成功" "商城：https://${DOMAIN}\n后台：https://${DOMAIN}${ADMIN_PATH}/\n管理命令：sudo dujiao-next-manager${smtp_note}"
+  ui_message "安装成功" "商城：https://${DOMAIN}\n后台：https://${DOMAIN}${ADMIN_PATH}/\n管理命令：sudo xmall-manager${smtp_note}"
 }
 
 require_installed_state() {
-  state_exists || die "未找到由本安装器管理的 Dujiao-Next"
+  state_exists || die "未找到由本安装器管理的 XMall"
 }
 
 show_status() {
@@ -1651,7 +1651,7 @@ Redis 监听：127.0.0.1:${REDIS_PORT}
 证书到期：${cert_expiry}
 EOF
 )
-  ui_message "Dujiao-Next 状态" "$message"
+  ui_message "XMall 状态" "$message"
 }
 
 show_logs() {
@@ -1659,7 +1659,7 @@ show_logs() {
   local target=${1:-}
   if [[ -z "$target" ]]; then
     target=$(ui_menu "查看日志" "请选择日志来源" \
-      app "Dujiao-Next 应用" \
+      app "XMall 应用" \
       redis "独立 Redis" \
       nginx "Nginx" \
       certbot "Certbot") || return 0
@@ -1813,12 +1813,12 @@ admin_recovery() {
     password)
       local password
       password=$(prompt_password_pair)
-      if ! printf '%s\n' "$password" | runuser -u "$SERVICE_USER" -- bash -c 'cd "$1" && ./dujiao-next admin reset-password --username "$2"' _ "$INSTALL_DIR" "$username"; then
+      if ! printf '%s\n' "$password" | runuser -u "$SERVICE_USER" -- bash -c 'cd "$1" && ./xmall admin reset-password --username "$2"' _ "$INSTALL_DIR" "$username"; then
         result=1
       fi
       ;;
     2fa)
-      if ! runuser -u "$SERVICE_USER" -- bash -c 'cd "$1" && ./dujiao-next admin reset-2fa --username "$2"' _ "$INSTALL_DIR" "$username"; then
+      if ! runuser -u "$SERVICE_USER" -- bash -c 'cd "$1" && ./xmall admin reset-2fa --username "$2"' _ "$INSTALL_DIR" "$username"; then
         result=1
       fi
       ;;
@@ -1843,12 +1843,12 @@ create_uninstall_backup() {
   cp -a -- "${INSTALL_DIR}/uploads" "${staging}/uploads" || return 1
   cp -p -- "$STATE_FILE" "${staging}/install-state.json" || return 1
   cat > "${staging}/README.txt" <<EOF || return 1
-Dujiao-Next uninstall backup
+XMall uninstall backup
 Created: ${timestamp}
 Restore requires config.yml, db/, and uploads/ together.
 The app.secret_key in config.yml is required to decrypt stored secrets.
 EOF
-  local temporary="${RUN_TMP}/dujiao-next-uninstall-${timestamp}.tar.gz"
+  local temporary="${RUN_TMP}/xmall-uninstall-${timestamp}.tar.gz"
   tar -czf "$temporary" -C "$staging" . || return 1
   tar -tzf "$temporary" >/dev/null || return 1
   local listing
@@ -1857,7 +1857,7 @@ EOF
   grep -q '^\./db/' <<< "$listing" || return 1
   grep -q '^\./uploads/' <<< "$listing" || return 1
   grep -q '^\./install-state.json$' <<< "$listing" || return 1
-  local destination="${BACKUP_DIR}/dujiao-next-uninstall-${timestamp}.tar.gz"
+  local destination="${BACKUP_DIR}/xmall-uninstall-${timestamp}.tar.gz"
   install -o root -g root -m 0600 "$temporary" "$destination" || return 1
   printf '%s' "$destination"
 }
@@ -1900,7 +1900,7 @@ uninstall_managed() {
 
   local destroy=false phrase=""
   if ui_yesno "保留恢复点" "卸载备份已保存到：\n${backup}\n\n是否连该备份也彻底销毁？默认建议保留。"; then
-    phrase=$(ui_input "最终确认" "输入 DELETE DUJIAO DATA 才会删除唯一恢复备份" "") || true
+    phrase=$(ui_input "最终确认" "输入 DELETE XMALL DATA 才会删除唯一恢复备份" "") || true
     validate_destroy_phrase "$phrase" && destroy=true
   fi
   if [[ "$destroy" == "true" ]]; then
@@ -1910,7 +1910,7 @@ uninstall_managed() {
     log_info "恢复备份保留在：$backup"
   fi
   rm -f -- "$MANAGER_BIN"
-  ui_message "卸载完成" "Dujiao-Next 已卸载。\n恢复备份：$([[ "$destroy" == "true" ]] && printf '已销毁' || printf '%s' "$backup")"
+  ui_message "卸载完成" "XMall 已卸载。\n恢复备份：$([[ "$destroy" == "true" ]] && printf '已销毁' || printf '%s' "$backup")"
 }
 
 show_smtp_hint() {
@@ -1923,11 +1923,11 @@ main_menu() {
   while true; do
     local choice
     if ! state_exists; then
-      choice=$(ui_menu "Dujiao-Next 管理器" "未检测到已完成安装" \
+      choice=$(ui_menu "XMall 管理器" "未检测到已完成安装" \
         install "安装或继续中断的安装" \
         exit "退出") || return 0
     else
-      choice=$(ui_menu "Dujiao-Next 管理器" "请选择操作" \
+      choice=$(ui_menu "XMall 管理器" "请选择操作" \
         status "查看状态" \
         logs "查看日志" \
         start "启动服务" \
@@ -1961,22 +1961,22 @@ main_menu() {
 
 usage() {
   cat <<'EOF'
-Dujiao-Next 官方安装与运维管理器
+XMall 官方安装与运维管理器
 
 用法：
-  安装前显式设置 DUJIAO_UPDATE_REPOSITORY=可信所有者/仓库名，无默认发行仓库。
+  安装前显式设置 XMALL_UPDATE_REPOSITORY=可信所有者/仓库名，无默认发行仓库。
   后台一键更新另需配置 update.repository；仅有 SHA-256 完整性校验，不等于发布签名。
-  dujiao-next-manager                         打开交互式管理菜单
-  dujiao-next-manager install                 安装或继续中断的安装
-  dujiao-next-manager status                  查看状态
-  dujiao-next-manager logs [app|redis|nginx|certbot]
-  dujiao-next-manager start|stop|restart
-  dujiao-next-manager configure-domain
-  dujiao-next-manager configure-admin-path
-  dujiao-next-manager renew-cert
-  dujiao-next-manager admin-reset-password
-  dujiao-next-manager admin-reset-2fa
-  dujiao-next-manager uninstall
+  xmall-manager                         打开交互式管理菜单
+  xmall-manager install                 安装或继续中断的安装
+  xmall-manager status                  查看状态
+  xmall-manager logs [app|redis|nginx|certbot]
+  xmall-manager start|stop|restart
+  xmall-manager configure-domain
+  xmall-manager configure-admin-path
+  xmall-manager renew-cert
+  xmall-manager admin-reset-password
+  xmall-manager admin-reset-2fa
+  xmall-manager uninstall
 EOF
 }
 
@@ -1999,11 +1999,11 @@ main() {
     admin-reset-2fa) admin_recovery 2fa ;;
     uninstall) uninstall_managed ;;
     -h|--help|help) usage ;;
-    --version) printf 'dujiao-next-manager %s\n' "$MANAGER_VERSION" ;;
+    --version) printf 'xmall-manager %s\n' "$MANAGER_VERSION" ;;
     *) usage; die "未知命令：$command" ;;
   esac
 }
 
-if [[ "${DUJIAO_MANAGER_TESTING:-0}" != "1" ]]; then
+if [[ "${XMALL_MANAGER_TESTING:-0}" != "1" ]]; then
   main "$@"
 fi

@@ -5,32 +5,32 @@ import (
 	"testing"
 	"time"
 
-	paymentgormstore "github.com/dujiao-next/internal/modules/payment/infrastructure/gormstore"
+	paymentgormstore "github.com/homles698698-lab/XMall/internal/modules/payment/infrastructure/gormstore"
 
-	paymentdomain "github.com/dujiao-next/internal/modules/payment/domain"
+	paymentdomain "github.com/homles698698-lab/XMall/internal/modules/payment/domain"
 
-	orderdomain "github.com/dujiao-next/internal/modules/order/domain"
-	ordergormstore "github.com/dujiao-next/internal/modules/order/infrastructure/gormstore"
+	orderdomain "github.com/homles698698-lab/XMall/internal/modules/order/domain"
+	ordergormstore "github.com/homles698698-lab/XMall/internal/modules/order/infrastructure/gormstore"
 
-	cardsecretdomain "github.com/dujiao-next/internal/modules/cardsecret/domain"
-	cardsecretgormstore "github.com/dujiao-next/internal/modules/cardsecret/infrastructure/gormstore"
-	memberleveldomain "github.com/dujiao-next/internal/modules/memberlevel/domain"
+	cardsecretdomain "github.com/homles698698-lab/XMall/internal/modules/cardsecret/domain"
+	cardsecretgormstore "github.com/homles698698-lab/XMall/internal/modules/cardsecret/infrastructure/gormstore"
+	memberleveldomain "github.com/homles698698-lab/XMall/internal/modules/memberlevel/domain"
 
-	mappingdomain "github.com/dujiao-next/internal/modules/catalog/mapping/domain"
+	mappingdomain "github.com/homles698698-lab/XMall/internal/modules/catalog/mapping/domain"
 
-	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
+	productdomain "github.com/homles698698-lab/XMall/internal/modules/catalog/product/domain"
 
-	categorydomain "github.com/dujiao-next/internal/modules/catalog/category/domain"
+	categorydomain "github.com/homles698698-lab/XMall/internal/modules/catalog/category/domain"
 
-	productgormstore "github.com/dujiao-next/internal/modules/catalog/product/store/gormstore"
+	productgormstore "github.com/homles698698-lab/XMall/internal/modules/catalog/product/store/gormstore"
 
-	catalogproductbootstrap "github.com/dujiao-next/internal/bootstrap/catalogproduct"
-	cartdomain "github.com/dujiao-next/internal/modules/cart/domain"
-	cartgormstore "github.com/dujiao-next/internal/modules/cart/infrastructure/gormstore"
-	categorygormstore "github.com/dujiao-next/internal/modules/catalog/category/infrastructure/gormstore"
-	mappinggormstore "github.com/dujiao-next/internal/modules/catalog/mapping/infrastructure/gormstore"
-	memberlevelgormstore "github.com/dujiao-next/internal/modules/memberlevel/infrastructure/gormstore"
 	"github.com/glebarez/sqlite"
+	catalogproductbootstrap "github.com/homles698698-lab/XMall/internal/bootstrap/catalogproduct"
+	cartdomain "github.com/homles698698-lab/XMall/internal/modules/cart/domain"
+	cartgormstore "github.com/homles698698-lab/XMall/internal/modules/cart/infrastructure/gormstore"
+	categorygormstore "github.com/homles698698-lab/XMall/internal/modules/catalog/category/infrastructure/gormstore"
+	mappinggormstore "github.com/homles698698-lab/XMall/internal/modules/catalog/mapping/infrastructure/gormstore"
+	memberlevelgormstore "github.com/homles698698-lab/XMall/internal/modules/memberlevel/infrastructure/gormstore"
 	"gorm.io/gorm"
 )
 

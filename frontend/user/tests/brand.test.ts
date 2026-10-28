@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import { resolveSiteName } from '../src/utils/brand.ts'
 
 test('missing and legacy default names use the localized storefront name', () => {
-  for (const fallback of ['商城', 'Store']) {
+  for (const fallback of ['X商城', 'XMall']) {
     for (const value of [undefined, null, '', '  ', 123, {}, 'Dujiao-Next', ' dujiao-next ']) {
       assert.equal(resolveSiteName(value, fallback), fallback)
     }

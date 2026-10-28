@@ -3,12 +3,12 @@ package userhttp
 import (
 	"strings"
 
-	resellerdomain "github.com/dujiao-next/internal/modules/reseller/domain"
+	resellerdomain "github.com/homles698698-lab/XMall/internal/modules/reseller/domain"
 
-	resellermodule "github.com/dujiao-next/internal/modules/reseller/contract"
-	dto "github.com/dujiao-next/internal/modules/reseller/transport/http/presenter"
-	"github.com/dujiao-next/internal/platform/http/ginutil"
-	"github.com/dujiao-next/internal/platform/http/response"
+	resellermodule "github.com/homles698698-lab/XMall/internal/modules/reseller/contract"
+	dto "github.com/homles698698-lab/XMall/internal/modules/reseller/transport/http/presenter"
+	"github.com/homles698698-lab/XMall/internal/platform/http/ginutil"
+	"github.com/homles698698-lab/XMall/internal/platform/http/response"
 	"github.com/shopspring/decimal"
 
 	"github.com/gin-gonic/gin"

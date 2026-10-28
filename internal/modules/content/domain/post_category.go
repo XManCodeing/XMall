@@ -3,7 +3,7 @@ package domain
 import (
 	"time"
 
-	"github.com/dujiao-next/internal/shared/jsonmap"
+	"github.com/homles698698-lab/XMall/internal/shared/jsonmap"
 )
 
 // PostCategory 文章分类（支持两级）。

@@ -3,13 +3,13 @@ package application
 import (
 	"context"
 	"fmt"
-	mappingdomain "github.com/dujiao-next/internal/modules/catalog/mapping/domain"
+	mappingdomain "github.com/homles698698-lab/XMall/internal/modules/catalog/mapping/domain"
 	"testing"
 
-	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
+	productdomain "github.com/homles698698-lab/XMall/internal/modules/catalog/product/domain"
 
-	"github.com/dujiao-next/internal/shared/money"
-	"github.com/dujiao-next/internal/upstream"
+	"github.com/homles698698-lab/XMall/internal/shared/money"
+	"github.com/homles698698-lab/XMall/internal/upstream"
 
 	"github.com/shopspring/decimal"
 )

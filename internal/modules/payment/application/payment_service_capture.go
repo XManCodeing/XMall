@@ -6,13 +6,13 @@ import (
 	"fmt"
 	"strings"
 
-	paymentcontract "github.com/dujiao-next/internal/modules/payment/contract"
+	paymentcontract "github.com/homles698698-lab/XMall/internal/modules/payment/contract"
 
-	paymentdomain "github.com/dujiao-next/internal/modules/payment/domain"
+	paymentdomain "github.com/homles698698-lab/XMall/internal/modules/payment/domain"
 
-	"github.com/dujiao-next/internal/constants"
-	"github.com/dujiao-next/internal/logger"
-	"github.com/dujiao-next/internal/shared/jsonmap"
+	"github.com/homles698698-lab/XMall/internal/constants"
+	"github.com/homles698698-lab/XMall/internal/logger"
+	"github.com/homles698698-lab/XMall/internal/shared/jsonmap"
 )
 
 // CapturePaymentInput 捕获支付输入。

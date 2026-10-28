@@ -3,10 +3,10 @@ package gormstore
 import (
 	"time"
 
-	paymentdomain "github.com/dujiao-next/internal/modules/payment/domain"
+	paymentdomain "github.com/homles698698-lab/XMall/internal/modules/payment/domain"
 
-	"github.com/dujiao-next/internal/constants"
-	dashboard "github.com/dujiao-next/internal/modules/dashboard/contract"
+	"github.com/homles698698-lab/XMall/internal/constants"
+	dashboard "github.com/homles698698-lab/XMall/internal/modules/dashboard/contract"
 )
 
 // GetTopChannels 获取支付渠道排行榜

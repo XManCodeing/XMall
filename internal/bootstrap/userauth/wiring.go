@@ -1,9 +1,9 @@
 package userauthwiring
 
 import (
-	"github.com/dujiao-next/internal/app/container"
-	captchahttp "github.com/dujiao-next/internal/modules/captcha/transport/http"
-	userauthtransport "github.com/dujiao-next/internal/modules/identity/userauth/transport/http"
+	"github.com/homles698698-lab/XMall/internal/app/container"
+	captchahttp "github.com/homles698698-lab/XMall/internal/modules/captcha/transport/http"
+	userauthtransport "github.com/homles698698-lab/XMall/internal/modules/identity/userauth/transport/http"
 )
 
 // Handlers contains the complete user authentication HTTP entrypoint set.

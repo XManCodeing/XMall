@@ -6,11 +6,11 @@ import (
 	"strings"
 	"time"
 
-	orderdomain "github.com/dujiao-next/internal/modules/order/domain"
-	paymentdomain "github.com/dujiao-next/internal/modules/payment/domain"
+	orderdomain "github.com/homles698698-lab/XMall/internal/modules/order/domain"
+	paymentdomain "github.com/homles698698-lab/XMall/internal/modules/payment/domain"
 
-	"github.com/dujiao-next/internal/constants"
-	dashboard "github.com/dujiao-next/internal/modules/dashboard/contract"
+	"github.com/homles698698-lab/XMall/internal/constants"
+	dashboard "github.com/homles698698-lab/XMall/internal/modules/dashboard/contract"
 )
 
 func profitOrderStatuses() []string {

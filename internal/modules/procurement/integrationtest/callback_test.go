@@ -4,12 +4,12 @@ import (
 	"testing"
 	"time"
 
-	fulfillmentdomain "github.com/dujiao-next/internal/modules/fulfillment/domain"
-	orderdomain "github.com/dujiao-next/internal/modules/order/domain"
+	fulfillmentdomain "github.com/homles698698-lab/XMall/internal/modules/fulfillment/domain"
+	orderdomain "github.com/homles698698-lab/XMall/internal/modules/order/domain"
 
-	"github.com/dujiao-next/internal/constants"
-	procurementcontract "github.com/dujiao-next/internal/modules/procurement/contract"
-	procurementgormstore "github.com/dujiao-next/internal/modules/procurement/infrastructure/gormstore"
+	"github.com/homles698698-lab/XMall/internal/constants"
+	procurementcontract "github.com/homles698698-lab/XMall/internal/modules/procurement/contract"
+	procurementgormstore "github.com/homles698698-lab/XMall/internal/modules/procurement/infrastructure/gormstore"
 )
 
 type procurementCallbackStatusFixture struct {

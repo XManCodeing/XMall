@@ -3,7 +3,7 @@ package domain
 import (
 	"time"
 
-	"github.com/dujiao-next/internal/shared/money"
+	"github.com/homles698698-lab/XMall/internal/shared/money"
 )
 
 // Commission 推广返利佣金记录

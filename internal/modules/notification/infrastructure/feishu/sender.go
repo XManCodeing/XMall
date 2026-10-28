@@ -8,7 +8,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/dujiao-next/internal/modules/notification/contract"
+	"github.com/homles698698-lab/XMall/internal/modules/notification/contract"
 
 	larkcore "github.com/larksuite/oapi-sdk-go/v3/core"
 	larkim "github.com/larksuite/oapi-sdk-go/v3/service/im/v1"

@@ -8,9 +8,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/dujiao-next/internal/constants"
-	cardsecretcontract "github.com/dujiao-next/internal/modules/cardsecret/contract"
-	cardsecretdomain "github.com/dujiao-next/internal/modules/cardsecret/domain"
+	"github.com/homles698698-lab/XMall/internal/constants"
+	cardsecretcontract "github.com/homles698698-lab/XMall/internal/modules/cardsecret/contract"
+	cardsecretdomain "github.com/homles698698-lab/XMall/internal/modules/cardsecret/domain"
 )
 
 // ExportAvailableCardSecretInput 可用卡密出库导出输入。

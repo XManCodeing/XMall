@@ -5,9 +5,9 @@ import (
 	"encoding/hex"
 	"time"
 
-	"github.com/dujiao-next/internal/constants"
-	apicredentialcontract "github.com/dujiao-next/internal/modules/apicredential/contract"
-	apicredentialdomain "github.com/dujiao-next/internal/modules/apicredential/domain"
+	"github.com/homles698698-lab/XMall/internal/constants"
+	apicredentialcontract "github.com/homles698698-lab/XMall/internal/modules/apicredential/contract"
+	apicredentialdomain "github.com/homles698698-lab/XMall/internal/modules/apicredential/domain"
 )
 
 // Service API 凭证服务

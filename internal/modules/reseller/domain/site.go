@@ -3,7 +3,7 @@ package domain
 import (
 	"time"
 
-	"github.com/dujiao-next/internal/shared/jsonmap"
+	"github.com/homles698698-lab/XMall/internal/shared/jsonmap"
 )
 
 // Domain 分销商域名绑定。

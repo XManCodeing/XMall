@@ -6,12 +6,12 @@ import (
 	"strings"
 	"testing"
 
-	resellergormstore "github.com/dujiao-next/internal/modules/reseller/infrastructure/gormstore"
+	resellergormstore "github.com/homles698698-lab/XMall/internal/modules/reseller/infrastructure/gormstore"
 
-	resellerdomain "github.com/dujiao-next/internal/modules/reseller/domain"
+	resellerdomain "github.com/homles698698-lab/XMall/internal/modules/reseller/domain"
 
-	auditlogdomain "github.com/dujiao-next/internal/modules/auditlog/domain"
-	resellermodule "github.com/dujiao-next/internal/modules/reseller/application"
+	auditlogdomain "github.com/homles698698-lab/XMall/internal/modules/auditlog/domain"
+	resellermodule "github.com/homles698698-lab/XMall/internal/modules/reseller/application"
 
 	"github.com/gin-gonic/gin"
 )

@@ -5,8 +5,8 @@ import (
 	"strings"
 	"time"
 
-	resellercontract "github.com/dujiao-next/internal/modules/reseller/contract"
-	resellerdomain "github.com/dujiao-next/internal/modules/reseller/domain"
+	resellercontract "github.com/homles698698-lab/XMall/internal/modules/reseller/contract"
+	resellerdomain "github.com/homles698698-lab/XMall/internal/modules/reseller/domain"
 
 	"github.com/shopspring/decimal"
 	"gorm.io/gorm"

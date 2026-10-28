@@ -3,10 +3,10 @@ import { createPinia } from 'pinia'
 import { createHead } from '@unhead/vue/client'
 import './style.css'
 import App from './App.vue'
-import router, { warmupCommonRoutes } from './router'
-import i18n, { detectLocale, setI18nLocale, warmupLocaleMessages } from './i18n'
-import { useTelegramMiniAppStore } from './stores/telegramMiniApp'
-import { initTemplateOverride } from './templates/registry'
+import router, { warmupCommonRoutes } from './router/index.ts'
+import i18n, { detectLocale, setI18nLocale, warmupLocaleMessages } from './i18n/index.ts'
+import { useTelegramMiniAppStore } from './stores/telegramMiniApp.ts'
+import { initTemplateOverride } from './templates/registry.ts'
 
 // 预览用：?template=vault 持久化激活模板（站长正式切换走站点配置）
 initTemplateOverride()
@@ -20,8 +20,10 @@ app.use(head)
 app.use(router)
 app.use(i18n)
 
-// 非默认语言的语言包为懒加载 chunk，挂载前并行加载，避免首屏文案闪现兜底语言
+// 首次导航守卫会加载站点配置；模板确定后再挂载，避免先渲染 classic 外壳。
+// 语言与 Telegram 初始化仍并行进行，等待期间保留空挂载点，不展示错误模板。
 Promise.all([
+  router.isReady(),
   useTelegramMiniAppStore(pinia).init(),
   setI18nLocale(detectLocale()),
 ]).then(() => {
@@ -29,6 +31,6 @@ Promise.all([
 })
 
 void router.isReady().then(() => {
-    warmupCommonRoutes()
-    warmupLocaleMessages()
+  warmupCommonRoutes()
+  warmupLocaleMessages()
 })

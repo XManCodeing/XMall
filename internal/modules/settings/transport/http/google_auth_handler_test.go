@@ -8,7 +8,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	settingssecurity "github.com/dujiao-next/internal/modules/settings/schema/security"
+	settingssecurity "github.com/homles698698-lab/XMall/internal/modules/settings/schema/security"
 )
 
 type googleAuthAdminStub struct {

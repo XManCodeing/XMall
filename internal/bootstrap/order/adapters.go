@@ -4,37 +4,37 @@ import (
 	"errors"
 	"fmt"
 
-	paymentapp "github.com/dujiao-next/internal/modules/payment/application"
-	paymentcontract "github.com/dujiao-next/internal/modules/payment/contract"
+	paymentapp "github.com/homles698698-lab/XMall/internal/modules/payment/application"
+	paymentcontract "github.com/homles698698-lab/XMall/internal/modules/payment/contract"
 
-	paymentdomain "github.com/dujiao-next/internal/modules/payment/domain"
+	paymentdomain "github.com/homles698698-lab/XMall/internal/modules/payment/domain"
 
-	orderapp "github.com/dujiao-next/internal/modules/order/application"
-	orderrefund "github.com/dujiao-next/internal/modules/order/application/refund"
-	ordercontract "github.com/dujiao-next/internal/modules/order/contract"
-	orderdomain "github.com/dujiao-next/internal/modules/order/domain"
+	orderapp "github.com/homles698698-lab/XMall/internal/modules/order/application"
+	orderrefund "github.com/homles698698-lab/XMall/internal/modules/order/application/refund"
+	ordercontract "github.com/homles698698-lab/XMall/internal/modules/order/contract"
+	orderdomain "github.com/homles698698-lab/XMall/internal/modules/order/domain"
 
-	walletdomain "github.com/dujiao-next/internal/modules/wallet/domain"
+	walletdomain "github.com/homles698698-lab/XMall/internal/modules/wallet/domain"
 
-	coupondomain "github.com/dujiao-next/internal/modules/coupon/domain"
+	coupondomain "github.com/homles698698-lab/XMall/internal/modules/coupon/domain"
 
-	promotiondomain "github.com/dujiao-next/internal/modules/promotion/domain"
+	promotiondomain "github.com/homles698698-lab/XMall/internal/modules/promotion/domain"
 
-	usercontract "github.com/dujiao-next/internal/modules/identity/user/contract"
+	usercontract "github.com/homles698698-lab/XMall/internal/modules/identity/user/contract"
 
-	userdomain "github.com/dujiao-next/internal/modules/identity/user/domain"
+	userdomain "github.com/homles698698-lab/XMall/internal/modules/identity/user/domain"
 
-	"github.com/dujiao-next/internal/constants"
-	captchaapp "github.com/dujiao-next/internal/modules/captcha/application"
-	captchahttp "github.com/dujiao-next/internal/modules/captcha/transport/http"
-	couponcontract "github.com/dujiao-next/internal/modules/coupon/contract"
-	ordertransport "github.com/dujiao-next/internal/modules/order/transport/http"
-	orderriskcontract "github.com/dujiao-next/internal/modules/orderrisk/contract"
-	promotioncontract "github.com/dujiao-next/internal/modules/promotion/contract"
-	reseller "github.com/dujiao-next/internal/modules/reseller/contract"
-	walletcontract "github.com/dujiao-next/internal/modules/wallet/contract"
-	"github.com/dujiao-next/internal/queue"
-	"github.com/dujiao-next/internal/shared/money"
+	"github.com/homles698698-lab/XMall/internal/constants"
+	captchaapp "github.com/homles698698-lab/XMall/internal/modules/captcha/application"
+	captchahttp "github.com/homles698698-lab/XMall/internal/modules/captcha/transport/http"
+	couponcontract "github.com/homles698698-lab/XMall/internal/modules/coupon/contract"
+	ordertransport "github.com/homles698698-lab/XMall/internal/modules/order/transport/http"
+	orderriskcontract "github.com/homles698698-lab/XMall/internal/modules/orderrisk/contract"
+	promotioncontract "github.com/homles698698-lab/XMall/internal/modules/promotion/contract"
+	reseller "github.com/homles698698-lab/XMall/internal/modules/reseller/contract"
+	walletcontract "github.com/homles698698-lab/XMall/internal/modules/wallet/contract"
+	"github.com/homles698698-lab/XMall/internal/queue"
+	"github.com/homles698698-lab/XMall/internal/shared/money"
 )
 
 type orderAdminQueryAdapter struct {

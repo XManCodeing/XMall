@@ -4,20 +4,20 @@ import (
 	"context"
 	"errors"
 
-	paymentpresenter "github.com/dujiao-next/internal/modules/payment/transport/presenter"
+	paymentpresenter "github.com/homles698698-lab/XMall/internal/modules/payment/transport/presenter"
 
-	paymentdomain "github.com/dujiao-next/internal/modules/payment/domain"
+	paymentdomain "github.com/homles698698-lab/XMall/internal/modules/payment/domain"
 
-	orderdomain "github.com/dujiao-next/internal/modules/order/domain"
+	orderdomain "github.com/homles698698-lab/XMall/internal/modules/order/domain"
 
-	"github.com/dujiao-next/internal/i18n"
-	captcha "github.com/dujiao-next/internal/modules/captcha/contract"
-	captchahttp "github.com/dujiao-next/internal/modules/captcha/transport/http"
-	orderpresenter "github.com/dujiao-next/internal/modules/order/transport/presenter"
-	"github.com/dujiao-next/internal/platform/http/ginutil"
-	"github.com/dujiao-next/internal/platform/http/response"
-	"github.com/dujiao-next/internal/shared/jsonmap"
-	"github.com/dujiao-next/internal/shared/money"
+	"github.com/homles698698-lab/XMall/internal/i18n"
+	captcha "github.com/homles698698-lab/XMall/internal/modules/captcha/contract"
+	captchahttp "github.com/homles698698-lab/XMall/internal/modules/captcha/transport/http"
+	orderpresenter "github.com/homles698698-lab/XMall/internal/modules/order/transport/presenter"
+	"github.com/homles698698-lab/XMall/internal/platform/http/ginutil"
+	"github.com/homles698698-lab/XMall/internal/platform/http/response"
+	"github.com/homles698698-lab/XMall/internal/shared/jsonmap"
+	"github.com/homles698698-lab/XMall/internal/shared/money"
 
 	"github.com/gin-gonic/gin"
 )

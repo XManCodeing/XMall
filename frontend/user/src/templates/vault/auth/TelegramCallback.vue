@@ -23,7 +23,7 @@ import InviteCodeDialog from '../../../components/InviteCodeDialog.vue'
 import { AlertCircle } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
-import { useTelegramCallback } from '../../../composables/useTelegramCallback'
+import { useTelegramCallback } from '../../../composables/useTelegramCallback.ts'
 
 const { t } = useI18n()
 

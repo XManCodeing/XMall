@@ -5,7 +5,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/dujiao-next/internal/shared/jsonmap"
+	"github.com/homles698698-lab/XMall/internal/shared/jsonmap"
 )
 
 func ToStringAnyMap(value interface{}) map[string]interface{} {

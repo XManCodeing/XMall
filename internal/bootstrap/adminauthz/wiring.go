@@ -1,8 +1,8 @@
 package adminauthzwiring
 
 import (
-	"github.com/dujiao-next/internal/app/container"
-	adminauthztransport "github.com/dujiao-next/internal/modules/identity/adminauthorization/transport/http"
+	"github.com/homles698698-lab/XMall/internal/app/container"
+	adminauthztransport "github.com/homles698698-lab/XMall/internal/modules/identity/adminauthorization/transport/http"
 )
 
 func NewHandler(c *container.Container) *adminauthztransport.AdminHandler {

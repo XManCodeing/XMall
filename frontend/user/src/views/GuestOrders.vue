@@ -96,7 +96,7 @@ import { Button, buttonVariants } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import EmptyState from '../components/EmptyState.vue'
 import PaginationNav from '../components/PaginationNav.vue'
-import { useGuestOrders } from '../composables/useGuestOrders'
+import { useGuestOrders } from '../composables/useGuestOrders.ts'
 
 const { t } = useI18n()
 

@@ -5,14 +5,14 @@ import (
 	"strconv"
 	"testing"
 
-	categorydomain "github.com/dujiao-next/internal/modules/catalog/category/domain"
+	categorydomain "github.com/homles698698-lab/XMall/internal/modules/catalog/category/domain"
 
-	"github.com/dujiao-next/internal/constants"
-	productwrite "github.com/dujiao-next/internal/modules/catalog/product/application/write"
-	productcontract "github.com/dujiao-next/internal/modules/catalog/product/contract"
-	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
-	"github.com/dujiao-next/internal/shared/jsonmap"
-	"github.com/dujiao-next/internal/shared/money"
+	"github.com/homles698698-lab/XMall/internal/constants"
+	productwrite "github.com/homles698698-lab/XMall/internal/modules/catalog/product/application/write"
+	productcontract "github.com/homles698698-lab/XMall/internal/modules/catalog/product/contract"
+	productdomain "github.com/homles698698-lab/XMall/internal/modules/catalog/product/domain"
+	"github.com/homles698698-lab/XMall/internal/shared/jsonmap"
+	"github.com/homles698698-lab/XMall/internal/shared/money"
 
 	"github.com/shopspring/decimal"
 )

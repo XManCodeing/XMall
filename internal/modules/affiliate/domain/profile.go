@@ -4,7 +4,7 @@ import (
 	"strings"
 	"time"
 
-	userdomain "github.com/dujiao-next/internal/modules/identity/user/domain"
+	userdomain "github.com/homles698698-lab/XMall/internal/modules/identity/user/domain"
 )
 
 // NormalizeCode 归一化外部输入的推广码，并限制为持久化字段允许的长度。

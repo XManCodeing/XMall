@@ -443,7 +443,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import EmptyState from '../components/EmptyState.vue'
 import BreadcrumbNav from '../components/BreadcrumbNav.vue'
 import SmartImage from '../components/SmartImage.vue'
-import { useOrderDetail } from '../composables/useOrderDetail'
+import { useOrderDetail } from '../composables/useOrderDetail.ts'
 
 const { t } = useI18n()
 

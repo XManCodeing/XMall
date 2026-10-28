@@ -5,10 +5,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/dujiao-next/internal/constants"
-	"github.com/dujiao-next/internal/modules/content/contract"
-	"github.com/dujiao-next/internal/modules/content/domain"
-	"github.com/dujiao-next/internal/shared/jsonmap"
+	"github.com/homles698698-lab/XMall/internal/constants"
+	"github.com/homles698698-lab/XMall/internal/modules/content/contract"
+	"github.com/homles698698-lab/XMall/internal/modules/content/domain"
+	"github.com/homles698698-lab/XMall/internal/shared/jsonmap"
 )
 
 // BannerInput 描述 Banner 创建和更新所需字段。

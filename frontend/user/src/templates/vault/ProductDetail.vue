@@ -253,8 +253,8 @@ import {
   RotateCw, ShoppingCart, Tag, TicketCheck, UserPlus, Zap,
 } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
-import { processHtmlForDisplay } from '../../utils/content'
-import { useProductDetail } from '../../composables/useProductDetail'
+import { processHtmlForDisplay } from '../../utils/content.ts'
+import { useProductDetail } from '../../composables/useProductDetail.ts'
 import VaultProductMobileBar from './components/VaultProductMobileBar.vue'
 
 const { t } = useI18n()

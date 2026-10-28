@@ -5,14 +5,14 @@ import (
 	"errors"
 	"strconv"
 
-	"github.com/dujiao-next/internal/constants"
-	contentapp "github.com/dujiao-next/internal/modules/content/application"
-	contentcontract "github.com/dujiao-next/internal/modules/content/contract"
-	contentdomain "github.com/dujiao-next/internal/modules/content/domain"
-	contentpresenter "github.com/dujiao-next/internal/modules/content/transport/presenter"
-	"github.com/dujiao-next/internal/platform/http/ginutil"
-	"github.com/dujiao-next/internal/platform/http/response"
 	"github.com/gin-gonic/gin"
+	"github.com/homles698698-lab/XMall/internal/constants"
+	contentapp "github.com/homles698698-lab/XMall/internal/modules/content/application"
+	contentcontract "github.com/homles698698-lab/XMall/internal/modules/content/contract"
+	contentdomain "github.com/homles698698-lab/XMall/internal/modules/content/domain"
+	contentpresenter "github.com/homles698698-lab/XMall/internal/modules/content/transport/presenter"
+	"github.com/homles698698-lab/XMall/internal/platform/http/ginutil"
+	"github.com/homles698698-lab/XMall/internal/platform/http/response"
 )
 
 // PublicPostQueries 是公开 Content Handler 实际需要的文章读取能力。

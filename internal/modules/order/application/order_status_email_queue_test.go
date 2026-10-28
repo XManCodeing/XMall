@@ -4,15 +4,15 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/dujiao-next/internal/testkit/memorysettings"
+	"github.com/homles698698-lab/XMall/internal/testkit/memorysettings"
 
-	orderqueueadapter "github.com/dujiao-next/internal/modules/order/infrastructure/queueadapter"
-	settingsapp "github.com/dujiao-next/internal/modules/settings/application"
+	orderqueueadapter "github.com/homles698698-lab/XMall/internal/modules/order/infrastructure/queueadapter"
+	settingsapp "github.com/homles698698-lab/XMall/internal/modules/settings/application"
 
-	"github.com/dujiao-next/internal/config"
-	"github.com/dujiao-next/internal/constants"
-	"github.com/dujiao-next/internal/queue"
-	"github.com/dujiao-next/internal/shared/jsonmap"
+	"github.com/homles698698-lab/XMall/internal/config"
+	"github.com/homles698698-lab/XMall/internal/constants"
+	"github.com/homles698698-lab/XMall/internal/queue"
+	"github.com/homles698698-lab/XMall/internal/shared/jsonmap"
 )
 
 type orderStatusEmailOrderRepoStub struct {

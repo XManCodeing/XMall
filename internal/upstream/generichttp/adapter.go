@@ -11,9 +11,9 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/dujiao-next/internal/shared/httpintegration"
-	"github.com/dujiao-next/internal/shared/jsonmap"
-	"github.com/dujiao-next/internal/upstream"
+	"github.com/homles698698-lab/XMall/internal/shared/httpintegration"
+	"github.com/homles698698-lab/XMall/internal/shared/jsonmap"
+	"github.com/homles698698-lab/XMall/internal/upstream"
 )
 
 var ErrUnsupported = errors.New("generic HTTP operation is not supported")

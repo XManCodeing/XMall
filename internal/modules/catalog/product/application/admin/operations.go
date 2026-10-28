@@ -3,8 +3,8 @@ package productadmin
 import (
 	"strconv"
 
-	productcontract "github.com/dujiao-next/internal/modules/catalog/product/contract"
-	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
+	productcontract "github.com/homles698698-lab/XMall/internal/modules/catalog/product/contract"
+	productdomain "github.com/homles698698-lab/XMall/internal/modules/catalog/product/domain"
 )
 
 // Delete 删除商品，并在确认无库存和成交记录后级联清理关联数据。

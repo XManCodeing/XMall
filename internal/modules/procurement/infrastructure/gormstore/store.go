@@ -4,11 +4,11 @@ import (
 	"errors"
 	"time"
 
-	orderdomain "github.com/dujiao-next/internal/modules/order/domain"
+	orderdomain "github.com/homles698698-lab/XMall/internal/modules/order/domain"
 
-	procurementcontract "github.com/dujiao-next/internal/modules/procurement/contract"
-	procurementdomain "github.com/dujiao-next/internal/modules/procurement/domain"
-	"github.com/dujiao-next/internal/modules/procurement/infrastructure/orderreader"
+	procurementcontract "github.com/homles698698-lab/XMall/internal/modules/procurement/contract"
+	procurementdomain "github.com/homles698698-lab/XMall/internal/modules/procurement/domain"
+	"github.com/homles698698-lab/XMall/internal/modules/procurement/infrastructure/orderreader"
 
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"

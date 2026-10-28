@@ -100,7 +100,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
-import { useForgot } from '../../../composables/useForgot'
+import { useForgot } from '../../../composables/useForgot.ts'
 
 const { t } = useI18n()
 

@@ -1,6 +1,6 @@
 package settingsbrand
 
-import settingsapp "github.com/dujiao-next/internal/modules/settings/application"
+import settingsapp "github.com/homles698698-lab/XMall/internal/modules/settings/application"
 
 // Reader 从设置应用服务读取站点 URL。
 type Reader struct {

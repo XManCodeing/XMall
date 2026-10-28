@@ -4,12 +4,12 @@ import (
 	"errors"
 	"strings"
 
-	"github.com/dujiao-next/internal/cache"
-	"github.com/dujiao-next/internal/constants"
-	settingsapp "github.com/dujiao-next/internal/modules/settings/application"
-	ginutil "github.com/dujiao-next/internal/platform/http/ginutil"
-	"github.com/dujiao-next/internal/platform/http/response"
-	"github.com/dujiao-next/internal/shared/jsonmap"
+	"github.com/homles698698-lab/XMall/internal/cache"
+	"github.com/homles698698-lab/XMall/internal/constants"
+	settingsapp "github.com/homles698698-lab/XMall/internal/modules/settings/application"
+	ginutil "github.com/homles698698-lab/XMall/internal/platform/http/ginutil"
+	"github.com/homles698698-lab/XMall/internal/platform/http/response"
+	"github.com/homles698698-lab/XMall/internal/shared/jsonmap"
 
 	"github.com/gin-gonic/gin"
 )

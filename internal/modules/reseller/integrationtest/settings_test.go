@@ -6,10 +6,10 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/dujiao-next/internal/constants"
-	settingsapp "github.com/dujiao-next/internal/modules/settings/application"
-	settingstransport "github.com/dujiao-next/internal/modules/settings/transport/http"
-	"github.com/dujiao-next/internal/shared/jsonmap"
+	"github.com/homles698698-lab/XMall/internal/constants"
+	settingsapp "github.com/homles698698-lab/XMall/internal/modules/settings/application"
+	settingstransport "github.com/homles698698-lab/XMall/internal/modules/settings/transport/http"
+	"github.com/homles698698-lab/XMall/internal/shared/jsonmap"
 
 	"github.com/gin-gonic/gin"
 )

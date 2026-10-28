@@ -126,12 +126,12 @@ import ResellerPageState from '../../components/reseller-console/ResellerPageSta
 import ResellerRecordCard from '../../components/reseller-console/ResellerRecordCard.vue'
 import ResellerSectionHeader from '../../components/reseller-console/ResellerSectionHeader.vue'
 import ResellerStatusBadge, { type ResellerBadgeTone } from '../../components/reseller-console/ResellerStatusBadge.vue'
-import { useResellerFinance } from '../../composables/reseller/useResellerFinance'
-import { useConfirmDialog } from '../../composables/useConfirmDialog'
-import { RESELLER_WITHDRAW_STATUS_PAID, RESELLER_WITHDRAW_STATUS_PENDING, RESELLER_WITHDRAW_STATUS_REJECTED } from '../../constants/reseller'
-import { type PageAlert } from '../../utils/alerts'
-import { formatResellerConsoleAmount, formatResellerConsoleDate } from '../../utils/resellerConsole'
-import { getResellerWithdrawDisabledReasonKey, isResellerWithdrawEnabled } from '../../utils/resellerFinance'
+import { useResellerFinance } from '../../composables/reseller/useResellerFinance.ts'
+import { useConfirmDialog } from '../../composables/useConfirmDialog.ts'
+import { RESELLER_WITHDRAW_STATUS_PAID, RESELLER_WITHDRAW_STATUS_PENDING, RESELLER_WITHDRAW_STATUS_REJECTED } from '../../constants/reseller.ts'
+import { type PageAlert } from '../../utils/alerts.ts'
+import { formatResellerConsoleAmount, formatResellerConsoleDate } from '../../utils/resellerConsole.ts'
+import { getResellerWithdrawDisabledReasonKey, isResellerWithdrawEnabled } from '../../utils/resellerFinance.ts'
 
 const { t } = useI18n()
 const { confirm } = useConfirmDialog()

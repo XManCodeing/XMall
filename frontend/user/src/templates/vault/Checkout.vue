@@ -207,7 +207,7 @@ import ImageCaptcha from '../../components/captcha/ImageCaptcha.vue'
 import TurnstileCaptcha from '../../components/captcha/TurnstileCaptcha.vue'
 import CheckoutManualForm from '../../components/checkout/CheckoutManualForm.vue'
 import VaultCheckoutSteps from './components/VaultCheckoutSteps.vue'
-import { useCheckout } from '../../composables/useCheckout'
+import { useCheckout } from '../../composables/useCheckout.ts'
 
 const { t } = useI18n()
 

@@ -5,12 +5,12 @@ import (
 	"strings"
 	"time"
 
-	"github.com/dujiao-next/internal/constants"
-	"github.com/dujiao-next/internal/modules/cart/contract"
-	"github.com/dujiao-next/internal/modules/cart/domain"
-	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
-	promotionapp "github.com/dujiao-next/internal/modules/promotion/application"
-	promotioncontract "github.com/dujiao-next/internal/modules/promotion/contract"
+	"github.com/homles698698-lab/XMall/internal/constants"
+	"github.com/homles698698-lab/XMall/internal/modules/cart/contract"
+	"github.com/homles698698-lab/XMall/internal/modules/cart/domain"
+	productdomain "github.com/homles698698-lab/XMall/internal/modules/catalog/product/domain"
+	promotionapp "github.com/homles698698-lab/XMall/internal/modules/promotion/application"
+	promotioncontract "github.com/homles698698-lab/XMall/internal/modules/promotion/contract"
 )
 
 // Service 购物车服务。

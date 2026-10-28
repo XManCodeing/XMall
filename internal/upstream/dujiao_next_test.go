@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	siteconnectiondomain "github.com/dujiao-next/internal/modules/siteconnection/domain"
+	siteconnectiondomain "github.com/homles698698-lab/XMall/internal/modules/siteconnection/domain"
 )
 
 // 上游返回的图片地址只允许与上游站点同主机，且大小受限，防止 SSRF 把内部响应落到公开目录。

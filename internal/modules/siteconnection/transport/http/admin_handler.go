@@ -3,12 +3,12 @@ package siteconnectionhttp
 import (
 	"errors"
 
-	ginutil "github.com/dujiao-next/internal/platform/http/ginutil"
+	ginutil "github.com/homles698698-lab/XMall/internal/platform/http/ginutil"
 
-	siteconnectionapp "github.com/dujiao-next/internal/modules/siteconnection/application"
-	siteconnectioncontract "github.com/dujiao-next/internal/modules/siteconnection/contract"
-	siteconnectiondomain "github.com/dujiao-next/internal/modules/siteconnection/domain"
-	"github.com/dujiao-next/internal/platform/http/response"
+	siteconnectionapp "github.com/homles698698-lab/XMall/internal/modules/siteconnection/application"
+	siteconnectioncontract "github.com/homles698698-lab/XMall/internal/modules/siteconnection/contract"
+	siteconnectiondomain "github.com/homles698698-lab/XMall/internal/modules/siteconnection/domain"
+	"github.com/homles698698-lab/XMall/internal/platform/http/response"
 
 	"github.com/gin-gonic/gin"
 )

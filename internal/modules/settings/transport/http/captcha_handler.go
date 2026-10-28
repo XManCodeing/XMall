@@ -1,8 +1,8 @@
 package settingshttp
 
 import (
-	captcha "github.com/dujiao-next/internal/modules/captcha/contract"
-	settingssecurity "github.com/dujiao-next/internal/modules/settings/schema/security"
+	captcha "github.com/homles698698-lab/XMall/internal/modules/captcha/contract"
+	settingssecurity "github.com/homles698698-lab/XMall/internal/modules/settings/schema/security"
 
 	"github.com/gin-gonic/gin"
 )

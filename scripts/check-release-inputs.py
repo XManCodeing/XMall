@@ -17,7 +17,7 @@ def check(skip_git=False):
         "LICENSE", "README.md", "config.yml.example", "go.mod", "go.sum",
         "frontend/admin/package.json", "frontend/admin/pnpm-lock.yaml",
         "frontend/user/package.json", "frontend/user/pnpm-lock.yaml",
-        "scripts/dujiao-next-manager.sh", "Dockerfile", ".goreleaser.yaml",
+        "scripts/xmall-manager.sh", "Dockerfile", ".goreleaser.yaml",
     ]
     for name in required:
         if not (ROOT / name).is_file():
@@ -37,14 +37,21 @@ def check(skip_git=False):
             value = value["secret_key"]
         if value != "":
             raise ValueError(f"Public template must have empty {section}.{key}")
-    # Allow updates to this fork only; an empty value explicitly disables updates.
-    if config["update"]["repository"] not in ("", "homles698698-lab/dujiao-auv"):
+    if config["app"]["totp_issuer"] != "XMall":
+        raise ValueError("Public template app.totp_issuer must be XMall")
+    if config["database"]["dsn"] != "./db/xmall.db":
+        raise ValueError("Public template database.dsn must be ./db/xmall.db")
+    # The owner confirmed the repository rename to XMall.
+    # Empty explicitly disables updates; never fall back to an upstream source.
+    if config["update"]["repository"] not in ("", "homles698698-lab/XMall"):
         raise ValueError(
-            "Public template update.repository must be empty or homles698698-lab/dujiao-auv"
+            "Public template update.repository must be empty or homles698698-lab/XMall"
         )
     release = yaml.safe_load((ROOT / ".goreleaser.yaml").read_text())
+    if release["project_name"] != "xmall" or release["builds"][0]["binary"] != "xmall":
+        raise ValueError("Release project and binary must be xmall")
     files = release["archives"][0]["files"]
-    for name in ["LICENSE", "README.md", "config.yml.example", "scripts/dujiao-next-manager.sh"]:
+    for name in ["LICENSE", "README.md", "config.yml.example", "scripts/xmall-manager.sh"]:
         if f"./{name}" not in files:
             raise ValueError(f"Release archive must include {name}")
     if "go mod tidy -diff" not in release["before"]["hooks"]:

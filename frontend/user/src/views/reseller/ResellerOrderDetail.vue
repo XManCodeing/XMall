@@ -181,14 +181,14 @@ import ResellerPageState from '../../components/reseller-console/ResellerPageSta
 import ResellerRecordCard from '../../components/reseller-console/ResellerRecordCard.vue'
 import ResellerSectionHeader from '../../components/reseller-console/ResellerSectionHeader.vue'
 import ResellerStatusBadge, { type ResellerBadgeTone } from '../../components/reseller-console/ResellerStatusBadge.vue'
-import { useResellerOrders } from '../../composables/reseller/useResellerOrders'
-import { formatResellerOrderItemSkuText } from '../../utils/resellerOrderDisplay'
+import { useResellerOrders } from '../../composables/reseller/useResellerOrders.ts'
+import { formatResellerOrderItemSkuText } from '../../utils/resellerOrderDisplay.ts'
 import {
   formatResellerConsoleAmount,
   formatResellerConsoleDate,
   resellerOrderStatusTone,
   resellerProfitStatusKey,
-} from '../../utils/resellerConsole'
+} from '../../utils/resellerConsole.ts'
 
 const { t, te, locale } = useI18n()
 const route = useRoute()

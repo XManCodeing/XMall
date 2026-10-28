@@ -4,8 +4,8 @@ import (
 	"errors"
 	"time"
 
-	cardsecretcontract "github.com/dujiao-next/internal/modules/cardsecret/contract"
-	cardsecretdomain "github.com/dujiao-next/internal/modules/cardsecret/domain"
+	cardsecretcontract "github.com/homles698698-lab/XMall/internal/modules/cardsecret/contract"
+	cardsecretdomain "github.com/homles698698-lab/XMall/internal/modules/cardsecret/domain"
 
 	"gorm.io/gorm"
 )

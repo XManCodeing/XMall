@@ -3,9 +3,9 @@ package domain
 import (
 	"time"
 
-	"github.com/dujiao-next/internal/shared/jsonmap"
-	"github.com/dujiao-next/internal/shared/jsonslice"
-	"github.com/dujiao-next/internal/shared/money"
+	"github.com/homles698698-lab/XMall/internal/shared/jsonmap"
+	"github.com/homles698698-lab/XMall/internal/shared/jsonslice"
+	"github.com/homles698698-lab/XMall/internal/shared/money"
 )
 
 // OrderItem 订单项表

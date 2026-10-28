@@ -1,8 +1,8 @@
 package contract
 
 import (
-	"github.com/dujiao-next/internal/config"
-	settingssecurity "github.com/dujiao-next/internal/modules/settings/schema/security"
+	"github.com/homles698698-lab/XMall/internal/config"
+	settingssecurity "github.com/homles698698-lab/XMall/internal/modules/settings/schema/security"
 )
 
 // SettingReader 是验证码运行时读取动态配置所需的最小端口。

@@ -3,11 +3,11 @@ package application
 import (
 	"strings"
 
-	ordercontract "github.com/dujiao-next/internal/modules/order/contract"
-	settingsapp "github.com/dujiao-next/internal/modules/settings/application"
+	ordercontract "github.com/homles698698-lab/XMall/internal/modules/order/contract"
+	settingsapp "github.com/homles698698-lab/XMall/internal/modules/settings/application"
 
-	"github.com/dujiao-next/internal/config"
-	"github.com/dujiao-next/internal/telegramidentity"
+	"github.com/homles698698-lab/XMall/internal/config"
+	"github.com/homles698698-lab/XMall/internal/telegramidentity"
 )
 
 type receiverEmailResolver interface {

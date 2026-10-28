@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 224 224" fill="none" role="img" aria-labelledby="title desc">
+  <title id="title">XMall</title>
+  <desc id="desc">Two mirrored M ribbons, optimized for dark backgrounds.</desc>
+  <g stroke-width="24" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M36 179V45Q36 26 52 41L112 102L172 41Q188 26 188 45V179" stroke="#ab83f6"/>
+    <path d="M36 45V179Q36 198 52 183L112 122L172 183Q188 198 188 179V45" stroke="#ff9fc9"/>
+    <path d="M75 65L112 102L147 67" stroke="#ab83f6"/>
+  </g>
+</svg>

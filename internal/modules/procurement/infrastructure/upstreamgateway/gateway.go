@@ -5,9 +5,9 @@ import (
 	"errors"
 	"fmt"
 
-	procurementcontract "github.com/dujiao-next/internal/modules/procurement/contract"
-	siteconnectiondomain "github.com/dujiao-next/internal/modules/siteconnection/domain"
-	"github.com/dujiao-next/internal/upstream"
+	procurementcontract "github.com/homles698698-lab/XMall/internal/modules/procurement/contract"
+	siteconnectiondomain "github.com/homles698698-lab/XMall/internal/modules/siteconnection/domain"
+	"github.com/homles698698-lab/XMall/internal/upstream"
 )
 
 type Provider interface {

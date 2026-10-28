@@ -5,16 +5,16 @@ import (
 	"strings"
 	"time"
 
-	productcontract "github.com/dujiao-next/internal/modules/catalog/product/contract"
-	orderapp "github.com/dujiao-next/internal/modules/order/application"
-	orderdomain "github.com/dujiao-next/internal/modules/order/domain"
-	paymentcontract "github.com/dujiao-next/internal/modules/payment/contract"
-	paymentdomain "github.com/dujiao-next/internal/modules/payment/domain"
-	walletcontract "github.com/dujiao-next/internal/modules/wallet/contract"
+	productcontract "github.com/homles698698-lab/XMall/internal/modules/catalog/product/contract"
+	orderapp "github.com/homles698698-lab/XMall/internal/modules/order/application"
+	orderdomain "github.com/homles698698-lab/XMall/internal/modules/order/domain"
+	paymentcontract "github.com/homles698698-lab/XMall/internal/modules/payment/contract"
+	paymentdomain "github.com/homles698698-lab/XMall/internal/modules/payment/domain"
+	walletcontract "github.com/homles698698-lab/XMall/internal/modules/wallet/contract"
 
-	"github.com/dujiao-next/internal/constants"
-	"github.com/dujiao-next/internal/shared/jsonmap"
-	"github.com/dujiao-next/internal/shared/money"
+	"github.com/homles698698-lab/XMall/internal/constants"
+	"github.com/homles698698-lab/XMall/internal/shared/jsonmap"
+	"github.com/homles698698-lab/XMall/internal/shared/money"
 
 	"github.com/shopspring/decimal"
 )

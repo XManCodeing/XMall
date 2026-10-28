@@ -4,10 +4,10 @@ import (
 	"strconv"
 	"strings"
 
-	cardsecretcontract "github.com/dujiao-next/internal/modules/cardsecret/contract"
-	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
+	cardsecretcontract "github.com/homles698698-lab/XMall/internal/modules/cardsecret/contract"
+	productdomain "github.com/homles698698-lab/XMall/internal/modules/catalog/product/domain"
 
-	"github.com/dujiao-next/internal/constants"
+	"github.com/homles698698-lab/XMall/internal/constants"
 )
 
 type ServiceOptions struct {

@@ -286,8 +286,8 @@
 <script setup lang="ts">
 import { useI18n } from 'vue-i18n'
 import { Crown, ShoppingBag, ShieldCheck, Percent } from 'lucide-vue-next'
-import { getImageUrl } from '../utils/image'
-import { pageAlertVariant, pageAlertToneClass } from '../utils/alerts'
+import { getImageUrl } from '../utils/image.ts'
+import { pageAlertVariant, pageAlertToneClass } from '../utils/alerts.ts'
 import StatCard from '../components/shared/StatCard.vue'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
@@ -299,7 +299,7 @@ import WalletPanel from './personal/WalletPanel.vue'
 import GiftCardPanel from './personal/GiftCardPanel.vue'
 import AffiliatePanel from './personal/AffiliatePanel.vue'
 import ApiPanel from './personal/ApiPanel.vue'
-import { usePersonalCenter, type PersonalSection } from '../composables/usePersonalCenter'
+import { usePersonalCenter, type PersonalSection } from '../composables/usePersonalCenter.ts'
 
 const { t } = useI18n()
 

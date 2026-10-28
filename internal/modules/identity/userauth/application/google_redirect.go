@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	googleauthapp "github.com/dujiao-next/internal/modules/identity/googleauth/application"
+	googleauthapp "github.com/homles698698-lab/XMall/internal/modules/identity/googleauth/application"
 )
 
 const (

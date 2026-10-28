@@ -4,9 +4,9 @@ import (
 	"strings"
 	"time"
 
-	siteconnectiondomain "github.com/dujiao-next/internal/modules/siteconnection/domain"
-	"github.com/dujiao-next/internal/shared/jsonmap"
-	"github.com/dujiao-next/internal/shared/money"
+	siteconnectiondomain "github.com/homles698698-lab/XMall/internal/modules/siteconnection/domain"
+	"github.com/homles698698-lab/XMall/internal/shared/jsonmap"
+	"github.com/homles698698-lab/XMall/internal/shared/money"
 )
 
 const PayloadPreviewMaxLines = 100

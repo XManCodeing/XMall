@@ -11,14 +11,14 @@ import (
 	"strconv"
 	"strings"
 
-	gatewaycommon "github.com/dujiao-next/internal/modules/payment/infrastructure/gateway/common"
+	gatewaycommon "github.com/homles698698-lab/XMall/internal/modules/payment/infrastructure/gateway/common"
 
-	paymentcontract "github.com/dujiao-next/internal/modules/payment/contract"
+	paymentcontract "github.com/homles698698-lab/XMall/internal/modules/payment/contract"
 
-	"github.com/dujiao-next/internal/constants"
-	"github.com/dujiao-next/internal/modules/payment/infrastructure/gateway/epay"
-	"github.com/dujiao-next/internal/shared/jsonmap"
-	"github.com/dujiao-next/internal/shared/money"
+	"github.com/homles698698-lab/XMall/internal/constants"
+	"github.com/homles698698-lab/XMall/internal/modules/payment/infrastructure/gateway/epay"
+	"github.com/homles698698-lab/XMall/internal/shared/jsonmap"
+	"github.com/homles698698-lab/XMall/internal/shared/money"
 
 	"github.com/shopspring/decimal"
 )

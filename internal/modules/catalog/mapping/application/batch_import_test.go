@@ -4,9 +4,9 @@ import (
 	"strings"
 	"testing"
 
-	categorydomain "github.com/dujiao-next/internal/modules/catalog/category/domain"
+	categorydomain "github.com/homles698698-lab/XMall/internal/modules/catalog/category/domain"
 
-	"github.com/dujiao-next/internal/shared/jsonmap"
+	"github.com/homles698698-lab/XMall/internal/shared/jsonmap"
 )
 
 // fakeCategoryRepo 以内存实现分类查找/复活端口，验证 findOrCreateLocalCategory 的调用编排。

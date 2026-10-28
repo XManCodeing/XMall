@@ -5,20 +5,20 @@ import (
 	"strings"
 	"time"
 
-	orderapp "github.com/dujiao-next/internal/modules/order/application"
+	orderapp "github.com/homles698698-lab/XMall/internal/modules/order/application"
 
-	affiliatecontract "github.com/dujiao-next/internal/modules/affiliate/contract"
-	usercontract "github.com/dujiao-next/internal/modules/identity/user/contract"
-	userdomain "github.com/dujiao-next/internal/modules/identity/user/domain"
-	ordercontract "github.com/dujiao-next/internal/modules/order/contract"
-	orderdomain "github.com/dujiao-next/internal/modules/order/domain"
-	resellercontract "github.com/dujiao-next/internal/modules/reseller/contract"
-	settingsapp "github.com/dujiao-next/internal/modules/settings/application"
-	walletapp "github.com/dujiao-next/internal/modules/wallet/application"
-	walletcontract "github.com/dujiao-next/internal/modules/wallet/contract"
+	affiliatecontract "github.com/homles698698-lab/XMall/internal/modules/affiliate/contract"
+	usercontract "github.com/homles698698-lab/XMall/internal/modules/identity/user/contract"
+	userdomain "github.com/homles698698-lab/XMall/internal/modules/identity/user/domain"
+	ordercontract "github.com/homles698698-lab/XMall/internal/modules/order/contract"
+	orderdomain "github.com/homles698698-lab/XMall/internal/modules/order/domain"
+	resellercontract "github.com/homles698698-lab/XMall/internal/modules/reseller/contract"
+	settingsapp "github.com/homles698698-lab/XMall/internal/modules/settings/application"
+	walletapp "github.com/homles698698-lab/XMall/internal/modules/wallet/application"
+	walletcontract "github.com/homles698698-lab/XMall/internal/modules/wallet/contract"
 
-	"github.com/dujiao-next/internal/constants"
-	"github.com/dujiao-next/internal/shared/money"
+	"github.com/homles698698-lab/XMall/internal/constants"
+	"github.com/homles698698-lab/XMall/internal/shared/money"
 
 	"github.com/shopspring/decimal"
 )

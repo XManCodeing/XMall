@@ -6,9 +6,9 @@ import (
 	"testing"
 	"time"
 
-	resellercontract "github.com/dujiao-next/internal/modules/reseller/contract"
+	resellercontract "github.com/homles698698-lab/XMall/internal/modules/reseller/contract"
 
-	reportingdomain "github.com/dujiao-next/internal/modules/reporting/domain"
+	reportingdomain "github.com/homles698698-lab/XMall/internal/modules/reporting/domain"
 	"github.com/shopspring/decimal"
 )
 

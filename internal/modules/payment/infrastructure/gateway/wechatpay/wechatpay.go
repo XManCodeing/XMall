@@ -19,8 +19,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/dujiao-next/internal/constants"
-	"github.com/dujiao-next/internal/modules/payment/infrastructure/gateway/common"
+	"github.com/homles698698-lab/XMall/internal/constants"
+	"github.com/homles698698-lab/XMall/internal/modules/payment/infrastructure/gateway/common"
 
 	"github.com/shopspring/decimal"
 	"github.com/wechatpay-apiv3/wechatpay-go/core"
@@ -752,7 +752,7 @@ func newSecurityEchoMessage() (string, error) {
 	if _, err := rand.Read(randomBytes); err != nil {
 		return "", err
 	}
-	return "dujiao-next-" + hex.EncodeToString(randomBytes), nil
+	return "xmall-" + hex.EncodeToString(randomBytes), nil
 }
 
 func validatePrivateKey(raw string) error {

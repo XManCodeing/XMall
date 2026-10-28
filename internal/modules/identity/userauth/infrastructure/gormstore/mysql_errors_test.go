@@ -6,9 +6,9 @@ import (
 	"fmt"
 	"testing"
 
-	userauthapp "github.com/dujiao-next/internal/modules/identity/userauth/application"
 	"github.com/glebarez/sqlite"
 	"github.com/go-sql-driver/mysql"
+	userauthapp "github.com/homles698698-lab/XMall/internal/modules/identity/userauth/application"
 	"github.com/jackc/pgx/v5/pgconn"
 	"gorm.io/gorm"
 )

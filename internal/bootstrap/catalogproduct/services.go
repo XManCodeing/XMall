@@ -3,18 +3,18 @@ package catalogproductbootstrap
 import (
 	"errors"
 
-	paymentcontract "github.com/dujiao-next/internal/modules/payment/contract"
+	paymentcontract "github.com/homles698698-lab/XMall/internal/modules/payment/contract"
 
-	productcontract "github.com/dujiao-next/internal/modules/catalog/product/contract"
+	productcontract "github.com/homles698698-lab/XMall/internal/modules/catalog/product/contract"
 
-	cardsecretcontract "github.com/dujiao-next/internal/modules/cardsecret/contract"
-	categorycontract "github.com/dujiao-next/internal/modules/catalog/category/contract"
+	cardsecretcontract "github.com/homles698698-lab/XMall/internal/modules/cardsecret/contract"
+	categorycontract "github.com/homles698698-lab/XMall/internal/modules/catalog/category/contract"
 
-	cartgormstore "github.com/dujiao-next/internal/modules/cart/infrastructure/gormstore"
-	mappingcontract "github.com/dujiao-next/internal/modules/catalog/mapping/contract"
-	productapplication "github.com/dujiao-next/internal/modules/catalog/product/application"
-	productadmin "github.com/dujiao-next/internal/modules/catalog/product/application/admin"
-	productwrite "github.com/dujiao-next/internal/modules/catalog/product/application/write"
+	cartgormstore "github.com/homles698698-lab/XMall/internal/modules/cart/infrastructure/gormstore"
+	mappingcontract "github.com/homles698698-lab/XMall/internal/modules/catalog/mapping/contract"
+	productapplication "github.com/homles698698-lab/XMall/internal/modules/catalog/product/application"
+	productadmin "github.com/homles698698-lab/XMall/internal/modules/catalog/product/application/admin"
+	productwrite "github.com/homles698698-lab/XMall/internal/modules/catalog/product/application/write"
 
 	"gorm.io/gorm"
 )

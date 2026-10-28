@@ -5,7 +5,7 @@ import (
 	"io/fs"
 	"os"
 
-	"github.com/dujiao-next/internal/modules/content/contract"
+	"github.com/homles698698-lab/XMall/internal/modules/content/contract"
 )
 
 // Store 使用当前工作目录下的本地文件系统。

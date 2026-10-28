@@ -11,7 +11,7 @@ import (
 // TestBinaryLockIsExclusive 第二次获取必须失败而不是阻塞等待——
 // 用户点了「回滚」，我们要立刻告诉他有别的操作在跑，而不是把 HTTP 请求挂住。
 func TestBinaryLockIsExclusive(t *testing.T) {
-	exec := filepath.Join(t.TempDir(), "dujiao-next")
+	exec := filepath.Join(t.TempDir(), "xmall")
 
 	unlock, err := acquireBinaryLock(exec)
 	if err != nil {
@@ -39,7 +39,7 @@ func TestBinaryLockIsExclusive(t *testing.T) {
 // 注意：go test -race 发现不了这个问题——它不是内存数据竞争，
 // 而是多个流程对同一组文件做 rename 的事务竞争。
 func TestConcurrentRollbacksDoNotBothSucceed(t *testing.T) {
-	exec := filepath.Join(t.TempDir(), "dujiao-next")
+	exec := filepath.Join(t.TempDir(), "xmall")
 	if err := os.WriteFile(exec, []byte("new-binary"), 0o755); err != nil {
 		t.Fatal(err)
 	}

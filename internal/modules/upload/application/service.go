@@ -13,7 +13,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/dujiao-next/internal/modules/upload/contract"
+	"github.com/homles698698-lab/XMall/internal/modules/upload/contract"
 
 	_ "image/gif"
 	_ "image/jpeg"

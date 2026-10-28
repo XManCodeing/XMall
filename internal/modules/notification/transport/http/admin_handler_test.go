@@ -9,8 +9,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/dujiao-next/internal/modules/notification/contract"
-	"github.com/dujiao-next/internal/modules/notification/domain"
+	"github.com/homles698698-lab/XMall/internal/modules/notification/contract"
+	"github.com/homles698698-lab/XMall/internal/modules/notification/domain"
 
 	"github.com/gin-gonic/gin"
 )

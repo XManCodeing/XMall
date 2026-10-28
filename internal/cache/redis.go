@@ -8,8 +8,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/dujiao-next/internal/config"
-	"github.com/dujiao-next/internal/constants"
+	"github.com/homles698698-lab/XMall/internal/config"
+	"github.com/homles698698-lab/XMall/internal/constants"
 
 	"github.com/redis/go-redis/v9"
 )

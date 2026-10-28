@@ -87,7 +87,7 @@ import { useI18n } from 'vue-i18n'
 import GoogleIdentityButton from '../auth/GoogleIdentityButton.vue'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import type { GoogleRedirectPreparedIntent } from '../../utils/googleRedirect'
+import type { GoogleRedirectPreparedIntent } from '../../utils/googleRedirect.ts'
 
 const { t } = useI18n()
 

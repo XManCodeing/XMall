@@ -3,11 +3,11 @@ package app
 import (
 	"errors"
 
-	"github.com/dujiao-next/internal/app/container"
-	"github.com/dujiao-next/internal/app/httpserver"
-	"github.com/dujiao-next/internal/app/jobs"
-	jobconsumer "github.com/dujiao-next/internal/app/jobs/consumer"
-	"github.com/dujiao-next/internal/config"
+	"github.com/homles698698-lab/XMall/internal/app/container"
+	"github.com/homles698698-lab/XMall/internal/app/httpserver"
+	"github.com/homles698698-lab/XMall/internal/app/jobs"
+	jobconsumer "github.com/homles698698-lab/XMall/internal/app/jobs/consumer"
+	"github.com/homles698698-lab/XMall/internal/config"
 )
 
 // BuildRunner 构建服务运行器

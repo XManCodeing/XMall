@@ -4,8 +4,8 @@ import (
 	"errors"
 	"testing"
 
-	adminusertransport "github.com/dujiao-next/internal/modules/identity/user/transport/http/admin"
-	userauthapp "github.com/dujiao-next/internal/modules/identity/userauth/application"
+	adminusertransport "github.com/homles698698-lab/XMall/internal/modules/identity/user/transport/http/admin"
+	userauthapp "github.com/homles698698-lab/XMall/internal/modules/identity/userauth/application"
 )
 
 func TestMapAdminUserTransportErrorMapsGoogleUnbindErrors(t *testing.T) {

@@ -28,7 +28,7 @@ import InviteCodeDialog from '../../../components/InviteCodeDialog.vue'
 import { AlertCircle } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
-import { useGoogleRedirectCallback } from '../../../composables/useGoogleRedirectCallback'
+import { useGoogleRedirectCallback } from '../../../composables/useGoogleRedirectCallback.ts'
 
 const { t } = useI18n()
 const { loading, errMsg, retryPath, continueAfterLogin, cancelInvite } = useGoogleRedirectCallback()

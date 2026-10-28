@@ -6,13 +6,13 @@ import (
 	"strings"
 	"time"
 
-	"github.com/dujiao-next/internal/constants"
-	"github.com/dujiao-next/internal/crypto"
-	"github.com/dujiao-next/internal/logger"
-	siteconnectioncontract "github.com/dujiao-next/internal/modules/siteconnection/contract"
-	siteconnectiondomain "github.com/dujiao-next/internal/modules/siteconnection/domain"
-	"github.com/dujiao-next/internal/shared/httpintegration"
-	"github.com/dujiao-next/internal/upstream"
+	"github.com/homles698698-lab/XMall/internal/constants"
+	"github.com/homles698698-lab/XMall/internal/crypto"
+	"github.com/homles698698-lab/XMall/internal/logger"
+	siteconnectioncontract "github.com/homles698698-lab/XMall/internal/modules/siteconnection/contract"
+	siteconnectiondomain "github.com/homles698698-lab/XMall/internal/modules/siteconnection/domain"
+	"github.com/homles698698-lab/XMall/internal/shared/httpintegration"
+	"github.com/homles698698-lab/XMall/internal/upstream"
 
 	"github.com/shopspring/decimal"
 )

@@ -5,11 +5,11 @@ import (
 	"errors"
 	"testing"
 
-	paymentcontract "github.com/dujiao-next/internal/modules/payment/contract"
+	paymentcontract "github.com/homles698698-lab/XMall/internal/modules/payment/contract"
 
-	"github.com/dujiao-next/internal/constants"
-	"github.com/dujiao-next/internal/modules/payment/infrastructure/gateway/epusdt"
-	"github.com/dujiao-next/internal/shared/jsonmap"
+	"github.com/homles698698-lab/XMall/internal/constants"
+	"github.com/homles698698-lab/XMall/internal/modules/payment/infrastructure/gateway/epusdt"
+	"github.com/homles698698-lab/XMall/internal/shared/jsonmap"
 )
 
 func TestEpusdtAdapter_Type(t *testing.T) {

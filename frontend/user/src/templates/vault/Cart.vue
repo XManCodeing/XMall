@@ -97,7 +97,7 @@ import { ArrowRight, ChevronRight, Minus, Package, Plus, ShoppingCart, Trash2 } 
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import VaultCheckoutSteps from './components/VaultCheckoutSteps.vue'
-import { useCart } from '../../composables/useCart'
+import { useCart } from '../../composables/useCart.ts'
 
 const { t } = useI18n()
 

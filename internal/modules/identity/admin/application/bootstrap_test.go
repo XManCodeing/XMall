@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	admindomain "github.com/dujiao-next/internal/modules/identity/admin/domain"
+	admindomain "github.com/homles698698-lab/XMall/internal/modules/identity/admin/domain"
 )
 
 type bootstrapStoreStub struct {

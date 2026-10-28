@@ -3,7 +3,7 @@ package domain
 import (
 	"strings"
 
-	"github.com/dujiao-next/internal/constants"
+	"github.com/homles698698-lab/XMall/internal/constants"
 )
 
 // IsStatusConsistent 判断本地采购状态与上游状态是否处于允许的同一业务窗口。

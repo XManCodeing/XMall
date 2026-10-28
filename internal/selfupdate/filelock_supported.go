@@ -10,7 +10,7 @@ import (
 
 // acquireBinaryLock 对二进制取一把跨进程独占锁，拿不到时返回 ErrUpdateInProgress。
 //
-// Manager 的进程内互斥挡不住「后台点升级」与「终端跑 dujiao-next rollback」同时发生：
+// Manager 的进程内互斥挡不住「后台点升级」与「终端跑 xmall rollback」同时发生：
 // 那是两个进程，共享的只有磁盘上的 exec / .backup / .rollback-tmp 这几个文件。
 // 交错执行足以把最后一份可恢复的备份弄丢。
 //

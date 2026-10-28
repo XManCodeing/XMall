@@ -1,6 +1,6 @@
 package application
 
-import giftcardcontract "github.com/dujiao-next/internal/modules/giftcard/contract"
+import giftcardcontract "github.com/homles698698-lab/XMall/internal/modules/giftcard/contract"
 
 // Service 礼品卡管理用例（不含兑换写路径）。
 type Service struct {

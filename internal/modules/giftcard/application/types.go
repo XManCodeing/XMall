@@ -3,7 +3,7 @@ package application
 import (
 	"time"
 
-	"github.com/dujiao-next/internal/shared/money"
+	"github.com/homles698698-lab/XMall/internal/shared/money"
 )
 
 // GenerateInput 生成礼品卡输入。

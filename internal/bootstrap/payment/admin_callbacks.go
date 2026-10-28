@@ -4,21 +4,21 @@ import (
 	"context"
 	"time"
 
-	paymentapp "github.com/dujiao-next/internal/modules/payment/application"
-	paymentcontract "github.com/dujiao-next/internal/modules/payment/contract"
+	paymentapp "github.com/homles698698-lab/XMall/internal/modules/payment/application"
+	paymentcontract "github.com/homles698698-lab/XMall/internal/modules/payment/contract"
 
-	paymentdomain "github.com/dujiao-next/internal/modules/payment/domain"
+	paymentdomain "github.com/homles698698-lab/XMall/internal/modules/payment/domain"
 
-	ordercontract "github.com/dujiao-next/internal/modules/order/contract"
-	orderdomain "github.com/dujiao-next/internal/modules/order/domain"
+	ordercontract "github.com/homles698698-lab/XMall/internal/modules/order/contract"
+	orderdomain "github.com/homles698698-lab/XMall/internal/modules/order/domain"
 
-	"github.com/dujiao-next/internal/constants"
-	notificationcontract "github.com/dujiao-next/internal/modules/notification/contract"
-	paymenttransport "github.com/dujiao-next/internal/modules/payment/transport/http"
-	paymentcallbacktransport "github.com/dujiao-next/internal/modules/payment/transport/http/callback"
-	walletcontract "github.com/dujiao-next/internal/modules/wallet/contract"
-	walletdomain "github.com/dujiao-next/internal/modules/wallet/domain"
-	"github.com/dujiao-next/internal/shared/jsonmap"
+	"github.com/homles698698-lab/XMall/internal/constants"
+	notificationcontract "github.com/homles698698-lab/XMall/internal/modules/notification/contract"
+	paymenttransport "github.com/homles698698-lab/XMall/internal/modules/payment/transport/http"
+	paymentcallbacktransport "github.com/homles698698-lab/XMall/internal/modules/payment/transport/http/callback"
+	walletcontract "github.com/homles698698-lab/XMall/internal/modules/wallet/contract"
+	walletdomain "github.com/homles698698-lab/XMall/internal/modules/wallet/domain"
+	"github.com/homles698698-lab/XMall/internal/shared/jsonmap"
 )
 
 type adminQueryAdapter struct {

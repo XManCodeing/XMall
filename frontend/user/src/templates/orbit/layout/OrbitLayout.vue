@@ -2,9 +2,6 @@
   <div class="orbit-scope" :data-orbit-motion="direction" :class="{ 'orbit-keyboard-open': keyboardOpen }" :style="{ '--orbit-visible-height': viewportHeight ? `${viewportHeight}px` : '100dvh' }">
     <header class="orbit-header">
       <div class="orbit-header-inner">
-        <RouterLink v-if="brandLogo" to="/" class="orbit-brand orbit-desktop-brand" :title="appStore.brandSiteName">
-          <img :src="brandLogo" :alt="appStore.brandSiteName" />
-        </RouterLink>
         <span class="orbit-mobile-page-title" :title="mobilePageTitle">{{ mobilePageTitle }}</span>
         <nav ref="desktopNav" class="orbit-desktop-nav" :aria-label="t('nav.home')">
           <span class="orbit-nav-indicator" :class="{ 'is-ready': indicatorReady }" :style="indicatorStyle" aria-hidden="true" />
@@ -73,7 +70,6 @@ import { useCartStore } from '../../../stores/cart'
 import { useUserAuthStore } from '../../../stores/userAuth'
 import { useNavConfig } from '../../../composables/useNavConfig'
 import { useTheme } from '../../../utils/theme'
-import { getImageUrl } from '../../../utils/image'
 import { getLocalizedText } from '../../../utils/resellerSiteConfig'
 import { useBuyNowStore } from '../../../stores/buyNow'
 import { orbitRootPaths, orbitParentPath, safeOrbitHistoryPath } from '../navigation'
@@ -232,10 +228,6 @@ onUnmounted(() => {
   cancelAnimationFrame(indicatorFrame)
 })
 const menu = ref<HTMLDialogElement>()
-const brandLogo = computed(() => {
-  const logo = String(appStore.config?.brand?.site_logo || '').trim()
-  return logo ? getImageUrl(logo) : ''
-})
 const footerLinks = computed(() => {
   const links = appStore.config?.footer_links
   if (!Array.isArray(links)) return []

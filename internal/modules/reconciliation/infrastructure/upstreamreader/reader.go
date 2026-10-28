@@ -4,9 +4,9 @@ import (
 	"context"
 	"fmt"
 
-	reconciliationcontract "github.com/dujiao-next/internal/modules/reconciliation/contract"
-	siteconnectiondomain "github.com/dujiao-next/internal/modules/siteconnection/domain"
-	"github.com/dujiao-next/internal/upstream"
+	reconciliationcontract "github.com/homles698698-lab/XMall/internal/modules/reconciliation/contract"
+	siteconnectiondomain "github.com/homles698698-lab/XMall/internal/modules/siteconnection/domain"
+	"github.com/homles698698-lab/XMall/internal/upstream"
 )
 
 type ConnectionProvider interface {

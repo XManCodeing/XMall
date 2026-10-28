@@ -1,8 +1,8 @@
 package asyncqueue
 
 import (
-	"github.com/dujiao-next/internal/modules/notification/contract"
-	"github.com/dujiao-next/internal/queue"
+	"github.com/homles698698-lab/XMall/internal/modules/notification/contract"
+	"github.com/homles698698-lab/XMall/internal/queue"
 
 	"github.com/hibiken/asynq"
 )

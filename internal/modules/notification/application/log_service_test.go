@@ -6,12 +6,12 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/dujiao-next/internal/constants"
-	"github.com/dujiao-next/internal/modules/notification/contract"
-	"github.com/dujiao-next/internal/modules/notification/domain"
-	settingsmessaging "github.com/dujiao-next/internal/modules/settings/schema/messaging"
-	settingsstorefront "github.com/dujiao-next/internal/modules/settings/schema/storefront"
-	"github.com/dujiao-next/internal/queue"
+	"github.com/homles698698-lab/XMall/internal/constants"
+	"github.com/homles698698-lab/XMall/internal/modules/notification/contract"
+	"github.com/homles698698-lab/XMall/internal/modules/notification/domain"
+	settingsmessaging "github.com/homles698698-lab/XMall/internal/modules/settings/schema/messaging"
+	settingsstorefront "github.com/homles698698-lab/XMall/internal/modules/settings/schema/storefront"
+	"github.com/homles698698-lab/XMall/internal/queue"
 )
 
 type notificationSettingsStub struct {

@@ -73,16 +73,16 @@ import ResellerPageState from '../../components/reseller-console/ResellerPageSta
 import ResellerProgressBar from '../../components/reseller-console/ResellerProgressBar.vue'
 import ResellerSectionHeader from '../../components/reseller-console/ResellerSectionHeader.vue'
 import ResellerStatusBadge, { type ResellerBadgeTone } from '../../components/reseller-console/ResellerStatusBadge.vue'
-import { useResellerFinance } from '../../composables/reseller/useResellerFinance'
-import type { ResellerBalanceData } from '../../api'
+import { useResellerFinance } from '../../composables/reseller/useResellerFinance.ts'
+import type { ResellerBalanceData } from '../../api/index.ts'
 import {
   RESELLER_BALANCE_STATUS_DISABLED,
   RESELLER_BALANCE_STATUS_FROZEN_REVIEW,
   RESELLER_BALANCE_STATUS_NEGATIVE_BALANCE,
   RESELLER_BALANCE_STATUS_NORMAL,
-} from '../../constants/reseller'
-import { formatResellerConsoleAmount, resellerCurrencyColor } from '../../utils/resellerConsole'
-import { getResellerFinanceStatusView, pickPrimaryResellerBalance } from '../../utils/resellerFinance'
+} from '../../constants/reseller.ts'
+import { formatResellerConsoleAmount, resellerCurrencyColor } from '../../utils/resellerConsole.ts'
+import { getResellerFinanceStatusView, pickPrimaryResellerBalance } from '../../utils/resellerFinance.ts'
 
 const { t } = useI18n()
 const { dashboardLoading, balanceLoading, dashboard, balances, loadDashboard, loadBalances } = useResellerFinance()

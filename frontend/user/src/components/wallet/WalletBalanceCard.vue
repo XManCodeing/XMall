@@ -26,7 +26,7 @@
 <script setup lang="ts">
 import { useI18n } from 'vue-i18n'
 import { Wallet, Banknote, ReceiptText, Layers } from 'lucide-vue-next'
-import { pageAlertVariant, pageAlertToneClass, type PageAlert } from '../../utils/alerts'
+import { pageAlertVariant, pageAlertToneClass, type PageAlert } from '../../utils/alerts.ts'
 import PanelHeading from '../shared/PanelHeading.vue'
 import StatCard from '../shared/StatCard.vue'
 import { Alert, AlertDescription } from '@/components/ui/alert'

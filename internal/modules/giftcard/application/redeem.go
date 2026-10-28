@@ -5,11 +5,11 @@ import (
 	"strings"
 	"time"
 
-	walletdomain "github.com/dujiao-next/internal/modules/wallet/domain"
+	walletdomain "github.com/homles698698-lab/XMall/internal/modules/wallet/domain"
 
-	"github.com/dujiao-next/internal/constants"
-	giftcardcontract "github.com/dujiao-next/internal/modules/giftcard/contract"
-	giftcarddomain "github.com/dujiao-next/internal/modules/giftcard/domain"
+	"github.com/homles698698-lab/XMall/internal/constants"
+	giftcardcontract "github.com/homles698698-lab/XMall/internal/modules/giftcard/contract"
+	giftcarddomain "github.com/homles698698-lab/XMall/internal/modules/giftcard/domain"
 
 	"github.com/shopspring/decimal"
 )

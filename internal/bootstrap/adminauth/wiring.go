@@ -1,9 +1,9 @@
 package adminauthwiring
 
 import (
-	"github.com/dujiao-next/internal/app/container"
-	captchahttp "github.com/dujiao-next/internal/modules/captcha/transport/http"
-	adminauthtransport "github.com/dujiao-next/internal/modules/identity/adminauth/transport/http"
+	"github.com/homles698698-lab/XMall/internal/app/container"
+	captchahttp "github.com/homles698698-lab/XMall/internal/modules/captcha/transport/http"
+	adminauthtransport "github.com/homles698698-lab/XMall/internal/modules/identity/adminauth/transport/http"
 )
 
 type Handlers struct {

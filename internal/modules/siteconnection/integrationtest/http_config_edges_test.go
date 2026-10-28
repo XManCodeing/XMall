@@ -3,12 +3,12 @@ package siteconnection_test
 import (
 	"context"
 	"encoding/json"
-	"github.com/dujiao-next/internal/crypto"
+	"github.com/homles698698-lab/XMall/internal/crypto"
 	"strings"
 	"testing"
 
-	app "github.com/dujiao-next/internal/modules/siteconnection/application"
-	"github.com/dujiao-next/internal/shared/httpintegration"
+	app "github.com/homles698698-lab/XMall/internal/modules/siteconnection/application"
+	"github.com/homles698698-lab/XMall/internal/shared/httpintegration"
 )
 
 func TestHTTPConfigTypedBodySecretsAreExtracted(t *testing.T) {

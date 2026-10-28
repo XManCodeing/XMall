@@ -13,8 +13,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/dujiao-next/internal/constants"
-	"github.com/dujiao-next/internal/modules/payment/infrastructure/gateway/common"
+	"github.com/homles698698-lab/XMall/internal/constants"
+	"github.com/homles698698-lab/XMall/internal/modules/payment/infrastructure/gateway/common"
 	"github.com/shopspring/decimal"
 )
 

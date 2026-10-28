@@ -8,18 +8,18 @@ import (
 	"strings"
 	"time"
 
-	paymentcontract "github.com/dujiao-next/internal/modules/payment/contract"
+	paymentcontract "github.com/homles698698-lab/XMall/internal/modules/payment/contract"
 
-	paymentdomain "github.com/dujiao-next/internal/modules/payment/domain"
+	paymentdomain "github.com/homles698698-lab/XMall/internal/modules/payment/domain"
 
-	orderdomain "github.com/dujiao-next/internal/modules/order/domain"
+	orderdomain "github.com/homles698698-lab/XMall/internal/modules/order/domain"
 
-	"github.com/dujiao-next/internal/constants"
-	resellercontract "github.com/dujiao-next/internal/modules/reseller/contract"
-	"github.com/dujiao-next/internal/shared/jsonmap"
-	"github.com/dujiao-next/internal/shared/money"
-	"github.com/dujiao-next/internal/shared/outboundctx"
-	"github.com/dujiao-next/internal/shared/serial"
+	"github.com/homles698698-lab/XMall/internal/constants"
+	resellercontract "github.com/homles698698-lab/XMall/internal/modules/reseller/contract"
+	"github.com/homles698698-lab/XMall/internal/shared/jsonmap"
+	"github.com/homles698698-lab/XMall/internal/shared/money"
+	"github.com/homles698698-lab/XMall/internal/shared/outboundctx"
+	"github.com/homles698698-lab/XMall/internal/shared/serial"
 
 	"github.com/shopspring/decimal"
 )

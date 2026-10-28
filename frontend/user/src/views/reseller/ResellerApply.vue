@@ -91,7 +91,7 @@
 import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { BadgeCheck, Check, CheckCircle2, X } from 'lucide-vue-next'
-import { resellerAPI } from '../../api'
+import { resellerAPI } from '../../api/index.ts'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
@@ -99,9 +99,9 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import ResellerPageState from '../../components/reseller-console/ResellerPageState.vue'
 import ResellerSectionHeader from '../../components/reseller-console/ResellerSectionHeader.vue'
-import { useResellerProfile } from '../../composables/reseller/useResellerProfile'
-import { type PageAlert } from '../../utils/alerts'
-import { getResellerProfileStatusKey } from '../../utils/resellerManagement'
+import { useResellerProfile } from '../../composables/reseller/useResellerProfile.ts'
+import { type PageAlert } from '../../utils/alerts.ts'
+import { getResellerProfileStatusKey } from '../../utils/resellerManagement.ts'
 
 const { t } = useI18n()
 const { loading, snapshot, state, load } = useResellerProfile()

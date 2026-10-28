@@ -4,11 +4,11 @@ import (
 	"context"
 	"errors"
 
-	reportingdomain "github.com/dujiao-next/internal/modules/reporting/domain"
-	reportinghttp "github.com/dujiao-next/internal/modules/reporting/transport/http"
-	resellermodule "github.com/dujiao-next/internal/modules/reseller/application"
-	"github.com/dujiao-next/internal/platform/http/ginutil"
-	"github.com/dujiao-next/internal/platform/http/response"
+	reportingdomain "github.com/homles698698-lab/XMall/internal/modules/reporting/domain"
+	reportinghttp "github.com/homles698698-lab/XMall/internal/modules/reporting/transport/http"
+	resellermodule "github.com/homles698698-lab/XMall/internal/modules/reseller/application"
+	"github.com/homles698698-lab/XMall/internal/platform/http/ginutil"
+	"github.com/homles698698-lab/XMall/internal/platform/http/response"
 
 	"github.com/gin-gonic/gin"
 )

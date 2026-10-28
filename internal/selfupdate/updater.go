@@ -16,7 +16,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/dujiao-next/internal/version"
+	"github.com/homles698698-lab/XMall/internal/version"
 )
 
 const (
@@ -29,10 +29,10 @@ const (
 	// maxChecksumSize checksums.txt 只有几行，给足冗余即可
 	maxChecksumSize = 1 << 20
 	// binaryName 归档内可执行文件名，与 .goreleaser.yaml 的 builds.binary 一致
-	binaryName = "dujiao-next"
+	binaryName = "xmall"
 
 	downloadTimeout = 10 * time.Minute
-	updateUserAgent = "dujiao-next-self-updater"
+	updateUserAgent = "xmall-self-updater"
 )
 
 var (
@@ -122,7 +122,7 @@ func (u *Updater) applyLocked(ctx context.Context, release *version.Release, exe
 	// 临时目录必须与目标二进制同目录：os.Rename 只在同一文件系统内原子，
 	// 放 /tmp 很可能跨挂载点（尤其容器与独立 /tmp 分区），rename 会退化成 EXDEV 失败。
 	execDir := filepath.Dir(execPath)
-	tempDir, err := os.MkdirTemp(execDir, ".dujiao-update-*")
+	tempDir, err := os.MkdirTemp(execDir, ".xmall-update-*")
 	if err != nil {
 		return fmt.Errorf("create temp dir: %w", err)
 	}
@@ -259,7 +259,7 @@ func swapBinary(execPath, newBinary string) error {
 	return nil
 }
 
-// archivePrefix 归档文件名前缀。发行版里同时存在 dujiao-all_* 等其它归档，
+// archivePrefix 归档文件名前缀。发行版里同时存在 xmall-other_* 等其它归档，
 // 只按平台后缀匹配会选错文件，必须连项目名一起限定。
 const archivePrefix = binaryName + "_"
 
@@ -288,7 +288,7 @@ func selectAssets(assets []version.Asset) (archiveURL, checksumURL, assetName st
 
 // isChecksumAsset 识别校验和文件。
 // goreleaser 默认模板是 {{.ProjectName}}_{{.Version}}_checksums.txt
-// （实际发行版里形如 dujiao-next_1.3.1_checksums.txt，版本号不带 v 前缀），
+// （实际发行版里形如 xmall_1.3.1_checksums.txt，版本号不带 v 前缀），
 // 同时兼容显式配置成裸 checksums.txt 的情况。
 func isChecksumAsset(name string) bool {
 	if !strings.HasSuffix(name, "checksums.txt") {

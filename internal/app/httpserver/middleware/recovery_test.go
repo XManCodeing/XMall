@@ -12,7 +12,7 @@ import (
 	"go.uber.org/zap"
 	"go.uber.org/zap/zaptest/observer"
 
-	"github.com/dujiao-next/internal/logger"
+	"github.com/homles698698-lab/XMall/internal/logger"
 )
 
 // captureLogs 把 logger.L 临时替换为 zap/observer 实例,返回观察句柄与还原函数。

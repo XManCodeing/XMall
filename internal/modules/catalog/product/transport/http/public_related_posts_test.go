@@ -5,7 +5,7 @@ import (
 	"errors"
 	"testing"
 
-	contentcontract "github.com/dujiao-next/internal/modules/content/contract"
+	contentcontract "github.com/homles698698-lab/XMall/internal/modules/content/contract"
 )
 
 type relatedPostReaderStub struct {

@@ -4,9 +4,9 @@ import (
 	"strings"
 	"time"
 
-	affiliatedomain "github.com/dujiao-next/internal/modules/affiliate/domain"
+	affiliatedomain "github.com/homles698698-lab/XMall/internal/modules/affiliate/domain"
 
-	"github.com/dujiao-next/internal/constants"
+	"github.com/homles698698-lab/XMall/internal/constants"
 )
 
 // ResolveOrderAffiliateSnapshot 解析下单归因快照（最近30天最后一次有效点击优先）

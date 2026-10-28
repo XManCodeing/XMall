@@ -1,10 +1,10 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import { useUserAuthStore } from '../stores/userAuth'
-import { useAppStore } from '../stores/app'
-import { useTelegramMiniAppStore } from '../stores/telegramMiniApp'
-import { captureAffiliateFromRoute } from '../utils/affiliate'
-import { templateView } from '../templates/registry'
-import { GOOGLE_REDIRECT_FRONTEND_CALLBACK_PATH } from '../utils/googleRedirect'
+import { useUserAuthStore } from '../stores/userAuth.ts'
+import { useAppStore } from '../stores/app.ts'
+import { useTelegramMiniAppStore } from '../stores/telegramMiniApp.ts'
+import { captureAffiliateFromRoute } from '../utils/affiliate.ts'
+import { templateView } from '../templates/registry.ts'
+import { GOOGLE_REDIRECT_FRONTEND_CALLBACK_PATH } from '../utils/googleRedirect.ts'
 
 type RouteComponentLoader = () => Promise<unknown>
 

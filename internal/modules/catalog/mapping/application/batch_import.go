@@ -4,18 +4,18 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/dujiao-next/internal/cache"
+	"github.com/homles698698-lab/XMall/internal/cache"
 	"time"
 
-	mappingcontract "github.com/dujiao-next/internal/modules/catalog/mapping/contract"
-	mappingdomain "github.com/dujiao-next/internal/modules/catalog/mapping/domain"
-	siteconnectioncontract "github.com/dujiao-next/internal/modules/siteconnection/contract"
+	mappingcontract "github.com/homles698698-lab/XMall/internal/modules/catalog/mapping/contract"
+	mappingdomain "github.com/homles698698-lab/XMall/internal/modules/catalog/mapping/domain"
+	siteconnectioncontract "github.com/homles698698-lab/XMall/internal/modules/siteconnection/contract"
 
-	categoryapp "github.com/dujiao-next/internal/modules/catalog/category/application"
-	categorydomain "github.com/dujiao-next/internal/modules/catalog/category/domain"
+	categoryapp "github.com/homles698698-lab/XMall/internal/modules/catalog/category/application"
+	categorydomain "github.com/homles698698-lab/XMall/internal/modules/catalog/category/domain"
 
-	"github.com/dujiao-next/internal/shared/jsonmap"
-	"github.com/dujiao-next/internal/upstream"
+	"github.com/homles698698-lab/XMall/internal/shared/jsonmap"
+	"github.com/homles698698-lab/XMall/internal/upstream"
 )
 
 // acquireBatchImportLock 同一连接同时只允许一个批量导入：大批量导入常超过 HTTP 超时，

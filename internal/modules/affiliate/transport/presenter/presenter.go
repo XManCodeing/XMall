@@ -3,9 +3,9 @@ package presenter
 import (
 	"time"
 
-	affiliatedomain "github.com/dujiao-next/internal/modules/affiliate/domain"
+	affiliatedomain "github.com/homles698698-lab/XMall/internal/modules/affiliate/domain"
 
-	"github.com/dujiao-next/internal/shared/money"
+	"github.com/homles698698-lab/XMall/internal/shared/money"
 )
 
 // Profile 推广用户资料响应

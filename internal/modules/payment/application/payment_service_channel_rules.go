@@ -1,14 +1,14 @@
 package application
 
 import (
-	"github.com/dujiao-next/internal/constants"
-	productcontract "github.com/dujiao-next/internal/modules/catalog/product/contract"
-	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
-	userdomain "github.com/dujiao-next/internal/modules/identity/user/domain"
-	orderdomain "github.com/dujiao-next/internal/modules/order/domain"
-	paymentcontract "github.com/dujiao-next/internal/modules/payment/contract"
-	paymentdomain "github.com/dujiao-next/internal/modules/payment/domain"
-	"github.com/dujiao-next/internal/shared/money"
+	"github.com/homles698698-lab/XMall/internal/constants"
+	productcontract "github.com/homles698698-lab/XMall/internal/modules/catalog/product/contract"
+	productdomain "github.com/homles698698-lab/XMall/internal/modules/catalog/product/domain"
+	userdomain "github.com/homles698698-lab/XMall/internal/modules/identity/user/domain"
+	orderdomain "github.com/homles698698-lab/XMall/internal/modules/order/domain"
+	paymentcontract "github.com/homles698698-lab/XMall/internal/modules/payment/contract"
+	paymentdomain "github.com/homles698698-lab/XMall/internal/modules/payment/domain"
+	"github.com/homles698698-lab/XMall/internal/shared/money"
 )
 
 // computeProductChannelIntersection 计算多个商品允许支付渠道的交集

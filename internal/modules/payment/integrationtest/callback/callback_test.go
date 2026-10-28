@@ -11,29 +11,29 @@ import (
 	"testing"
 	"time"
 
-	okpayadapter "github.com/dujiao-next/internal/modules/payment/infrastructure/gateway/adapters/okpay"
+	okpayadapter "github.com/homles698698-lab/XMall/internal/modules/payment/infrastructure/gateway/adapters/okpay"
 
-	paymentapp "github.com/dujiao-next/internal/modules/payment/application"
-	paymentcontract "github.com/dujiao-next/internal/modules/payment/contract"
-	paymentgormstore "github.com/dujiao-next/internal/modules/payment/infrastructure/gormstore"
+	paymentapp "github.com/homles698698-lab/XMall/internal/modules/payment/application"
+	paymentcontract "github.com/homles698698-lab/XMall/internal/modules/payment/contract"
+	paymentgormstore "github.com/homles698698-lab/XMall/internal/modules/payment/infrastructure/gormstore"
 
-	paymentdomain "github.com/dujiao-next/internal/modules/payment/domain"
+	paymentdomain "github.com/homles698698-lab/XMall/internal/modules/payment/domain"
 
-	fulfillmentdomain "github.com/dujiao-next/internal/modules/fulfillment/domain"
-	ordercontract "github.com/dujiao-next/internal/modules/order/contract"
-	orderdomain "github.com/dujiao-next/internal/modules/order/domain"
-	ordergormstore "github.com/dujiao-next/internal/modules/order/infrastructure/gormstore"
+	fulfillmentdomain "github.com/homles698698-lab/XMall/internal/modules/fulfillment/domain"
+	ordercontract "github.com/homles698698-lab/XMall/internal/modules/order/contract"
+	orderdomain "github.com/homles698698-lab/XMall/internal/modules/order/domain"
+	ordergormstore "github.com/homles698698-lab/XMall/internal/modules/order/infrastructure/gormstore"
 
-	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
-	productgormstore "github.com/dujiao-next/internal/modules/catalog/product/store/gormstore"
+	productdomain "github.com/homles698698-lab/XMall/internal/modules/catalog/product/domain"
+	productgormstore "github.com/homles698698-lab/XMall/internal/modules/catalog/product/store/gormstore"
 
-	userdomain "github.com/dujiao-next/internal/modules/identity/user/domain"
+	userdomain "github.com/homles698698-lab/XMall/internal/modules/identity/user/domain"
 
-	"github.com/dujiao-next/internal/constants"
-	paymentprovider "github.com/dujiao-next/internal/modules/payment/infrastructure/gateway/provider"
-	paymentcallback "github.com/dujiao-next/internal/modules/payment/transport/http/callback"
-	"github.com/dujiao-next/internal/shared/jsonmap"
-	"github.com/dujiao-next/internal/shared/money"
+	"github.com/homles698698-lab/XMall/internal/constants"
+	paymentprovider "github.com/homles698698-lab/XMall/internal/modules/payment/infrastructure/gateway/provider"
+	paymentcallback "github.com/homles698698-lab/XMall/internal/modules/payment/transport/http/callback"
+	"github.com/homles698698-lab/XMall/internal/shared/jsonmap"
+	"github.com/homles698698-lab/XMall/internal/shared/money"
 
 	"github.com/gin-gonic/gin"
 	"github.com/glebarez/sqlite"

@@ -6,9 +6,9 @@ import (
 	"net/mail"
 	"strings"
 
-	"github.com/dujiao-next/internal/config"
-	settingsvalue "github.com/dujiao-next/internal/modules/settings/schema/value"
-	"github.com/dujiao-next/internal/shared/jsonmap"
+	"github.com/homles698698-lab/XMall/internal/config"
+	settingsvalue "github.com/homles698698-lab/XMall/internal/modules/settings/schema/value"
+	"github.com/homles698698-lab/XMall/internal/shared/jsonmap"
 )
 
 var ErrSMTPConfigInvalid = errors.New("smtp config invalid")

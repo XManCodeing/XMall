@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { parseNavExpansion, resolveNavExpansion } from '@/utils/navExpansion'
+import BrandMark from '@/components/BrandMark.vue'
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute, RouterView, RouterLink } from 'vue-router'
 import {
@@ -74,30 +76,18 @@ interface NavGroup {
   items: NavGroupItem[]
 }
 
-const NAV_GROUP_EXPANDED_STORAGE_KEY = 'admin_nav_group_expanded'
+const NAV_GROUP_EXPANDED_STORAGE_KEY = 'admin_nav_group_expanded_v2'
 const SIDEBAR_COLLAPSED_STORAGE_KEY = 'admin_sidebar_collapsed'
 const SIDEBAR_AUTO_COLLAPSE_WIDTH = 1280 // xl breakpoint
 
 const readExpandedGroups = () => {
-  if (typeof window === 'undefined') {
-    return {}
-  }
-  const raw = localStorage.getItem(NAV_GROUP_EXPANDED_STORAGE_KEY)
-  if (!raw) {
-    return {}
-  }
+  if (typeof window === 'undefined') return {}
   try {
-    const parsed = JSON.parse(raw)
-    if (!parsed || typeof parsed !== 'object') {
-      return {}
-    }
-    const result: Record<string, boolean> = {}
-    Object.entries(parsed).forEach(([key, value]) => {
-      if (typeof value === 'boolean') {
-        result[key] = value
-      }
-    })
-    return result
+    const raw = localStorage.getItem(NAV_GROUP_EXPANDED_STORAGE_KEY)
+    if (raw !== null) return parseNavExpansion(raw)
+    const migrated = parseNavExpansion(localStorage.getItem('admin_nav_group_expanded'), true)
+    localStorage.setItem(NAV_GROUP_EXPANDED_STORAGE_KEY, JSON.stringify(migrated))
+    return migrated
   } catch {
     return {}
   }
@@ -550,18 +540,6 @@ const navGroups = computed<NavGroup[]>(() => {
 })
 
 watch(
-  navGroups,
-  (groups) => {
-    const next: Record<string, boolean> = {}
-    groups.forEach((group) => {
-      next[group.id] = expandedGroups.value[group.id] ?? true
-    })
-    expandedGroups.value = next
-  },
-  { immediate: true }
-)
-
-watch(
   expandedGroups,
   (value) => {
     if (typeof window === 'undefined') {
@@ -607,10 +585,11 @@ const filteredNavGroups = computed<NavGroup[]>(() => {
 })
 
 const isGroupExpanded = (groupID: string) => {
-  if (normalizedSearch.value) {
-    return true
-  }
-  return expandedGroups.value[groupID] !== false
+  return resolveNavExpansion(
+    expandedGroups.value[groupID],
+    navGroups.value.some((group) => group.id === groupID && group.items.some((item) => isItemActive(item.to))),
+    Boolean(normalizedSearch.value),
+  )
 }
 
 const toggleGroup = (groupID: string) => {
@@ -756,12 +735,13 @@ onBeforeUnmount(() => {
         :class="sidebarCollapsed ? 'w-16' : 'w-64'"
       >
         <div class="py-6" :class="sidebarCollapsed ? 'px-2' : 'px-6'">
-          <div v-if="!sidebarCollapsed" class="text-xl font-semibold tracking-tight">
+          <div v-if="!sidebarCollapsed" class="flex items-center gap-2 text-xl font-semibold tracking-tight">
+            <BrandMark class="h-7 w-7" />
             {{ t('admin.brand') }}
           </div>
           <div v-if="!sidebarCollapsed" class="text-xs text-muted-foreground mt-1">{{ t('admin.layout.controlRoom') }}</div>
           <div v-if="sidebarCollapsed" class="flex justify-center" :title="t('admin.brand')">
-            <LayoutDashboard class="h-5 w-5" aria-hidden="true" />
+            <BrandMark class="h-7 w-7" />
           </div>
         </div>
         <div v-if="!sidebarCollapsed" class="px-3 pb-2">
@@ -844,19 +824,24 @@ onBeforeUnmount(() => {
             </template>
           </template>
         </nav>
-        <!-- Collapse toggle button -->
-        <div class="border-t border-border">
-          <div v-if="!sidebarCollapsed && appVersion" class="px-6 py-3 text-[11px] text-muted-foreground">
+        <!-- Compact sidebar footer -->
+        <div
+          class="flex h-12 shrink-0 items-center gap-2 border-t border-border/60"
+          :class="sidebarCollapsed ? 'justify-center px-2' : 'justify-between px-4'"
+        >
+          <span v-if="!sidebarCollapsed" class="min-w-0 truncate text-xs tabular-nums text-muted-foreground" :title="appVersion">
             {{ appVersion }}
-          </div>
+          </span>
           <button
             type="button"
-            class="flex w-full items-center justify-center py-3 text-muted-foreground hover:text-foreground hover:bg-secondary/70 transition-colors"
+            class="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
             @click="toggleSidebar"
             :title="sidebarCollapsed ? t('admin.layout.expandSidebar') : t('admin.layout.collapseSidebar')"
+            :aria-label="sidebarCollapsed ? t('admin.layout.expandSidebar') : t('admin.layout.collapseSidebar')"
+            :aria-expanded="!sidebarCollapsed"
           >
-            <ChevronsLeft v-if="!sidebarCollapsed" class="h-4 w-4" />
-            <ChevronsRight v-else class="h-4 w-4" />
+            <ChevronsLeft v-if="!sidebarCollapsed" class="h-4 w-4" aria-hidden="true" />
+            <ChevronsRight v-else class="h-4 w-4" aria-hidden="true" />
           </button>
         </div>
       </aside>

@@ -3,13 +3,13 @@ package adminauthhttp
 import (
 	"errors"
 
-	ginutil "github.com/dujiao-next/internal/platform/http/ginutil"
+	ginutil "github.com/homles698698-lab/XMall/internal/platform/http/ginutil"
 
-	"github.com/dujiao-next/internal/constants"
-	"github.com/dujiao-next/internal/i18n"
-	captcha "github.com/dujiao-next/internal/modules/captcha/contract"
-	captchahttp "github.com/dujiao-next/internal/modules/captcha/transport/http"
-	"github.com/dujiao-next/internal/platform/http/response"
+	"github.com/homles698698-lab/XMall/internal/constants"
+	"github.com/homles698698-lab/XMall/internal/i18n"
+	captcha "github.com/homles698698-lab/XMall/internal/modules/captcha/contract"
+	captchahttp "github.com/homles698698-lab/XMall/internal/modules/captcha/transport/http"
+	"github.com/homles698698-lab/XMall/internal/platform/http/response"
 
 	"github.com/gin-gonic/gin"
 )

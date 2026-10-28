@@ -23,20 +23,20 @@ import (
 	"testing"
 	"time"
 
-	"github.com/dujiao-next/internal/constants"
-	cardsecretdomain "github.com/dujiao-next/internal/modules/cardsecret/domain"
-	cartdomain "github.com/dujiao-next/internal/modules/cart/domain"
-	externalidentitydomain "github.com/dujiao-next/internal/modules/identity/externalidentity/domain"
+	"github.com/homles698698-lab/XMall/internal/constants"
+	cardsecretdomain "github.com/homles698698-lab/XMall/internal/modules/cardsecret/domain"
+	cartdomain "github.com/homles698698-lab/XMall/internal/modules/cart/domain"
+	externalidentitydomain "github.com/homles698698-lab/XMall/internal/modules/identity/externalidentity/domain"
 
-	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
-	orderdomain "github.com/dujiao-next/internal/modules/order/domain"
-	procurementdomain "github.com/dujiao-next/internal/modules/procurement/domain"
-	resellerdomain "github.com/dujiao-next/internal/modules/reseller/domain"
-	settingsstore "github.com/dujiao-next/internal/modules/settings/infrastructure/gormstore"
-	"github.com/dujiao-next/internal/platform/database/gormdb"
-	"github.com/dujiao-next/internal/shared/jsonmap"
-	"github.com/dujiao-next/internal/shared/money"
 	"github.com/glebarez/sqlite"
+	productdomain "github.com/homles698698-lab/XMall/internal/modules/catalog/product/domain"
+	orderdomain "github.com/homles698698-lab/XMall/internal/modules/order/domain"
+	procurementdomain "github.com/homles698698-lab/XMall/internal/modules/procurement/domain"
+	resellerdomain "github.com/homles698698-lab/XMall/internal/modules/reseller/domain"
+	settingsstore "github.com/homles698698-lab/XMall/internal/modules/settings/infrastructure/gormstore"
+	"github.com/homles698698-lab/XMall/internal/platform/database/gormdb"
+	"github.com/homles698698-lab/XMall/internal/shared/jsonmap"
+	"github.com/homles698698-lab/XMall/internal/shared/money"
 	"github.com/shopspring/decimal"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
@@ -49,8 +49,13 @@ import (
 // Future model/baseline/data changes require a new target AND its incremental step.
 const legacyWholePackageV1Fingerprint = "14a135bc9b1cc99bc28c03a1f4a5a8f27e928ce371bdd75e9c11df8e24ab578a"
 
+// XMall module rename changes the source fingerprint (including imports), not
+// database schema. Preserve the pre-rename v1 fingerprint for audit; no migration
+// step or schemaVersion change is required for this package-path-only change.
+const preXMallScopedV1Fingerprint = "85555e2b375b75da42e9e25d8a68dcc8cae4f41e34217ea211472b3cac20d899"
+
 var schemaFingerprints = map[int64]string{
-	1: "85555e2b375b75da42e9e25d8a68dcc8cae4f41e34217ea211472b3cac20d899",
+	1: "f5c4c4d544768db1ce8eb2768d082671c6476aca3ddf8635830ae2f751d3b281",
 }
 
 func TestSchemaVersionCoversModelsAndMigrations(t *testing.T) {
@@ -340,7 +345,7 @@ func TestVersionRunnerConcurrentConnections(t *testing.T) {
 }
 
 func TestVersionRunnerCrossProcess(t *testing.T) {
-	if path := os.Getenv("DUJIAO_MIGRATION_TEST_DB"); path != "" {
+	if path := os.Getenv("XMALL_MIGRATION_TEST_DB"); path != "" {
 		db := openVersionRunnerDB(t, path)
 		if err := runSchemaMigrations(db, 1, func(tx *gorm.DB) error {
 			time.Sleep(100 * time.Millisecond)
@@ -359,7 +364,7 @@ func TestVersionRunnerCrossProcess(t *testing.T) {
 	outputs := make([]bytes.Buffer, len(commands))
 	for i := range commands {
 		commands[i] = exec.Command(os.Args[0], "-test.run=^TestVersionRunnerCrossProcess$", "-test.timeout=30s")
-		commands[i].Env = append(os.Environ(), "DUJIAO_MIGRATION_TEST_DB="+path, "TEST_MYSQL_DSN=", "TEST_POSTGRES_DSN=")
+		commands[i].Env = append(os.Environ(), "XMALL_MIGRATION_TEST_DB="+path, "TEST_MYSQL_DSN=", "TEST_POSTGRES_DSN=")
 		commands[i].Stdout, commands[i].Stderr = &outputs[i], &outputs[i]
 		if err := commands[i].Start(); err != nil {
 			t.Fatal(err)

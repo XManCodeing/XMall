@@ -4,18 +4,18 @@ import (
 	"errors"
 	"strings"
 
-	promotiondomain "github.com/dujiao-next/internal/modules/promotion/domain"
+	promotiondomain "github.com/homles698698-lab/XMall/internal/modules/promotion/domain"
 
-	productcontract "github.com/dujiao-next/internal/modules/catalog/product/contract"
-	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
-	productpresenter "github.com/dujiao-next/internal/modules/catalog/product/transport/presenter"
+	productcontract "github.com/homles698698-lab/XMall/internal/modules/catalog/product/contract"
+	productdomain "github.com/homles698698-lab/XMall/internal/modules/catalog/product/domain"
+	productpresenter "github.com/homles698698-lab/XMall/internal/modules/catalog/product/transport/presenter"
 
-	"github.com/dujiao-next/internal/constants"
-	domaincatalog "github.com/dujiao-next/internal/modules/catalog"
-	categorypresenter "github.com/dujiao-next/internal/modules/catalog/category/transport/presenter"
-	promotioncontract "github.com/dujiao-next/internal/modules/promotion/contract"
-	reseller "github.com/dujiao-next/internal/modules/reseller/contract"
-	"github.com/dujiao-next/internal/shared/money"
+	"github.com/homles698698-lab/XMall/internal/constants"
+	domaincatalog "github.com/homles698698-lab/XMall/internal/modules/catalog"
+	categorypresenter "github.com/homles698698-lab/XMall/internal/modules/catalog/category/transport/presenter"
+	promotioncontract "github.com/homles698698-lab/XMall/internal/modules/promotion/contract"
+	reseller "github.com/homles698698-lab/XMall/internal/modules/reseller/contract"
+	"github.com/homles698698-lab/XMall/internal/shared/money"
 )
 
 // publicSKUView 内部 SKU 计算结构，用于装饰逻辑

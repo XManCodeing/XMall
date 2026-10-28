@@ -4,17 +4,17 @@ import (
 	"errors"
 	"strings"
 
-	giftcarddomain "github.com/dujiao-next/internal/modules/giftcard/domain"
-	walletdomain "github.com/dujiao-next/internal/modules/wallet/domain"
+	giftcarddomain "github.com/homles698698-lab/XMall/internal/modules/giftcard/domain"
+	walletdomain "github.com/homles698698-lab/XMall/internal/modules/wallet/domain"
 
-	"github.com/dujiao-next/internal/constants"
-	captcha "github.com/dujiao-next/internal/modules/captcha/contract"
-	captchahttp "github.com/dujiao-next/internal/modules/captcha/transport/http"
-	giftcardapp "github.com/dujiao-next/internal/modules/giftcard/application"
-	giftcardcontract "github.com/dujiao-next/internal/modules/giftcard/contract"
-	giftcardpresenter "github.com/dujiao-next/internal/modules/giftcard/transport/presenter"
-	"github.com/dujiao-next/internal/platform/http/ginutil"
-	"github.com/dujiao-next/internal/platform/http/response"
+	"github.com/homles698698-lab/XMall/internal/constants"
+	captcha "github.com/homles698698-lab/XMall/internal/modules/captcha/contract"
+	captchahttp "github.com/homles698698-lab/XMall/internal/modules/captcha/transport/http"
+	giftcardapp "github.com/homles698698-lab/XMall/internal/modules/giftcard/application"
+	giftcardcontract "github.com/homles698698-lab/XMall/internal/modules/giftcard/contract"
+	giftcardpresenter "github.com/homles698698-lab/XMall/internal/modules/giftcard/transport/presenter"
+	"github.com/homles698698-lab/XMall/internal/platform/http/ginutil"
+	"github.com/homles698698-lab/XMall/internal/platform/http/response"
 
 	"github.com/gin-gonic/gin"
 )

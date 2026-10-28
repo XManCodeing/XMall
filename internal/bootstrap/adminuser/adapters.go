@@ -5,24 +5,24 @@ import (
 	"errors"
 	"fmt"
 
-	coupondomain "github.com/dujiao-next/internal/modules/coupon/domain"
+	coupondomain "github.com/homles698698-lab/XMall/internal/modules/coupon/domain"
 
-	productcontract "github.com/dujiao-next/internal/modules/catalog/product/contract"
-	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
+	productcontract "github.com/homles698698-lab/XMall/internal/modules/catalog/product/contract"
+	productdomain "github.com/homles698698-lab/XMall/internal/modules/catalog/product/domain"
 
-	usercontract "github.com/dujiao-next/internal/modules/identity/user/contract"
+	usercontract "github.com/homles698698-lab/XMall/internal/modules/identity/user/contract"
 
-	userdomain "github.com/dujiao-next/internal/modules/identity/user/domain"
+	userdomain "github.com/homles698698-lab/XMall/internal/modules/identity/user/domain"
 
-	"github.com/dujiao-next/internal/cache"
-	couponcontract "github.com/dujiao-next/internal/modules/coupon/contract"
-	externalidentitycontract "github.com/dujiao-next/internal/modules/identity/externalidentity/contract"
-	externalidentitydomain "github.com/dujiao-next/internal/modules/identity/externalidentity/domain"
-	adminusertransport "github.com/dujiao-next/internal/modules/identity/user/transport/http/admin"
-	userauthapp "github.com/dujiao-next/internal/modules/identity/userauth/application"
-	walletapp "github.com/dujiao-next/internal/modules/wallet/application"
-	walletdomain "github.com/dujiao-next/internal/modules/wallet/domain"
-	"github.com/dujiao-next/internal/shared/money"
+	"github.com/homles698698-lab/XMall/internal/cache"
+	couponcontract "github.com/homles698698-lab/XMall/internal/modules/coupon/contract"
+	externalidentitycontract "github.com/homles698698-lab/XMall/internal/modules/identity/externalidentity/contract"
+	externalidentitydomain "github.com/homles698698-lab/XMall/internal/modules/identity/externalidentity/domain"
+	adminusertransport "github.com/homles698698-lab/XMall/internal/modules/identity/user/transport/http/admin"
+	userauthapp "github.com/homles698698-lab/XMall/internal/modules/identity/userauth/application"
+	walletapp "github.com/homles698698-lab/XMall/internal/modules/wallet/application"
+	walletdomain "github.com/homles698698-lab/XMall/internal/modules/wallet/domain"
+	"github.com/homles698698-lab/XMall/internal/shared/money"
 )
 
 type adminUserDirectoryAdapter struct {

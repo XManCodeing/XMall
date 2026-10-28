@@ -5,9 +5,9 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/dujiao-next/internal/constants"
-	"github.com/dujiao-next/internal/logger"
-	"github.com/dujiao-next/internal/shared/passwordpolicy"
+	"github.com/homles698698-lab/XMall/internal/constants"
+	"github.com/homles698698-lab/XMall/internal/logger"
+	"github.com/homles698698-lab/XMall/internal/shared/passwordpolicy"
 
 	"github.com/spf13/viper"
 )
@@ -320,7 +320,7 @@ func Load() *Config {
 
 	// 设置默认值（可选）
 	viper.SetDefault("app.secret_key", "change-me-32-byte-secret-key!!")
-	viper.SetDefault("app.totp_issuer", "Dujiao-Next")
+	viper.SetDefault("app.totp_issuer", "XMall")
 	viper.SetDefault("server.host", "0.0.0.0")
 	viper.SetDefault("server.port", "8080")
 	viper.SetDefault("server.mode", "debug")
@@ -332,7 +332,7 @@ func Load() *Config {
 	viper.SetDefault("log.max_age_days", 30)
 	viper.SetDefault("log.compress", true)
 	viper.SetDefault("database.driver", "sqlite")
-	viper.SetDefault("database.dsn", "./db/dujiao.db")
+	viper.SetDefault("database.dsn", "./db/xmall.db")
 	viper.SetDefault("database.pool.max_open_conns", 1)
 	viper.SetDefault("database.pool.max_idle_conns", 1)
 	viper.SetDefault("database.pool.conn_max_lifetime_seconds", 0)

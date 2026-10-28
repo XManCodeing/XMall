@@ -1,9 +1,9 @@
 package orderreader
 
 import (
-	orderdomain "github.com/dujiao-next/internal/modules/order/domain"
-	procurementcontract "github.com/dujiao-next/internal/modules/procurement/contract"
-	procurementdomain "github.com/dujiao-next/internal/modules/procurement/domain"
+	orderdomain "github.com/homles698698-lab/XMall/internal/modules/order/domain"
+	procurementcontract "github.com/homles698698-lab/XMall/internal/modules/procurement/contract"
+	procurementdomain "github.com/homles698698-lab/XMall/internal/modules/procurement/domain"
 )
 
 type Source interface {

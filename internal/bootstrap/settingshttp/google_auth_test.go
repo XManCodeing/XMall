@@ -5,11 +5,11 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/dujiao-next/internal/config"
-	"github.com/dujiao-next/internal/constants"
-	settingsapp "github.com/dujiao-next/internal/modules/settings/application"
-	settingssecurity "github.com/dujiao-next/internal/modules/settings/schema/security"
-	"github.com/dujiao-next/internal/shared/jsonmap"
+	"github.com/homles698698-lab/XMall/internal/config"
+	"github.com/homles698698-lab/XMall/internal/constants"
+	settingsapp "github.com/homles698698-lab/XMall/internal/modules/settings/application"
+	settingssecurity "github.com/homles698698-lab/XMall/internal/modules/settings/schema/security"
+	"github.com/homles698698-lab/XMall/internal/shared/jsonmap"
 )
 
 type googleAuthSettingStore struct {

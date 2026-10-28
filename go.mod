@@ -1,4 +1,4 @@
-module github.com/dujiao-next
+module github.com/homles698698-lab/XMall
 
 go 1.26.5
 

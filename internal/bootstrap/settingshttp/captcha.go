@@ -1,10 +1,10 @@
 package settingsbootstrap
 
 import (
-	"github.com/dujiao-next/internal/config"
-	captchaapp "github.com/dujiao-next/internal/modules/captcha/application"
-	settingsapp "github.com/dujiao-next/internal/modules/settings/application"
-	settingssecurity "github.com/dujiao-next/internal/modules/settings/schema/security"
+	"github.com/homles698698-lab/XMall/internal/config"
+	captchaapp "github.com/homles698698-lab/XMall/internal/modules/captcha/application"
+	settingsapp "github.com/homles698698-lab/XMall/internal/modules/settings/application"
+	settingssecurity "github.com/homles698698-lab/XMall/internal/modules/settings/schema/security"
 )
 
 type settingsCaptchaAdapter struct {

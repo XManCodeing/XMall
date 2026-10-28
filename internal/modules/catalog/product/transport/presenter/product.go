@@ -3,11 +3,11 @@ package presenter
 import (
 	"time"
 
-	categorypresenter "github.com/dujiao-next/internal/modules/catalog/category/transport/presenter"
-	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
-	"github.com/dujiao-next/internal/shared/jsonmap"
-	"github.com/dujiao-next/internal/shared/jsonslice"
-	"github.com/dujiao-next/internal/shared/money"
+	categorypresenter "github.com/homles698698-lab/XMall/internal/modules/catalog/category/transport/presenter"
+	productdomain "github.com/homles698698-lab/XMall/internal/modules/catalog/product/domain"
+	"github.com/homles698698-lab/XMall/internal/shared/jsonmap"
+	"github.com/homles698698-lab/XMall/internal/shared/jsonslice"
+	"github.com/homles698698-lab/XMall/internal/shared/money"
 
 	"github.com/shopspring/decimal"
 )

@@ -5,9 +5,9 @@ import (
 	"strings"
 	"time"
 
-	giftcardcontract "github.com/dujiao-next/internal/modules/giftcard/contract"
-	giftcarddomain "github.com/dujiao-next/internal/modules/giftcard/domain"
-	"github.com/dujiao-next/internal/persistence/gormutil"
+	giftcardcontract "github.com/homles698698-lab/XMall/internal/modules/giftcard/contract"
+	giftcarddomain "github.com/homles698698-lab/XMall/internal/modules/giftcard/domain"
+	"github.com/homles698698-lab/XMall/internal/persistence/gormutil"
 
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"

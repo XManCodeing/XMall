@@ -3,8 +3,8 @@ package contract
 import (
 	"time"
 
-	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
-	resellerdomain "github.com/dujiao-next/internal/modules/reseller/domain"
+	productdomain "github.com/homles698698-lab/XMall/internal/modules/catalog/product/domain"
+	resellerdomain "github.com/homles698698-lab/XMall/internal/modules/reseller/domain"
 )
 
 // ProfileListFilter 管理端分销商资料过滤条件。

@@ -6,15 +6,15 @@ import (
 	"strings"
 	"time"
 
-	affiliatedomain "github.com/dujiao-next/internal/modules/affiliate/domain"
+	affiliatedomain "github.com/homles698698-lab/XMall/internal/modules/affiliate/domain"
 
-	affiliateapp "github.com/dujiao-next/internal/modules/affiliate/application"
-	telegramauthapp "github.com/dujiao-next/internal/modules/identity/telegramauth/application"
-	userauthapp "github.com/dujiao-next/internal/modules/identity/userauth/application"
-	settingsintegration "github.com/dujiao-next/internal/modules/settings/schema/integration"
-	"github.com/dujiao-next/internal/platform/http/channelresponse"
-	"github.com/dujiao-next/internal/platform/http/ginutil"
-	"github.com/dujiao-next/internal/platform/http/response"
+	affiliateapp "github.com/homles698698-lab/XMall/internal/modules/affiliate/application"
+	telegramauthapp "github.com/homles698698-lab/XMall/internal/modules/identity/telegramauth/application"
+	userauthapp "github.com/homles698698-lab/XMall/internal/modules/identity/userauth/application"
+	settingsintegration "github.com/homles698698-lab/XMall/internal/modules/settings/schema/integration"
+	"github.com/homles698698-lab/XMall/internal/platform/http/channelresponse"
+	"github.com/homles698698-lab/XMall/internal/platform/http/ginutil"
+	"github.com/homles698698-lab/XMall/internal/platform/http/response"
 
 	"github.com/gin-gonic/gin"
 	"github.com/shopspring/decimal"

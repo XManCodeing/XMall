@@ -7,12 +7,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/dujiao-next/internal/constants"
-	affiliatecontract "github.com/dujiao-next/internal/modules/affiliate/contract"
-	affiliatedomain "github.com/dujiao-next/internal/modules/affiliate/domain"
-	userdomain "github.com/dujiao-next/internal/modules/identity/user/domain"
-	orderdomain "github.com/dujiao-next/internal/modules/order/domain"
-	"github.com/dujiao-next/internal/shared/money"
+	"github.com/homles698698-lab/XMall/internal/constants"
+	affiliatecontract "github.com/homles698698-lab/XMall/internal/modules/affiliate/contract"
+	affiliatedomain "github.com/homles698698-lab/XMall/internal/modules/affiliate/domain"
+	userdomain "github.com/homles698698-lab/XMall/internal/modules/identity/user/domain"
+	orderdomain "github.com/homles698698-lab/XMall/internal/modules/order/domain"
+	"github.com/homles698698-lab/XMall/internal/shared/money"
 
 	"github.com/glebarez/sqlite"
 	"github.com/shopspring/decimal"

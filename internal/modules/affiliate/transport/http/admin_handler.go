@@ -4,12 +4,12 @@ import (
 	"errors"
 	"strings"
 
-	affiliatedomain "github.com/dujiao-next/internal/modules/affiliate/domain"
+	affiliatedomain "github.com/homles698698-lab/XMall/internal/modules/affiliate/domain"
 
-	"github.com/dujiao-next/internal/constants"
-	affiliateapp "github.com/dujiao-next/internal/modules/affiliate/application"
-	"github.com/dujiao-next/internal/platform/http/ginutil"
-	"github.com/dujiao-next/internal/platform/http/response"
+	"github.com/homles698698-lab/XMall/internal/constants"
+	affiliateapp "github.com/homles698698-lab/XMall/internal/modules/affiliate/application"
+	"github.com/homles698698-lab/XMall/internal/platform/http/ginutil"
+	"github.com/homles698698-lab/XMall/internal/platform/http/response"
 
 	"github.com/gin-gonic/gin"
 )

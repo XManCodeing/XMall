@@ -62,7 +62,7 @@ import { AlertCircle } from 'lucide-vue-next'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import VaultOrderBody from './components/VaultOrderBody.vue'
-import { useOrderDetail } from '../../composables/useOrderDetail'
+import { useOrderDetail } from '../../composables/useOrderDetail.ts'
 
 const { t } = useI18n()
 

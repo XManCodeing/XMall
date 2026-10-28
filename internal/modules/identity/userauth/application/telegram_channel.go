@@ -4,12 +4,12 @@ import (
 	"strings"
 	"time"
 
-	userdomain "github.com/dujiao-next/internal/modules/identity/user/domain"
+	userdomain "github.com/homles698698-lab/XMall/internal/modules/identity/user/domain"
 
-	"github.com/dujiao-next/internal/constants"
-	externalidentitydomain "github.com/dujiao-next/internal/modules/identity/externalidentity/domain"
-	telegramauthapp "github.com/dujiao-next/internal/modules/identity/telegramauth/application"
-	"github.com/dujiao-next/internal/telegramidentity"
+	"github.com/homles698698-lab/XMall/internal/constants"
+	externalidentitydomain "github.com/homles698698-lab/XMall/internal/modules/identity/externalidentity/domain"
+	telegramauthapp "github.com/homles698698-lab/XMall/internal/modules/identity/telegramauth/application"
+	"github.com/homles698698-lab/XMall/internal/telegramidentity"
 )
 
 // TelegramChannelIdentityInput Telegram 渠道身份输入

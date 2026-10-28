@@ -1,8 +1,8 @@
 package settingsstorefront
 
 import (
-	settingsvalue "github.com/dujiao-next/internal/modules/settings/schema/value"
-	"github.com/dujiao-next/internal/shared/jsonmap"
+	settingsvalue "github.com/homles698698-lab/XMall/internal/modules/settings/schema/value"
+	"github.com/homles698698-lab/XMall/internal/shared/jsonmap"
 )
 
 // DashboardAlertSetting 描述仪表盘告警阈值。

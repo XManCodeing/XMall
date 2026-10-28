@@ -7,14 +7,14 @@ import (
 	"strings"
 	"time"
 
-	userdomain "github.com/dujiao-next/internal/modules/identity/user/domain"
+	userdomain "github.com/homles698698-lab/XMall/internal/modules/identity/user/domain"
 
-	giftcardapp "github.com/dujiao-next/internal/modules/giftcard/application"
-	giftcardcontract "github.com/dujiao-next/internal/modules/giftcard/contract"
-	giftcarddomain "github.com/dujiao-next/internal/modules/giftcard/domain"
-	"github.com/dujiao-next/internal/platform/http/ginutil"
-	"github.com/dujiao-next/internal/platform/http/response"
-	"github.com/dujiao-next/internal/shared/money"
+	giftcardapp "github.com/homles698698-lab/XMall/internal/modules/giftcard/application"
+	giftcardcontract "github.com/homles698698-lab/XMall/internal/modules/giftcard/contract"
+	giftcarddomain "github.com/homles698698-lab/XMall/internal/modules/giftcard/domain"
+	"github.com/homles698698-lab/XMall/internal/platform/http/ginutil"
+	"github.com/homles698698-lab/XMall/internal/platform/http/response"
+	"github.com/homles698698-lab/XMall/internal/shared/money"
 
 	"github.com/gin-gonic/gin"
 	"github.com/shopspring/decimal"

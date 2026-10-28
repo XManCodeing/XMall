@@ -6,14 +6,14 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/dujiao-next/internal/authz"
-	"github.com/dujiao-next/internal/i18n"
-	"github.com/dujiao-next/internal/logger"
-	auditlogapp "github.com/dujiao-next/internal/modules/auditlog/application"
-	admindomain "github.com/dujiao-next/internal/modules/identity/admin/domain"
-	"github.com/dujiao-next/internal/platform/http/ginutil"
-	"github.com/dujiao-next/internal/platform/http/response"
-	"github.com/dujiao-next/internal/shared/jsonmap"
+	"github.com/homles698698-lab/XMall/internal/authz"
+	"github.com/homles698698-lab/XMall/internal/i18n"
+	"github.com/homles698698-lab/XMall/internal/logger"
+	auditlogapp "github.com/homles698698-lab/XMall/internal/modules/auditlog/application"
+	admindomain "github.com/homles698698-lab/XMall/internal/modules/identity/admin/domain"
+	"github.com/homles698698-lab/XMall/internal/platform/http/ginutil"
+	"github.com/homles698698-lab/XMall/internal/platform/http/response"
+	"github.com/homles698698-lab/XMall/internal/shared/jsonmap"
 
 	"github.com/gin-gonic/gin"
 )

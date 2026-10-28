@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/dujiao-next/internal/modules/upload/contract"
+	"github.com/homles698698-lab/XMall/internal/modules/upload/contract"
 )
 
 func TestStoreSavesFileUnderConfiguredRoot(t *testing.T) {

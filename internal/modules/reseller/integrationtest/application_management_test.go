@@ -7,15 +7,15 @@ import (
 	"testing"
 	"time"
 
-	resellergormstore "github.com/dujiao-next/internal/modules/reseller/infrastructure/gormstore"
+	resellergormstore "github.com/homles698698-lab/XMall/internal/modules/reseller/infrastructure/gormstore"
 
-	resellerdomain "github.com/dujiao-next/internal/modules/reseller/domain"
+	resellerdomain "github.com/homles698698-lab/XMall/internal/modules/reseller/domain"
 
-	userdomain "github.com/dujiao-next/internal/modules/identity/user/domain"
+	userdomain "github.com/homles698698-lab/XMall/internal/modules/identity/user/domain"
 
-	"github.com/dujiao-next/internal/config"
-	admindomain "github.com/dujiao-next/internal/modules/identity/admin/domain"
 	"github.com/glebarez/sqlite"
+	"github.com/homles698698-lab/XMall/internal/config"
+	admindomain "github.com/homles698698-lab/XMall/internal/modules/identity/admin/domain"
 	"github.com/shopspring/decimal"
 	"gorm.io/gorm"
 )

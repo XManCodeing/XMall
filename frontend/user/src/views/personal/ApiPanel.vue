@@ -209,8 +209,8 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { apiCredentialAPI } from '../../api'
-import { pageAlertVariant, pageAlertToneClass, type PageAlert } from '../../utils/alerts'
+import { apiCredentialAPI } from '../../api/index.ts'
+import { pageAlertVariant, pageAlertToneClass, type PageAlert } from '../../utils/alerts.ts'
 import { AlertTriangle, XCircle, Info, Check, Key } from 'lucide-vue-next'
 import PanelHeading from '../../components/shared/PanelHeading.vue'
 import { Alert, AlertDescription } from '@/components/ui/alert'

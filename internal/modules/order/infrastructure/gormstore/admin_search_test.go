@@ -5,18 +5,18 @@ import (
 	"testing"
 	"time"
 
-	ordercontract "github.com/dujiao-next/internal/modules/order/contract"
+	ordercontract "github.com/homles698698-lab/XMall/internal/modules/order/contract"
 
-	fulfillmentdomain "github.com/dujiao-next/internal/modules/fulfillment/domain"
-	orderdomain "github.com/dujiao-next/internal/modules/order/domain"
+	fulfillmentdomain "github.com/homles698698-lab/XMall/internal/modules/fulfillment/domain"
+	orderdomain "github.com/homles698698-lab/XMall/internal/modules/order/domain"
 
-	usercontract "github.com/dujiao-next/internal/modules/identity/user/contract"
-	userstore "github.com/dujiao-next/internal/modules/identity/user/infrastructure/gormstore"
+	usercontract "github.com/homles698698-lab/XMall/internal/modules/identity/user/contract"
+	userstore "github.com/homles698698-lab/XMall/internal/modules/identity/user/infrastructure/gormstore"
 
-	userdomain "github.com/dujiao-next/internal/modules/identity/user/domain"
+	userdomain "github.com/homles698698-lab/XMall/internal/modules/identity/user/domain"
 
-	externalidentitydomain "github.com/dujiao-next/internal/modules/identity/externalidentity/domain"
 	"github.com/glebarez/sqlite"
+	externalidentitydomain "github.com/homles698698-lab/XMall/internal/modules/identity/externalidentity/domain"
 	"gorm.io/gorm"
 )
 

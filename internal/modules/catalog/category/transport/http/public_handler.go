@@ -1,10 +1,10 @@
 package categoryhttp
 
 import (
-	categorydomain "github.com/dujiao-next/internal/modules/catalog/category/domain"
-	categorypresenter "github.com/dujiao-next/internal/modules/catalog/category/transport/presenter"
-	"github.com/dujiao-next/internal/platform/http/ginutil"
-	"github.com/dujiao-next/internal/platform/http/response"
+	categorydomain "github.com/homles698698-lab/XMall/internal/modules/catalog/category/domain"
+	categorypresenter "github.com/homles698698-lab/XMall/internal/modules/catalog/category/transport/presenter"
+	"github.com/homles698698-lab/XMall/internal/platform/http/ginutil"
+	"github.com/homles698698-lab/XMall/internal/platform/http/response"
 
 	"github.com/gin-gonic/gin"
 )

@@ -5,10 +5,10 @@ import (
 	"net/mail"
 	"strings"
 
-	resellercontract "github.com/dujiao-next/internal/modules/reseller/contract"
-	resellerdomain "github.com/dujiao-next/internal/modules/reseller/domain"
-	settingsapp "github.com/dujiao-next/internal/modules/settings/application"
-	"github.com/dujiao-next/internal/shared/mailbrand"
+	resellercontract "github.com/homles698698-lab/XMall/internal/modules/reseller/contract"
+	resellerdomain "github.com/homles698698-lab/XMall/internal/modules/reseller/domain"
+	settingsapp "github.com/homles698698-lab/XMall/internal/modules/settings/application"
+	"github.com/homles698698-lab/XMall/internal/shared/mailbrand"
 )
 
 type mainBrandReader interface {

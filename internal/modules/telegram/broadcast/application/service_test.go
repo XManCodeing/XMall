@@ -5,11 +5,11 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/dujiao-next/internal/constants"
-	broadcastcontract "github.com/dujiao-next/internal/modules/telegram/broadcast/contract"
-	broadcastdomain "github.com/dujiao-next/internal/modules/telegram/broadcast/domain"
-	notifycontract "github.com/dujiao-next/internal/modules/telegram/notify/contract"
-	"github.com/dujiao-next/internal/shared/jsonslice"
+	"github.com/homles698698-lab/XMall/internal/constants"
+	broadcastcontract "github.com/homles698698-lab/XMall/internal/modules/telegram/broadcast/contract"
+	broadcastdomain "github.com/homles698698-lab/XMall/internal/modules/telegram/broadcast/domain"
+	notifycontract "github.com/homles698698-lab/XMall/internal/modules/telegram/notify/contract"
+	"github.com/homles698698-lab/XMall/internal/shared/jsonslice"
 )
 
 type broadcastStoreStub struct {

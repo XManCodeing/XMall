@@ -4,9 +4,9 @@ import (
 	"errors"
 	"time"
 
-	mappingcontract "github.com/dujiao-next/internal/modules/catalog/mapping/contract"
-	mappingdomain "github.com/dujiao-next/internal/modules/catalog/mapping/domain"
-	"github.com/dujiao-next/internal/persistence/gormutil"
+	mappingcontract "github.com/homles698698-lab/XMall/internal/modules/catalog/mapping/contract"
+	mappingdomain "github.com/homles698698-lab/XMall/internal/modules/catalog/mapping/domain"
+	"github.com/homles698698-lab/XMall/internal/persistence/gormutil"
 
 	"gorm.io/gorm"
 )

@@ -6,8 +6,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/dujiao-next/internal/modules/captcha/contract"
-	settingssecurity "github.com/dujiao-next/internal/modules/settings/schema/security"
+	"github.com/homles698698-lab/XMall/internal/modules/captcha/contract"
+	settingssecurity "github.com/homles698698-lab/XMall/internal/modules/settings/schema/security"
 )
 
 func TestClientPostsSiteverifyForm(t *testing.T) {

@@ -3,8 +3,8 @@ package application
 import (
 	"time"
 
-	reconciliationcontract "github.com/dujiao-next/internal/modules/reconciliation/contract"
-	reconciliationdomain "github.com/dujiao-next/internal/modules/reconciliation/domain"
+	reconciliationcontract "github.com/homles698698-lab/XMall/internal/modules/reconciliation/contract"
+	reconciliationdomain "github.com/homles698698-lab/XMall/internal/modules/reconciliation/domain"
 )
 
 func (s *Service) GetJob(id uint) (*reconciliationdomain.Job, error) {

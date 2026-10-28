@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/dujiao-next/internal/crypto"
+	"github.com/homles698698-lab/XMall/internal/crypto"
 )
 
 func TestPrepareTOTPEnableRejectsExpiredPendingBeforeSideEffects(t *testing.T) {

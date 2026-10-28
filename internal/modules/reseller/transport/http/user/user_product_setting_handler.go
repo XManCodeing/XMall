@@ -3,11 +3,11 @@ package userhttp
 import (
 	"strings"
 
-	resellermodule "github.com/dujiao-next/internal/modules/reseller/application"
-	dto "github.com/dujiao-next/internal/modules/reseller/transport/http/presenter"
-	transportshared "github.com/dujiao-next/internal/modules/reseller/transport/http/shared"
-	"github.com/dujiao-next/internal/platform/http/ginutil"
-	"github.com/dujiao-next/internal/platform/http/response"
+	resellermodule "github.com/homles698698-lab/XMall/internal/modules/reseller/application"
+	dto "github.com/homles698698-lab/XMall/internal/modules/reseller/transport/http/presenter"
+	transportshared "github.com/homles698698-lab/XMall/internal/modules/reseller/transport/http/shared"
+	"github.com/homles698698-lab/XMall/internal/platform/http/ginutil"
+	"github.com/homles698698-lab/XMall/internal/platform/http/response"
 
 	"github.com/gin-gonic/gin"
 )

@@ -1,13 +1,13 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { useUserAuthStore } from '../stores/userAuth'
+import { useUserAuthStore } from '../stores/userAuth.ts'
 import { useI18n } from 'vue-i18n'
-import { debounceAsync } from '../utils/debounce'
-import { useAppStore } from '../stores/app'
-import type { CaptchaPayload } from '../api'
+import { debounceAsync } from '../utils/debounce.ts'
+import { useAppStore } from '../stores/app.ts'
+import type { CaptchaPayload } from '../api/index.ts'
 import ImageCaptcha from '../components/captcha/ImageCaptcha.vue'
 import TurnstileCaptcha from '../components/captcha/TurnstileCaptcha.vue'
-import { useFormValidation, getPasswordStrength } from './useFormValidation'
+import { useFormValidation, getPasswordStrength } from './useFormValidation.ts'
 
 /**
  * 用户注册页共享逻辑（classic + vault 双模板共用）。

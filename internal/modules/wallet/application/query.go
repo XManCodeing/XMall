@@ -3,9 +3,9 @@ package application
 import (
 	"time"
 
-	walletcontract "github.com/dujiao-next/internal/modules/wallet/contract"
-	walletdomain "github.com/dujiao-next/internal/modules/wallet/domain"
-	"github.com/dujiao-next/internal/shared/money"
+	walletcontract "github.com/homles698698-lab/XMall/internal/modules/wallet/contract"
+	walletdomain "github.com/homles698698-lab/XMall/internal/modules/wallet/domain"
+	"github.com/homles698698-lab/XMall/internal/shared/money"
 
 	"github.com/shopspring/decimal"
 )

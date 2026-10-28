@@ -2,11 +2,11 @@ package gormstore
 
 import (
 	"fmt"
-	"github.com/dujiao-next/internal/persistence/gormutil"
+	"github.com/homles698698-lab/XMall/internal/persistence/gormutil"
 	"strings"
 	"time"
 
-	"github.com/dujiao-next/internal/constants"
+	"github.com/homles698698-lab/XMall/internal/constants"
 
 	"gorm.io/gorm"
 )

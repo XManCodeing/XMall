@@ -2,21 +2,21 @@ package integrationtest
 
 import (
 	"fmt"
-	userauthgormstore "github.com/dujiao-next/internal/modules/identity/userauth/infrastructure/gormstore"
+	userauthgormstore "github.com/homles698698-lab/XMall/internal/modules/identity/userauth/infrastructure/gormstore"
 	"testing"
 	"time"
 
-	userstore "github.com/dujiao-next/internal/modules/identity/user/infrastructure/gormstore"
+	userstore "github.com/homles698698-lab/XMall/internal/modules/identity/user/infrastructure/gormstore"
 
-	userdomain "github.com/dujiao-next/internal/modules/identity/user/domain"
+	userdomain "github.com/homles698698-lab/XMall/internal/modules/identity/user/domain"
 
-	"github.com/dujiao-next/internal/config"
-	"github.com/dujiao-next/internal/constants"
-	emailverificationdomain "github.com/dujiao-next/internal/modules/identity/emailverification/domain"
-	emailverificationstore "github.com/dujiao-next/internal/modules/identity/emailverification/infrastructure/gormstore"
-	externalidentitydomain "github.com/dujiao-next/internal/modules/identity/externalidentity/domain"
-	externalidentitystore "github.com/dujiao-next/internal/modules/identity/externalidentity/infrastructure/gormstore"
-	userauthapp "github.com/dujiao-next/internal/modules/identity/userauth/application"
+	"github.com/homles698698-lab/XMall/internal/config"
+	"github.com/homles698698-lab/XMall/internal/constants"
+	emailverificationdomain "github.com/homles698698-lab/XMall/internal/modules/identity/emailverification/domain"
+	emailverificationstore "github.com/homles698698-lab/XMall/internal/modules/identity/emailverification/infrastructure/gormstore"
+	externalidentitydomain "github.com/homles698698-lab/XMall/internal/modules/identity/externalidentity/domain"
+	externalidentitystore "github.com/homles698698-lab/XMall/internal/modules/identity/externalidentity/infrastructure/gormstore"
+	userauthapp "github.com/homles698698-lab/XMall/internal/modules/identity/userauth/application"
 
 	"github.com/glebarez/sqlite"
 	"gorm.io/gorm"

@@ -238,8 +238,8 @@ import {
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { resellerAPI } from '../../api'
-import type { ResellerDomainData, ResellerSiteConfigSnapshotData } from '../../api/types'
+import { resellerAPI } from '../../api/index.ts'
+import type { ResellerDomainData, ResellerSiteConfigSnapshotData } from '../../api/types.ts'
 import ResellerDataTable from '../../components/reseller-console/ResellerDataTable.vue'
 import ResellerDonut from '../../components/reseller-console/ResellerDonut.vue'
 import ResellerMetricCard from '../../components/reseller-console/ResellerMetricCard.vue'
@@ -247,21 +247,21 @@ import ResellerPageState from '../../components/reseller-console/ResellerPageSta
 import ResellerRecordCard from '../../components/reseller-console/ResellerRecordCard.vue'
 import ResellerSectionHeader from '../../components/reseller-console/ResellerSectionHeader.vue'
 import ResellerStatusBadge, { type ResellerBadgeTone } from '../../components/reseller-console/ResellerStatusBadge.vue'
-import { useResellerFinance } from '../../composables/reseller/useResellerFinance'
-import { useResellerOrders } from '../../composables/reseller/useResellerOrders'
-import { useResellerProfile } from '../../composables/reseller/useResellerProfile'
+import { useResellerFinance } from '../../composables/reseller/useResellerFinance.ts'
+import { useResellerOrders } from '../../composables/reseller/useResellerOrders.ts'
+import { useResellerProfile } from '../../composables/reseller/useResellerProfile.ts'
 import {
   RESELLER_DOMAIN_STATUS_ACTIVE,
   RESELLER_DOMAIN_VERIFICATION_VERIFIED,
-} from '../../constants/reseller'
+} from '../../constants/reseller.ts'
 import {
   formatResellerConsoleAmount,
   formatResellerConsoleDate,
   resellerCurrencyColor,
   resellerOrderStatusColor,
   resellerOrderStatusTone,
-} from '../../utils/resellerConsole'
-import { pickPrimaryResellerBalance } from '../../utils/resellerFinance'
+} from '../../utils/resellerConsole.ts'
+import { pickPrimaryResellerBalance } from '../../utils/resellerFinance.ts'
 
 const { t, te } = useI18n()
 const { loading: profileLoading, snapshot: profileSnapshot, state: profileState, load: loadProfile } = useResellerProfile()

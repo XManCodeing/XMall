@@ -3,8 +3,8 @@ package contract
 import (
 	"context"
 
-	"github.com/dujiao-next/internal/config"
-	settingssecurity "github.com/dujiao-next/internal/modules/settings/schema/security"
+	"github.com/homles698698-lab/XMall/internal/config"
+	settingssecurity "github.com/homles698698-lab/XMall/internal/modules/settings/schema/security"
 )
 
 // SettingReader 提供 Telegram 动态配置。

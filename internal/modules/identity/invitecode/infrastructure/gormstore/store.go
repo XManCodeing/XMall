@@ -4,7 +4,7 @@ import (
 	"errors"
 	"time"
 
-	invitecodedomain "github.com/dujiao-next/internal/modules/identity/invitecode/domain"
+	invitecodedomain "github.com/homles698698-lab/XMall/internal/modules/identity/invitecode/domain"
 
 	"gorm.io/gorm"
 )

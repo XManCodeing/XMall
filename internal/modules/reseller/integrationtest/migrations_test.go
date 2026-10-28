@@ -5,13 +5,13 @@ import (
 	"testing"
 	"time"
 
-	orderdomain "github.com/dujiao-next/internal/modules/order/domain"
+	orderdomain "github.com/homles698698-lab/XMall/internal/modules/order/domain"
 
-	userdomain "github.com/dujiao-next/internal/modules/identity/user/domain"
-	resellerdomain "github.com/dujiao-next/internal/modules/reseller/domain"
-	resellerstore "github.com/dujiao-next/internal/modules/reseller/infrastructure/gormstore"
-	"github.com/dujiao-next/internal/shared/money"
 	"github.com/glebarez/sqlite"
+	userdomain "github.com/homles698698-lab/XMall/internal/modules/identity/user/domain"
+	resellerdomain "github.com/homles698698-lab/XMall/internal/modules/reseller/domain"
+	resellerstore "github.com/homles698698-lab/XMall/internal/modules/reseller/infrastructure/gormstore"
+	"github.com/homles698698-lab/XMall/internal/shared/money"
 	"github.com/shopspring/decimal"
 	"gorm.io/gorm"
 )

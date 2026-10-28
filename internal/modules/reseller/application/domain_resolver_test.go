@@ -6,9 +6,9 @@ import (
 	"net/http"
 	"testing"
 
-	resellerdomain "github.com/dujiao-next/internal/modules/reseller/domain"
+	resellerdomain "github.com/homles698698-lab/XMall/internal/modules/reseller/domain"
 
-	"github.com/dujiao-next/internal/config"
+	"github.com/homles698698-lab/XMall/internal/config"
 )
 
 type resellerResolverRepoStub struct {

@@ -8,9 +8,9 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/dujiao-next/internal/logger"
-	orderriskcontract "github.com/dujiao-next/internal/modules/orderrisk/contract"
-	settingssecurity "github.com/dujiao-next/internal/modules/settings/schema/security"
+	"github.com/homles698698-lab/XMall/internal/logger"
+	orderriskcontract "github.com/homles698698-lab/XMall/internal/modules/orderrisk/contract"
+	settingssecurity "github.com/homles698698-lab/XMall/internal/modules/settings/schema/security"
 )
 
 type parsedIPBlacklist struct {
