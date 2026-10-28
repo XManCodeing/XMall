@@ -99,7 +99,9 @@ func TestResolvePaymentRawPayloads(t *testing.T) {
 func TestExplicitImageDoesNotFallBackToEncodingNonImage(t *testing.T) {
 	for _, body := range [][]byte{nil, {}} {
 		_, err := resolvePaymentMedia(context.Background(), &c.Payment{QRCodeKind: "image", QRCode: "https://pay.example/image"}, func(context.Context, string) ([]byte, error) { return body, nil })
-		if !errors.Is(err, c.ErrUnavailable) { t.Fatalf("non-image response accepted: %v", err) }
+		if !errors.Is(err, c.ErrUnavailable) {
+			t.Fatalf("non-image response accepted: %v", err)
+		}
 	}
 }
 
