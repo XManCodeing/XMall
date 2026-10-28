@@ -34,10 +34,13 @@ type updateStatusRequest struct {
 }
 
 type updateRequest struct {
-	Name        string  `json:"name"`
-	Description string  `json:"description"`
-	BotToken    *string `json:"bot_token"`    // nil = 不修改, "" = 清空, "xxx" = 设置
-	CallbackURL *string `json:"callback_url"` // nil = 不修改, "" = 清空
+	Name                   string  `json:"name"`
+	Description            string  `json:"description"`
+	BotToken               *string `json:"bot_token"`    // nil = 不修改, "" = 清空, "xxx" = 设置
+	CallbackURL            *string `json:"callback_url"` // nil = 不修改, "" = 清空
+	HistoryBotIDs          []int64 `json:"history_bot_ids"`
+	HistoryRevision        uint64  `json:"history_revision"`
+	ConfirmCompleteHistory bool    `json:"confirm_complete_history"`
 }
 
 // AdminHandler 处理后台渠道客户端请求。
@@ -139,6 +142,21 @@ func (h *AdminHandler) UpdateChannelClient(c *gin.Context) {
 		return
 	}
 
+	if req.HistoryBotIDs != nil {
+		repair, ok := h.clients.(interface {
+			RepairTelegramHistory(uint, uint64, []int64) error
+		})
+		if !ok || !req.ConfirmCompleteHistory || req.HistoryRevision == 0 || req.BotToken != nil || req.CallbackURL != nil || req.Name != "" || req.Description != "" {
+			ginutil.RespondError(c, response.CodeBadRequest, "error.bad_request", nil)
+			return
+		}
+		if err := repair.RepairTelegramHistory(id, req.HistoryRevision, req.HistoryBotIDs); err != nil {
+			ginutil.RespondError(c, response.CodeBadRequest, "error.channel_client_update_failed", err)
+			return
+		}
+		response.Success(c, nil)
+		return
+	}
 	result, err := h.clients.UpdateChannelClient(id, req.Name, req.Description, req.BotToken, req.CallbackURL)
 	if err != nil {
 		if errors.Is(err, channelclientapp.ErrNotFound) {

@@ -1,20 +1,24 @@
 package gormstore
 
 import (
+	"context"
 	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
 	"fmt"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
 	"github.com/XManCodeing/XMall/internal/constants"
+	externalidentitydomain "github.com/XManCodeing/XMall/internal/modules/identity/externalidentity/domain"
 	userdomain "github.com/XManCodeing/XMall/internal/modules/identity/user/domain"
 	ordercontract "github.com/XManCodeing/XMall/internal/modules/order/contract"
 	orderdomain "github.com/XManCodeing/XMall/internal/modules/order/domain"
 	orderriskdomain "github.com/XManCodeing/XMall/internal/modules/orderrisk/domain"
+	delivery "github.com/XManCodeing/XMall/internal/modules/telegram/delivery/contract"
 	"github.com/XManCodeing/XMall/internal/persistence/gormutil"
 
 	"gorm.io/gorm"
@@ -25,9 +29,47 @@ import (
 type Store struct {
 	db                    *gorm.DB
 	guestCredentialSecret []byte
+	businessEventsEnabled bool
 }
 
 var _ ordercontract.Store = (*Store)(nil)
+var _ delivery.TransactionIdentityGuard = (*Store)(nil)
+
+// LockTelegramIdentity runs only on a transaction-bound order store. Lock the
+// identity and user locks are retained until the surrounding transaction ends.
+// A concurrent bind/unbind may deadlock and be retried by its unit of work, but
+// cannot commit a binding change between this check and the business write.
+func (s *Store) LockTelegramIdentity(userID uint, source delivery.Source) error {
+	if userID == 0 || source.ExpectedIdentityID == 0 || source.Validate() != nil {
+		return delivery.ErrIdentityChanged
+	}
+	var identity externalidentitydomain.Identity
+	err := s.db.Clauses(clause.Locking{Strength: "UPDATE"}).
+		Where("provider = ? AND provider_user_id = ?", constants.UserOAuthProviderTelegram, strconv.FormatInt(source.TelegramID, 10)).
+		First(&identity).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return delivery.ErrIdentityChanged
+	}
+	if err != nil {
+		return err
+	}
+	if identity.ID != source.ExpectedIdentityID || identity.UserID != userID {
+		return delivery.ErrIdentityChanged
+	}
+	var user userdomain.User
+	err = s.db.Clauses(clause.Locking{Strength: "UPDATE"}).
+		Where("id = ? AND deleted_at IS NULL", userID).First(&user).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return delivery.ErrIdentityChanged
+	}
+	if err != nil {
+		return err
+	}
+	if strings.ToLower(strings.TrimSpace(user.Status)) != constants.UserStatusActive {
+		return delivery.ErrIdentityChanged
+	}
+	return nil
+}
 
 const guestCredentialHashPrefix = "hmac-sha256:"
 
@@ -38,6 +80,26 @@ func New(db *gorm.DB, guestCredentialSecret string) *Store {
 		panic("order store: guest credential secret is required")
 	}
 	return &Store{db: db, guestCredentialSecret: []byte(secret)}
+}
+
+// ListPaidWithoutFulfillment scans leaf orders; it never reallocates inventory.
+func (s *Store) GetByIDContext(ctx context.Context, id uint) (*orderdomain.Order, error) {
+	clone := *s
+	clone.db = s.db.WithContext(ctx)
+	return clone.GetByID(id)
+}
+
+func (s *Store) ListPaidWithoutFulfillment(ctx context.Context, afterID uint, before time.Time, limit int) ([]uint, error) {
+	if limit <= 0 || limit > 500 {
+		limit = 100
+	}
+	var ids []uint
+	err := s.db.WithContext(ctx).Table("orders").Where("orders.id > ? AND orders.deleted_at IS NULL AND orders.status IN ? AND orders.updated_at <= ?", afterID, []string{constants.OrderStatusPaid, constants.OrderStatusFulfilling}, before).
+		Where("NOT EXISTS (SELECT 1 FROM orders children WHERE children.parent_id = orders.id AND children.deleted_at IS NULL)").
+		Where("NOT EXISTS (SELECT 1 FROM fulfillments WHERE fulfillments.order_id = orders.id AND fulfillments.deleted_at IS NULL)").
+		Where("EXISTS (SELECT 1 FROM order_items WHERE order_items.order_id = orders.id AND order_items.deleted_at IS NULL AND order_items.fulfillment_type IN ?)", []string{constants.FulfillmentTypeAuto, constants.FulfillmentTypeUpstream}).
+		Order("orders.id ASC").Limit(limit).Pluck("orders.id", &ids).Error
+	return ids, err
 }
 
 func (r *Store) withChildren(query *gorm.DB) *gorm.DB {

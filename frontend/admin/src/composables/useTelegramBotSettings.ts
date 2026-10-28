@@ -1,12 +1,13 @@
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { adminAPI } from '@/api/admin'
+import { useAdminAuthStore } from '@/stores/auth'
 import { notifyError, notifySuccess } from '@/utils/notify'
 
 const supportedLanguages = ['zh-CN', 'zh-TW', 'en-US'] as const
 type SupportedLanguage = (typeof supportedLanguages)[number]
 type LocalizedText = Record<SupportedLanguage, string>
-type MenuActionType = 'builtin' | 'url' | 'web_app' | 'command'
+type MenuActionType = string
 
 interface MenuItem {
   key: string
@@ -55,7 +56,8 @@ interface TelegramBotSettingsForm {
   }
 }
 
-const menuActionTypes: MenuActionType[] = ['builtin', 'url', 'web_app', 'command']
+const menuActionTypes: MenuActionType[] = ['builtin', 'url']
+const builtinMenuValues = ['shop', 'orders', 'wallet', 'language', 'help']
 const menuItemsMaxCount = 20
 const helpItemsMaxCount = 12
 
@@ -134,7 +136,7 @@ const parseMenuItem = (raw: unknown): MenuItem => {
 
   if (obj.action && typeof obj.action === 'object' && !Array.isArray(obj.action)) {
     const action = obj.action as Record<string, unknown>
-    if (action.type === 'builtin' || action.type === 'url' || action.type === 'web_app' || action.type === 'command') {
+    if (typeof action.type === 'string') {
       item.action.type = action.type
     }
     if (typeof action.value === 'string') {
@@ -161,8 +163,13 @@ const parseHelpItem = (raw: unknown): HelpItem => {
   return item
 }
 
-export function useTelegramBotSettings() {
+export function useTelegramBotSettings(sections: Array<'basic' | 'welcome' | 'help' | 'menu'> = ['basic', 'welcome']) {
   const { t } = useI18n()
+  const auth = useAdminAuthStore()
+  const canSave = computed(() => sections.every(section => auth.hasPermission(`PATCH:/admin/settings/telegram-bot/${section}`)))
+  const version = ref(0)
+  const error = ref('')
+  const loaded = ref(false)
 
   const currentLang = ref<SupportedLanguage>('zh-CN')
   const loading = ref(false)
@@ -178,17 +185,26 @@ export function useTelegramBotSettings() {
   ])
 
   const fetchConfig = async () => {
+    if (loading.value || saving.value) return
+    if (!auth.hasPermission('GET:/admin/settings/telegram-bot')) {
+      loaded.value = false
+      error.value = t('telegramBot.instances.forbidden')
+      return
+    }
     loading.value = true
+    loaded.value = false
     try {
-      form.value = createTelegramBotSettingsForm()
-
       const res = await adminAPI.getTelegramBotSettings()
       const data = res.data?.data as Record<string, unknown> | undefined
-      if (!data) {
-        return
+      if (!data || !Number.isSafeInteger(data.config_version) || Number(data.config_version) < 0) {
+        throw new Error('Invalid configuration response')
       }
 
-      form.value.enabled = (data.enabled as boolean) ?? false
+      form.value = createTelegramBotSettingsForm()
+      version.value = Number(data.config_version)
+      loaded.value = true
+      error.value = ''
+      form.value.enabled = false
       form.value.default_locale = (data.default_locale as SupportedLanguage) ?? 'zh-CN'
 
       const basic = data.basic as Record<string, unknown> | undefined
@@ -222,21 +238,52 @@ export function useTelegramBotSettings() {
         form.value.menu.items = menu.items.map(parseMenuItem)
       }
     } catch {
-      notifyError(t('telegramBot.settings.loadFailed'))
+      loaded.value = false
+      error.value = t('telegramBot.settings.loadFailed')
+      notifyError(error.value)
     } finally {
       loading.value = false
     }
   }
 
+  const getMenuItemError = (item: MenuItem) => {
+    if (!menuActionTypes.includes(item.action.type)) {
+      return t('telegramBot.settings.menuUnsupportedType', { type: item.action.type })
+    }
+    if (item.action.type === 'builtin' && !builtinMenuValues.includes(item.action.value.trim())) {
+      return t('telegramBot.settings.menuUnsupportedBuiltin')
+    }
+    return ''
+  }
+  const menuValidationError = computed(() => form.value.menu.items.map(getMenuItemError).find(Boolean) || '')
+
   const saveConfig = async () => {
+    if (!loaded.value || !canSave.value || saving.value || loading.value) return
+    if (sections.includes('menu') && menuValidationError.value) {
+      error.value = menuValidationError.value
+      notifyError(error.value)
+      return
+    }
     saving.value = true
+    error.value = ''
+    // Freeze the payload across sequential CAS writes; edits made while saving remain local.
+    const snapshot = JSON.parse(JSON.stringify(form.value)) as TelegramBotSettingsForm
     try {
-      await adminAPI.updateTelegramBotSettings({
-        ...form.value,
-      })
+      for (const section of sections) {
+        const data = section === 'basic' ? { basic: snapshot.basic, default_locale: snapshot.default_locale } : snapshot[section]
+        const res = await adminAPI.updateTelegramBotSettingsSection(section, version.value, data)
+        const nextVersion = res.data?.data?.config_version
+        if (!Number.isSafeInteger(nextVersion) || nextVersion <= version.value) {
+          throw new Error('Invalid configuration version response')
+        }
+        version.value = nextVersion
+      }
       notifySuccess(t('telegramBot.settings.saveSuccess'))
-    } catch {
-      notifyError(t('telegramBot.settings.saveFailed'))
+    } catch (err: any) {
+      // A conflict or an ambiguous transport failure requires an explicit reload.
+      loaded.value = false
+      error.value = t(err?.response?.status === 409 ? 'telegramBot.instances.conflict' : 'telegramBot.settings.saveFailed')
+      notifyError(error.value)
     } finally {
       saving.value = false
     }
@@ -301,11 +348,18 @@ export function useTelegramBotSettings() {
     ;[items[index], items[targetIndex]] = [items[targetIndex]!, items[index]!]
   }
 
-  const getMenuActionValuePlaceholder = (type: MenuActionType) => t(`telegramBot.settings.menuActionValuePlaceholder_${type}`)
+  const getMenuActionValuePlaceholder = (type: MenuActionType) => menuActionTypes.includes(type)
+    ? t(`telegramBot.settings.menuActionValuePlaceholder_${type}`)
+    : t('telegramBot.settings.menuActionValuePlaceholder')
 
-  const getMenuActionValueHint = (type: MenuActionType) => t(`telegramBot.settings.menuActionValueHint_${type}`)
+  const getMenuActionValueHint = (type: MenuActionType) => menuActionTypes.includes(type)
+    ? t(`telegramBot.settings.menuActionValueHint_${type}`)
+    : t('telegramBot.settings.menuUnsupportedType', { type })
 
   return {
+    canSave,
+    error,
+    loaded,
     coverFileInput,
     currentLang,
     fetchConfig,
@@ -318,6 +372,8 @@ export function useTelegramBotSettings() {
     languages,
     loading,
     menuActionTypes,
+    getMenuItemError,
+    menuValidationError,
     moveHelpItem,
     moveMenuItem,
     removeHelpItem,

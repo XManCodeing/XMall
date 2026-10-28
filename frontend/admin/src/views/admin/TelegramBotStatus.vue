@@ -1,178 +1,106 @@
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { adminAPI } from '@/api/admin'
-import type { AdminTelegramBotRuntimeStatus } from '@/api/types'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
+import { botState, useTelegramBotInstances, type BotInstance } from '@/composables/useTelegramBotInstances'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Badge } from '@/components/ui/badge'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { formatDate } from '@/utils/format'
-import { Wifi, WifiOff, RefreshCw } from 'lucide-vue-next'
 
-const { t } = useI18n()
-
-const loading = ref(false)
-const runtimeStatus = ref<AdminTelegramBotRuntimeStatus | null>(null)
-
-const isConnected = computed(() => {
-  if (!runtimeStatus.value) return false
-  return runtimeStatus.value.connected === true
-})
-
-const fetchRuntimeStatus = async () => {
-  loading.value = true
+const { t, te } = useI18n()
+const { instances, loading, busy, error, refreshError, notice, now, canList, canCreate, can, refresh, startPolling, create, patch, test } = useTelegramBotInstances()
+const dialog = ref(false)
+const editing = ref<BotInstance | null>(null)
+const token = ref('')
+const deliveryOpen = ref(false)
+const deliveryLoading = ref(false)
+const deliveries = ref<Array<{ id: number; status: string; attempts: number; last_error?: string }>>([])
+const deliveryError = ref('')
+const page = ref(1)
+const deliveryTotal = ref(0)
+let deliveryRequest = 0
+const deliveryBot = ref<BotInstance | null>(null)
+const stateLabel = (state: string) => te(`telegramBot.instances.states.${state}`) ? t(`telegramBot.instances.states.${state}`) : state
+onMounted(startPolling)
+onUnmounted(() => { deliveryRequest++ })
+function open(item: BotInstance | null) { editing.value = item ? { ...item } : null; token.value = ''; dialog.value = true }
+async function save() {
+  if (!token.value.trim()) return
+  const ok = editing.value ? await patch(editing.value, { token: token.value.trim() }) : await create(token.value.trim())
+  if (ok) { token.value = ''; dialog.value = false }
+}
+async function loadDeliveries(item: BotInstance, nextPage = 1) {
+  if (!can('GET', item.id, '/deliveries')) return
+  const request = ++deliveryRequest
+  deliveryBot.value = item; page.value = nextPage; deliveryOpen.value = true; deliveryLoading.value = true; deliveryError.value = ''
+  deliveries.value = []; deliveryTotal.value = 0
   try {
-    const res = await adminAPI.getTelegramBotRuntimeStatus()
-    runtimeStatus.value = res.data?.data ?? null
-  } catch {
-    runtimeStatus.value = null
-  } finally {
-    loading.value = false
-  }
+    const res = await adminAPI.getTelegramBotInstanceDeliveries(item.id, { page: nextPage, page_size: 20 })
+    if (request !== deliveryRequest) return
+    deliveries.value = res.data.data.items
+    deliveryTotal.value = res.data.data.total
+  } catch { if (request === deliveryRequest) deliveryError.value = t('telegramBot.instances.failed') } finally { if (request === deliveryRequest) deliveryLoading.value = false }
 }
-
-const formatRuntimeDate = (value: unknown) => {
-  if (typeof value !== 'string' || !value) return '-'
-  return formatDate(value) || '-'
-}
-
-const formatWebhookStatus = (value?: string) => {
-  if (!value) return '-'
-  const normalized = value.trim().toLowerCase()
-  if (['active', 'enabled', 'connected', 'ok'].includes(normalized)) {
-    return t('telegramBot.status.webhookStatusActive')
-  }
-  if (['inactive', 'disabled', 'disconnected'].includes(normalized)) {
-    return t('telegramBot.status.webhookStatusInactive')
-  }
-  return value
-}
-
-const formatLicenseStatus = (value?: string) => {
-  if (!value) return t('telegramBot.status.licenseStatusUnknown')
-  const normalized = value.trim().toLowerCase()
-  if (normalized === 'active') return t('telegramBot.status.licenseStatusActive')
-  if (normalized === 'expired') return t('telegramBot.status.licenseStatusExpired')
-  if (normalized === 'revoked') return t('telegramBot.status.licenseStatusRevoked')
-  if (normalized === 'suspended') return t('telegramBot.status.licenseStatusSuspended')
-  if (normalized === 'inactive') return t('telegramBot.status.licenseStatusInactive')
-  return value
-}
-
-const getLicenseBadgeVariant = (value?: string) => {
-  const normalized = value?.trim().toLowerCase()
-  if (normalized === 'active') return 'default'
-  if (normalized === 'expired' || normalized === 'revoked' || normalized === 'suspended') return 'destructive'
-  return 'secondary'
-}
-
-const formatWarning = (value: string) => {
-  const normalized = value.trim().toLowerCase()
-  if (normalized === 'license_lease_expiring_soon') {
-    return t('telegramBot.status.warningLeaseExpiringSoon')
-  }
-  if (normalized === 'license_lease_expired') {
-    return t('telegramBot.status.warningLeaseExpired')
-  }
-  return value
-}
-
-onMounted(() => {
-  fetchRuntimeStatus()
-})
 </script>
 
 <template>
   <div class="space-y-6">
-    <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-      <div>
-        <h2 class="text-2xl font-bold tracking-tight">{{ t('telegramBot.status.title') }}</h2>
-        <p class="text-muted-foreground">{{ t('telegramBot.status.subtitle') }}</p>
+    <div class="flex items-center justify-between gap-3">
+      <div><h2 class="text-2xl font-bold tracking-tight">{{ t('telegramBot.instances.title') }}</h2><p class="text-muted-foreground">{{ t('telegramBot.instances.subtitle') }}</p></div>
+      <div class="flex gap-2">
+        <Button variant="outline" :disabled="loading || busy || !canList" @click="refresh">{{ t('telegramBot.instances.reload') }}</Button>
+        <Button v-if="canCreate" :disabled="busy" @click="open(null)">{{ t('telegramBot.instances.create') }}</Button>
       </div>
-      <Button variant="outline" size="sm" class="w-full sm:w-auto" :disabled="loading" @click="fetchRuntimeStatus">
-        <RefreshCw class="h-4 w-4 mr-2" :class="{ 'animate-spin': loading }" />
-        {{ t('telegramBot.overview.refreshStatus') }}
-      </Button>
     </div>
-
-    <Card>
-      <CardHeader>
-        <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <CardTitle>{{ t('telegramBot.status.connectionStatus') }}</CardTitle>
-            <CardDescription>{{ t('telegramBot.status.connectionStatusDesc') }}</CardDescription>
-          </div>
-          <Badge :variant="isConnected ? 'default' : 'secondary'" class="w-fit">
-            <component :is="isConnected ? Wifi : WifiOff" class="h-3 w-3 mr-1" />
-            {{ isConnected ? t('telegramBot.overview.connected') : t('telegramBot.overview.notConnected') }}
-          </Badge>
+    <p v-if="!canList" class="text-muted-foreground">{{ t('telegramBot.instances.forbidden') }}</p>
+    <p v-if="error || refreshError" role="alert" class="text-sm text-destructive">{{ error || refreshError }}</p>
+    <p v-if="notice" role="status" class="text-sm text-muted-foreground">{{ notice }}</p>
+    <p v-if="loading" role="status" class="text-muted-foreground">{{ t('telegramBot.instances.loading') }}</p>
+    <div v-if="canList" class="rounded-lg border border-border">
+      <Table>
+        <TableHeader><TableRow>
+          <TableHead>{{ t('telegramBot.instances.bot') }}</TableHead><TableHead>{{ t('telegramBot.instances.token') }}</TableHead><TableHead>{{ t('telegramBot.instances.desiredState') }}</TableHead><TableHead>{{ t('telegramBot.instances.actualState') }}</TableHead><TableHead>{{ t('telegramBot.instances.version') }}</TableHead><TableHead>{{ t('telegramBot.status.lastSeenAt') }}</TableHead><TableHead>{{ t('telegramBot.instances.backlog') }}</TableHead><TableHead>{{ t('telegramBot.instances.actions') }}</TableHead>
+        </TableRow></TableHeader>
+        <TableBody>
+          <TableRow v-for="item in instances" :key="item.id">
+            <TableCell><p class="font-medium">{{ item.username ? `@${item.username}` : item.telegram_id }}</p><p v-if="item.last_error" class="max-w-64 break-words text-xs text-destructive">{{ item.last_error }}</p></TableCell>
+            <TableCell>{{ t(item.token_set ? 'telegramBot.instances.tokenSet' : 'telegramBot.instances.tokenMissing') }}</TableCell>
+            <TableCell>{{ t(item.enabled ? 'telegramBot.instances.desiredRunning' : 'telegramBot.instances.desiredStopped') }}</TableCell>
+            <TableCell><Badge variant="secondary">{{ stateLabel(botState(item, now)) }}</Badge></TableCell>
+            <TableCell>{{ item.applied_version }} / {{ item.version }}</TableCell>
+            <TableCell>{{ item.last_seen_at ? formatDate(item.last_seen_at) : '-' }}</TableCell>
+            <TableCell>{{ item.backlog ?? '-' }} / {{ item.unknown ?? '-' }}</TableCell>
+            <TableCell><div class="flex flex-wrap gap-1">
+              <Button v-if="can('PATCH', item.id)" size="sm" variant="outline" :disabled="busy || loading" @click="patch(item, { enabled: !item.enabled })">{{ t(item.enabled ? 'telegramBot.instances.stop' : 'telegramBot.instances.start') }}</Button>
+              <Button v-if="can('PATCH', item.id)" size="sm" variant="ghost" :disabled="busy || loading" @click="open(item)">{{ t('telegramBot.instances.rotate') }}</Button>
+              <Button v-if="can('POST', item.id, '/test')" size="sm" variant="ghost" :disabled="busy || loading" @click="test(item)">{{ t('telegramBot.instances.test') }}</Button>
+              <Button v-if="can('GET', item.id, '/deliveries')" size="sm" variant="ghost" @click="loadDeliveries(item)">{{ t('telegramBot.instances.deliveries') }}</Button>
+            </div></TableCell>
+          </TableRow>
+          <TableRow v-if="!instances.length && !loading"><TableCell :colspan="8" class="py-8 text-center text-muted-foreground">{{ t('telegramBot.instances.empty') }}</TableCell></TableRow>
+        </TableBody>
+      </Table>
+    </div>
+    <Dialog v-model:open="dialog" @update:open="token = ''">
+      <DialogContent><DialogHeader><DialogTitle>{{ t(editing ? 'telegramBot.instances.rotate' : 'telegramBot.instances.create') }}</DialogTitle></DialogHeader>
+        <div class="space-y-3"><Label for="bot-token">{{ t('telegramBot.instances.token') }}</Label><Input id="bot-token" v-model="token" type="password" autocomplete="new-password" />
+          <p v-if="error" role="alert" class="text-sm text-destructive">{{ error }}</p>
         </div>
-      </CardHeader>
-      <CardContent>
-        <div v-if="runtimeStatus" class="space-y-4">
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div class="rounded-lg border p-4">
-              <p class="text-sm text-muted-foreground mb-1">{{ t('telegramBot.status.connected') }}</p>
-              <p class="text-lg font-semibold">
-                <Badge :variant="isConnected ? 'default' : 'destructive'">
-                  {{ isConnected ? t('telegramBot.overview.connected') : t('telegramBot.overview.notConnected') }}
-                </Badge>
-              </p>
-            </div>
-            <div class="rounded-lg border p-4">
-              <p class="text-sm text-muted-foreground mb-1">{{ t('telegramBot.status.botVersion') }}</p>
-              <p class="text-lg font-semibold">{{ runtimeStatus.bot_version || '-' }}</p>
-            </div>
-            <div class="rounded-lg border p-4">
-              <p class="text-sm text-muted-foreground mb-1">{{ t('telegramBot.status.webhookStatus') }}</p>
-              <p class="text-lg font-semibold">{{ formatWebhookStatus(runtimeStatus.webhook_status) }}</p>
-            </div>
-            <div class="rounded-lg border p-4">
-              <p class="text-sm text-muted-foreground mb-1">{{ t('telegramBot.status.configVersion') }}</p>
-              <p class="text-lg font-semibold">{{ runtimeStatus.config_version ?? '-' }}</p>
-            </div>
-            <div class="rounded-lg border p-4">
-              <p class="text-sm text-muted-foreground mb-1">{{ t('telegramBot.status.lastSeenAt') }}</p>
-              <p class="text-lg font-semibold">{{ formatRuntimeDate(runtimeStatus.last_seen_at) }}</p>
-            </div>
-            <div class="rounded-lg border p-4">
-              <p class="text-sm text-muted-foreground mb-1">{{ t('telegramBot.status.lastConfigSyncAt') }}</p>
-              <p class="text-lg font-semibold">{{ formatRuntimeDate(runtimeStatus.last_config_sync_at) }}</p>
-            </div>
-            <div class="rounded-lg border p-4 md:col-span-2">
-              <p class="text-sm text-muted-foreground mb-1">{{ t('telegramBot.status.machineCode') }}</p>
-              <p class="text-sm font-semibold break-all font-mono">{{ runtimeStatus.machine_code || '-' }}</p>
-            </div>
-            <div class="rounded-lg border p-4">
-              <p class="text-sm text-muted-foreground mb-1">{{ t('telegramBot.status.licenseStatusLabel') }}</p>
-              <Badge :variant="getLicenseBadgeVariant(runtimeStatus.license_status)">
-                {{ formatLicenseStatus(runtimeStatus.license_status) }}
-              </Badge>
-            </div>
-            <div class="rounded-lg border p-4">
-              <p class="text-sm text-muted-foreground mb-1">{{ t('telegramBot.status.licenseExpiresAt') }}</p>
-              <p class="text-lg font-semibold">{{ formatRuntimeDate(runtimeStatus.license_expires_at) }}</p>
-            </div>
-            <div class="rounded-lg border p-4 md:col-span-2">
-              <p class="text-sm text-muted-foreground mb-2">{{ t('telegramBot.status.licenseWarnings') }}</p>
-              <div v-if="runtimeStatus.warnings?.length" class="flex flex-wrap gap-2">
-                <Badge
-                  v-for="warning in runtimeStatus.warnings"
-                  :key="warning"
-                  variant="secondary"
-                >
-                  {{ formatWarning(warning) }}
-                </Badge>
-              </div>
-              <p v-else class="text-sm font-semibold">{{ t('telegramBot.status.licenseWarningsEmpty') }}</p>
-            </div>
-          </div>
-        </div>
-        <div v-else class="rounded-lg border border-dashed p-6 text-center">
-          <WifiOff class="h-10 w-10 mx-auto text-muted-foreground mb-3" />
-          <p class="text-sm text-muted-foreground">{{ t('telegramBot.overview.notConnectedHint') }}</p>
-        </div>
-      </CardContent>
-    </Card>
+        <DialogFooter><Button :disabled="busy || !token.trim()" @click="save">{{ t('telegramBot.settings.save') }}</Button></DialogFooter>
+      </DialogContent>
+    </Dialog>
+    <Dialog v-model:open="deliveryOpen"><DialogContent class="sm:max-w-3xl"><DialogHeader><DialogTitle>{{ t('telegramBot.instances.deliveries') }}</DialogTitle></DialogHeader>
+      <p v-if="deliveryError" role="alert" class="text-destructive">{{ deliveryError }}</p>
+      <p v-if="deliveryLoading">{{ t('telegramBot.instances.loading') }}</p>
+      <Table><TableHeader><TableRow><TableHead>ID</TableHead><TableHead>{{ t('telegramBot.instances.state') }}</TableHead><TableHead>{{ t('telegramBot.instances.attempts') }}</TableHead><TableHead>{{ t('telegramBot.instances.error') }}</TableHead></TableRow></TableHeader><TableBody>
+        <TableRow v-for="item in deliveries" :key="item.id"><TableCell>{{ item.id }}</TableCell><TableCell>{{ stateLabel(item.status) }}</TableCell><TableCell>{{ item.attempts }}</TableCell><TableCell>{{ item.last_error || '-' }}</TableCell></TableRow>
+        <TableRow v-if="!deliveries.length && !deliveryLoading"><TableCell :colspan="4">{{ t('telegramBot.instances.empty') }}</TableCell></TableRow>
+      </TableBody></Table>
+      <DialogFooter><Button variant="outline" :disabled="page <= 1 || deliveryLoading" @click="deliveryBot && loadDeliveries(deliveryBot, page - 1)">{{ t('telegramBot.instances.previous') }}</Button><Button variant="outline" :disabled="page * 20 >= deliveryTotal || deliveryLoading" @click="deliveryBot && loadDeliveries(deliveryBot, page + 1)">{{ t('telegramBot.instances.next') }}</Button></DialogFooter>
+    </DialogContent></Dialog>
   </div>
 </template>

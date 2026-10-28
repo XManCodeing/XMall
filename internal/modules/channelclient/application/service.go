@@ -21,10 +21,26 @@ type Service struct {
 
 // NewService 创建渠道客户端服务。
 func NewService(store channelclientcontract.Store, appSecretKey string) *Service {
+	if guarded, ok := store.(interface{ SetCredentialSecret(string) }); ok {
+		guarded.SetCredentialSecret(appSecretKey)
+	}
 	return &Service{
 		store:  store,
 		encKey: crypto.DeriveKey(appSecretKey),
 	}
+}
+
+func (s *Service) RepairTelegramHistory(id uint, revision uint64, identities []int64) error {
+	if revision == 0 {
+		return fmt.Errorf("history revision required")
+	}
+	store, ok := s.store.(interface {
+		RepairTelegramHistory(uint, uint64, []int64) error
+	})
+	if !ok {
+		return fmt.Errorf("history repair unavailable")
+	}
+	return store.RepairTelegramHistory(id, revision, identities)
 }
 
 func maskBotToken(token string) string {
@@ -83,6 +99,7 @@ func (s *Service) CreateChannelClient(name, channelType, description, botToken, 
 	}
 
 	return &ClientDetail{
+		Revision:      client.Revision,
 		ID:            client.ID,
 		Name:          client.Name,
 		ChannelType:   client.ChannelType,
@@ -129,6 +146,7 @@ func (s *Service) GetChannelClientDetail(id uint) (*ClientDetail, error) {
 	}
 
 	resp := &ClientDetail{
+		Revision:      client.Revision,
 		ID:            client.ID,
 		Name:          client.Name,
 		ChannelType:   client.ChannelType,
@@ -163,6 +181,7 @@ func (s *Service) ListChannelClientDetails() ([]ClientDetail, error) {
 			plainSecret = ""
 		}
 		resp := ClientDetail{
+			Revision:      c.Revision,
 			ID:            c.ID,
 			Name:          c.Name,
 			ChannelType:   c.ChannelType,
@@ -206,11 +225,17 @@ func (s *Service) ResetChannelClientSecret(id uint) (*ClientDetail, error) {
 	}
 
 	client.ChannelSecret = encryptedSecret
+	// Rotating a Telegram channel credential never re-authorizes a taken-over
+	// bot. Disable atomically with rotation (also used by explicit cutover).
+	if client.ChannelType == "telegram_bot" {
+		client.Status = 0
+	}
 	if err := s.store.Update(client); err != nil {
 		return nil, err
 	}
 
 	resp := &ClientDetail{
+		Revision:      client.Revision,
 		ID:            client.ID,
 		Name:          client.Name,
 		ChannelType:   client.ChannelType,
@@ -296,6 +321,7 @@ func (s *Service) UpdateChannelClient(id uint, name, description string, botToke
 	}
 
 	resp := &ClientDetail{
+		Revision:      client.Revision,
 		ID:            client.ID,
 		Name:          client.Name,
 		ChannelType:   client.ChannelType,

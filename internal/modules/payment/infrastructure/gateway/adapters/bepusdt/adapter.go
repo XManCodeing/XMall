@@ -85,7 +85,9 @@ func (a *bepusdtAdapter) ValidateConfig(raw jsonmap.JSON, channelType string) er
 }
 
 // CreatePayment 创建支付。bepusdt 多 channel type，需要先校验 channelType。
-func (a *bepusdtAdapter) CreatePayment(ctx context.Context, raw jsonmap.JSON, input paymentcontract.GatewayCreateInput) (*paymentcontract.GatewayCreateResult, error) {
+func (a *bepusdtAdapter) CreatePayment(ctx context.Context, raw jsonmap.JSON, input paymentcontract.GatewayCreateInput) (out *paymentcontract.GatewayCreateResult, err error) {
+	ctx, classify := gatewaycommon.TrackCreation(ctx)
+	defer func() { err = classify(err) }()
 	cfg, err := a.parseConfig(raw)
 	if err != nil {
 		return nil, err

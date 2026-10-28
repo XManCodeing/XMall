@@ -26,6 +26,7 @@ import (
 	externalidentitydomain "github.com/XManCodeing/XMall/internal/modules/identity/externalidentity/domain"
 	invitecodedomain "github.com/XManCodeing/XMall/internal/modules/identity/invitecode/domain"
 	userdomain "github.com/XManCodeing/XMall/internal/modules/identity/user/domain"
+	userauthdomain "github.com/XManCodeing/XMall/internal/modules/identity/userauth/domain"
 	memberleveldomain "github.com/XManCodeing/XMall/internal/modules/memberlevel/domain"
 	notificationdomain "github.com/XManCodeing/XMall/internal/modules/notification/domain"
 	orderdomain "github.com/XManCodeing/XMall/internal/modules/order/domain"
@@ -39,6 +40,8 @@ import (
 	settingsstore "github.com/XManCodeing/XMall/internal/modules/settings/infrastructure/gormstore"
 	siteconnectiondomain "github.com/XManCodeing/XMall/internal/modules/siteconnection/domain"
 	broadcastdomain "github.com/XManCodeing/XMall/internal/modules/telegram/broadcast/domain"
+	deliverycontract "github.com/XManCodeing/XMall/internal/modules/telegram/delivery/contract"
+	runtimedomain "github.com/XManCodeing/XMall/internal/modules/telegram/runtime/domain"
 	walletdomain "github.com/XManCodeing/XMall/internal/modules/wallet/domain"
 	"github.com/XManCodeing/XMall/internal/platform/database/gormdb"
 	"log"
@@ -51,7 +54,7 @@ import (
 
 // schemaVersion tracks schema/data changes, not runner implementation changes.
 // For vN: update the current-model baseline AND append the targeted vN step.
-const schemaVersion int64 = 1
+const schemaVersion int64 = 5
 const migrationLockName = "dujiao_next_schema_migration"
 const migrationAdvisoryKey int64 = 0x64756a69616f
 
@@ -66,7 +69,72 @@ type migrationStep struct {
 // The baseline is the CURRENT model/data snapshot, not a frozen v1 snapshot.
 // An unversioned DB runs it once and records schemaVersion, skipping historical
 // steps which could conflict with current models. A versioned DB ONLY runs steps.
-var schemaSteps = []migrationStep{}
+var schemaSteps = []migrationStep{
+	{version: 2, name: "telegram runtime", run: migrateTelegramRuntime},
+	{version: 3, name: "telegram identity and business delivery", run: migrateTelegramBusinessDelivery},
+	{version: 4, name: "telegram explicit cutover ownership", run: migrateTelegramRuntime},
+	{version: 5, name: "persistent telegram channel ownership", run: migrateTelegramOwnership},
+}
+
+func migrateTelegramOwnership(db *gorm.DB) error {
+	if err := migrateModelsWithProgress(db, &channelclientdomain.Client{}, &runtimedomain.BotOwnership{}); err != nil {
+		return err
+	}
+	if err := db.Where("id = ?", 1).FirstOrCreate(&runtimedomain.BotOwnership{ID: 1, State: "lock"}).Error; err != nil {
+		return err
+	}
+	// Keep encrypted source snapshots: schema migrations intentionally have no
+	// application key. Identity resolution happens under the ownership lock.
+	var channels []struct {
+		ID       uint
+		BotToken string
+	}
+	if err := db.Table("channel_clients").Select("id", "bot_token").Where("channel_type = ?", "telegram_bot").Find(&channels).Error; err != nil {
+		return err
+	}
+	for _, row := range channels {
+		if err := db.Where("channel_id = ? AND telegram_id = 0", row.ID).FirstOrCreate(&runtimedomain.BotOwnership{ChannelID: row.ID, State: "unresolved", SnapshotCipher: row.BotToken}).Error; err != nil {
+			return err
+		}
+	}
+	var bots []runtimedomain.Instance
+	if err := db.Where("channel_client_id IS NOT NULL").Find(&bots).Error; err != nil {
+		return err
+	}
+	for _, bot := range bots {
+		state := "legacy"
+		if bot.Mode == "cutover_pending" {
+			state = "pending"
+		}
+		if bot.CutoverCompleted {
+			state = "internal"
+		}
+		if err := db.Where("channel_id = ? AND telegram_id = ?", *bot.ChannelClientID, bot.TelegramID).FirstOrCreate(&runtimedomain.BotOwnership{ChannelID: *bot.ChannelClientID, TelegramID: bot.TelegramID, State: state}).Error; err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func migrateTelegramRuntime(db *gorm.DB) error {
+	return migrateModelsWithProgress(db,
+		&runtimedomain.Instance{}, &runtimedomain.Contact{}, &runtimedomain.Inbox{},
+		&runtimedomain.Session{}, &runtimedomain.Delivery{},
+	)
+}
+
+func migrateTelegramBusinessDelivery(db *gorm.DB) error {
+	// v2 installations may predate the delivery ownership/broadcast metadata.
+	// Reconcile runtime tables here too; v2 is not rerun for a versioned v2 DB.
+	if err := migrateTelegramRuntime(db); err != nil {
+		return err
+	}
+	return migrateModelsWithProgress(db,
+		&userauthdomain.TelegramHistoryGrant{},
+		&deliverycontract.Event{}, &deliverycontract.OrderSource{}, &deliverycontract.OrderOperation{},
+		&paymentdomain.Payment{}, &broadcastdomain.Broadcast{},
+	)
+}
 
 func AutoMigrate() error {
 	return runSchemaMigrations(gormdb.DB, schemaVersion, migrateSchema, schemaSteps...)
@@ -341,6 +409,10 @@ func migrateSchema(db *gorm.DB) error {
 		&admindomain.Admin{},
 		&userdomain.User{},
 		&externalidentitydomain.Identity{},
+		&userauthdomain.TelegramHistoryGrant{},
+		&deliverycontract.Event{},
+		&deliverycontract.OrderSource{},
+		&deliverycontract.OrderOperation{},
 		&invitecodedomain.InviteCode{},
 		&affiliatedomain.Profile{},
 		&affiliatedomain.Click{},
@@ -387,6 +459,11 @@ func migrateSchema(db *gorm.DB) error {
 		&reconciliationdomain.Item{},
 		&channelclientdomain.Client{},
 		&broadcastdomain.Broadcast{},
+		&runtimedomain.Instance{},
+		&runtimedomain.Contact{},
+		&runtimedomain.Inbox{},
+		&runtimedomain.Session{},
+		&runtimedomain.Delivery{},
 		&memberleveldomain.MemberLevel{},
 		&memberleveldomain.MemberLevelPrice{},
 		&contentdomain.Media{},
@@ -398,6 +475,7 @@ func migrateSchema(db *gorm.DB) error {
 		name string
 		run  func(...*gorm.DB) error
 	}{
+		{"telegram ownership history", func(dbs ...*gorm.DB) error { return migrateTelegramOwnership(dbs[0]) }},
 		{"oauth identity unique index", ensureUserOAuthIdentityUserProviderUniqueIndex},
 		{"pending order risk IPs", func(dbs ...*gorm.DB) error { return backfillPendingOrderRiskIPs(dbs[0]) }},
 		{"reseller schema", func(dbs ...*gorm.DB) error { return resellerstore.Migrate(dbs[0]) }},

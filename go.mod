@@ -3,6 +3,7 @@ module github.com/XManCodeing/XMall
 go 1.26.5
 
 require (
+	github.com/boombuler/barcode v1.0.1-0.20190219062509-6c824513bacc
 	github.com/casbin/casbin/v3 v3.10.0
 	github.com/casbin/gorm-adapter/v3 v3.41.0
 	github.com/gin-gonic/gin v1.12.0
@@ -34,7 +35,6 @@ require (
 require (
 	filippo.io/edwards25519 v1.1.0 // indirect
 	github.com/bmatcuk/doublestar/v4 v4.9.1 // indirect
-	github.com/boombuler/barcode v1.0.1-0.20190219062509-6c824513bacc // indirect
 	github.com/bytedance/gopkg v0.1.3 // indirect
 	github.com/bytedance/sonic v1.15.0 // indirect
 	github.com/bytedance/sonic/loader v0.5.0 // indirect

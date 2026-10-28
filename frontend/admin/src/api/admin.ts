@@ -626,13 +626,25 @@ export const adminAPI = {
 
   // Telegram Bot Settings
   getTelegramBotSettings: () => api.get('/admin/settings/telegram-bot'),
-  updateTelegramBotSettings: (data: Record<string, unknown>) => api.put('/admin/settings/telegram-bot', data),
+  updateTelegramBotSettingsSection: (section: string, expectedVersion: number, data: unknown) =>
+    api.patch(`/admin/settings/telegram-bot/${section}`, { expected_version: expectedVersion, data }),
+  getTelegramBotInstances: () => api.get('/admin/telegram-bot/instances'),
+  createTelegramBotInstance: (data: { token: string }) => api.post('/admin/telegram-bot/instances', data),
+  patchTelegramBotInstance: (id: number, data: { expected_version: number; enabled?: boolean; token?: string }) => api.patch(`/admin/telegram-bot/instances/${id}`, data),
+  testTelegramBotInstance: (id: number) => api.post(`/admin/telegram-bot/instances/${id}/test`),
+  getTelegramBotInstanceStatus: (id: number) => api.get(`/admin/telegram-bot/instances/${id}/status`),
+  getTelegramBotInstanceDeliveries: (id: number, params?: Record<string, unknown>) => api.get(`/admin/telegram-bot/instances/${id}/deliveries`, { params }),
   getTelegramBotRuntimeStatus: () => api.get('/admin/settings/telegram-bot/runtime-status'),
   getTelegramBroadcasts: (params?: Record<string, unknown>) =>
     api.get('/admin/telegram-bot/broadcasts', { params }),
   getTelegramBroadcast: (id: number) =>
     api.get(`/admin/telegram-bot/broadcasts/${id}`),
+  getTelegramBroadcastDeliveries: (id: number, params: { page: number; page_size: number }) =>
+    api.get(`/admin/telegram-bot/broadcasts/${id}/deliveries`, { params }),
+  retryTelegramBroadcastDelivery: (id: number, deliveryId: number) =>
+    api.post(`/admin/telegram-bot/broadcasts/${id}/deliveries/${deliveryId}/retry`),
   createTelegramBroadcast: (data: {
+    bot_id: number
     title: string
     recipient_type: string
     user_ids?: number[]

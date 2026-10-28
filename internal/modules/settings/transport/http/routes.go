@@ -42,5 +42,6 @@ func RegisterAdminOrderEmailTemplateRoutes(admin gin.IRoutes, handler *OrderEmai
 func RegisterAdminTelegramBotRoutes(admin gin.IRoutes, handler *TelegramBotHandler) {
 	admin.GET("/settings/telegram-bot", handler.GetTelegramBotConfig)
 	admin.PUT("/settings/telegram-bot", handler.UpdateTelegramBotConfig)
+	admin.PATCH("/settings/telegram-bot/:section", handler.PatchTelegramBotConfigSection)
 	admin.GET("/settings/telegram-bot/runtime-status", handler.GetTelegramBotRuntimeStatus)
 }

@@ -361,6 +361,7 @@ func CreatePayment(ctx context.Context, cfg *Config, input CreateInput, options 
 		req.Header.Set(key, value)
 	}
 
+	common.MarkCreationDispatched(ctx)
 	resp, err := (&http.Client{Timeout: common.DefaultTimeout}).Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("%w: %v", ErrRequestFailed, err)

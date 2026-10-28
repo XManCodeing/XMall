@@ -304,6 +304,9 @@ func discoverAdminRouteSources(routerDirectory string) ([]string, error) {
 		}
 	}
 
+	// Broadcast keeps route registration beside its handler to stay within its
+	// module file budget; it must remain included in RBAC coverage scanning.
+	sources = append(sources, filepath.Join(routerDirectory, "..", "..", "modules", "telegram", "broadcast", "transport", "http", "handler.go"))
 	sort.Strings(sources)
 	return sources, nil
 }
@@ -319,6 +322,28 @@ func TestExtractAdminRoutesIncludesPlatformHTTPRoutes(t *testing.T) {
 		}
 	}
 	t.Fatal("platform HTTP route GET /admin/system/version/check was not discovered")
+}
+
+func TestExtractAdminRoutesIncludesBroadcastDeliveries(t *testing.T) {
+	routes, err := extractAdminRoutesFromSource()
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := map[string]bool{
+		"GET /admin/telegram-bot/broadcasts/:id/deliveries":                     false,
+		"POST /admin/telegram-bot/broadcasts/:id/deliveries/:delivery_id/retry": false,
+	}
+	for _, route := range routes {
+		key := route.method + " " + route.object
+		if _, ok := want[key]; ok {
+			want[key] = true
+		}
+	}
+	for route, found := range want {
+		if !found {
+			t.Errorf("broadcast handler route not discovered: %s", route)
+		}
+	}
 }
 
 func extractAdminRoutesFromFile(path string) ([]adminRoute, error) {

@@ -1,10 +1,41 @@
 package orderreader
 
 import (
+	"context"
+	"errors"
 	orderdomain "github.com/XManCodeing/XMall/internal/modules/order/domain"
 	procurementcontract "github.com/XManCodeing/XMall/internal/modules/procurement/contract"
 	procurementdomain "github.com/XManCodeing/XMall/internal/modules/procurement/domain"
 )
+
+type contextReader struct {
+	procurementcontract.OrderRepository
+	ctx    context.Context
+	source interface {
+		GetByIDContext(context.Context, uint) (*orderdomain.Order, error)
+	}
+}
+
+func (r *Reader) WithContext(ctx context.Context) (procurementcontract.OrderRepository, error) {
+	source, ok := r.source.(interface {
+		GetByIDContext(context.Context, uint) (*orderdomain.Order, error)
+	})
+	if !ok {
+		return nil, errors.New("order source does not support cancellation")
+	}
+	return &contextReader{ctx: ctx, source: source}, nil
+}
+func (r *contextReader) GetByID(id uint) (*procurementdomain.LocalOrder, error) {
+	if err := r.ctx.Err(); err != nil {
+		return nil, err
+	}
+	order, err := r.source.GetByIDContext(r.ctx, id)
+	if err != nil || order == nil {
+		return nil, err
+	}
+	mapped := MapOrder(*order)
+	return &mapped, nil
+}
 
 type Source interface {
 	GetByID(id uint) (*orderdomain.Order, error)

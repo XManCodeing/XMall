@@ -74,7 +74,9 @@ func (a *alipayAdapter) ValidateConfig(raw jsonmap.JSON, interactionMode string)
 }
 
 // CreatePayment 创建支付。
-func (a *alipayAdapter) CreatePayment(ctx context.Context, raw jsonmap.JSON, input paymentcontract.GatewayCreateInput) (*paymentcontract.GatewayCreateResult, error) {
+func (a *alipayAdapter) CreatePayment(ctx context.Context, raw jsonmap.JSON, input paymentcontract.GatewayCreateInput) (out *paymentcontract.GatewayCreateResult, err error) {
+	ctx, classify := gatewaycommon.TrackCreation(ctx)
+	defer func() { err = classify(err) }()
 	// 从 input.Extra 取 interaction_mode（jump / qr）。
 	interactionMode, _ := input.Extra["interaction_mode"].(string)
 	cfg, err := a.parseConfig(raw, interactionMode)

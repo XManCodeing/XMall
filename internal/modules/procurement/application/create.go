@@ -1,6 +1,7 @@
 package application
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -13,6 +14,51 @@ import (
 
 	"github.com/google/uuid"
 )
+
+func (s *Service) CreateForOrderContext(ctx context.Context, id uint) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	clone := *s
+	var err error
+	if clone.procRepo, err = bindRecoveryContext[procurementcontract.Repository](ctx, s.procRepo); err != nil {
+		return err
+	}
+	if clone.orderRepo, err = bindRecoveryContext[procurementcontract.OrderRepository](ctx, s.orderRepo); err != nil {
+		return err
+	}
+	if clone.mappingRepo, err = bindRecoveryContext[procurementcontract.ProductMappingReader](ctx, s.mappingRepo); err != nil {
+		return err
+	}
+	if clone.skuMapRepo, err = bindRecoveryContext[procurementcontract.SKUMappingReader](ctx, s.skuMapRepo); err != nil {
+		return err
+	}
+	if clone.connections, err = bindRecoveryContext[procurementcontract.ConnectionProvider](ctx, s.connections); err != nil {
+		return err
+	}
+	if s.queue != nil {
+		if clone.queue, err = bindRecoveryContext[procurementcontract.Enqueuer](ctx, s.queue); err != nil {
+			return err
+		}
+	}
+	err = clone.CreateForOrder(id)
+	if ctx.Err() != nil {
+		return ctx.Err()
+	}
+	return err
+}
+
+// Bind request-scoped copies without mutating shared dependencies. Missing
+// cancellation support fails closed, never falling back to background I/O.
+func bindRecoveryContext[T any](ctx context.Context, value T) (T, error) {
+	if binder, ok := any(value).(interface {
+		WithContext(context.Context) (T, error)
+	}); ok {
+		return binder.WithContext(ctx)
+	}
+	var zero T
+	return zero, errors.New("procurement dependency does not support cancellation")
+}
 
 // CreateForOrder 为已支付订单创建采购单（上游交付类型）
 func (s *Service) CreateForOrder(orderID uint) error {

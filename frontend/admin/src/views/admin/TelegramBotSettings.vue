@@ -20,6 +20,7 @@ const {
   languages,
   loading,
   saveConfig,
+  canSave, error, loaded,
   saving,
 } = useTelegramBotSettings()
 
@@ -30,6 +31,7 @@ onMounted(() => {
 
 <template>
   <div class="space-y-6">
+    <p v-if="error" role="alert" class="text-sm text-destructive">{{ error }} <Button variant="link" @click="fetchConfig">{{ t('telegramBot.instances.reload') }}</Button></p>
     <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
       <div>
         <h2 class="text-2xl font-bold tracking-tight">{{ t('telegramBot.settings.title') }}</h2>
@@ -47,7 +49,7 @@ onMounted(() => {
             {{ lang.name }}
           </button>
         </div>
-        <Button class="w-full sm:w-auto" :disabled="saving || loading" @click="saveConfig">
+        <Button class="w-full sm:w-auto" :disabled="saving || loading || !loaded || !canSave" @click="saveConfig">
           <Loader2 v-if="saving" class="mr-2 h-4 w-4 animate-spin" />
           <Save v-else class="mr-2 h-4 w-4" />
           {{ t('telegramBot.settings.save') }}
@@ -62,10 +64,6 @@ onMounted(() => {
       </CardHeader>
       <CardContent class="space-y-4">
         <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
-          <div class="flex flex-col gap-3 rounded-lg border border-border bg-muted/10 px-4 py-3 sm:flex-row sm:items-center">
-            <Switch id="bot-enabled" v-model="form.enabled" />
-            <Label for="bot-enabled">{{ t('telegramBot.settings.enabled') }}</Label>
-          </div>
           <div class="space-y-2">
             <Label>{{ t('telegramBot.settings.defaultLocale') }}</Label>
             <Select v-model="form.default_locale">

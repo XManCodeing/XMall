@@ -385,6 +385,9 @@ export interface AdminTelegramBotRuntimeStatus {
 }
 
 export interface AdminTelegramBroadcast {
+  bot_id: number
+  delivery_version: number
+  unknown_count: number
   id: number
   title: string
   recipient_type: string
@@ -399,6 +402,23 @@ export interface AdminTelegramBroadcast {
   started_at?: string
   completed_at?: string
   last_error?: string
+  created_at: string
+  updated_at: string
+}
+
+export interface AdminTelegramBroadcastDelivery {
+  id: number
+  bot_id: number
+  broadcast_id: number
+  user_id: number
+  telegram_user_id: number
+  chat_id: number
+  status: string
+  attempts: number
+  message_id: number
+  last_error: string
+  retryable: boolean
+  available_at: string
   created_at: string
   updated_at: string
 }

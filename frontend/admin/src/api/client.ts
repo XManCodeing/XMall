@@ -192,7 +192,7 @@ async function request(method: string, path: string, bodyOrOptions?: any, option
       redirectToLogin()
     }
     notifyError(message)
-    return Promise.reject(createNotifiedError(message))
+    return Promise.reject(Object.assign(createNotifiedError(message), { response: { status, data } }))
   }
 
   // Business error check
@@ -205,7 +205,7 @@ async function request(method: string, path: string, bodyOrOptions?: any, option
       return Promise.reject(createNotifiedError(message))
     }
     notifyError(message)
-    return Promise.reject(createNotifiedError(message))
+    return Promise.reject(Object.assign(createNotifiedError(message), { response: { status: data.status_code, data } }))
   }
 
   return { data }

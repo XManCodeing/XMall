@@ -7,6 +7,10 @@ import (
 	paymentdomain "github.com/XManCodeing/XMall/internal/modules/payment/domain"
 )
 
+// CreationLocker acquires SQLite's writer reservation before any reads. Other
+// dialects use the order row lock already taken by the payment use case.
+type CreationLocker interface{ LockCreation(orderID uint) error }
+
 // Store 是支付记录持久化与事务边界。
 type Store interface {
 	Create(payment *paymentdomain.Payment) error

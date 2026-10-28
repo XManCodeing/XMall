@@ -42,12 +42,12 @@ func (c *Container) initRepositories() error {
 	c.UserStore = userstore.New(db)
 	c.ExternalIdentityStore = externalidentitystore.New(db)
 	c.EmailVerificationStore = emailverificationstore.New(db)
-	orderStore := ordergormstore.New(db, c.Config.App.SecretKey)
+	orderStore := ordergormstore.New(db, c.Config.App.SecretKey).EnableBusinessEvents()
 	if _, err := orderStore.BackfillGuestCredentialHashes(); err != nil {
 		return fmt.Errorf("backfill guest order credentials: %w", err)
 	}
 	c.OrderStore = orderStore
-	c.PaymentStore = paymentgormstore.New(db, c.Config.App.SecretKey)
+	c.PaymentStore = paymentgormstore.New(db, c.Config.App.SecretKey).EnableBusinessEvents()
 	c.PaymentChannelStore = paymentgormstore.NewChannelStore(db)
 	c.CardSecretRepo = cardsecretgormstore.New(db)
 	c.CardSecretBatchRepo = cardsecretgormstore.NewBatch(db)

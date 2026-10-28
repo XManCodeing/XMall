@@ -3,6 +3,7 @@ package application
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"strings"
 	"time"
 
@@ -16,6 +17,46 @@ import (
 
 	"github.com/shopspring/decimal"
 )
+
+func (s *Service) OpenProcurementSnapshotContext(ctx context.Context, id uint, snapshot string) (*siteconnectiondomain.Connection, upstream.Adapter, error) {
+	clone, err := s.recoveryContext(ctx)
+	if err != nil {
+		return nil, nil, err
+	}
+	return clone.OpenProcurementSnapshot(id, snapshot)
+}
+func (s *Service) recoveryContext(ctx context.Context) (*Service, error) {
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+	binder, ok := s.connRepo.(interface {
+		WithContext(context.Context) (siteconnectioncontract.Repository, error)
+	})
+	if !ok {
+		return nil, errors.New("connection repository does not support cancellation")
+	}
+	repo, err := binder.WithContext(ctx)
+	if err != nil {
+		return nil, err
+	}
+	clone := *s
+	clone.connRepo = repo
+	return &clone, nil
+}
+func (s *Service) GetByIDContext(ctx context.Context, id uint) (*siteconnectiondomain.Connection, error) {
+	clone, err := s.recoveryContext(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return clone.GetByID(id)
+}
+func (s *Service) CaptureProcurementSnapshotContext(ctx context.Context, id uint) (string, error) {
+	clone, err := s.recoveryContext(ctx)
+	if err != nil {
+		return "", err
+	}
+	return clone.CaptureProcurementSnapshot(id)
+}
 
 // MarkupReapplier 在连接定价配置（汇率/加价/取整）变更后，按新配置重算该连接已映射商品的本地售价。
 // 由 Catalog Mapping 应用服务实现，通过 setter 注入以避免与本服务的循环依赖。

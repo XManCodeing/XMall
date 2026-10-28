@@ -70,7 +70,9 @@ func (a *epayAdapter) ValidateConfig(raw jsonmap.JSON, channelType string) error
 //   - mode == "redirect" → BuildRedirectURL（不发 HTTP，仅构造跳转 URL）
 //   - mode == "" 或 mode == "qr" → CreatePayment（发 HTTP）
 //   - 其他 mode → 返回 paymentcontract.ErrGatewayConfigInvalid
-func (a *epayAdapter) CreatePayment(ctx context.Context, raw jsonmap.JSON, input paymentcontract.GatewayCreateInput) (*paymentcontract.GatewayCreateResult, error) {
+func (a *epayAdapter) CreatePayment(ctx context.Context, raw jsonmap.JSON, input paymentcontract.GatewayCreateInput) (out *paymentcontract.GatewayCreateResult, err error) {
+	ctx, classify := gatewaycommon.TrackCreation(ctx)
+	defer func() { err = classify(err) }()
 	// 先校验 channelType
 	if !epay.IsSupportedChannelType(input.ChannelType) {
 		return nil, fmt.Errorf("%w: epay channel_type %s", paymentcontract.ErrGatewayUnsupportedChannel, input.ChannelType)

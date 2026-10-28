@@ -69,7 +69,9 @@ func (a *okpayAdapter) ValidateConfig(raw jsonmap.JSON, channelType string) erro
 }
 
 // CreatePayment 创建支付。okpay 多 channel type，需要先校验 channelType。
-func (a *okpayAdapter) CreatePayment(ctx context.Context, raw jsonmap.JSON, input paymentcontract.GatewayCreateInput) (*paymentcontract.GatewayCreateResult, error) {
+func (a *okpayAdapter) CreatePayment(ctx context.Context, raw jsonmap.JSON, input paymentcontract.GatewayCreateInput) (out *paymentcontract.GatewayCreateResult, err error) {
+	ctx, classify := gatewaycommon.TrackCreation(ctx)
+	defer func() { err = classify(err) }()
 	// 先校验 channelType
 	if input.ChannelType != "" && !okpay.IsSupportedChannelType(input.ChannelType) {
 		return nil, fmt.Errorf("%w: okpay channel_type %s", paymentcontract.ErrGatewayUnsupportedChannel, input.ChannelType)

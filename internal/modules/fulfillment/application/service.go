@@ -3,6 +3,7 @@ package application
 import (
 	"errors"
 	"fmt"
+	delivery "github.com/XManCodeing/XMall/internal/modules/telegram/delivery/contract"
 	"sort"
 	"strings"
 	"time"
@@ -147,7 +148,7 @@ func (s *Service) CreateManual(input CreateManualInput) (*fulfillmentdomain.Fulf
 			return ErrOrderUpdateFailed
 		}
 		created = fulfillment
-		return nil
+		return appendFulfilledEvent(tx, order, fulfillment)
 	})
 	if err != nil {
 		if errors.Is(err, ErrFulfillmentExists) {
@@ -320,7 +321,7 @@ func (s *Service) CreateAuto(orderID uint) (*fulfillmentdomain.Fulfillment, erro
 		}); err != nil {
 			return ErrOrderUpdateFailed
 		}
-		return nil
+		return appendFulfilledEvent(tx, order, fulfillment)
 	})
 	if err != nil {
 		switch {
@@ -387,6 +388,11 @@ func (s *Service) CreateAuto(orderID uint) (*fulfillmentdomain.Fulfillment, erro
 
 // NotifyBotOrderFulfilled 查找用户 Telegram 绑定并入队通知任务。
 func (s *Service) NotifyBotOrderFulfilled(userID, orderID uint) {
+	// Once transactional events are enabled, even website destinations must be
+	// resolved there; a login-identity fallback bypasses private-contact checks.
+	if delivery.From(s.orderStore) != nil {
+		return
+	}
 	if s.botNotifier == nil || userID == 0 || s.userOAuthIdentityRepo == nil {
 		return
 	}

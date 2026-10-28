@@ -1,7 +1,11 @@
 package gormstore
 
 import (
+	"errors"
 	"fmt"
+	identitydomain "github.com/XManCodeing/XMall/internal/modules/identity/externalidentity/domain"
+	delivery "github.com/XManCodeing/XMall/internal/modules/telegram/delivery/contract"
+	runtimedomain "github.com/XManCodeing/XMall/internal/modules/telegram/runtime/domain"
 	"testing"
 	"time"
 
@@ -19,6 +23,87 @@ import (
 	"github.com/shopspring/decimal"
 	"gorm.io/gorm"
 )
+
+func TestWebsiteOrderEventsUseCurrentTransactionContact(t *testing.T) {
+	db := openOrderTenantScopeTestDB(t)
+	sqlDB, _ := db.DB()
+	sqlDB.SetMaxOpenConns(1)
+	t.Cleanup(func() { sqlDB.Close() })
+	must := func(err error) {
+		t.Helper()
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+	must(db.AutoMigrate(&identitydomain.Identity{}, &runtimedomain.Contact{}, &runtimedomain.Instance{}, &delivery.OrderSource{}, &delivery.Event{}))
+	must(db.Create(&userdomain.User{ID: 1, Status: "active"}).Error)
+	must(db.Create(&identitydomain.Identity{UserID: 1, Provider: "telegram", ProviderUserID: "8"}).Error)
+	must(db.Create(&runtimedomain.Instance{ID: 7, TelegramID: 77, Mode: "internal", Enabled: true}).Error)
+	order := seedScopedOrder(t, db, "website", 1, "", "", "paid", nil, nil)
+	store := New(db, "test-guest-credential-secret-with-32-bytes").EnableBusinessEvents()
+	rollback := errors.New("business write failed")
+	appendEvent := func(tx ordercontract.Transaction) error {
+		return delivery.AppendOrder(tx.Orders(), delivery.EventOrderPaid, order.ID, 0, 1, 0)
+	}
+	must(store.WithinTransaction(appendEvent)) // A login binding alone is not a contact.
+	var count int64
+	must(db.Model(&delivery.Event{}).Count(&count).Error)
+	if count != 0 {
+		t.Fatal("login inferred a destination")
+	}
+	err := store.WithinTransaction(func(tx ordercontract.Transaction) error {
+		// Both contact and order status are written on the exact business handle.
+		dbtx := tx.(transaction).db
+		if err := dbtx.Create(&runtimedomain.Contact{BotID: 7, UserID: 1, TelegramUserID: 8, ChatID: 8, Reachable: true}).Error; err != nil {
+			return err
+		}
+		if err := dbtx.Model(&orderdomain.Order{}).Where("id = ?", order.ID).Update("status", "completed").Error; err != nil {
+			return err
+		}
+		if err := appendEvent(tx); err != nil {
+			return err
+		}
+		var rows []delivery.Event
+		if err := dbtx.Find(&rows).Error; err != nil {
+			return err
+		}
+		if len(rows) != 1 || rows[0].BotID != 7 || rows[0].UserID != 1 {
+			t.Fatalf("event=%+v", rows)
+		}
+		return rollback
+	})
+	if !errors.Is(err, rollback) {
+		t.Fatal(err)
+	}
+	must(db.Model(&delivery.Event{}).Count(&count).Error)
+	if count != 0 {
+		t.Fatal("event escaped rollback")
+	}
+	var reloaded orderdomain.Order
+	must(db.First(&reloaded, order.ID).Error)
+	if reloaded.Status != "paid" {
+		t.Fatal("business status escaped rollback")
+	}
+	must(db.Create(&runtimedomain.Contact{BotID: 7, UserID: 1, TelegramUserID: 8, ChatID: 8, Reachable: true}).Error)
+	must(store.WithinTransaction(appendEvent))
+	must(store.WithinTransaction(appendEvent))
+	must(db.Model(&delivery.Event{}).Count(&count).Error)
+	if count != 1 {
+		t.Fatalf("dedup count=%d", count)
+	}
+	must(db.Model(&delivery.OrderSource{}).Count(&count).Error)
+	if count != 0 {
+		t.Fatal("website recipient persisted as historical source")
+	}
+	must(db.Where("user_id = 1").Delete(&identitydomain.Identity{}).Error)
+	must(store.WithinTransaction(func(tx ordercontract.Transaction) error {
+		return delivery.AppendOrder(tx.Orders(), delivery.EventOrderFulfilled, order.ID, 0, 1, 2)
+	}))
+	must(db.Model(&delivery.Event{}).Count(&count).Error)
+	if count != 1 {
+		t.Fatal("revoked identity generated fulfillment event")
+	}
+}
 
 func openOrderTenantScopeTestDB(t *testing.T) *gorm.DB {
 	t.Helper()

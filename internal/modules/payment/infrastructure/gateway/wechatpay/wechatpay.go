@@ -487,6 +487,9 @@ func validateBaseConfig(cfg *Config) error {
 }
 
 func doPostJSON(ctx context.Context, client *core.Client, requestURL string, payload map[string]interface{}) (map[string]interface{}, error) {
+	// The SDK owns request construction/signing/transport. Once entered we
+	// conservatively treat every error as uncertain, including verifier errors.
+	common.MarkCreationDispatched(ctx)
 	result, err := client.Post(ctx, requestURL, payload)
 	if err != nil {
 		return nil, wrapRequestError(err)

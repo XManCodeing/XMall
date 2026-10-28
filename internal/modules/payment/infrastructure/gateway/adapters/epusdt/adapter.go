@@ -58,7 +58,9 @@ func (a *epusdtAdapter) ValidateConfig(raw jsonmap.JSON, _ string) error {
 }
 
 // CreatePayment 创建支付。epusdt 的实际币种和网络由配置决定，不依赖 channel_type。
-func (a *epusdtAdapter) CreatePayment(ctx context.Context, raw jsonmap.JSON, input paymentcontract.GatewayCreateInput) (*paymentcontract.GatewayCreateResult, error) {
+func (a *epusdtAdapter) CreatePayment(ctx context.Context, raw jsonmap.JSON, input paymentcontract.GatewayCreateInput) (out *paymentcontract.GatewayCreateResult, err error) {
+	ctx, classify := gatewaycommon.TrackCreation(ctx)
+	defer func() { err = classify(err) }()
 	cfg, err := a.parseConfig(raw)
 	if err != nil {
 		return nil, err

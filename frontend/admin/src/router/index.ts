@@ -325,7 +325,7 @@ const routes = [
         path: 'telegram-bot',
         name: 'telegram-bot',
         component: () => import('@/views/admin/TelegramBot.vue'),
-        meta: { permission: 'GET:/admin/settings/telegram-bot' },
+        meta: { permission: 'GET:/admin/telegram-bot/instances' },
       },
       {
         path: 'telegram-bot/settings',
@@ -349,7 +349,7 @@ const routes = [
         path: 'telegram-bot/status',
         name: 'telegram-bot-status',
         component: () => import('@/views/admin/TelegramBotStatus.vue'),
-        meta: { permission: 'GET:/admin/settings/telegram-bot' },
+        meta: { permission: 'GET:/admin/telegram-bot/instances' },
       },
       {
         path: 'telegram-bot/channel-clients',
@@ -367,13 +367,13 @@ const routes = [
         path: 'telegram-bot/broadcasts/create',
         name: 'telegram-bot-broadcast-create',
         component: () => import('@/views/admin/TelegramBotBroadcastCreate.vue'),
-        meta: { permission: 'GET:/admin/telegram-bot/broadcasts' },
+        meta: { permission: 'POST:/admin/telegram-bot/broadcasts' },
       },
       {
         path: 'telegram-bot/broadcasts/:id',
         name: 'telegram-bot-broadcast-detail',
         component: () => import('@/views/admin/TelegramBotBroadcastDetail.vue'),
-        meta: { permission: 'GET:/admin/telegram-bot/broadcasts' },
+        meta: { permission: 'GET:/admin/telegram-bot/broadcasts/:id' },
       },
     ],
   },

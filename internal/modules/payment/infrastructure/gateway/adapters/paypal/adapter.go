@@ -60,7 +60,9 @@ func (a *paypalAdapter) ValidateConfig(raw jsonmap.JSON, _ string) error {
 }
 
 // CreatePayment 创建支付。
-func (a *paypalAdapter) CreatePayment(ctx context.Context, raw jsonmap.JSON, input paymentcontract.GatewayCreateInput) (*paymentcontract.GatewayCreateResult, error) {
+func (a *paypalAdapter) CreatePayment(ctx context.Context, raw jsonmap.JSON, input paymentcontract.GatewayCreateInput) (out *paymentcontract.GatewayCreateResult, err error) {
+	ctx, classify := gatewaycommon.TrackCreation(ctx)
+	defer func() { err = classify(err) }()
 	cfg, err := a.parseConfig(raw)
 	if err != nil {
 		return nil, err

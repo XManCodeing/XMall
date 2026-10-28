@@ -1,6 +1,7 @@
 package gormstore
 
 import (
+	"context"
 	"errors"
 	"time"
 
@@ -21,6 +22,13 @@ var _ siteconnectioncontract.Repository = (*Store)(nil)
 // New 创建连接仓库。
 func New(db *gorm.DB) *Store {
 	return &Store{db: db}
+}
+
+func (s *Store) WithContext(ctx context.Context) (siteconnectioncontract.Repository, error) {
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+	return &Store{db: s.db.WithContext(ctx)}, nil
 }
 
 // GetByID 根据 ID 获取

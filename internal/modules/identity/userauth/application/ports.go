@@ -7,6 +7,7 @@ import (
 	externalidentitydomain "github.com/XManCodeing/XMall/internal/modules/identity/externalidentity/domain"
 	googleauthapp "github.com/XManCodeing/XMall/internal/modules/identity/googleauth/application"
 	userdomain "github.com/XManCodeing/XMall/internal/modules/identity/user/domain"
+	userauthdomain "github.com/XManCodeing/XMall/internal/modules/identity/userauth/domain"
 	"github.com/XManCodeing/XMall/internal/shared/mailbrand"
 )
 
@@ -32,6 +33,9 @@ type AuthTransaction interface {
 	CreateIdentity(identity *externalidentitydomain.Identity) error
 	UpdateIdentity(identity *externalidentitydomain.Identity) error
 	DeleteIdentityByID(identityID uint) error
+	CreateTelegramHistoryGrant(grant *userauthdomain.TelegramHistoryGrant) error
+	ListTelegramHistoryGrants(botID uint, telegramUserID string, currentUserID, identityID uint) ([]userauthdomain.TelegramHistoryGrant, error)
+	RevokeTelegramHistoryGrants(identityID uint, now time.Time) error
 }
 
 // AuthUnitOfWork provides the atomic boundary shared by users and external

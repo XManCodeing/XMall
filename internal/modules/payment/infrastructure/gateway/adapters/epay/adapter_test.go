@@ -15,6 +15,7 @@ import (
 	"net/url"
 	"sort"
 	"strings"
+	"sync/atomic"
 	"testing"
 
 	paymentcontract "github.com/XManCodeing/XMall/internal/modules/payment/contract"
@@ -26,6 +27,47 @@ import (
 
 	"github.com/shopspring/decimal"
 )
+
+func TestEpayCreationDispatchBoundary(t *testing.T) {
+	for _, scenario := range []string{"request-build", "http-error", "invalid-response", "transport-after-send"} {
+		t.Run(scenario, func(t *testing.T) {
+			var calls atomic.Int32
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				calls.Add(1)
+				switch scenario {
+				case "http-error":
+					w.WriteHeader(http.StatusInternalServerError)
+				case "invalid-response":
+					_, _ = w.Write([]byte(`not-json`))
+				case "transport-after-send":
+					conn, _, err := w.(http.Hijacker).Hijack()
+					if err != nil {
+						t.Error(err)
+						return
+					}
+					_ = conn.Close()
+				}
+			}))
+			defer server.Close()
+			endpoint := server.URL
+			if scenario == "request-build" {
+				endpoint = "http://[::1"
+			}
+			_, err := NewEpayAdapter().CreatePayment(context.Background(), jsonmap.JSON{
+				"gateway_url": endpoint, "epay_version": "v1", "merchant_id": "test", "merchant_key": "test", "notify_url": "https://example.com/notify", "return_url": "https://example.com/pay", "sign_type": "MD5",
+			}, paymentcontract.GatewayCreateInput{OrderNo: "BOUNDARY", ClientIP: "127.0.0.1", Subject: "test", Currency: "CNY", Amount: money.FromDecimal(decimal.NewFromInt(10)), ChannelType: "alipay", Extra: jsonmap.JSON{"interaction_mode": "qr"}})
+			if err == nil {
+				t.Fatal("expected failure")
+			}
+			if got := errors.Is(err, paymentcontract.ErrGatewayNotSubmitted); got != (scenario == "request-build") {
+				t.Fatalf("incorrect classification: %v", err)
+			}
+			if scenario == "request-build" && calls.Load() != 0 || scenario != "request-build" && calls.Load() != 1 {
+				t.Fatalf("requests=%d", calls.Load())
+			}
+		})
+	}
+}
 
 func TestEpayAdapter_Type(t *testing.T) {
 	a := NewEpayAdapter()

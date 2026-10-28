@@ -146,6 +146,27 @@ func telegramProviderUserIDMatchesVerified(providerUserID string, verified *tele
 	return false
 }
 
+// updateTelegramIdentity prevents stale login/profile refreshes from restoring
+// an identity deleted or moved by a concurrent unbind/transfer.
+func (s *Service) updateTelegramIdentity(identity *externalidentitydomain.Identity) error {
+	if s.authUnitOfWork == nil {
+		return telegramauthapp.ErrTelegramAuthConfigInvalid
+	}
+	return s.authUnitOfWork.WithinTransaction(context.Background(), func(tx AuthTransaction) error {
+		if _, err := activeTransactionUser(tx, identity.UserID); err != nil {
+			return err
+		}
+		current, err := tx.GetIdentityByUserProvider(identity.UserID, identity.Provider)
+		if err != nil {
+			return err
+		}
+		if current == nil || current.ID != identity.ID {
+			return ErrUserOAuthNotBound
+		}
+		return tx.UpdateIdentity(identity)
+	})
+}
+
 func applyTelegramIdentity(verified *telegramauthapp.IdentityVerified, identity *externalidentitydomain.Identity) bool {
 	if verified == nil || identity == nil {
 		return false

@@ -21,8 +21,9 @@ const {
   moveHelpItem,
   removeHelpItem,
   saveConfig,
+  canSave, error, loaded,
   saving,
-} = useTelegramBotSettings()
+} = useTelegramBotSettings(['help'])
 
 onMounted(() => {
   fetchConfig()
@@ -31,6 +32,7 @@ onMounted(() => {
 
 <template>
   <div class="space-y-6">
+    <p v-if="error" role="alert" class="text-sm text-destructive">{{ error }} <Button variant="link" @click="fetchConfig">{{ t('telegramBot.instances.reload') }}</Button></p>
     <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
       <div>
         <h2 class="text-2xl font-bold tracking-tight">{{ t('telegramBot.settings.helpTitle') }}</h2>
@@ -48,7 +50,7 @@ onMounted(() => {
             {{ lang.name }}
           </button>
         </div>
-        <Button class="w-full sm:w-auto" :disabled="saving || loading" @click="saveConfig">
+        <Button class="w-full sm:w-auto" :disabled="saving || loading || !loaded || !canSave" @click="saveConfig">
           <Loader2 v-if="saving" class="mr-2 h-4 w-4 animate-spin" />
           <Save v-else class="mr-2 h-4 w-4" />
           {{ t('telegramBot.settings.save') }}

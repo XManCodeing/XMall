@@ -2,8 +2,6 @@ package telegrambroadcast
 
 import (
 	"context"
-	"errors"
-
 	channelclientapp "github.com/XManCodeing/XMall/internal/modules/channelclient/application"
 	externalidentitycontract "github.com/XManCodeing/XMall/internal/modules/identity/externalidentity/contract"
 	broadcastapp "github.com/XManCodeing/XMall/internal/modules/telegram/broadcast/application"
@@ -48,17 +46,7 @@ func NewBotTokenResolver(service *channelclientapp.Service) BotTokenResolver {
 }
 
 func (resolver BotTokenResolver) ResolveActiveBotToken() (string, error) {
-	if resolver.service == nil {
-		return "", broadcastapp.ErrTokenUnavailable
-	}
-	token, err := resolver.service.ResolveBotTokenByType("telegram_bot")
-	if err != nil {
-		if errors.Is(err, channelclientapp.ErrNotFound) {
-			return "", broadcastapp.ErrTokenUnavailable
-		}
-		return "", err
-	}
-	return token, nil
+	return "", broadcastapp.ErrTokenUnavailable
 }
 
 type Dispatcher struct {

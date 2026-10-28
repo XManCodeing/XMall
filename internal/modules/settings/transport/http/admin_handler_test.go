@@ -11,8 +11,28 @@ import (
 
 	"github.com/XManCodeing/XMall/internal/constants"
 	settingsapp "github.com/XManCodeing/XMall/internal/modules/settings/application"
+	settingsmessaging "github.com/XManCodeing/XMall/internal/modules/settings/schema/messaging"
 	"github.com/XManCodeing/XMall/internal/shared/jsonmap"
 )
+
+type unsupportedMenuStub struct{ TelegramBotAdminService }
+
+func (unsupportedMenuStub) PatchTelegramBotConfigSection(string, int, json.RawMessage) (settingsmessaging.TelegramBotConfigSetting, error) {
+	return settingsmessaging.TelegramBotConfigSetting{}, settingsapp.ErrTelegramBotMenuUnsupported
+}
+
+func TestTelegramMenuUnsupportedReturnsExplicitBadRequest(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	recorder := httptest.NewRecorder()
+	ctx, _ := gin.CreateTestContext(recorder)
+	ctx.Params = gin.Params{{Key: "section", Value: "menu"}}
+	ctx.Request = httptest.NewRequest(http.MethodPatch, "/admin/settings/telegram-bot/menu", strings.NewReader(`{"expected_version":0,"data":{"items":[]}}`))
+	ctx.Request.Header.Set("Content-Type", "application/json")
+	NewTelegramBotHandler(unsupportedMenuStub{}).PatchTelegramBotConfigSection(ctx)
+	if recorder.Code != http.StatusBadRequest || !strings.Contains(recorder.Body.String(), "support only builtin") {
+		t.Fatalf("expected actionable 400: %d %s", recorder.Code, recorder.Body.String())
+	}
+}
 
 type adminSettingsStub struct {
 	updateCalls int

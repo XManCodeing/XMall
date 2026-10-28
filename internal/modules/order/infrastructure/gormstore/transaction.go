@@ -1,6 +1,8 @@
 package gormstore
 
 import (
+	delivery "github.com/XManCodeing/XMall/internal/modules/telegram/delivery/contract"
+	deliverygorm "github.com/XManCodeing/XMall/internal/modules/telegram/delivery/infrastructure/gormstore"
 	"strings"
 	"time"
 
@@ -30,6 +32,7 @@ import (
 type transaction struct {
 	db                    *gorm.DB
 	guestCredentialSecret []byte
+	businessEventsEnabled bool
 }
 
 var _ ordercontract.Transaction = transaction{}
@@ -55,7 +58,7 @@ func useTransaction(tx *gorm.DB, guestCredentialSecret []byte) ordercontract.Tra
 }
 
 func (tx transaction) Orders() ordercontract.Store {
-	return &Store{db: tx.db, guestCredentialSecret: tx.guestCredentialSecret}
+	return &Store{db: tx.db, guestCredentialSecret: tx.guestCredentialSecret, businessEventsEnabled: tx.businessEventsEnabled}
 }
 
 func (tx transaction) Products() productcontract.Repository {
@@ -112,11 +115,40 @@ func (tx transaction) ExpirePendingPaymentsByOrderIDs(orderIDs []uint, expiredAt
 	return result.RowsAffected, result.Error
 }
 
+// EnableBusinessEvents is a construction-time switch after migrating the Telegram tables.
+func (s *Store) EnableBusinessEvents() *Store { s.businessEventsEnabled = true; return s }
+func (s *Store) BusinessEvents() delivery.BusinessStore {
+	if !s.businessEventsEnabled {
+		return nil
+	}
+	return deliverygorm.NewBusinessStore(s.db)
+}
+func (s *Store) ResolveCurrentOrderSource(orderID uint) (*delivery.OrderSource, error) {
+	if !s.businessEventsEnabled || orderID == 0 {
+		return nil, nil
+	}
+	order, err := s.GetByIDForUpdate(orderID)
+	if err != nil || order == nil || order.UserID == 0 {
+		return nil, err
+	}
+	source, err := deliverygorm.NewBusinessStore(s.db).ResolveCurrentSource(order.UserID, 0)
+	if err != nil || source == nil {
+		return nil, err
+	}
+	return &delivery.OrderSource{OrderID: order.ID, UserID: order.UserID, BotID: source.BotID, TelegramID: source.TelegramID, PrivateChatID: source.PrivateChatID}, nil
+}
+
+func UseTransactionWithBusinessEvents(db *gorm.DB, secret string) ordercontract.Transaction {
+	tx := UseTransaction(db, secret).(transaction)
+	tx.businessEventsEnabled = true
+	return tx
+}
+
 func (s *Store) WithinTransaction(fn func(ordercontract.Transaction) error) error {
 	if fn == nil {
 		return nil
 	}
 	return s.db.Transaction(func(tx *gorm.DB) error {
-		return fn(useTransaction(tx, s.guestCredentialSecret))
+		return fn(transaction{db: tx, guestCredentialSecret: s.guestCredentialSecret, businessEventsEnabled: s.businessEventsEnabled})
 	})
 }

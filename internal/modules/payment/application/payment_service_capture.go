@@ -2,9 +2,16 @@ package application
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
+	orderapp "github.com/XManCodeing/XMall/internal/modules/order/application"
+	ordercontract "github.com/XManCodeing/XMall/internal/modules/order/contract"
+	procurementcontract "github.com/XManCodeing/XMall/internal/modules/procurement/contract"
 	"strings"
+	"time"
 
 	paymentcontract "github.com/XManCodeing/XMall/internal/modules/payment/contract"
 
@@ -14,6 +21,120 @@ import (
 	"github.com/XManCodeing/XMall/internal/logger"
 	"github.com/XManCodeing/XMall/internal/shared/jsonmap"
 )
+
+func paymentOperationHash(input CreatePaymentInput) string {
+	raw, _ := json.Marshal(struct {
+		ChannelID                       uint
+		UseBalance                      bool
+		ReturnBizType, ReturnBusinessNo string
+		ReturnGuest                     bool
+	}{input.ChannelID, input.UseBalance, input.ReturnBizType, input.ReturnBusinessNo, input.ReturnGuest})
+	sum := sha256.Sum256(raw)
+	return hex.EncodeToString(sum[:])
+}
+
+// RecoverPaidFulfillment repairs the commit/enqueue crash window. limit is the
+// page size; keyset traversal prevents failing rows starving later orders.
+// Run once per reconciliation interval, not once per Bot.
+func (s *PaymentService) RecoverPaidFulfillment(ctx context.Context, limit int) (int, error) {
+	ctx, cancel := context.WithTimeout(ctx, 2*time.Minute)
+	defer cancel()
+	scanner, ok := s.orderRepo.(ordercontract.FulfillmentRecoveryStore)
+	if !ok {
+		return 0, errors.New("fulfillment recovery store unavailable")
+	}
+	if limit <= 0 || limit > 500 {
+		limit = 100
+	}
+	var after uint
+	recovered := 0
+	var firstErr error
+	before := time.Now().Add(-time.Minute)
+	for {
+		if err := ctx.Err(); err != nil {
+			return recovered, err
+		}
+		ids, err := scanner.ListPaidWithoutFulfillment(ctx, after, before, limit)
+		if err != nil {
+			return recovered, err
+		}
+		for _, id := range ids {
+			if err := ctx.Err(); err != nil {
+				return recovered, err
+			}
+			if id <= after {
+				return recovered, errors.New("fulfillment recovery cursor did not advance")
+			}
+			after = id
+			order, err := scanner.GetByIDContext(ctx, id)
+			if err != nil {
+				if firstErr == nil {
+					firstErr = err
+				}
+				continue
+			}
+			if order == nil || order.Fulfillment != nil || (order.Status != constants.OrderStatusPaid && order.Status != constants.OrderStatusFulfilling) {
+				continue
+			}
+			if shouldAutoFulfill(order) {
+				if s.queue == nil || !s.queue.Enabled() {
+					if firstErr == nil {
+						firstErr = orderapp.ErrQueueUnavailable
+					}
+					continue
+				}
+				queue, ok := s.queue.(interface {
+					EnqueueOrderAutoFulfillContext(context.Context, uint) error
+				})
+				if !ok {
+					return recovered, errors.New("context-aware fulfillment queue unavailable")
+				}
+				if err := ctx.Err(); err != nil {
+					return recovered, err
+				}
+				if err := queue.EnqueueOrderAutoFulfillContext(ctx, id); err != nil {
+					if firstErr == nil {
+						firstErr = err
+					}
+				} else {
+					recovered++
+				}
+				continue
+			}
+			upstream := false
+			for _, item := range order.Items {
+				if item.FulfillmentType == constants.FulfillmentTypeUpstream {
+					upstream = true
+				}
+			}
+			if upstream && s.procurementSvc != nil {
+				creator, ok := s.procurementSvc.(interface {
+					CreateForOrderContext(context.Context, uint) error
+				})
+				if !ok {
+					return recovered, errors.New("context-aware procurement unavailable")
+				}
+				if err := ctx.Err(); err != nil {
+					return recovered, err
+				}
+				err := creator.CreateForOrderContext(ctx, id)
+				if err != nil && !errors.Is(err, procurementcontract.ErrExists) {
+					if firstErr == nil {
+						firstErr = err
+					}
+				} else {
+					recovered++
+				}
+			}
+		}
+		if err := ctx.Err(); err != nil {
+			return recovered, err
+		}
+		if len(ids) < limit {
+			return recovered, firstErr
+		}
+	}
+}
 
 // CapturePaymentInput 捕获支付输入。
 type CapturePaymentInput struct {

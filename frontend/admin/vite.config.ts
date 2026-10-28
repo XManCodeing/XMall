@@ -30,6 +30,8 @@ const isFullstack = process.env.VITE_FULLSTACK === '1'
 
 // https://vite.dev/config/
 export default defineConfig({
+  // Isolated verification must never read local environment files.
+  envDir: process.env.XMALL_SKIP_ENV_FILES === '1' ? false : undefined,
   base: isFullstack ? './' : '/',
   plugins: [
     vue(),

@@ -10,6 +10,7 @@ import (
 	invitecodestore "github.com/XManCodeing/XMall/internal/modules/identity/invitecode/infrastructure/gormstore"
 	userdomain "github.com/XManCodeing/XMall/internal/modules/identity/user/domain"
 	userauthapp "github.com/XManCodeing/XMall/internal/modules/identity/userauth/application"
+	userauthdomain "github.com/XManCodeing/XMall/internal/modules/identity/userauth/domain"
 
 	"github.com/go-sql-driver/mysql"
 	"github.com/jackc/pgx/v5/pgconn"
@@ -201,7 +202,15 @@ func (t *transaction) UpdateIdentity(identity *externalidentitydomain.Identity) 
 	if identity == nil || identity.ID == 0 {
 		return nil
 	}
-	return t.db.Save(identity).Error
+	result := t.db.Model(&externalidentitydomain.Identity{}).Where("id = ?", identity.ID).
+		Select("*").Omit("id").Updates(identity)
+	if result.Error != nil {
+		return result.Error
+	}
+	if result.RowsAffected != 1 {
+		return userauthapp.ErrUserOAuthNotBound
+	}
+	return nil
 }
 
 func (t *transaction) DeleteIdentityByID(identityID uint) error {
@@ -209,6 +218,55 @@ func (t *transaction) DeleteIdentityByID(identityID uint) error {
 		return nil
 	}
 	return t.db.Delete(&externalidentitydomain.Identity{}, identityID).Error
+}
+
+func (t *transaction) CreateTelegramHistoryGrant(grant *userauthdomain.TelegramHistoryGrant) error {
+	return t.db.Create(grant).Error
+}
+
+func (t *transaction) ListTelegramHistoryGrants(botID uint, telegramUserID string, currentUserID, identityID uint) ([]userauthdomain.TelegramHistoryGrant, error) {
+	var grants []userauthdomain.TelegramHistoryGrant
+	err := t.db.Where("bot_id = ? AND telegram_user_id = ? AND current_user_id = ? AND identity_id = ? AND status = ?", botID, telegramUserID, currentUserID, identityID, userauthdomain.TelegramHistoryActive).Order("id ASC").Find(&grants).Error
+	return grants, err
+}
+
+func (t *transaction) RevokeTelegramHistoryGrants(identityID uint, now time.Time) error {
+	return t.db.Model(&userauthdomain.TelegramHistoryGrant{}).
+		Where("identity_id = ? AND status = ?", identityID, userauthdomain.TelegramHistoryActive).
+		Updates(map[string]interface{}{"status": userauthdomain.TelegramHistoryRevoked, "revoked_at": now, "updated_at": now}).Error
+}
+
+// ValidateTelegramIdentityStampInTransaction uses the caller's transaction;
+// bootstrap can inject it into an order transaction port without opening a
+// nested connection. The caller must keep this transaction until the mutation
+// commits. User then identity row locks serialize disable/unbind/rebind on
+// PostgreSQL; SQLite write conflicts fail closed and require a whole-tx retry.
+func ValidateTelegramIdentityStampInTransaction(ctx context.Context, db *gorm.DB, stamp userauthapp.TelegramIdentityStamp) error {
+	if db == nil || stamp.BotID == 0 || stamp.UserID == 0 || stamp.IdentityID == 0 || strings.TrimSpace(stamp.TelegramUserID) == "" {
+		return userauthapp.ErrUserOAuthNotBound
+	}
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	t := &transaction{db: db.WithContext(ctx)}
+	user, err := t.GetUserByIDForUpdate(stamp.UserID)
+	if err != nil {
+		return err
+	}
+	if user == nil {
+		return userauthapp.ErrNotFound
+	}
+	if strings.ToLower(strings.TrimSpace(user.Status)) != "active" {
+		return userauthapp.ErrUserDisabled
+	}
+	identity, err := t.GetIdentityByProviderUserID("telegram", stamp.TelegramUserID)
+	if err != nil {
+		return err
+	}
+	if identity == nil || identity.ID != stamp.IdentityID || identity.UserID != stamp.UserID {
+		return userauthapp.ErrUserOAuthNotBound
+	}
+	return nil
 }
 
 var _ userauthapp.AuthUnitOfWork = (*UnitOfWork)(nil)

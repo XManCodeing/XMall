@@ -75,6 +75,31 @@ func TestServiceAssemblyDeclaresDependencyOrder(t *testing.T) {
 	}
 }
 
+func TestTelegramTransactionalDeliveryIsWired(t *testing.T) {
+	directory := currentContainerDirectory(t)
+	for file, required := range map[string][]string{
+		"repositories.go": {
+			"ordergormstore.New(db, c.Config.App.SecretKey).EnableBusinessEvents()",
+			"paymentgormstore.New(db, c.Config.App.SecretKey).EnableBusinessEvents()",
+		},
+		"services_integration.go": {
+			"NewLifecycle(c.QueueClient, c.SettingService, c.Config.Email).EnableBusinessEvents()",
+		},
+		"telegram_bot.go": {
+			"broadcastapp.NewRuntimeService(",
+			"c.TelegramBroadcastService.Reconcile(ctx)",
+			"dispatcher.Reconcile(ctx, botID)",
+		},
+	} {
+		source := readContainerSource(t, filepath.Join(directory, file))
+		for _, text := range required {
+			if !strings.Contains(source, text) {
+				t.Errorf("%s missing transactional Telegram wiring: %s", file, text)
+			}
+		}
+	}
+}
+
 func currentContainerDirectory(t *testing.T) string {
 	t.Helper()
 	_, filename, _, ok := runtime.Caller(0)

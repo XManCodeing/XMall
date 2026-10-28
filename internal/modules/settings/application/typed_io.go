@@ -1,7 +1,12 @@
 package settingsapp
 
 import (
+	"encoding/json"
+	"errors"
+	"strings"
 	"time"
+
+	"github.com/XManCodeing/XMall/internal/shared/jsonmap"
 
 	"github.com/XManCodeing/XMall/internal/config"
 	"github.com/XManCodeing/XMall/internal/constants"
@@ -306,20 +311,29 @@ func (s *Service) GetTelegramBotConfig() (settingsmessaging.TelegramBotConfigSet
 		return fallback, err
 	}
 	if value == nil {
+		fallback.Menu.Items = supportedBotMenus(fallback.Menu.Items)
 		return fallback, nil
 	}
 	parsed := settingsmessaging.DecodeTelegramBotConfig(value, fallback)
-	parsed.Menu.Items = settingsmessaging.EnsureBuiltinMenuItems(parsed.Menu.Items)
+	parsed.Menu.Items = supportedBotMenus(settingsmessaging.EnsureBuiltinMenuItems(parsed.Menu.Items))
 	return parsed, nil
 }
 
 // UpdateTelegramBotConfig 整对象覆盖更新 Telegram Bot 配置，自动递增 config_version。
 func (s *Service) UpdateTelegramBotConfig(cfg settingsmessaging.TelegramBotConfigSetting) (settingsmessaging.TelegramBotConfigSetting, error) {
+	return s.updateTelegramBotConfig(cfg, true)
+}
+
+func (s *Service) updateTelegramBotConfig(cfg settingsmessaging.TelegramBotConfigSetting, normalizeMenu bool) (settingsmessaging.TelegramBotConfigSetting, error) {
 	current, err := s.GetTelegramBotConfig()
 	if err != nil {
 		return settingsmessaging.TelegramBotConfigSetting{}, err
 	}
 
+	if cfg.ConfigVersion != current.ConfigVersion {
+		return settingsmessaging.TelegramBotConfigSetting{}, ErrTelegramBotConfigConflict
+	}
+	cfg.Enabled = false // Runtime is controlled exclusively by managed instances.
 	cfg.ConfigVersion = current.ConfigVersion + 1
 	cfg.Basic.Description = settingsmessaging.NormalizeLocalizedText(cfg.Basic.Description)
 	cfg.Welcome.Message = settingsmessaging.NormalizeLocalizedText(cfg.Welcome.Message)
@@ -328,17 +342,108 @@ func (s *Service) UpdateTelegramBotConfig(cfg settingsmessaging.TelegramBotConfi
 	cfg.Help.CenterHint = settingsmessaging.NormalizeLocalizedText(cfg.Help.CenterHint)
 	cfg.Help.SupportHint = settingsmessaging.NormalizeLocalizedText(cfg.Help.SupportHint)
 	cfg.Help.Items = settingsmessaging.NormalizeHelpItems(cfg.Help.Items)
-	cfg.Menu.Items = settingsmessaging.NormalizeTelegramBotMenuItems(cfg.Menu.Items)
-
-	if _, err := s.Update(constants.SettingKeyTelegramBotConfig, settingsmessaging.EncodeTelegramBotConfig(cfg)); err != nil {
-		return settingsmessaging.TelegramBotConfigSetting{}, err
+	if normalizeMenu {
+		cfg.Menu.Items = supportedBotMenus(settingsmessaging.NormalizeTelegramBotMenuItems(cfg.Menu.Items))
 	}
 
-	runtimeStatus, _ := s.GetTelegramBotRuntimeStatus()
-	runtimeStatus.ConfigVersion = cfg.ConfigVersion
-	_ = s.UpdateTelegramBotRuntimeStatus(runtimeStatus)
+	store, ok := s.repo.(interface {
+		CompareAndSwapTelegramBotConfig(string, int, jsonmap.JSON) (bool, error)
+	})
+	if !ok {
+		return settingsmessaging.TelegramBotConfigSetting{}, errors.New("settings store does not support CAS")
+	}
+	value := s.registry.Normalize(constants.SettingKeyTelegramBotConfig, settingsmessaging.EncodeTelegramBotConfig(cfg))
+	value["menu"] = settingsmessaging.EncodeTelegramBotConfig(cfg)["menu"]
+	if err := s.registry.Validate(constants.SettingKeyTelegramBotConfig, value); err != nil {
+		return settingsmessaging.TelegramBotConfigSetting{}, err
+	}
+	updated, err := store.CompareAndSwapTelegramBotConfig(constants.SettingKeyTelegramBotConfig, current.ConfigVersion, value)
+	if err != nil {
+		return settingsmessaging.TelegramBotConfigSetting{}, err
+	}
+	if !updated {
+		return settingsmessaging.TelegramBotConfigSetting{}, ErrTelegramBotConfigConflict
+	}
 
 	return cfg, nil
+}
+
+func supportedBotMenus(items []settingsmessaging.TelegramBotMenuItem) []settingsmessaging.TelegramBotMenuItem {
+	result := make([]settingsmessaging.TelegramBotMenuItem, 0, len(items))
+	seen := map[string]bool{}
+	for _, item := range items {
+		if item.Action.Type == "builtin" {
+			if item.Action.Value == "" {
+				item.Action.Value = item.Key
+			}
+			aliases := map[string]string{"shop_home": "shop", "my_orders": "orders", "my_wallet": "wallet", "switch_language": "language", "contact_support": "help"}
+			if value, ok := aliases[item.Action.Value]; ok {
+				item.Action.Value = value
+			}
+			if value, ok := aliases[item.Key]; ok {
+				item.Key = value
+			}
+			if seen[item.Action.Value] {
+				continue
+			}
+			seen[item.Action.Value] = true
+		}
+		result = append(result, item)
+	}
+	return result
+}
+
+var ErrTelegramBotConfigConflict = errors.New("telegram bot configuration version conflict")
+var ErrTelegramBotSection = errors.New("invalid telegram bot configuration section")
+var ErrTelegramBotMenuUnsupported = errors.New("internal bot menus support only builtin (shop, orders, wallet, language, help) and url actions")
+
+// PatchTelegramBotConfigSection merges only the selected section; CAS prevents stale writes.
+func (s *Service) PatchTelegramBotConfigSection(section string, expected int, raw json.RawMessage) (settingsmessaging.TelegramBotConfigSetting, error) {
+	current, err := s.GetTelegramBotConfig()
+	if err != nil {
+		return current, err
+	}
+	if current.ConfigVersion != expected {
+		return current, ErrTelegramBotConfigConflict
+	}
+	switch section {
+	case "basic":
+		var data struct {
+			Basic         settingsmessaging.TelegramBotBasicConfig `json:"basic"`
+			DefaultLocale string                                   `json:"default_locale"`
+		}
+		if err = json.Unmarshal(raw, &data); err == nil {
+			current.Basic = data.Basic
+			current.DefaultLocale = data.DefaultLocale
+		}
+	case "welcome":
+		err = json.Unmarshal(raw, &current.Welcome)
+	case "help":
+		err = json.Unmarshal(raw, &current.Help)
+	case "menu":
+		err = json.Unmarshal(raw, &current.Menu)
+		// This admin section configures the internal runtime. The shared schema and
+		// channel serialization still retain external runners' action types.
+		for _, item := range current.Menu.Items {
+			switch strings.TrimSpace(item.Action.Type) {
+			case "url":
+			case "builtin":
+				switch strings.TrimSpace(item.Action.Value) {
+				case "shop", "orders", "wallet", "language", "help":
+				default:
+					return current, ErrTelegramBotMenuUnsupported
+				}
+			default:
+				return current, ErrTelegramBotMenuUnsupported
+			}
+		}
+	default:
+		return current, ErrTelegramBotSection
+	}
+	if err != nil {
+		return current, ErrTelegramBotSection
+	}
+	return s.updateTelegramBotConfig(current, section == "menu")
 }
 
 // GetTelegramBotRuntimeStatus 获取 Telegram Bot 运行时状态。

@@ -57,7 +57,9 @@ func (a *tokenpayAdapter) ValidateConfig(raw jsonmap.JSON, _ string) error {
 }
 
 // CreatePayment 创建支付。tokenpay 单 channel type，不需要 IsSupportedChannelType 校验。
-func (a *tokenpayAdapter) CreatePayment(ctx context.Context, raw jsonmap.JSON, input paymentcontract.GatewayCreateInput) (*paymentcontract.GatewayCreateResult, error) {
+func (a *tokenpayAdapter) CreatePayment(ctx context.Context, raw jsonmap.JSON, input paymentcontract.GatewayCreateInput) (out *paymentcontract.GatewayCreateResult, err error) {
+	ctx, classify := gatewaycommon.TrackCreation(ctx)
+	defer func() { err = classify(err) }()
 	cfg, err := a.parseConfig(raw)
 	if err != nil {
 		return nil, err

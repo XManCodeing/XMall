@@ -39,6 +39,9 @@ func BuildRunner(cfg *config.Config, mode string) (*Runner, error) {
 			return nil, err
 		}
 		services = append(services, workerService)
+		if dependencies.TelegramBotRuntime != nil {
+			services = append(services, dependencies.TelegramBotRuntime)
+		}
 	}
 
 	// 如果没有服务被启动（例如模式错误或配置导致都没起），应该报错或至少打日志
@@ -49,6 +52,9 @@ func BuildRunner(cfg *config.Config, mode string) (*Runner, error) {
 	runner := NewRunner(services...)
 	if dependencies.QueueClient != nil {
 		runner.cleanup = append(runner.cleanup, dependencies.QueueClient.Close)
+	}
+	if dependencies.TelegramBotLeaseClient != nil {
+		runner.cleanup = append(runner.cleanup, dependencies.TelegramBotLeaseClient.Close)
 	}
 	return runner, nil
 }

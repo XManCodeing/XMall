@@ -1,6 +1,7 @@
 package gormstore
 
 import (
+	"context"
 	"errors"
 	"time"
 
@@ -21,6 +22,13 @@ type Store struct {
 var _ procurementcontract.Repository = (*Store)(nil)
 
 func New(db *gorm.DB) *Store { return &Store{db: db} }
+
+func (s *Store) WithContext(ctx context.Context) (procurementcontract.Repository, error) {
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+	return &Store{db: s.db.WithContext(ctx)}, nil
+}
 
 func (s *Store) GetByID(id uint) (*procurementdomain.Order, error) {
 	var order procurementdomain.Order

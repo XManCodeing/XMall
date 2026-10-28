@@ -2,6 +2,7 @@ package application
 
 import (
 	"context"
+	delivery "github.com/XManCodeing/XMall/internal/modules/telegram/delivery/contract"
 	"strings"
 	"time"
 
@@ -24,6 +25,7 @@ import (
 
 // CreateWalletRechargePaymentInput 创建钱包充值支付请求
 type CreateWalletRechargePaymentInput struct {
+	Source        *delivery.Source
 	UserID        uint
 	ChannelID     uint
 	Amount        money.Amount
@@ -42,6 +44,11 @@ type CreateWalletRechargePaymentResult struct {
 
 // CreateWalletRechargePayment 创建钱包充值支付单
 func (s *PaymentService) CreateWalletRechargePayment(input CreateWalletRechargePaymentInput) (*CreateWalletRechargePaymentResult, error) {
+	if input.Source != nil {
+		if err := input.Source.Validate(); err != nil {
+			return nil, err
+		}
+	}
 	if input.UserID == 0 || input.ChannelID == 0 {
 		return nil, ErrPaymentInvalid
 	}
@@ -128,6 +135,14 @@ func (s *PaymentService) CreateWalletRechargePayment(input CreateWalletRechargeP
 			Status:          constants.PaymentStatusInitiated,
 			CreatedAt:       now,
 			UpdatedAt:       now,
+		}
+		if input.Source != nil {
+			if delivery.From(tx.Orders()) == nil {
+				return ErrPaymentCreateFailed
+			}
+			payment.SourceBotID = input.Source.BotID
+			payment.SourceTelegramID = input.Source.TelegramID
+			payment.SourcePrivateChatID = input.Source.PrivateChatID
 		}
 		if err := paymentRepo.Create(payment); err != nil {
 			return ErrPaymentCreateFailed

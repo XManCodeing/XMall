@@ -10,6 +10,7 @@ import (
 	paymentcontract "github.com/XManCodeing/XMall/internal/modules/payment/contract"
 
 	"github.com/XManCodeing/XMall/internal/constants"
+	gatewaycommon "github.com/XManCodeing/XMall/internal/modules/payment/infrastructure/gateway/common"
 	"github.com/XManCodeing/XMall/internal/modules/payment/infrastructure/gateway/wechatpay"
 	"github.com/XManCodeing/XMall/internal/shared/jsonmap"
 	"github.com/XManCodeing/XMall/internal/shared/money"
@@ -96,7 +97,9 @@ func (a *wechatpayAdapter) ValidateConfig(raw jsonmap.JSON, interactionMode stri
 }
 
 // CreatePayment 创建支付。
-func (a *wechatpayAdapter) CreatePayment(ctx context.Context, raw jsonmap.JSON, input paymentcontract.GatewayCreateInput) (*paymentcontract.GatewayCreateResult, error) {
+func (a *wechatpayAdapter) CreatePayment(ctx context.Context, raw jsonmap.JSON, input paymentcontract.GatewayCreateInput) (out *paymentcontract.GatewayCreateResult, err error) {
+	ctx, classify := gatewaycommon.TrackCreation(ctx)
+	defer func() { err = classify(err) }()
 	// 从 input.Extra 取 interaction_mode（jsapi/native/h5）
 	interactionMode, _ := input.Extra["interaction_mode"].(string)
 	cfg, err := a.parseConfig(raw, interactionMode)

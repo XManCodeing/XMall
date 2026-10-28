@@ -26,7 +26,7 @@ func TestTelegramBroadcastHTTPLivesInTransport(t *testing.T) {
 	assertFileDeclaresFunctions(t, filepath.Join(channelBotTransportRoot, "routes.go"), []string{
 		"RegisterChannelBotRoutes",
 	})
-	assertFileDeclaresFunctions(t, filepath.Join(broadcastTransportRoot, "routes.go"), []string{
+	assertFileDeclaresFunctions(t, filepath.Join(broadcastTransportRoot, "handler.go"), []string{
 		"RegisterAdminRoutes",
 	})
 	assertFileDeclaresTypes(t, filepath.Join(broadcastTransportRoot, "handler.go"), []string{

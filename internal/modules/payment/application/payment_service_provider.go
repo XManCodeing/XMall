@@ -2,6 +2,7 @@ package application
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/url"
 	"strconv"
@@ -130,12 +131,12 @@ func (s *PaymentService) applyProviderPayment(input CreatePaymentInput, order *o
 		log.Infow("payment_provider_apply_success")
 	}()
 	if s.paymentProviderRegistry == nil {
-		return ErrPaymentProviderNotSupported
+		return paymentcontract.GatewayNotSubmitted(ErrPaymentProviderNotSupported)
 	}
 
 	p, ok := s.paymentProviderRegistry.Lookup(channel.ProviderType, channel.ChannelType)
 	if !ok {
-		return ErrPaymentProviderNotSupported
+		return paymentcontract.GatewayNotSubmitted(ErrPaymentProviderNotSupported)
 	}
 
 	// 构造 paymentcontract.GatewayCreateInput。
@@ -178,9 +179,30 @@ func (s *PaymentService) applyProviderPayment(input CreatePaymentInput, order *o
 		ReturnURL: resolveTenantReturnURL(input.Context, input.RequestScheme, channel),
 	}
 
+	// Persist the exact gateway reference before crossing the network boundary.
+	if err := s.paymentRepo.WithinTransaction(func(tx paymentcontract.Transaction) error {
+		locked, err := tx.Payments().GetByIDForUpdate(payment.ID)
+		if err != nil {
+			return err
+		}
+		if locked == nil {
+			return ErrPaymentNotFound
+		}
+		locked.GatewayOrderNo = payment.GatewayOrderNo
+		return tx.Payments().Update(locked)
+	}); err != nil {
+		return paymentcontract.GatewayNotSubmitted(err)
+	}
 	result, err := p.CreatePayment(gatewayCtx, channel.ConfigJSON, createInput)
 	if err != nil {
-		return mapProviderErrorToService(err)
+		mapped := mapProviderErrorToService(err)
+		if errors.Is(err, paymentcontract.ErrGatewayNotSubmitted) {
+			return paymentcontract.GatewayNotSubmitted(mapped)
+		}
+		return mapped
+	}
+	if result == nil {
+		return ErrPaymentGatewayResponseInvalid
 	}
 
 	// 把 result 写回 payment 字段
@@ -221,7 +243,28 @@ func (s *PaymentService) applyProviderPayment(input CreatePaymentInput, order *o
 	payment.Status = constants.PaymentStatusPending
 	payment.UpdatedAt = time.Now()
 
-	if err := s.paymentRepo.Update(payment); err != nil {
+	payment.CreationState = "ready"
+	if err := s.paymentRepo.WithinTransaction(func(tx paymentcontract.Transaction) error {
+		locked, err := tx.Payments().GetByIDForUpdate(payment.ID)
+		if err != nil {
+			return err
+		}
+		if locked == nil {
+			return ErrPaymentNotFound
+		}
+		// A callback may have completed while the gateway response was in flight.
+		if locked.Status != constants.PaymentStatusInitiated && locked.Status != constants.PaymentStatusPending {
+			payment.Status = locked.Status
+			payment.PaidAt = locked.PaidAt
+			payment.CallbackAt = locked.CallbackAt
+			payment.ExceptionCode = locked.ExceptionCode
+			payment.ExpiredAt = locked.ExpiredAt
+		}
+		payment.ProviderPayload = mergeProviderPayload(payment.ProviderPayload, locked.ProviderPayload)
+		payment.SupersededAt = locked.SupersededAt
+		payment.SupersededByPaymentID = locked.SupersededByPaymentID
+		return tx.Payments().Update(payment)
+	}); err != nil {
 		return ErrPaymentUpdateFailed
 	}
 	return nil

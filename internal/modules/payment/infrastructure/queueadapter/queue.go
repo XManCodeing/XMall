@@ -1,6 +1,7 @@
 package queueadapter
 
 import (
+	"context"
 	"strings"
 	"time"
 
@@ -40,6 +41,16 @@ func (q *Queue) EnqueueOrderAutoFulfill(orderID uint) error {
 		return nil
 	}
 	return q.client.EnqueueOrderAutoFulfill(queue.OrderAutoFulfillPayload{OrderID: orderID}, asynq.MaxRetry(3))
+}
+
+func (q *Queue) EnqueueOrderAutoFulfillContext(ctx context.Context, orderID uint) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	if q == nil || q.client == nil {
+		return nil
+	}
+	return q.client.EnqueueOrderAutoFulfillContext(ctx, queue.OrderAutoFulfillPayload{OrderID: orderID}, asynq.MaxRetry(3))
 }
 
 func (q *Queue) EnqueueAffiliateOrderPaid(orderID uint) error {

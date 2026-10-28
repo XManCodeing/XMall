@@ -15,10 +15,20 @@ import { notifyError, notifySuccess } from '@/utils/notify'
 import { formatDate, toRFC3339 } from '@/utils/format'
 import { Loader2, Search, Send, Trash2, Users, ImageIcon } from 'lucide-vue-next'
 import MediaPicker from '@/components/admin/MediaPicker.vue'
+import { useAdminAuthStore } from '@/stores/auth'
+import { useTelegramBotInstances } from '@/composables/useTelegramBotInstances'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import FileInput from '@/components/FileInput.vue'
 
 const { t } = useI18n()
 const router = useRouter()
+const auth = useAdminAuthStore()
+const canCreate = computed(() => auth.hasPermission('POST:/admin/telegram-bot/broadcasts'))
+const canListUsers = computed(() => auth.hasPermission('GET:/admin/telegram-bot/users'))
+const { instances, refresh, loading: loadingBots, error: botError, canList } = useTelegramBotInstances()
+const botID = ref('')
+const availableBots = computed(() => instances.value.filter(item => item.mode === 'internal' && item.enabled && item.token_set))
+let userRequest = 0
 
 const submitting = ref(false)
 const uploading = ref(false)
@@ -55,10 +65,12 @@ const selectedCount = computed(() => selectedUserIds.value.length)
 const shouldNotifyLocally = (error: unknown) => !(error as { __notified?: boolean } | undefined)?.__notified
 
 const fetchUsers = async (page = 1) => {
-  if (form.recipient_type !== 'specific') return
+  if (form.recipient_type !== 'specific' || !botID.value || !canListUsers.value) return
+  const request = ++userRequest
   loadingUsers.value = true
   try {
     const res = await adminAPI.getTelegramBroadcastUsers({
+      bot_id: Number(botID.value),
       page,
       page_size: pagination.value.page_size,
       keyword: filters.keyword || undefined,
@@ -68,15 +80,17 @@ const fetchUsers = async (page = 1) => {
       created_from: toRFC3339(filters.created_from),
       created_to: toRFC3339(filters.created_to),
     })
+    if (request !== userRequest) return
     users.value = res.data?.data || []
     pagination.value = res.data?.pagination || pagination.value
   } catch (error) {
+    if (request !== userRequest) return
     users.value = []
     if (shouldNotifyLocally(error)) {
       notifyError(t('telegramBot.broadcasts.userLoadFailed'))
     }
   } finally {
-    loadingUsers.value = false
+    if (request === userRequest) loadingUsers.value = false
   }
 }
 
@@ -153,6 +167,8 @@ const handleAttachmentChange = async (files: FileList | null) => {
 }
 
 const handleSubmit = async () => {
+  if (submitting.value || uploading.value || !canCreate.value || !availableBots.value.some(item => item.id === Number(botID.value))) return
+  if (form.recipient_type === 'specific' && !canListUsers.value) return
   if (!form.title.trim() || !form.message_html.trim()) {
     notifyError(t('telegramBot.broadcasts.formInvalid'))
     return
@@ -165,6 +181,7 @@ const handleSubmit = async () => {
   submitting.value = true
   try {
     await adminAPI.createTelegramBroadcast({
+      bot_id: Number(botID.value),
       title: form.title.trim(),
       recipient_type: form.recipient_type,
       user_ids: form.recipient_type === 'specific' ? selectedUserIds.value : [],
@@ -202,10 +219,17 @@ watch(
   },
 )
 
+watch(botID, () => {
+  ++userRequest
+  users.value = []
+  selectedUserIds.value = []
+  loadingUsers.value = false
+  pagination.value = { page: 1, page_size: 10, total: 0, total_page: 1 }
+  fetchUsers(1)
+})
+
 onMounted(() => {
-  if (form.recipient_type === 'specific') {
-    fetchUsers(1)
-  }
+  refresh()
 })
 </script>
 
@@ -229,6 +253,17 @@ onMounted(() => {
         <CardDescription>{{ t('telegramBot.broadcasts.basicInfoDesc') }}</CardDescription>
       </CardHeader>
       <CardContent class="space-y-4">
+        <p v-if="!canCreate || !canList" class="text-sm text-muted-foreground">{{ t('telegramBot.instances.forbidden') }}</p>
+        <p v-if="botError" role="alert" class="text-sm text-destructive">{{ botError }}</p>
+        <div class="space-y-2">
+          <Label>{{ t('telegramBot.instances.bot') }}</Label>
+          <Select v-model="botID" :disabled="loadingBots || submitting || !canList">
+            <SelectTrigger><SelectValue :placeholder="t('telegramBot.instances.bot')" /></SelectTrigger>
+            <SelectContent><SelectItem v-for="item in availableBots" :key="item.id" :value="String(item.id)">{{ item.username ? `@${item.username}` : item.telegram_id }}</SelectItem></SelectContent>
+          </Select>
+          <p v-if="!loadingBots && !availableBots.length" class="text-sm text-muted-foreground">{{ t('telegramBot.instances.empty') }}</p>
+          <Button v-if="canList" variant="link" size="sm" :disabled="loadingBots || submitting" @click="refresh">{{ t('telegramBot.instances.reload') }}</Button>
+        </div>
         <div class="space-y-2">
           <Label>{{ t('telegramBot.broadcasts.fieldTitle') }}</Label>
           <Input v-model="form.title" :placeholder="t('telegramBot.broadcasts.fieldTitlePlaceholder')" />
@@ -393,7 +428,7 @@ onMounted(() => {
     </Card>
 
     <div class="flex justify-end">
-      <Button class="w-full sm:w-auto" :disabled="submitting || uploading" @click="handleSubmit">
+      <Button class="w-full sm:w-auto" :disabled="submitting || uploading || !canCreate || !availableBots.some(item => item.id === Number(botID)) || (form.recipient_type === 'specific' && !canListUsers)" @click="handleSubmit">
         <Send class="h-4 w-4 mr-2" />
         {{ submitting ? t('admin.common.loading') : t('telegramBot.broadcasts.submit') }}
       </Button>

@@ -17,6 +17,7 @@ import (
 	externalidentitydomain "github.com/XManCodeing/XMall/internal/modules/identity/externalidentity/domain"
 	externalidentitystore "github.com/XManCodeing/XMall/internal/modules/identity/externalidentity/infrastructure/gormstore"
 	userauthapp "github.com/XManCodeing/XMall/internal/modules/identity/userauth/application"
+	userauthdomain "github.com/XManCodeing/XMall/internal/modules/identity/userauth/domain"
 
 	"github.com/glebarez/sqlite"
 	"gorm.io/gorm"
@@ -30,7 +31,7 @@ func setupUserAuthServiceChannelIdentityTest(t *testing.T) (*userauthapp.Service
 	if err != nil {
 		t.Fatalf("open sqlite failed: %v", err)
 	}
-	if err := db.AutoMigrate(&userdomain.User{}, &externalidentitydomain.Identity{}, &emailverificationdomain.Code{}); err != nil {
+	if err := db.AutoMigrate(&userauthdomain.TelegramHistoryGrant{}, &userdomain.User{}, &externalidentitydomain.Identity{}, &emailverificationdomain.Code{}); err != nil {
 		t.Fatalf("auto migrate failed: %v", err)
 	}
 

@@ -1,6 +1,7 @@
 package gormstore
 
 import (
+	"context"
 	"errors"
 	"time"
 
@@ -10,6 +11,13 @@ import (
 
 	"gorm.io/gorm"
 )
+
+func (s *MappingStore) GetByLocalProductIDContext(ctx context.Context, id uint) (*mappingdomain.Mapping, error) {
+	return (&MappingStore{db: s.db.WithContext(ctx)}).GetByLocalProductID(id)
+}
+func (s *SKUMappingStore) GetByLocalSKUIDContext(ctx context.Context, id uint) (*mappingdomain.SKUMapping, error) {
+	return (&SKUMappingStore{db: s.db.WithContext(ctx)}).GetByLocalSKUID(id)
+}
 
 // MappingStore 是 Catalog 上游映射端口的 GORM 实现。
 type MappingStore struct {

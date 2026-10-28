@@ -1,16 +1,68 @@
 package procurement_test
 
 import (
+	"context"
 	"errors"
 	procurementstore "github.com/XManCodeing/XMall/internal/modules/procurement/infrastructure/gormstore"
 	"github.com/XManCodeing/XMall/internal/modules/siteconnection/application"
+	"gorm.io/gorm"
 	"sync"
 	"testing"
+	"time"
 
 	mappingdomain "github.com/XManCodeing/XMall/internal/modules/catalog/mapping/domain"
 
 	"github.com/XManCodeing/XMall/internal/constants"
 )
+
+func TestRecoveryContextReachesProcurementQueries(t *testing.T) {
+	for _, table := range []string{"orders", "procurement_orders", "product_mappings", "site_connections", "sku_mappings"} {
+		t.Run(table, func(t *testing.T) {
+			db := setupProcurementTestDB(t)
+			order := createProcTestOrder(t, db, "CTX-RECOVERY", "paid", "upstream")
+			pm := &mappingdomain.Mapping{ConnectionID: 1, LocalProductID: 1, UpstreamProductID: 101, IsActive: true}
+			if err := db.Create(pm).Error; err != nil {
+				t.Fatal(err)
+			}
+			if err := db.Create(&mappingdomain.SKUMapping{ProductMappingID: pm.ID, LocalSKUID: 1, UpstreamSKUID: 201}).Error; err != nil {
+				t.Fatal(err)
+			}
+			conn := newTestSiteConnectionService(db, "test-key", t.TempDir())
+			if _, err := conn.Create(application.CreateInput{Name: "test", BaseURL: "https://invalid.example", ApiKey: "test-key", ApiSecret: "test-secret", Protocol: constants.ConnectionProtocolDujiaoNext}); err != nil {
+				t.Fatal(err)
+			}
+			svc := newTestProcurementService(db, conn)
+			ctx, cancel := context.WithCancel(context.Background())
+			defer cancel()
+			reached := make(chan struct{})
+			if err := db.Callback().Query().Before("gorm:query").Register("test:cancel", func(tx *gorm.DB) {
+				if tx.Statement.Table != table {
+					return
+				}
+				close(reached)
+				<-tx.Statement.Context.Done()
+			}); err != nil {
+				t.Fatal(err)
+			}
+			done := make(chan error, 1)
+			go func() { done <- svc.CreateForOrderContext(ctx, order.ID) }()
+			select {
+			case <-reached:
+			case <-time.After(time.Second):
+				t.Fatal("query not reached")
+			}
+			cancel()
+			select {
+			case err := <-done:
+				if !errors.Is(err, context.Canceled) {
+					t.Fatalf("error=%v", err)
+				}
+			case <-time.After(time.Second):
+				t.Fatal("query did not observe recovery cancellation")
+			}
+		})
+	}
+}
 
 func TestMissingPaidProcurementCompensationCandidates(t *testing.T) {
 	db := setupProcurementTestDB(t)

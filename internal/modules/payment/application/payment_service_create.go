@@ -2,10 +2,12 @@ package application
 
 import (
 	"context"
+	"errors"
 	"strings"
 	"time"
 
 	paymentcontract "github.com/XManCodeing/XMall/internal/modules/payment/contract"
+	delivery "github.com/XManCodeing/XMall/internal/modules/telegram/delivery/contract"
 
 	paymentdomain "github.com/XManCodeing/XMall/internal/modules/payment/domain"
 
@@ -23,11 +25,14 @@ import (
 
 // CreatePaymentInput 创建支付请求
 type CreatePaymentInput struct {
+	OperationKey     string // optional, scoped to order; empty remains compatible
 	OrderID          uint
 	ChannelID        uint
 	UseBalance       bool
 	ClientIP         string
 	Context          context.Context
+	Source           *delivery.Source // optional transaction-bound identity guard
+	UserID           uint             // expected order owner when Source is supplied
 	ReturnBizType    string
 	ReturnBusinessNo string
 	ReturnGuest      bool
@@ -51,8 +56,16 @@ func hasProviderResult(payment *paymentdomain.Payment) bool {
 	return strings.TrimSpace(payment.PayURL) != "" || strings.TrimSpace(payment.QRCode) != ""
 }
 
+var ErrPaymentCreationUncertain = errors.New("payment creation in progress or outcome unknown; query existing payment before retry")
+var ErrPaymentOperationConflict = errors.New("payment operation key reused with different request")
+
 // CreatePayment 创建支付单
 func (s *PaymentService) CreatePayment(input CreatePaymentInput) (*CreatePaymentResult, error) {
+	input.OperationKey = strings.TrimSpace(input.OperationKey)
+	if len(input.OperationKey) > 160 {
+		return nil, ErrPaymentInvalid
+	}
+	operationHash := paymentOperationHash(input)
 	if input.OrderID == 0 {
 		return nil, ErrPaymentInvalid
 	}
@@ -67,6 +80,7 @@ func (s *PaymentService) CreatePayment(input CreatePaymentInput) (*CreatePayment
 	var channel *paymentdomain.PaymentChannel
 	feeRate := decimal.Zero
 	reusedPending := false
+	replayedOperation := false
 	orderPaidByWallet := false
 	now := time.Now()
 	feeConfig := settingsapp.DefaultPaymentFeeConfig()
@@ -84,6 +98,11 @@ func (s *PaymentService) CreatePayment(input CreatePaymentInput) (*CreatePayment
 	}
 
 	err := s.paymentRepo.WithinTransaction(func(tx paymentcontract.Transaction) error {
+		if locker, ok := tx.Payments().(paymentcontract.CreationLocker); ok {
+			if err := locker.LockCreation(input.OrderID); err != nil {
+				return err
+			}
+		}
 		preloaded, err := tx.Orders().GetByIDForUpdateWithChildren(input.OrderID)
 		if err != nil {
 			return orderapp.ErrOrderFetchFailed
@@ -92,6 +111,51 @@ func (s *PaymentService) CreatePayment(input CreatePaymentInput) (*CreatePayment
 			return orderapp.ErrOrderNotFound
 		}
 		lockedOrder := *preloaded
+		if input.Source != nil {
+			if input.Source.ExpectedIdentityID == 0 || input.UserID == 0 || lockedOrder.UserID != input.UserID {
+				return delivery.ErrIdentityChanged
+			}
+			if err := delivery.GuardIdentity(tx.Orders(), input.UserID, input.Source); err != nil {
+				return err
+			}
+		}
+		// The order row lock serializes durable intent creation across processes.
+		// Any unresolved gateway attempt blocks ALL channels, including wallet.
+		existingPayments, err := tx.Payments().ListByOrderID(input.OrderID)
+		if err != nil {
+			return err
+		}
+		for i := range existingPayments {
+			previous := &existingPayments[i]
+			if input.OperationKey != "" && previous.OperationKey != nil && *previous.OperationKey == input.OperationKey {
+				if previous.OperationHash != operationHash {
+					return ErrPaymentOperationConflict
+				}
+				// A proven local failure is terminal for this operation key. A new
+				// key may retry/switch channels; replay never dispatches twice.
+				if previous.CreationState == "not_submitted" && previous.Status != constants.PaymentStatusSuccess {
+					return ErrPaymentCreateFailed
+				}
+				if previous.CreationState != "ready" && previous.Status != constants.PaymentStatusSuccess {
+					return ErrPaymentCreationUncertain
+				}
+				payment = previous
+				order = &lockedOrder
+				replayedOperation = true
+				if previous.ChannelID != 0 {
+					channel, err = tx.PaymentChannels().GetByID(previous.ChannelID)
+					if err != nil {
+						return err
+					}
+				}
+				return nil
+			}
+		}
+		for _, previous := range existingPayments {
+			if (previous.CreationState == "processing" || previous.CreationState == "unknown") && previous.Status != constants.PaymentStatusSuccess {
+				return ErrPaymentCreationUncertain
+			}
+		}
 		if lockedOrder.ParentID != nil {
 			return ErrPaymentInvalid
 		}
@@ -141,7 +205,7 @@ func (s *PaymentService) CreatePayment(input CreatePaymentInput) (*CreatePayment
 			if err != nil {
 				return ErrPaymentCreateFailed
 			}
-			if existing != nil && hasProviderResult(existing) {
+			if existing != nil && hasProviderResult(existing) && input.OperationKey == "" {
 				legacyFeePayment := existing.FeeAmount.Decimal.IsPositive() &&
 					(existing.FeePolicy == "" || existing.FeePolicy == constants.PaymentFeePolicyLegacyCustomerSurcharge)
 				if !legacyFeePayment || feeConfig.ReuseLegacyOrderFeePayment {
@@ -186,6 +250,12 @@ func (s *PaymentService) CreatePayment(input CreatePaymentInput) (*CreatePayment
 				UpdatedAt:       paidAt,
 				PaidAt:          &paidAt,
 			}
+			payment.CreationState = "ready"
+			if input.OperationKey != "" {
+				key := input.OperationKey
+				payment.OperationKey = &key
+				payment.OperationHash = operationHash
+			}
 			if err := paymentRepo.Create(payment); err != nil {
 				return ErrPaymentCreateFailed
 			}
@@ -193,7 +263,7 @@ func (s *PaymentService) CreatePayment(input CreatePaymentInput) (*CreatePayment
 			if _, err := paymentRepo.SupersedePendingByOrderID(lockedOrder.ID, payment.ID, paidAt); err != nil {
 				return ErrPaymentCreateFailed
 			}
-			if err := s.markOrderPaid(tx, &lockedOrder, paidAt); err != nil {
+			if err := s.markOrderPaid(tx, &lockedOrder, payment.ID, paidAt); err != nil {
 				return err
 			}
 			// 与在线支付回调一致：分销利润与支付在同一事务入账
@@ -245,6 +315,12 @@ func (s *PaymentService) CreatePayment(input CreatePaymentInput) (*CreatePayment
 			payment.Currency = "CNY"
 		}
 
+		payment.CreationState = "processing"
+		if input.OperationKey != "" {
+			key := input.OperationKey
+			payment.OperationKey = &key
+			payment.OperationHash = operationHash
+		}
 		if err := paymentRepo.Create(payment); err != nil {
 			return ErrPaymentCreateFailed
 		}
@@ -267,6 +343,14 @@ func (s *PaymentService) CreatePayment(input CreatePaymentInput) (*CreatePayment
 		return nil, orderapp.ErrOrderFetchFailed
 	}
 
+	if replayedOperation {
+		result := &CreatePaymentResult{Payment: payment, Channel: channel, OrderPaid: payment.Status == constants.PaymentStatusSuccess, WalletPaidAmount: order.WalletPaidAmount, OnlinePayAmount: order.OnlinePaidAmount}
+		if payment.ProviderType == constants.PaymentProviderWallet {
+			result.Payment = nil
+			result.Channel = nil
+		}
+		return result, nil
+	}
 	if reusedPending {
 		if _, err := s.paymentRepo.SupersedePendingByOrderID(order.ID, payment.ID, time.Now()); err != nil {
 			return nil, ErrPaymentCreateFailed
@@ -310,45 +394,57 @@ func (s *PaymentService) CreatePayment(input CreatePaymentInput) (*CreatePayment
 	}
 
 	if err := s.applyProviderPayment(input, order, channel, payment); err != nil {
-		rollbackErr := s.paymentRepo.WithinTransaction(func(tx paymentcontract.Transaction) error {
-			paymentRepo := tx.Payments()
-			payment.Status = constants.PaymentStatusFailed
-			payment.UpdatedAt = time.Now()
-			if updateErr := paymentRepo.Update(payment); updateErr != nil {
-				return updateErr
+		// Only explicit execution-boundary evidence permits releasing the intent.
+		// A category such as config/auth/request alone is never sufficient.
+		notSubmitted := errors.Is(err, paymentcontract.ErrGatewayNotSubmitted)
+		markErr := s.paymentRepo.WithinTransaction(func(tx paymentcontract.Transaction) error {
+			locked, lockErr := tx.Payments().GetByIDForUpdate(payment.ID)
+			if lockErr != nil {
+				return lockErr
 			}
-			if s.walletSvc == nil {
-				return nil
+			if locked == nil {
+				return ErrPaymentNotFound
 			}
-			preloaded, findErr := tx.Orders().GetByIDForUpdate(order.ID)
-			if findErr != nil {
-				return findErr
+			// Match callback lock order (payment then order). Never refund funds
+			// consumed by a callback, nor overwrite its authoritative state.
+			lockedOrder, lockErr := tx.Orders().GetByIDForUpdateWithChildren(order.ID)
+			if lockErr != nil {
+				return lockErr
 			}
-			if preloaded == nil {
+			if lockedOrder == nil {
 				return orderapp.ErrOrderNotFound
 			}
-			lockedOrder := *preloaded
-			_, refundErr := orderapp.ReleaseWalletBalance(s.walletSvc, tx, &lockedOrder, constants.WalletTxnTypeOrderRefund, "在线支付创建失败，退回余额")
-			return refundErr
+			if locked.Status == constants.PaymentStatusSuccess || locked.CallbackAt != nil {
+				notSubmitted = false // callback evidence overrides a provider's local classification
+				return nil
+			}
+			locked.CreationState = "unknown"
+			if notSubmitted {
+				locked.CreationState = "not_submitted"
+				locked.Status = constants.PaymentStatusFailed
+				if lockedOrder.Status == constants.OrderStatusPendingPayment && lockedOrder.PaidAt == nil {
+					if _, releaseErr := orderapp.ReleaseWalletBalance(s.walletSvc, tx, lockedOrder, constants.WalletTxnTypeOrderRefund, "支付请求未提交，退回余额"); releaseErr != nil {
+						return releaseErr
+					}
+					if updateErr := tx.Orders().UpdateFields(order.ID, map[string]interface{}{
+						"online_paid_amount": money.FromDecimal(normalizeOrderAmount(lockedOrder.TotalAmount.Decimal.Sub(lockedOrder.WalletPaidAmount.Decimal))),
+						"updated_at":         time.Now(),
+					}); updateErr != nil {
+						return updateErr
+					}
+				}
+			}
+			locked.UpdatedAt = time.Now()
+			return tx.Payments().Update(locked)
 		})
-		if rollbackErr != nil {
-			log.Errorw("payment_create_provider_failed_with_rollback_error",
-				"payment_id", payment.ID,
-				"order_id", order.ID,
-				"provider_type", payment.ProviderType,
-				"channel_type", payment.ChannelType,
-				"provider_error", err,
-				"rollback_error", rollbackErr,
-			)
-		} else {
-			log.Errorw("payment_create_provider_failed",
-				"payment_id", payment.ID,
-				"provider_type", payment.ProviderType,
-				"channel_type", payment.ChannelType,
-				"error", err,
-			)
+		if markErr != nil {
+			log.Errorw("payment_creation_failure_persist_failed", "payment_id", payment.ID, "error", markErr)
+			return nil, ErrPaymentCreationUncertain
 		}
-		return nil, err
+		if notSubmitted {
+			return nil, err
+		}
+		return nil, ErrPaymentCreationUncertain
 	}
 	if _, err := s.paymentRepo.SupersedePendingByOrderID(order.ID, payment.ID, time.Now()); err != nil {
 		log.Errorw("payment_create_supersede_previous_failed",

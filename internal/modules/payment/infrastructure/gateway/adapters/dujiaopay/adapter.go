@@ -86,7 +86,9 @@ func (a *dujiaoPayAdapter) ValidateConfig(raw jsonmap.JSON, channelType string) 
 }
 
 // CreatePayment 创建 DujiaoPay 收银台订单。
-func (a *dujiaoPayAdapter) CreatePayment(ctx context.Context, raw jsonmap.JSON, input paymentcontract.GatewayCreateInput) (*paymentcontract.GatewayCreateResult, error) {
+func (a *dujiaoPayAdapter) CreatePayment(ctx context.Context, raw jsonmap.JSON, input paymentcontract.GatewayCreateInput) (out *paymentcontract.GatewayCreateResult, err error) {
+	ctx, classify := gatewaycommon.TrackCreation(ctx)
+	defer func() { err = classify(err) }()
 	channelType := strings.ToLower(strings.TrimSpace(input.ChannelType))
 
 	cfg, err := a.parseConfig(raw, channelType)

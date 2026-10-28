@@ -4,6 +4,12 @@ import (
 	"testing"
 	"time"
 
+	"github.com/XManCodeing/XMall/internal/config"
+	identitydomain "github.com/XManCodeing/XMall/internal/modules/identity/externalidentity/domain"
+	userdomain "github.com/XManCodeing/XMall/internal/modules/identity/user/domain"
+	delivery "github.com/XManCodeing/XMall/internal/modules/telegram/delivery/contract"
+	runtimedomain "github.com/XManCodeing/XMall/internal/modules/telegram/runtime/domain"
+
 	fulfillmentdomain "github.com/XManCodeing/XMall/internal/modules/fulfillment/domain"
 	orderdomain "github.com/XManCodeing/XMall/internal/modules/order/domain"
 
@@ -11,6 +17,56 @@ import (
 	procurementcontract "github.com/XManCodeing/XMall/internal/modules/procurement/contract"
 	procurementgormstore "github.com/XManCodeing/XMall/internal/modules/procurement/infrastructure/gormstore"
 )
+
+func TestWebsiteProcurementDeliveryUsesTransactionalContact(t *testing.T) {
+	for _, contact := range []bool{false, true} {
+		t.Run(map[bool]string{false: "no-contact", true: "verified-contact"}[contact], func(t *testing.T) {
+			db := setupProcurementTestDB(t)
+			must := func(err error) {
+				t.Helper()
+				if err != nil {
+					t.Fatal(err)
+				}
+			}
+			must(db.AutoMigrate(&userdomain.User{}, &identitydomain.Identity{}, &runtimedomain.Instance{}, &runtimedomain.Contact{}, &delivery.OrderSource{}, &delivery.Event{}))
+			pool, err := db.DB()
+			must(err)
+			pool.SetMaxOpenConns(1)
+			t.Cleanup(func() { _ = pool.Close() })
+			must(db.Create(&userdomain.User{ID: 1, Email: "procurement@example.test", Status: "active"}).Error)
+			must(db.Create(&identitydomain.Identity{UserID: 1, Provider: "telegram", ProviderUserID: "123"}).Error)
+			must(db.Create(&runtimedomain.Instance{ID: 7, TelegramID: 77, Enabled: true, Mode: "internal"}).Error)
+			if contact {
+				must(db.Create(&runtimedomain.Contact{BotID: 7, UserID: 1, TelegramUserID: 123, ChatID: 123, Reachable: true}).Error)
+			}
+			order := createProcTestOrder(t, db, "TG-WEBSITE", constants.OrderStatusFulfilling, constants.FulfillmentTypeUpstream)
+			proc := createTestProcurementOrder(t, db, 1, order.ID, order.OrderNo, constants.ProcurementStatusPending)
+			lifecycle := procurementgormstore.New(db).NewLifecycle(nil, nil, config.EmailConfig{}).EnableBusinessEvents()
+			changed, err := lifecycle.Deliver(proc, &procurementcontract.Fulfillment{Status: "delivered", Payload: "test-card"}, time.Now())
+			must(err)
+			if !changed {
+				t.Fatal("delivery did not commit")
+			}
+			var events []delivery.Event
+			must(db.Find(&events).Error)
+			want := 0
+			if contact {
+				want = 1
+			}
+			if len(events) != want {
+				t.Fatalf("events=%d want=%d", len(events), want)
+			}
+			if contact && (events[0].BotID != 7 || events[0].UserID != 1 || events[0].PrivateChatID != 123 || events[0].FulfillmentID == 0) {
+				t.Fatalf("wrong destination: %+v", events[0])
+			}
+			var sources int64
+			must(db.Model(&delivery.OrderSource{}).Count(&sources).Error)
+			if sources != 0 {
+				t.Fatal("website contact must not become permanent checkout source")
+			}
+		})
+	}
+}
 
 type procurementCallbackStatusFixture struct {
 	orderNo                   string

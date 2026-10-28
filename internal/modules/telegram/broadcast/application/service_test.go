@@ -3,13 +3,10 @@ package broadcastapp
 import (
 	"context"
 	"errors"
-	"testing"
-
-	"github.com/XManCodeing/XMall/internal/constants"
 	broadcastcontract "github.com/XManCodeing/XMall/internal/modules/telegram/broadcast/contract"
 	broadcastdomain "github.com/XManCodeing/XMall/internal/modules/telegram/broadcast/domain"
-	notifycontract "github.com/XManCodeing/XMall/internal/modules/telegram/notify/contract"
-	"github.com/XManCodeing/XMall/internal/shared/jsonslice"
+	"testing"
+	"time"
 )
 
 type broadcastStoreStub struct {
@@ -17,202 +14,174 @@ type broadcastStoreStub struct {
 	nextID uint
 }
 
-func (r *broadcastStoreStub) Create(broadcast *broadcastdomain.Broadcast) error {
-	if broadcast == nil {
-		return nil
+func (s *broadcastStoreStub) Create(ctx context.Context, b *broadcastdomain.Broadcast) error {
+	if s.items == nil {
+		s.items = map[uint]*broadcastdomain.Broadcast{}
 	}
-	if r.items == nil {
-		r.items = map[uint]*broadcastdomain.Broadcast{}
-	}
-	r.nextID++
-	broadcast.ID = r.nextID
-	copyValue := *broadcast
-	r.items[broadcast.ID] = &copyValue
+	s.nextID++
+	b.ID = s.nextID
+	return s.Update(ctx, b)
+}
+func (s *broadcastStoreStub) Update(_ context.Context, b *broadcastdomain.Broadcast) error {
+	v := *b
+	s.items[b.ID] = &v
 	return nil
 }
-
-func (r *broadcastStoreStub) GetByID(id uint) (*broadcastdomain.Broadcast, error) {
-	if item, ok := r.items[id]; ok {
-		copyValue := *item
-		return &copyValue, nil
+func (s *broadcastStoreStub) GetByID(_ context.Context, id uint) (*broadcastdomain.Broadcast, error) {
+	if b := s.items[id]; b != nil {
+		v := *b
+		return &v, nil
 	}
 	return nil, nil
 }
-
-func (r *broadcastStoreStub) List(broadcastcontract.ListFilter) ([]broadcastdomain.Broadcast, int64, error) {
-	items := make([]broadcastdomain.Broadcast, 0, len(r.items))
-	for _, item := range r.items {
-		items = append(items, *item)
+func (s *broadcastStoreStub) List(context.Context, broadcastcontract.ListFilter) ([]broadcastdomain.Broadcast, int64, error) {
+	var items []broadcastdomain.Broadcast
+	for _, b := range s.items {
+		items = append(items, *b)
 	}
 	return items, int64(len(items)), nil
 }
 
-func (r *broadcastStoreStub) Update(broadcast *broadcastdomain.Broadcast) error {
-	if broadcast == nil {
+type bridgeStub struct {
+	fail     bool
+	keys     map[uint]bool
+	progress Progress
+}
+
+func (*bridgeStub) Prepare(context.Context, CreateInput) (string, int, error) {
+	return "encrypted", 2, nil
+}
+func (b *bridgeStub) Enqueue(_ context.Context, job *broadcastdomain.Broadcast) error {
+	b.keys[job.ID] = true
+	if b.fail {
+		return errors.New("interrupted")
+	}
+	return nil
+}
+func (b *bridgeStub) Progress(context.Context, uint, uint) (Progress, error) { return b.progress, nil }
+func TestResumeUsesLedgerAndQuarantinesUnknown(t *testing.T) {
+	store := &broadcastStoreStub{}
+	bridge := &bridgeStub{fail: true, keys: map[uint]bool{}, progress: Progress{Total: 2, Sent: 1, Unknown: 1}}
+	s := NewRuntimeService(store, nil, bridge, nil)
+	ctx := context.Background()
+	job, err := s.CreateBroadcast(ctx, CreateInput{BotID: 7, Title: "demo", MessageHTML: "hello", RecipientType: "all"})
+	if err != nil || job == nil {
+		t.Fatal("expected accepted durable interrupted job")
+	}
+	bridge.fail = false
+	if err = s.Reconcile(ctx); err != nil {
+		t.Fatal(err)
+	}
+	got, _ := s.GetBroadcast(context.Background(), job.ID)
+	if got.Status != "needs_review" || got.SuccessCount != 1 || got.UnknownCount != 1 || len(bridge.keys) != 1 {
+		t.Fatalf("unexpected progress: %+v", got)
+	}
+	if got.MessageHTML != "" || len(got.RecipientChatIDs) != 0 || got.PayloadCipher != "encrypted" {
+		t.Fatal("plaintext snapshot retained")
+	}
+}
+func TestLegacyNeverRestarts(t *testing.T) {
+	store := &broadcastStoreStub{}
+	b := &broadcastdomain.Broadcast{Status: "running", RecipientCount: 20, SuccessCount: 3}
+	_ = store.Create(context.Background(), b)
+	s := NewRuntimeService(store, nil, nil, nil)
+	if err := s.ProcessBroadcast(context.Background(), b.ID); err != nil {
+		t.Fatal(err)
+	}
+	got, _ := s.GetBroadcast(context.Background(), b.ID)
+	if got.Status != "needs_review" || got.SuccessCount != 3 {
+		t.Fatal(got)
+	}
+}
+func TestExplicitBotRequired(t *testing.T) {
+	s := NewRuntimeService(&broadcastStoreStub{}, nil, &bridgeStub{}, nil)
+	_, err := s.CreateBroadcast(context.Background(), CreateInput{Title: "demo", MessageHTML: "hi", RecipientType: "all"})
+	if !errors.Is(err, ErrInvalid) {
+		t.Fatal(err)
+	}
+}
+
+type cancelStore struct {
+	broadcastStoreStub
+	phase   string
+	entered chan context.Context
+}
+
+func (s *cancelStore) block(ctx context.Context, phase string) error {
+	if s.phase != phase {
 		return nil
 	}
-	copyValue := *broadcast
-	r.items[broadcast.ID] = &copyValue
-	return nil
+	s.entered <- ctx
+	<-ctx.Done()
+	return ctx.Err()
 }
-
-type userDirectoryStub struct {
-	items []UserItem
-}
-
-func (directory *userDirectoryStub) ListTelegramUsers(query UserQuery) ([]UserItem, int64, error) {
-	allowed := make(map[uint]struct{}, len(query.UserIDs))
-	for _, id := range query.UserIDs {
-		allowed[id] = struct{}{}
-	}
-	result := make([]UserItem, 0, len(directory.items))
-	for _, item := range directory.items {
-		if len(allowed) > 0 {
-			if _, ok := allowed[item.UserID]; !ok {
-				continue
-			}
-		}
-		result = append(result, item)
-	}
-	return result, int64(len(result)), nil
-}
-
-type tokenResolverStub struct {
-	token string
-	err   error
-}
-
-func (resolver tokenResolverStub) ResolveActiveBotToken() (string, error) {
-	if resolver.err != nil {
-		return "", resolver.err
-	}
-	return resolver.token, nil
-}
-
-type senderStub struct {
-	failures map[string]error
-	calls    []notifycontract.SendOptions
-}
-
-func (s *senderStub) SendWithBotToken(_ context.Context, _ string, options notifycontract.SendOptions) error {
-	s.calls = append(s.calls, options)
-	if err, ok := s.failures[options.ChatID]; ok {
+func (s *cancelStore) Create(ctx context.Context, b *broadcastdomain.Broadcast) error {
+	if err := s.block(ctx, "create"); err != nil {
 		return err
 	}
-	return nil
+	return s.broadcastStoreStub.Create(ctx, b)
+}
+func (s *cancelStore) List(ctx context.Context, f broadcastcontract.ListFilter) ([]broadcastdomain.Broadcast, int64, error) {
+	if err := s.block(ctx, "list"); err != nil {
+		return nil, 0, err
+	}
+	return s.broadcastStoreStub.List(ctx, f)
+}
+func (s *cancelStore) GetByID(ctx context.Context, id uint) (*broadcastdomain.Broadcast, error) {
+	if err := s.block(ctx, "get"); err != nil {
+		return nil, err
+	}
+	return s.broadcastStoreStub.GetByID(ctx, id)
+}
+func (s *cancelStore) Update(ctx context.Context, b *broadcastdomain.Broadcast) error {
+	if err := s.block(ctx, "update"); err != nil {
+		return err
+	}
+	return s.broadcastStoreStub.Update(ctx, b)
 }
 
-func TestServiceCreateBroadcastValidation(t *testing.T) {
-	service := NewService(
-		&broadcastStoreStub{},
-		&userDirectoryStub{},
-		tokenResolverStub{err: ErrTokenUnavailable},
-		nil,
-		&senderStub{},
-	)
-
-	_, err := service.CreateBroadcast(context.Background(), CreateInput{
-		Title:         "",
-		RecipientType: constants.TelegramBroadcastRecipientTypeAll,
-		MessageHTML:   "<b>hello</b>",
-	})
-	if !errors.Is(err, ErrInvalid) {
-		t.Fatalf("expected invalid broadcast error, got %v", err)
-	}
-
-	_, err = service.CreateBroadcast(context.Background(), CreateInput{
-		Title:         "Demo",
-		RecipientType: constants.TelegramBroadcastRecipientTypeAll,
-		MessageHTML:   "<b>hello</b>",
-	})
-	if !errors.Is(err, ErrTokenUnavailable) {
-		t.Fatalf("expected token unavailable error, got %v", err)
-	}
-}
-
-func TestServiceCreateBroadcastSnapshotsSpecificRecipients(t *testing.T) {
-	store := &broadcastStoreStub{}
-	service := NewService(
-		store,
-		&userDirectoryStub{items: []UserItem{
-			{UserID: 1, TelegramUserID: "1001"},
-			{UserID: 2, TelegramUserID: "1002"},
-		}},
-		tokenResolverStub{token: "bot-token"},
-		queuedDispatcherStub{},
-		&senderStub{},
-	)
-
-	created, err := service.CreateBroadcast(context.Background(), CreateInput{
-		Title:         "Demo",
-		RecipientType: constants.TelegramBroadcastRecipientTypeSpecific,
-		UserIDs:       []uint{2, 2},
-		MessageHTML:   "<b>hello</b>",
-	})
-	if err != nil {
-		t.Fatalf("create broadcast failed: %v", err)
-	}
-	if created.RecipientCount != 1 || len(created.RecipientChatIDs) != 1 || created.RecipientChatIDs[0] != "1002" {
-		t.Fatalf("unexpected recipient snapshot: %#v", created.RecipientChatIDs)
-	}
-	selected, ok := created.FiltersJSON["selected_user_ids"].([]uint)
-	if !ok || len(selected) != 1 || selected[0] != 2 {
-		t.Fatalf("unexpected selected user snapshot: %#v", created.FiltersJSON["selected_user_ids"])
-	}
-}
-
-type queuedDispatcherStub struct{}
-
-func (queuedDispatcherStub) DispatchBroadcast(context.Context, uint) (bool, error) {
-	return true, nil
-}
-
-func TestServiceProcessBroadcastUpdatesStats(t *testing.T) {
-	store := &broadcastStoreStub{
-		items: map[uint]*broadcastdomain.Broadcast{
-			1: {
-				ID:               1,
-				Title:            "Demo",
-				RecipientType:    constants.TelegramBroadcastRecipientTypeSpecific,
-				RecipientChatIDs: jsonslice.Strings{"1001", "1002"},
-				RecipientCount:   2,
-				Status:           constants.TelegramBroadcastStatusPending,
-				MessageHTML:      "<b>Hello</b>",
-			},
-		},
-		nextID: 1,
-	}
-	sender := &senderStub{
-		failures: map[string]error{
-			"1002": errors.New("send failed"),
-		},
-	}
-	service := NewService(
-		store,
-		&userDirectoryStub{},
-		tokenResolverStub{token: "bot-token"},
-		nil,
-		sender,
-	)
-
-	if err := service.ProcessBroadcast(context.Background(), 1); err != nil {
-		t.Fatalf("process broadcast failed: %v", err)
-	}
-
-	updated, err := store.GetByID(1)
-	if err != nil {
-		t.Fatalf("get updated broadcast failed: %v", err)
-	}
-	if updated == nil {
-		t.Fatal("expected updated broadcast")
-	}
-	if updated.SuccessCount != 1 || updated.FailedCount != 1 {
-		t.Fatalf("unexpected stats: success=%d failed=%d", updated.SuccessCount, updated.FailedCount)
-	}
-	if updated.Status != constants.TelegramBroadcastStatusCompleted {
-		t.Fatalf("expected completed status, got %s", updated.Status)
-	}
-	if len(sender.calls) != 2 {
-		t.Fatalf("expected 2 send calls, got %d", len(sender.calls))
+func TestRecoveryPropagatesSameContextToEveryStorePhase(t *testing.T) {
+	for _, phase := range []string{"create", "list", "get", "update", "legacy-update"} {
+		t.Run(phase, func(t *testing.T) {
+			ctx, cancel := context.WithCancel(context.Background())
+			defer cancel()
+			job := &broadcastdomain.Broadcast{ID: 1, BotID: 7, DeliveryVersion: 1, PayloadCipher: "cipher", Status: "pending", RecipientCount: 2}
+			store := &cancelStore{phase: phase, entered: make(chan context.Context, 1), broadcastStoreStub: broadcastStoreStub{items: map[uint]*broadcastdomain.Broadcast{1: job}}}
+			if phase == "legacy-update" {
+				job.DeliveryVersion = 0
+				store.phase = "update"
+			}
+			bridge := &bridgeStub{keys: map[uint]bool{}, progress: Progress{Total: 2, Sent: 2}}
+			svc := NewRuntimeService(store, nil, bridge, nil)
+			done := make(chan error, 1)
+			go func() {
+				if phase == "create" {
+					_, err := svc.CreateBroadcast(ctx, CreateInput{BotID: 7, Title: "test", MessageHTML: "test", RecipientType: "all"})
+					done <- err
+				} else {
+					done <- svc.Reconcile(ctx)
+				}
+			}()
+			select {
+			case got := <-store.entered:
+				if got != ctx {
+					t.Error("recovery context was replaced")
+				}
+			case <-time.After(time.Second):
+				t.Fatal("store phase was not reached")
+			}
+			cancel()
+			select {
+			case err := <-done:
+				if !errors.Is(err, context.Canceled) {
+					t.Fatalf("cancellation lost: %v", err)
+				}
+			case <-time.After(time.Second):
+				t.Fatal("recovery did not join cancelled database operation")
+			}
+			if job.Status != "pending" {
+				t.Fatal("cancelled write changed persisted broadcast")
+			}
+		})
 	}
 }

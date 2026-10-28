@@ -2,6 +2,9 @@ package gormstore
 
 import (
 	"errors"
+	"fmt"
+	delivery "github.com/XManCodeing/XMall/internal/modules/telegram/delivery/contract"
+	deliverygorm "github.com/XManCodeing/XMall/internal/modules/telegram/delivery/infrastructure/gormstore"
 	"strings"
 	"time"
 
@@ -23,11 +26,15 @@ import (
 // fulfillments and parent/child order status. It deliberately uses private
 // records through the procurement-owned store.
 type Lifecycle struct {
-	db                 *gorm.DB
-	queue              StatusEmailQueue
-	settings           *settingsapp.Service
-	defaultEmailConfig config.EmailConfig
+	businessEventsEnabled bool
+	db                    *gorm.DB
+	queue                 StatusEmailQueue
+	settings              *settingsapp.Service
+	defaultEmailConfig    config.EmailConfig
 }
+
+// EnableBusinessEvents opts procurement delivery into the transaction outbox.
+func (l *Lifecycle) EnableBusinessEvents() *Lifecycle { l.businessEventsEnabled = true; return l }
 
 var _ procurementcontract.OrderLifecycle = (*Lifecycle)(nil)
 
@@ -165,6 +172,31 @@ func (l *Lifecycle) Deliver(order *procurementdomain.Order, fulfillment *procure
 			}
 			if result.RowsAffected != 1 {
 				return errors.New("local order changed during delivery")
+			}
+		}
+		if l.businessEventsEnabled && changed {
+			events := deliverygorm.NewBusinessStore(tx)
+			source, err := events.FindSource(local.ID)
+			if err != nil {
+				return err
+			}
+			if source == nil && local.UserID != 0 {
+				current, resolveErr := events.ResolveCurrentSource(local.UserID, 0)
+				if resolveErr != nil {
+					return resolveErr
+				}
+				if current != nil {
+					source = &delivery.OrderSource{OrderID: local.ID, UserID: local.UserID, BotID: current.BotID, TelegramID: current.TelegramID, PrivateChatID: current.PrivateChatID}
+				}
+			}
+			if source != nil {
+				var parentID uint
+				if local.ParentID != nil {
+					parentID = *local.ParentID
+				}
+				if err := deliverygorm.NewBusinessStore(tx).Append(&delivery.Event{EventKey: fmt.Sprintf("%s:order:%d:fulfillment:%d", delivery.EventOrderFulfilled, local.ID, record.ID), Kind: delivery.EventOrderFulfilled, OrderID: local.ID, ParentOrderID: parentID, FulfillmentID: record.ID, UserID: source.UserID, BotID: source.BotID, TelegramID: source.TelegramID, PrivateChatID: source.PrivateChatID}); err != nil {
+					return err
+				}
 			}
 		}
 		return nil

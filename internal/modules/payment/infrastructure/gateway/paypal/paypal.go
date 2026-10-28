@@ -627,6 +627,7 @@ func doJSONRequest(ctx context.Context, cfg *Config, method, endpoint, token str
 		req.Header.Set("Authorization", "Bearer "+strings.TrimSpace(token))
 	}
 
+	common.MarkCreationDispatched(ctx)
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return nil, 0, fmt.Errorf("%w: http request failed", ErrRequestFailed)

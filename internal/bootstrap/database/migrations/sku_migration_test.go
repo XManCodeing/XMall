@@ -24,9 +24,17 @@ import (
 	"time"
 
 	"github.com/XManCodeing/XMall/internal/constants"
+	"github.com/XManCodeing/XMall/internal/crypto"
 	cardsecretdomain "github.com/XManCodeing/XMall/internal/modules/cardsecret/domain"
 	cartdomain "github.com/XManCodeing/XMall/internal/modules/cart/domain"
+	channel "github.com/XManCodeing/XMall/internal/modules/channelclient/domain"
 	externalidentitydomain "github.com/XManCodeing/XMall/internal/modules/identity/externalidentity/domain"
+	userauthdomain "github.com/XManCodeing/XMall/internal/modules/identity/userauth/domain"
+	paymentdomain "github.com/XManCodeing/XMall/internal/modules/payment/domain"
+	broadcastdomain "github.com/XManCodeing/XMall/internal/modules/telegram/broadcast/domain"
+	deliverycontract "github.com/XManCodeing/XMall/internal/modules/telegram/delivery/contract"
+	runtimedomain "github.com/XManCodeing/XMall/internal/modules/telegram/runtime/domain"
+	runtimestore "github.com/XManCodeing/XMall/internal/modules/telegram/runtime/infrastructure/gormstore"
 
 	productdomain "github.com/XManCodeing/XMall/internal/modules/catalog/product/domain"
 	orderdomain "github.com/XManCodeing/XMall/internal/modules/order/domain"
@@ -60,6 +68,259 @@ const preOwnerRenameScopedV1Fingerprint = "f5c4c4d544768db1ce8eb2768d082671c6476
 
 var schemaFingerprints = map[int64]string{
 	1: "6aa3cd137e927bbeee42774a013fec690c0930f262434d2c686dc6464f7a6c26",
+	2: "3b601bf8773d9f82915578189f724ded072ff20a4803aaae6f7898af12f11600",
+	// Final unreleased v3 includes broadcast retry and procurement recipient store logic.
+	// Both are covered by the existing v3 model migration; no deployed version is rewritten.
+	3: "da6480dffd796c57a13bc40d6b0f3f743b21a9a3d99216e0b37978ae4e42a5db",
+	4: "29e6bbdf957d8c52063fa619d7aff50ee3eaf6ac9b492632ac818dad16f5ad10",
+	5: "63934f8dc6a6b0ed97b9ca46269fcd4a08ea4eeaf8a13a2226c5bd73163a509f",
+}
+
+func TestV4OwnershipUpgradePreservesUnknownAndBackfillsSnapshot(t *testing.T) {
+	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{Logger: logger.Default.LogMode(logger.Silent)})
+	if err != nil {
+		t.Fatal(err)
+	}
+	pool, _ := db.DB()
+	pool.SetMaxOpenConns(1)
+	defer pool.Close()
+	key := crypto.DeriveKey("synthetic-migration-key")
+	cipher, _ := crypto.Encrypt(key, "123:old")
+	if err := runSchemaMigrations(db, 4, func(tx *gorm.DB) error {
+		if err := tx.AutoMigrate(&channel.Client{}); err != nil {
+			return err
+		}
+		if err := migrateTelegramRuntime(tx); err != nil {
+			return err
+		}
+		for index, token := range []string{cipher, "", "invalid-cipher"} {
+			if err := tx.Create(&channel.Client{Name: "upgrade", ChannelType: "telegram_bot", ChannelKey: fmt.Sprint(index), BotToken: token, ChannelSecret: "synthetic"}).Error; err != nil {
+				return err
+			}
+		}
+		return nil
+	}, schemaSteps[:3]...); err != nil {
+		t.Fatal(err)
+	}
+	if err := runSchemaMigrations(db, schemaVersion, func(*gorm.DB) error { return errors.New("unexpected baseline") }, schemaSteps...); err != nil {
+		t.Fatal(err)
+	}
+	// A concurrent/post-upgrade credential change cannot erase the snapshot.
+	if err := db.Table("channel_clients").Where("id = 1").Update("bot_token", "").Error; err != nil {
+		t.Fatal(err)
+	}
+	if err := db.Transaction(func(tx *gorm.DB) error {
+		if err := runtimestore.OwnershipLock(tx); err != nil {
+			return err
+		}
+		return runtimestore.OwnershipBackfill(tx, func(s string) (string, error) { return crypto.Decrypt(key, s) })
+	}); err != nil {
+		t.Fatal(err)
+	}
+	var owned int64
+	db.Model(&runtimedomain.BotOwnership{}).Where("channel_id = 1 AND telegram_id = 123").Count(&owned)
+	if owned != 1 {
+		t.Fatal("lost upgrade identity")
+	}
+	var unknown int64
+	db.Model(&runtimedomain.BotOwnership{}).Where("state = ?", "unresolved").Count(&unknown)
+	if unknown != 2 {
+		t.Fatal("unknown historical ownership silently resolved")
+	}
+	if err := migrateTelegramOwnership(db); err != nil {
+		t.Fatal(err)
+	}
+	db.Model(&runtimedomain.BotOwnership{}).Where("state = ?", "unresolved").Count(&unknown)
+	if unknown != 2 {
+		t.Fatal("migration retry rewrote history")
+	}
+}
+
+func TestV3UpgradeRequiresExplicitCutoverProof(t *testing.T) {
+	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	pool, _ := db.DB()
+	pool.SetMaxOpenConns(1)
+	defer pool.Close()
+	if err := runSchemaMigrations(db, 3, func(tx *gorm.DB) error {
+		if err := migrateTelegramRuntime(tx); err != nil {
+			return err
+		}
+		if err := tx.Create(&runtimedomain.Instance{TelegramID: 123, TokenCipher: "synthetic", Mode: "internal", Enabled: true}).Error; err != nil {
+			return err
+		}
+		return tx.Migrator().DropColumn(&runtimedomain.Instance{}, "cutover_completed")
+	}, schemaSteps[:2]...); err != nil {
+		t.Fatal(err)
+	}
+	if err := runSchemaMigrations(db, schemaVersion, func(*gorm.DB) error { t.Fatal("unexpected baseline"); return nil }, schemaSteps...); err != nil {
+		t.Fatal(err)
+	}
+	if !db.Migrator().HasColumn(&runtimedomain.Instance{}, "cutover_completed") {
+		t.Fatal("missing ownership proof column")
+	}
+	var row runtimedomain.Instance
+	if err := db.First(&row).Error; err != nil {
+		t.Fatal(err)
+	}
+	if row.CutoverCompleted || row.TelegramID != 123 {
+		t.Fatal("upgrade fabricated cutover proof")
+	}
+}
+
+func TestTelegramUpgradeFromV1AndV2(t *testing.T) {
+	for _, scenario := range []struct {
+		version int64
+		retry   bool
+	}{{1, false}, {1, true}, {2, false}, {2, true}} {
+		t.Run(fmt.Sprintf("from_v%d_retry_%t", scenario.version, scenario.retry), func(t *testing.T) {
+			db := openVersionRunnerDB(t, filepath.Join(t.TempDir(), "telegram.sqlite"))
+			if err := runSchemaMigrations(db, scenario.version, func(tx *gorm.DB) error {
+				if err := tx.AutoMigrate(&paymentdomain.Payment{}, &broadcastdomain.Broadcast{}); err != nil {
+					return err
+				}
+				for _, payment := range []paymentdomain.Payment{
+					{OrderID: 42, ChannelID: 1, ProviderType: "epay", ChannelType: "alipay", InteractionMode: "redirect", Amount: money.FromDecimal(decimal.NewFromInt(12)), Currency: "CNY", Status: "pending", PayURL: "https://example.test/pay"},
+					{OrderID: 42, ChannelID: 1, ProviderType: "epay", ChannelType: "alipay", InteractionMode: "redirect", Amount: money.FromDecimal(decimal.NewFromInt(12)), Currency: "CNY", Status: "failed"},
+				} {
+					if err := tx.Create(&payment).Error; err != nil {
+						return err
+					}
+				}
+				if err := tx.Create(&broadcastdomain.Broadcast{Title: "legacy", RecipientType: "all", MessageHTML: "legacy message", Status: "completed", SuccessCount: 2}).Error; err != nil {
+					return err
+				}
+				// Remove every new payment/broadcast field, not just source IDs.
+				if err := tx.Migrator().DropIndex(&paymentdomain.Payment{}, "idx_payment_order_operation"); err != nil {
+					return err
+				}
+				for _, column := range []string{"operation_key", "operation_hash", "creation_state", "source_bot_id", "source_telegram_id", "source_private_chat_id"} {
+					if err := tx.Migrator().DropColumn(&paymentdomain.Payment{}, column); err != nil {
+						return err
+					}
+				}
+				for _, column := range []string{"bot_id", "delivery_version", "payload_cipher", "unknown_count"} {
+					if err := tx.Migrator().DropColumn(&broadcastdomain.Broadcast{}, column); err != nil {
+						return err
+					}
+				}
+				if scenario.version == 2 {
+					if err := migrateTelegramRuntime(tx); err != nil {
+						return err
+					}
+					for _, column := range []string{"telegram_user_id", "user_id", "broadcast_id"} {
+						if err := tx.Migrator().DropColumn(&runtimedomain.Delivery{}, column); err != nil {
+							return err
+						}
+					}
+				}
+				return tx.Exec("CREATE TABLE retained_legacy (id INTEGER PRIMARY KEY, value TEXT)").Error
+			}, schemaSteps[:scenario.version-1]...); err != nil {
+				t.Fatal(err)
+			}
+			if err := db.Exec("INSERT INTO retained_legacy (id,value) VALUES (1,'preserved')").Error; err != nil {
+				t.Fatal(err)
+			}
+			baseline := func(*gorm.DB) error { t.Fatal("versioned database ran baseline"); return nil }
+			if scenario.retry {
+				steps := append([]migrationStep(nil), schemaSteps...)
+				injected := errors.New("injected v3 failure after DDL")
+				steps[1].run = func(tx *gorm.DB) error {
+					if err := migrateTelegramBusinessDelivery(tx); err != nil {
+						return err
+					}
+					return injected
+				}
+				if err := runSchemaMigrations(db, schemaVersion, baseline, steps...); !errors.Is(err, injected) {
+					t.Fatalf("failure = %v", err)
+				}
+				var completed int64
+				if err := db.Raw("SELECT MAX(version) FROM schema_migrations").Scan(&completed).Error; err != nil {
+					t.Fatal(err)
+				}
+				if completed != scenario.version {
+					t.Fatalf("failed SQLite attempt committed version %d", completed)
+				}
+			}
+			if err := runSchemaMigrations(db, schemaVersion, baseline, schemaSteps...); err != nil {
+				t.Fatal(err)
+			}
+			for _, model := range []interface{}{
+				&runtimedomain.Instance{}, &runtimedomain.Contact{}, &runtimedomain.Inbox{}, &runtimedomain.Session{}, &runtimedomain.Delivery{},
+				&userauthdomain.TelegramHistoryGrant{}, &deliverycontract.Event{}, &deliverycontract.OrderSource{}, &deliverycontract.OrderOperation{},
+				&paymentdomain.Payment{}, &broadcastdomain.Broadcast{},
+			} {
+				stmt := &gorm.Statement{DB: db}
+				if err := stmt.Parse(model); err != nil {
+					t.Fatal(err)
+				}
+				for _, field := range stmt.Schema.Fields {
+					if field.DBName != "" && !field.IgnoreMigration && !db.Migrator().HasColumn(model, field.DBName) {
+						t.Fatalf("missing %T column %s", model, field.DBName)
+					}
+				}
+				for _, index := range stmt.Schema.ParseIndexes() {
+					if !db.Migrator().HasIndex(model, index.Name) {
+						t.Fatalf("missing %T index %s", model, index.Name)
+					}
+				}
+				if !db.Migrator().HasTable(model) {
+					t.Fatalf("missing Telegram table %T", model)
+				}
+			}
+			for _, column := range []string{"source_bot_id", "source_telegram_id", "source_private_chat_id"} {
+				if !db.Migrator().HasColumn(&paymentdomain.Payment{}, column) {
+					t.Fatalf("missing payment column %s", column)
+				}
+			}
+			if !db.Migrator().HasColumn(&broadcastdomain.Broadcast{}, "bot_id") {
+				t.Fatal("missing broadcast bot_id")
+			}
+			var payments []paymentdomain.Payment
+			if err := db.Order("id").Find(&payments).Error; err != nil {
+				t.Fatal(err)
+			}
+			if len(payments) != 2 || payments[0].PayURL != "https://example.test/pay" || payments[0].OperationKey != nil || payments[1].OperationKey != nil || !payments[0].Amount.Decimal.Equal(decimal.NewFromInt(12)) {
+				t.Fatalf("legacy payments changed: %+v", payments)
+			}
+			var broadcast broadcastdomain.Broadcast
+			if err := db.First(&broadcast).Error; err != nil {
+				t.Fatal(err)
+			}
+			if broadcast.MessageHTML != "legacy message" || broadcast.SuccessCount != 2 || broadcast.DeliveryVersion != 0 || broadcast.UnknownCount != 0 || broadcast.PayloadCipher != "" {
+				t.Fatalf("legacy broadcast changed: %+v", broadcast)
+			}
+			// The nullable key must preserve legacy duplicate order IDs while enforcing
+			// uniqueness for newly keyed payment operations after an upgrade.
+			key := "migration-test"
+			if err := db.Model(&payments[0]).Update("operation_key", key).Error; err != nil {
+				t.Fatal(err)
+			}
+			if err := db.Model(&payments[1]).Update("operation_key", key).Error; err == nil {
+				t.Fatal("payment operation unique index is ineffective")
+			}
+			var value string
+			if err := db.Raw("SELECT value FROM retained_legacy WHERE id = 1").Scan(&value).Error; err != nil || value != "preserved" {
+				t.Fatalf("legacy row changed: %q %v", value, err)
+			}
+			var versions []int64
+			if err := db.Raw("SELECT version FROM schema_migrations ORDER BY version").Scan(&versions).Error; err != nil {
+				t.Fatal(err)
+			}
+			if len(versions) != int(schemaVersion-scenario.version+1) || versions[0] != scenario.version || versions[len(versions)-1] != schemaVersion {
+				t.Fatal(versions)
+			}
+			if err := runSchemaMigrations(db, schemaVersion, baseline, schemaSteps...); err != nil {
+				t.Fatal(err)
+			}
+			// Replay v3 directly as well: MySQL may retain DDL after a failed step.
+			if err := migrateTelegramBusinessDelivery(db); err != nil {
+				t.Fatal(err)
+			}
+		})
+	}
 }
 
 func TestSchemaVersionCoversModelsAndMigrations(t *testing.T) {
@@ -702,13 +963,13 @@ func TestVersionRunnerUsesLockedDBWithoutReplacingGlobal(t *testing.T) {
 	t.Cleanup(func() { gormdb.DB = previous })
 	originalLogger := db.Logger
 	originalPool := db.Statement.ConnPool
-	if err := runSchemaMigrations(db, schemaVersion, migrateSchema); err != nil {
+	if err := runSchemaMigrations(db, schemaVersion, migrateSchema, schemaSteps...); err != nil {
 		t.Fatal(err)
 	}
 	if gormdb.DB != nil || db.Logger != originalLogger || db.Statement.ConnPool != originalPool {
 		t.Fatal("runner changed business DB/logger/connection pool")
 	}
-	if err := runSchemaMigrations(db, schemaVersion, func(*gorm.DB) error { t.Fatal("full baseline repeated"); return nil }); err != nil {
+	if err := runSchemaMigrations(db, schemaVersion, func(*gorm.DB) error { t.Fatal("full baseline repeated"); return nil }, schemaSteps...); err != nil {
 		t.Fatal(err)
 	}
 }

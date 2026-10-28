@@ -479,9 +479,14 @@ func (s *Service) unbindExternalIdentity(userID uint, provider string) error {
 		return googleauthapp.ErrGoogleAuthConfigInvalid
 	}
 	return s.authUnitOfWork.WithinTransaction(context.Background(), func(tx AuthTransaction) error {
-		user, err := activeTransactionUser(tx, userID)
+		// Disabled accounts must still be revocable by the shared admin/user
+		// entry point; active status is required for access, not revocation.
+		user, err := tx.GetUserByIDForUpdate(userID)
 		if err != nil {
 			return err
+		}
+		if user == nil {
+			return ErrNotFound
 		}
 		identity, err := tx.GetIdentityByUserProvider(userID, provider)
 		if err != nil {
@@ -496,6 +501,11 @@ func (s *Service) unbindExternalIdentity(userID uint, provider string) error {
 		}
 		if !s.hasUsableLoginAfterRemoval(user, identity.ID, identities) {
 			return errExternalIdentityUnbindLocked
+		}
+		if provider == constants.UserOAuthProviderTelegram {
+			if err := tx.RevokeTelegramHistoryGrants(identity.ID, time.Now()); err != nil {
+				return err
+			}
 		}
 		return tx.DeleteIdentityByID(identity.ID)
 	})

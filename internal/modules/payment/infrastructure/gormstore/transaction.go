@@ -47,6 +47,10 @@ func (s *Store) WithinTransaction(fn func(paymentcontract.Transaction) error) er
 		return nil
 	}
 	return s.db.Transaction(func(tx *gorm.DB) error {
-		return fn(UseTransaction(tx, s.guestCredentialSecret))
+		unit := UseTransaction(tx, s.guestCredentialSecret).(transaction)
+		if s.businessEventsEnabled {
+			unit.Transaction = ordergormstore.UseTransactionWithBusinessEvents(tx, s.guestCredentialSecret)
+		}
+		return fn(unit)
 	})
 }

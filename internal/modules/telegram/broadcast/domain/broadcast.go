@@ -9,6 +9,10 @@ import (
 
 // Broadcast is a persisted Telegram broadcast job.
 type Broadcast struct {
+	BotID            uint              `gorm:"index" json:"bot_id"`
+	DeliveryVersion  int               `gorm:"not null;default:0" json:"delivery_version"`
+	PayloadCipher    string            `gorm:"type:text" json:"-"`
+	UnknownCount     int               `gorm:"not null;default:0" json:"unknown_count"`
 	ID               uint              `gorm:"primarykey" json:"id"`
 	Title            string            `gorm:"size:200;not null" json:"title"`
 	RecipientType    string            `gorm:"size:32;not null;index" json:"recipient_type"`

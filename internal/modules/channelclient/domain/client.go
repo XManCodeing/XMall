@@ -4,6 +4,7 @@ import "time"
 
 // ChannelClient 渠道客户端（Telegram Bot 等外部服务的认证凭证）
 type Client struct {
+	Revision      uint64     `json:"-" gorm:"not null;default:1"`
 	ID            uint       `json:"id" gorm:"primaryKey"`
 	Name          string     `json:"name" gorm:"size:100;not null"`
 	ChannelType   string     `json:"channel_type" gorm:"size:50;not null;index"`

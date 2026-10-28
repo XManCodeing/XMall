@@ -17,6 +17,34 @@ import (
 	"github.com/shopspring/decimal"
 )
 
+func TestPaypalCreationAuthenticationVersusOrderBoundary(t *testing.T) {
+	for _, authFails := range []bool{true, false} {
+		t.Run(map[bool]string{true: "oauth-failure", false: "order-failure"}[authFails], func(t *testing.T) {
+			orders := 0
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				if r.URL.Path == "/v1/oauth2/token" {
+					if authFails {
+						w.WriteHeader(http.StatusUnauthorized)
+						return
+					}
+					_, _ = w.Write([]byte(`{"access_token":"test-token","expires_in":3600}`))
+					return
+				}
+				orders++
+				w.WriteHeader(http.StatusInternalServerError)
+			}))
+			defer server.Close()
+			_, err := NewPaypalAdapter().CreatePayment(context.Background(), jsonmap.JSON{"client_id": "test", "client_secret": "test", "base_url": server.URL, "return_url": "https://example.com/pay", "cancel_url": "https://example.com/cancel", "webhook_id": "test"}, paymentcontract.GatewayCreateInput{OrderNo: "BOUNDARY", Currency: "USD", Amount: money.FromDecimal(decimal.NewFromInt(10))})
+			if err == nil || errors.Is(err, paymentcontract.ErrGatewayNotSubmitted) != authFails {
+				t.Fatalf("classification: %v", err)
+			}
+			if authFails && orders != 0 || !authFails && orders != 1 {
+				t.Fatalf("orders=%d", orders)
+			}
+		})
+	}
+}
+
 func TestPaypalAdapter_Type(t *testing.T) {
 	a := NewPaypalAdapter()
 	want := constants.PaymentProviderOfficial + ":" + constants.PaymentChannelTypePaypal

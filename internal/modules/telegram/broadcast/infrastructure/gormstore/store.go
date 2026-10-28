@@ -1,6 +1,7 @@
 package broadcaststore
 
 import (
+	"context"
 	"errors"
 
 	broadcastcontract "github.com/XManCodeing/XMall/internal/modules/telegram/broadcast/contract"
@@ -17,19 +18,19 @@ func New(db *gorm.DB) *Store {
 	return &Store{db: db}
 }
 
-func (r *Store) Create(broadcast *broadcastdomain.Broadcast) error {
+func (r *Store) Create(ctx context.Context, broadcast *broadcastdomain.Broadcast) error {
 	if broadcast == nil {
 		return nil
 	}
-	return r.db.Create(broadcast).Error
+	return r.db.WithContext(ctx).Create(broadcast).Error
 }
 
-func (r *Store) GetByID(id uint) (*broadcastdomain.Broadcast, error) {
+func (r *Store) GetByID(ctx context.Context, id uint) (*broadcastdomain.Broadcast, error) {
 	if id == 0 {
 		return nil, nil
 	}
 	var broadcast broadcastdomain.Broadcast
-	if err := r.db.Where("deleted_at IS NULL").First(&broadcast, id).Error; err != nil {
+	if err := r.db.WithContext(ctx).Where("deleted_at IS NULL").First(&broadcast, id).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, nil
 		}
@@ -38,8 +39,8 @@ func (r *Store) GetByID(id uint) (*broadcastdomain.Broadcast, error) {
 	return &broadcast, nil
 }
 
-func (r *Store) List(filter broadcastcontract.ListFilter) ([]broadcastdomain.Broadcast, int64, error) {
-	query := r.db.Model(&broadcastdomain.Broadcast{}).Where("deleted_at IS NULL")
+func (r *Store) List(ctx context.Context, filter broadcastcontract.ListFilter) ([]broadcastdomain.Broadcast, int64, error) {
+	query := r.db.WithContext(ctx).Model(&broadcastdomain.Broadcast{}).Where("deleted_at IS NULL")
 
 	var total int64
 	if err := query.Count(&total).Error; err != nil {
@@ -61,9 +62,9 @@ func (r *Store) List(filter broadcastcontract.ListFilter) ([]broadcastdomain.Bro
 	return items, total, nil
 }
 
-func (r *Store) Update(broadcast *broadcastdomain.Broadcast) error {
+func (r *Store) Update(ctx context.Context, broadcast *broadcastdomain.Broadcast) error {
 	if broadcast == nil {
 		return nil
 	}
-	return r.db.Save(broadcast).Error
+	return r.db.WithContext(ctx).Save(broadcast).Error
 }

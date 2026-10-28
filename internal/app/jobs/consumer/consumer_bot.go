@@ -20,10 +20,100 @@ import (
 	"github.com/hibiken/asynq"
 )
 
-// handleBotNotify 处理 Telegram Bot 事件回调任务。
-func (c *Consumer) handleBotNotify(_ context.Context, task *asynq.Task) error {
-	if c == nil || task == nil {
+// LegacyNotifyRouter resolves explicit routing or a persisted historical mapping.
+// A nil endpoint is allowed only after durable conversion to runtime deliveries.
+// Unknown routing must return ErrLegacyNotifyUnmapped, never choose an active bot.
+type LegacyNotifyRouter interface {
+	Resolve(context.Context, queue.BotNotifyPayload, uint) (*channelclientapp.ActiveEndpoint, error)
+	LegacyAllowed(context.Context, uint) (bool, error)
+}
+
+type LegacyHistory interface {
+	ChannelForNotification(context.Context, queue.BotNotifyPayload) (uint, error)
+}
+type LegacyConverter interface {
+	ConvertLegacyNotification(context.Context, uint, queue.BotNotifyPayload) error
+}
+type LegacyChannelGuard interface {
+	LegacyAllowed(context.Context, uint) (bool, error)
+}
+
+// RoutedLegacyNotify never consults active-channel ordering. History resolves old
+// queue entries; conversion must durably enqueue before returning success.
+type RoutedLegacyNotify struct {
+	Channels  *channelclientapp.Service
+	Guard     LegacyChannelGuard
+	History   LegacyHistory
+	Converter LegacyConverter
+}
+
+func (r *RoutedLegacyNotify) LegacyAllowed(ctx context.Context, id uint) (bool, error) {
+	if r == nil || r.Guard == nil {
+		return false, ErrLegacyNotifyUnmapped
+	}
+	return r.Guard.LegacyAllowed(ctx, id)
+}
+func (r *RoutedLegacyNotify) Resolve(ctx context.Context, p queue.BotNotifyPayload, channelID uint) (*channelclientapp.ActiveEndpoint, error) {
+	if r == nil {
+		return nil, ErrLegacyNotifyUnmapped
+	}
+	if channelID == 0 {
+		if r.History == nil {
+			return nil, ErrLegacyNotifyUnmapped
+		}
+		var err error
+		channelID, err = r.History.ChannelForNotification(ctx, p)
+		if err != nil {
+			return nil, err
+		}
+	}
+	if channelID == 0 {
+		return nil, ErrLegacyNotifyUnmapped
+	}
+	allowed, err := r.LegacyAllowed(ctx, channelID)
+	if err != nil {
+		return nil, err
+	}
+	if !allowed {
+		if r.Converter == nil {
+			return nil, ErrLegacyNotifyUnmapped
+		}
+		return nil, r.Converter.ConvertLegacyNotification(ctx, channelID, p)
+	}
+	if r.Channels == nil {
+		return nil, ErrLegacyNotifyUnmapped
+	}
+	client, err := r.Channels.GetChannelClient(channelID)
+	if err != nil {
+		return nil, err
+	}
+	if client == nil || client.Status != 1 || client.ChannelType != "telegram_bot" || client.DeletedAt != nil {
+		return nil, ErrLegacyNotifyUnmapped
+	}
+	secret, err := r.Channels.DecryptChannelSecret(client)
+	if err != nil {
+		return nil, errors.New("channel credential unavailable")
+	}
+	if secret == "" {
+		return nil, ErrLegacyNotifyUnmapped
+	}
+	return &channelclientapp.ActiveEndpoint{ClientID: client.ID, ChannelKey: client.ChannelKey, CallbackURL: client.CallbackURL, ChannelSecret: secret}, nil
+}
+
+var ErrLegacyNotifyUnmapped = errors.New("legacy bot notification requires routing reconciliation")
+
+func NewLegacyBotNotifyHandler(router LegacyNotifyRouter) asynq.HandlerFunc {
+	return func(ctx context.Context, task *asynq.Task) error { return handleRoutedBotNotify(ctx, task, router) }
+}
+func (c *Consumer) handleBotNotify(ctx context.Context, task *asynq.Task) error {
+	return handleRoutedBotNotify(ctx, task, nil)
+}
+func handleRoutedBotNotify(ctx context.Context, task *asynq.Task, router LegacyNotifyRouter) error {
+	if task == nil {
 		return nil
+	}
+	if router == nil {
+		return fmt.Errorf("%w: %w", ErrLegacyNotifyUnmapped, asynq.SkipRetry)
 	}
 	var payload queue.BotNotifyPayload
 	if err := json.Unmarshal(task.Payload(), &payload); err != nil {
@@ -35,19 +125,34 @@ func (c *Consumer) handleBotNotify(_ context.Context, task *asynq.Task) error {
 		return nil
 	}
 
-	// 从 DB 读取 telegram_bot 类型的活跃 ChannelClient
-	channelEndpoint, err := c.ChannelClientService.GetActiveEndpoint("telegram_bot")
-	if err != nil {
-		if errors.Is(err, channelclientapp.ErrNotFound) {
-			logger.Debugw("worker_bot_notify_skip_no_channel_client")
-			return nil
-		}
-		logger.Warnw("worker_bot_notify_find_channel_client_failed", "error", err)
-		return fmt.Errorf("find telegram bot channel client: %w", err)
+	var route struct {
+		ChannelID uint `json:"channel_id"`
 	}
-	if channelEndpoint == nil || channelEndpoint.CallbackURL == "" {
-		logger.Debugw("worker_bot_notify_skip_no_channel_client")
+	if err := json.Unmarshal(task.Payload(), &route); err != nil {
+		return err
+	}
+	channelEndpoint, err := router.Resolve(ctx, payload, route.ChannelID)
+	if errors.Is(err, ErrLegacyNotifyUnmapped) {
+		return fmt.Errorf("%w: %w", err, asynq.SkipRetry)
+	}
+	if err != nil {
+		return errors.New("legacy bot route resolution failed")
+	}
+	if channelEndpoint == nil {
 		return nil
+	}
+	if channelEndpoint.ClientID == 0 || channelEndpoint.CallbackURL == "" {
+		return fmt.Errorf("%w: %w", ErrLegacyNotifyUnmapped, asynq.SkipRetry)
+	}
+	if route.ChannelID != 0 && channelEndpoint.ClientID != route.ChannelID {
+		return fmt.Errorf("%w: %w", ErrLegacyNotifyUnmapped, asynq.SkipRetry)
+	}
+	allowed, err := router.LegacyAllowed(ctx, channelEndpoint.ClientID)
+	if err != nil {
+		return errors.New("legacy channel guard unavailable")
+	}
+	if !allowed {
+		return fmt.Errorf("legacy channel fenced: %w", asynq.SkipRetry)
 	}
 
 	timestamp := time.Now().Unix()
@@ -92,7 +197,7 @@ func (c *Consumer) handleBotNotify(_ context.Context, task *asynq.Task) error {
 		return fmt.Errorf("build bot notify request url: %w", err)
 	}
 
-	req, err := http.NewRequest("POST", requestURL, bytes.NewReader(body))
+	req, err := http.NewRequestWithContext(ctx, "POST", requestURL, bytes.NewReader(body))
 	if err != nil {
 		return fmt.Errorf("create bot notify request: %w", err)
 	}
@@ -101,12 +206,12 @@ func (c *Consumer) handleBotNotify(_ context.Context, task *asynq.Task) error {
 	req.Header.Set("Dujiao-Next-Channel-Timestamp", strconv.FormatInt(timestamp, 10))
 	req.Header.Set("Dujiao-Next-Channel-Signature", signature)
 
-	httpClient := &http.Client{Timeout: 10 * time.Second}
+	httpClient := &http.Client{Timeout: 10 * time.Second, CheckRedirect: func(*http.Request, []*http.Request) error {
+		return http.ErrUseLastResponse
+	}}
 	resp, err := httpClient.Do(req)
 	if err != nil {
-		logger.Warnw("worker_bot_notify_request_failed",
-			"order_id", payload.OrderID, "telegram_user_id", payload.TelegramUserID, "error", err)
-		return fmt.Errorf("bot notify request: %w", err)
+		return fmt.Errorf("bot notify outcome unknown: %w", asynq.SkipRetry)
 	}
 	defer resp.Body.Close()
 
@@ -116,25 +221,26 @@ func (c *Consumer) handleBotNotify(_ context.Context, task *asynq.Task) error {
 		return nil
 	}
 
-	// 4xx 客户端错误不重试
-	if resp.StatusCode >= 400 && resp.StatusCode < 500 {
-		logger.Warnw("worker_bot_notify_client_error",
-			"order_id", payload.OrderID, "status", resp.StatusCode)
-		return nil
+	// Legacy callbacks have no durable remote idempotency receipt. A 5xx or
+	// redirect can follow an accepted send; archive for reconciliation instead
+	// of blindly sending again. Explicit 429 rejection is safe to retry.
+	if resp.StatusCode == http.StatusTooManyRequests {
+		return errors.New("legacy bot rate limited")
 	}
-
-	// 5xx 返回 error 触发 asynq 重试
-	return fmt.Errorf("bot notify unexpected status: %d", resp.StatusCode)
+	if resp.StatusCode >= 400 && resp.StatusCode < 500 {
+		return fmt.Errorf("legacy bot rejected request (%d): %w", resp.StatusCode, asynq.SkipRetry)
+	}
+	return fmt.Errorf("legacy bot outcome unknown (%d): %w", resp.StatusCode, asynq.SkipRetry)
 }
 
 // buildBotNotifyRequestURL 构建 Bot 回调请求URL并重置查询参数。
 func buildBotNotifyRequestURL(rawURL string, path string) (string, error) {
 	parsed, err := url.Parse(strings.TrimSpace(rawURL))
 	if err != nil {
-		return "", err
+		return "", errors.New("invalid callback url")
 	}
-	if parsed.Scheme == "" || parsed.Host == "" {
-		return "", fmt.Errorf("invalid callback url: %s", rawURL)
+	if (parsed.Scheme != "http" && parsed.Scheme != "https") || parsed.Host == "" || parsed.User != nil {
+		return "", errors.New("invalid callback url")
 	}
 
 	parsed.Path = path

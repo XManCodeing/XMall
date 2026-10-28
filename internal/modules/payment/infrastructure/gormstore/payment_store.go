@@ -18,6 +18,7 @@ import (
 type Store struct {
 	db                    *gorm.DB
 	guestCredentialSecret string
+	businessEventsEnabled bool
 }
 
 // New 创建支付 Store。
@@ -27,6 +28,13 @@ func New(db *gorm.DB, guestCredentialSecret string) *Store {
 		panic("payment store: guest credential secret is required")
 	}
 	return &Store{db: db, guestCredentialSecret: secret}
+}
+
+func (r *Store) LockCreation(orderID uint) error {
+	if r.db.Dialector.Name() == "sqlite" {
+		return r.db.Exec("UPDATE orders SET status = status WHERE id = ?", orderID).Error
+	}
+	return nil
 }
 
 // Create 创建支付记录

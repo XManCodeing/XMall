@@ -10,6 +10,54 @@ import (
 	"github.com/XManCodeing/XMall/internal/upstream"
 )
 
+type contextProvider struct {
+	Provider
+	SnapshotProvider
+	ctx    context.Context
+	source interface {
+		GetByIDContext(context.Context, uint) (*siteconnectiondomain.Connection, error)
+		CaptureProcurementSnapshotContext(context.Context, uint) (string, error)
+		OpenProcurementSnapshotContext(context.Context, uint, string) (*siteconnectiondomain.Connection, upstream.Adapter, error)
+	}
+}
+
+func (g *Gateway) WithContext(ctx context.Context) (procurementcontract.ConnectionProvider, error) {
+	source, ok := g.provider.(interface {
+		GetByIDContext(context.Context, uint) (*siteconnectiondomain.Connection, error)
+		CaptureProcurementSnapshotContext(context.Context, uint) (string, error)
+		OpenProcurementSnapshotContext(context.Context, uint, string) (*siteconnectiondomain.Connection, upstream.Adapter, error)
+	})
+	snapshots, snapshotOK := g.provider.(SnapshotProvider)
+	if !ok || !snapshotOK {
+		return nil, errors.New("connection provider does not support cancellation")
+	}
+	return New(&contextProvider{g.provider, snapshots, ctx, source}), nil
+}
+func (p *contextProvider) GetByID(id uint) (*siteconnectiondomain.Connection, error) {
+	if err := p.ctx.Err(); err != nil {
+		return nil, err
+	}
+	return p.source.GetByIDContext(p.ctx, id)
+}
+func (p *contextProvider) CaptureProcurementSnapshot(id uint) (string, error) {
+	if err := p.ctx.Err(); err != nil {
+		return "", err
+	}
+	return p.source.CaptureProcurementSnapshotContext(p.ctx, id)
+}
+func (p *contextProvider) GetAdapter(conn *siteconnectiondomain.Connection) (upstream.Adapter, error) {
+	if err := p.ctx.Err(); err != nil {
+		return nil, err
+	}
+	return p.Provider.GetAdapter(conn)
+}
+func (p *contextProvider) OpenProcurementSnapshot(id uint, snapshot string) (*siteconnectiondomain.Connection, upstream.Adapter, error) {
+	if err := p.ctx.Err(); err != nil {
+		return nil, nil, err
+	}
+	return p.source.OpenProcurementSnapshotContext(p.ctx, id, snapshot)
+}
+
 type Provider interface {
 	GetByID(id uint) (*siteconnectiondomain.Connection, error)
 	GetAdapter(connection *siteconnectiondomain.Connection) (upstream.Adapter, error)

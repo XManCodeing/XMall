@@ -1,6 +1,8 @@
 package application
 
 import (
+	"fmt"
+	delivery "github.com/XManCodeing/XMall/internal/modules/telegram/delivery/contract"
 	"strings"
 	"time"
 
@@ -94,7 +96,8 @@ func (s *PaymentService) handleWalletRechargeCallback(payment *paymentdomain.Pay
 			}
 		}
 		s.enqueueWalletRechargeSuccessAsync(recharge, updated, log)
-		s.enqueueWalletRechargeBotNotifyAsync(recharge, log)
+		// Telegram delivery is emitted only from the payment transaction below.
+		// Never fall back to login identity/global bot routing after commit.
 	}
 	return updated, nil
 }
@@ -176,6 +179,27 @@ func (s *PaymentService) applyWalletRechargePaymentUpdate(payment *paymentdomain
 				return err
 			}
 			newlySucceeded = true
+			events := delivery.From(tx.Orders())
+			source := &delivery.Source{BotID: lockedPayment.SourceBotID, TelegramID: lockedPayment.SourceTelegramID, PrivateChatID: lockedPayment.SourcePrivateChatID}
+			if source.BotID == 0 {
+				// Legacy pending recharges have no checkout source. Resolve only
+				// today's trusted contact, never a historical binding or order.
+				source = nil
+				if resolver, ok := events.(delivery.CurrentSourceResolver); ok {
+					source, err = resolver.ResolveCurrentSource(recharge.UserID, 0)
+					if err != nil {
+						return err
+					}
+				}
+			}
+			if source != nil {
+				if events == nil {
+					return ErrPaymentUpdateFailed
+				}
+				if err := events.Append(&delivery.Event{EventKey: fmt.Sprintf("recharge:%d:succeeded", recharge.ID), Kind: delivery.EventRechargeSucceeded, RechargeID: recharge.ID, PaymentID: lockedPayment.ID, UserID: recharge.UserID, BotID: source.BotID, TelegramID: source.TelegramID, PrivateChatID: source.PrivateChatID}); err != nil {
+					return err
+				}
+			}
 			recharge.Status = constants.WalletRechargeStatusSuccess
 			paidAt := now
 			if lockedPayment.PaidAt != nil {

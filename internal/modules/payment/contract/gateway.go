@@ -75,6 +75,9 @@ type GatewaySecurityTestResult struct {
 type GatewayProvider interface {
 	Type() string
 	ValidateConfig(cfg jsonmap.JSON, channelType string) error
+	// CreatePayment errors are outcome-unknown by default. Only an adapter
+	// proving no payment request crossed its execution boundary may wrap the
+	// error with GatewayNotSubmitted. Never classify by error category alone.
 	CreatePayment(ctx context.Context, cfg jsonmap.JSON, input GatewayCreateInput) (*GatewayCreateResult, error)
 }
 

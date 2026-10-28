@@ -1,7 +1,11 @@
 package application
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
+	"encoding/json"
 	"errors"
+	delivery "github.com/XManCodeing/XMall/internal/modules/telegram/delivery/contract"
 	"strings"
 	"time"
 
@@ -138,6 +142,13 @@ func NewOrderService(opts OrderServiceOptions) *OrderService {
 
 // CreateOrderInput 创建订单输入
 type CreateOrderInput struct {
+	// Expected values are optional; when provided, the exact persisted settlement
+	// must match before any order/stock write. Existing operations replay first.
+	ExpectedTotalAmount *money.Amount
+	ExpectedCurrency    string
+	OperationKey        string
+	RequestHash         string
+	Source              *delivery.Source
 	UserID              uint
 	Tenant              resellercontract.TenantContext
 	Items               []CreateOrderItem
@@ -229,6 +240,11 @@ func (s *OrderService) CreateOrder(input CreateOrderInput) (*orderdomain.Order, 
 		return nil, ErrInvalidOrderItem
 	}
 	return s.createOrder(orderCreateParams{
+		ExpectedTotalAmount: input.ExpectedTotalAmount,
+		ExpectedCurrency:    input.ExpectedCurrency,
+		OperationKey:        input.OperationKey,
+		RequestHash:         input.RequestHash,
+		Source:              input.Source,
 		UserID:              input.UserID,
 		Tenant:              input.Tenant,
 		Items:               input.Items,
@@ -270,6 +286,11 @@ func (s *OrderService) CreateGuestOrder(input CreateGuestOrderInput) (*orderdoma
 }
 
 type orderCreateParams struct {
+	ExpectedTotalAmount      *money.Amount
+	ExpectedCurrency         string
+	OperationKey             string
+	RequestHash              string
+	Source                   *delivery.Source
 	UserID                   uint
 	GuestEmail               string
 	GuestPassword            string
@@ -343,6 +364,7 @@ func (s *OrderService) PreviewOrder(input CreateOrderInput) (*OrderPreview, erro
 	}
 	params := orderCreateParams{
 		UserID:              input.UserID,
+		SkipIPRiskControl:   input.SkipIPRiskControl,
 		Tenant:              input.Tenant,
 		Items:               input.Items,
 		CouponCode:          input.CouponCode,
@@ -426,6 +448,20 @@ func (s *OrderService) previewOrder(input orderCreateParams) (*OrderPreview, err
 }
 
 func (s *OrderService) createOrder(input orderCreateParams) (*orderdomain.Order, error) {
+	if err := validateOperationInput(&input); err != nil {
+		return nil, err
+	}
+	var requestFingerprint string
+	if input.OperationKey != "" {
+		var err error
+		requestFingerprint, err = operationFingerprint(input)
+		if err != nil {
+			return nil, ErrInvalidOrderItem
+		}
+		if existing, err := s.existingOperation(input.OperationKey, requestFingerprint, input.UserID, input.Source); err != nil || existing != nil {
+			return existing, err
+		}
+	}
 	if s.queueClient == nil || !s.queueClient.Enabled() {
 		return nil, ErrQueueUnavailable
 	}
@@ -446,6 +482,15 @@ func (s *OrderService) createOrder(input orderCreateParams) (*orderdomain.Order,
 		}
 	} else if isResellerOrderContext(input.Tenant) {
 		return nil, ErrResellerProductNotListed
+	}
+
+	// Compare the settlement snapshot that is actually persisted, not a second
+	// preview. The operation lookup above intentionally precedes this check.
+	if input.ExpectedTotalAmount != nil && !money.FromDecimal(result.TotalAmount).Decimal.Equal(input.ExpectedTotalAmount.Decimal) {
+		return nil, ErrInvalidOrderAmount
+	}
+	if input.ExpectedCurrency != "" && result.Currency != input.ExpectedCurrency {
+		return nil, ErrOrderCurrencyMismatch
 	}
 
 	// 仅允许钱包余额支付时，在创建订单（锁库存）前预校验余额是否充足
@@ -541,8 +586,26 @@ func (s *OrderService) createOrder(input orderCreateParams) (*orderdomain.Order,
 		order.CouponID = &result.AppliedCoupon.ID
 	}
 
+	var repeatedOrderID uint
 	err = s.orderStore.WithinTransaction(func(tx ordercontract.Transaction) error {
 		orderStore := tx.Orders()
+		if err := delivery.GuardIdentity(orderStore, input.UserID, input.Source); err != nil {
+			return err
+		}
+		events := delivery.From(orderStore)
+		if input.OperationKey != "" {
+			if events == nil {
+				return ErrBusinessEventsUnavailable
+			}
+			op, created, err := events.ReserveOperation(input.OperationKey, requestFingerprint, input.UserID)
+			if err != nil {
+				return err
+			}
+			if !created {
+				repeatedOrderID = op.OrderID
+				return nil
+			}
+		}
 		productSKURepo := tx.ProductSKUs()
 		if s.riskControlSvc != nil && !input.SkipRiskControl {
 			if err := s.riskControlSvc.CheckPendingOrderAllowed(buildRiskCheckInput(input, false), input.RiskCheckResult, orderStore); err != nil {
@@ -551,6 +614,16 @@ func (s *OrderService) createOrder(input orderCreateParams) (*orderdomain.Order,
 		}
 		if err := orderStore.Create(order, nil); err != nil {
 			return err
+		}
+		if input.OperationKey != "" {
+			if err := events.CompleteOperation(input.OperationKey, order.ID); err != nil {
+				return err
+			}
+		}
+		if input.Source != nil {
+			if err := events.SaveSource(order.ID, input.UserID, *input.Source); err != nil {
+				return err
+			}
 		}
 
 		for idx := range result.Plans {
@@ -599,6 +672,11 @@ func (s *OrderService) createOrder(input orderCreateParams) (*orderdomain.Order,
 			items := []orderdomain.OrderItem{plan.Item}
 			if err := orderStore.Create(childOrder, items); err != nil {
 				return err
+			}
+			if input.Source != nil {
+				if err := events.SaveSource(childOrder.ID, input.UserID, *input.Source); err != nil {
+					return err
+				}
 			}
 			if len(items) > 0 {
 				result.Plans[idx].Item = items[0]
@@ -686,7 +764,17 @@ func (s *OrderService) createOrder(input orderCreateParams) (*orderdomain.Order,
 		}
 		return nil
 	})
+	if err == nil && repeatedOrderID != 0 {
+		existing, fetchErr := s.orderStore.GetByIDAndUser(repeatedOrderID, input.UserID)
+		if existing != nil {
+			FillOrderItemsFromChildren(existing)
+		}
+		return existing, fetchErr
+	}
 	if err != nil {
+		if errors.Is(err, ErrOperationConflict) || errors.Is(err, ErrBusinessEventsUnavailable) || errors.Is(err, delivery.ErrIdentityChanged) {
+			return nil, err
+		}
 		for _, couponErr := range []error{
 			couponcontract.ErrNotFound,
 			couponcontract.ErrUsageLimit,
@@ -787,6 +875,74 @@ func buildRiskCheckInput(input orderCreateParams, consumeRateLimit bool) orderri
 		ConsumeRateLimit: consumeRateLimit,
 		Items:            items,
 	}
+}
+
+var ErrOperationConflict = delivery.ErrOperationConflict
+var ErrBusinessEventsUnavailable = errors.New("telegram business event store unavailable")
+
+// Fingerprint business parameters ourselves; caller hashes alone cannot prove equality.
+func operationFingerprint(input orderCreateParams) (string, error) {
+	input.OperationKey = ""
+	input.ClientIP = ""
+	input.RiskIP = ""
+	raw, err := json.Marshal(input)
+	if err != nil {
+		return "", err
+	}
+	sum := sha256.Sum256(raw)
+	return hex.EncodeToString(sum[:]), nil
+}
+func (s *OrderService) existingOperation(key, hash string, userID uint, source *delivery.Source) (*orderdomain.Order, error) {
+	if source != nil && source.ExpectedIdentityID != 0 {
+		var order *orderdomain.Order
+		err := s.orderStore.WithinTransaction(func(tx ordercontract.Transaction) error {
+			if err := delivery.GuardIdentity(tx.Orders(), userID, source); err != nil {
+				return err
+			}
+			var err error
+			order, err = existingOperationFrom(tx.Orders(), key, hash, userID)
+			return err
+		})
+		return order, err
+	}
+	return existingOperationFrom(s.orderStore, key, hash, userID)
+}
+
+func existingOperationFrom(store ordercontract.Store, key, hash string, userID uint) (*orderdomain.Order, error) {
+	events := delivery.From(store)
+	if events == nil {
+		return nil, ErrBusinessEventsUnavailable
+	}
+	operation, err := events.FindOperation(key)
+	if err != nil || operation == nil {
+		return nil, err
+	}
+	if operation.UserID != userID || operation.RequestHash != hash {
+		return nil, ErrOperationConflict
+	}
+	if operation.OrderID == 0 {
+		return nil, ErrBusinessEventsUnavailable
+	}
+	order, err := store.GetByIDAndUser(operation.OrderID, userID)
+	if err == nil && order != nil {
+		FillOrderItemsFromChildren(order)
+	}
+	return order, err
+}
+func validateOperationInput(input *orderCreateParams) error {
+	input.OperationKey = strings.TrimSpace(input.OperationKey)
+	if len(input.OperationKey) > 160 || len(input.RequestHash) > 256 {
+		return ErrInvalidOrderItem
+	}
+	if input.Source != nil {
+		if err := input.Source.Validate(); err != nil {
+			return err
+		}
+		if input.OperationKey == "" {
+			return ErrInvalidOrderItem
+		}
+	}
+	return nil
 }
 
 func generateOrderNo() string {

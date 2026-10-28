@@ -155,12 +155,12 @@ func DefaultTelegramBotConfig() TelegramBotConfigSetting {
 					Key:     "wallet",
 					Enabled: true,
 					Order:   3,
-					Summary: LocalizedText{"zh-CN": "💰 钱包充值", "zh-TW": "💰 錢包儲值", "en-US": "💰 Wallet help"},
-					Title:   LocalizedText{"zh-CN": "💰 钱包充值", "zh-TW": "💰 錢包儲值", "en-US": "💰 Wallet help"},
+					Summary: LocalizedText{"zh-CN": "💰 钱包余额", "zh-TW": "💰 錢包餘額", "en-US": "💰 Wallet help"},
+					Title:   LocalizedText{"zh-CN": "💰 钱包余额", "zh-TW": "💰 錢包餘額", "en-US": "💰 Wallet help"},
 					Content: LocalizedText{
-						"zh-CN": "打开“我的钱包”可以查看余额、充值记录并发起充值。充值成功后，余额会更新，可直接用于支付订单。",
-						"zh-TW": "打開「我的錢包」可以查看餘額、儲值記錄並發起儲值。儲值成功後，餘額會更新，可直接用於支付訂單。",
-						"en-US": "Open \"My Wallet\" to view balance, recharge history, and create a recharge. Once the recharge succeeds, the balance updates and can be used for orders.",
+						"zh-CN": "打开“我的钱包”可以查看余额。已有余额可用于支持钱包支付的订单；Bot 暂不提供充值入口。",
+						"zh-TW": "打開「我的錢包」可以查看餘額。已有餘額可用於支援錢包付款的訂單；Bot 暫不提供儲值入口。",
+						"en-US": "Open \"My Wallet\" to view your balance. Existing funds can pay for eligible orders. Recharging is not available in the bot.",
 					},
 				},
 				{
@@ -401,14 +401,6 @@ func normalizeTelegramBotConfigMap(raw jsonmap.JSON) map[string]interface{} {
 	return EncodeTelegramBotConfig(setting)
 }
 
-// validMenuActionTypes 菜单项 action type 白名单
-var validMenuActionTypes = map[string]bool{
-	"builtin": true,
-	"url":     true,
-	"web_app": true,
-	"command": true,
-}
-
 const helpItemsMaxCount = 12
 const menuItemsMaxCount = 20
 
@@ -521,27 +513,21 @@ func NormalizeHelpItems(items []TelegramBotHelpItem) []TelegramBotHelpItem {
 // BuiltinTelegramBotMenuKeysOrder 内置菜单 key 显示顺序，必须与 telegram-bot 端 builtinMenuButtons 保持一致。
 // 后台 default seed、补齐缺失项时均按该顺序生成。
 var BuiltinTelegramBotMenuKeysOrder = []string{
-	"shop_home",
-	"my_orders",
-	"my_wallet",
-	"affiliate",
-	"gift_card",
-	"switch_language",
-	"contact_support",
+	"shop", "orders", "wallet", "language", "help",
 }
 
 // builtinMenuLabels 内置菜单的多语言默认 label（与 telegram-bot 的 i18n 默认值一致）。
 var builtinMenuLabels = map[string]LocalizedText{
-	"shop_home":       {"zh-CN": "🛍️ 开始购物", "zh-TW": "🛍️ 開始購物", "en-US": "🛍️ Shop Now"},
-	"my_orders":       {"zh-CN": "📦 我的订单", "zh-TW": "📦 我的訂單", "en-US": "📦 My Orders"},
-	"my_wallet":       {"zh-CN": "💰 我的钱包", "zh-TW": "💰 我的錢包", "en-US": "💰 My Wallet"},
-	"affiliate":       {"zh-CN": "📣 推广返利", "zh-TW": "📣 推廣返利", "en-US": "📣 Affiliate"},
-	"gift_card":       {"zh-CN": "🎁 礼品卡兑换", "zh-TW": "🎁 禮品卡兌換", "en-US": "🎁 Redeem Gift Card"},
-	"switch_language": {"zh-CN": "🌐 切换语言", "zh-TW": "🌐 切換語言", "en-US": "🌐 Language"},
-	"contact_support": {"zh-CN": "❓ 帮助中心", "zh-TW": "❓ 幫助中心", "en-US": "❓ Help"},
+	"shop":      {"zh-CN": "🛍️ 开始购物", "zh-TW": "🛍️ 開始購物", "en-US": "🛍️ Shop Now"},
+	"orders":    {"zh-CN": "📦 我的订单", "zh-TW": "📦 我的訂單", "en-US": "📦 My Orders"},
+	"wallet":    {"zh-CN": "💰 我的钱包", "zh-TW": "💰 我的錢包", "en-US": "💰 My Wallet"},
+	"affiliate": {"zh-CN": "📣 推广返利", "zh-TW": "📣 推廣返利", "en-US": "📣 Affiliate"},
+	"gift_card": {"zh-CN": "🎁 礼品卡兑换", "zh-TW": "🎁 禮品卡兌換", "en-US": "🎁 Redeem Gift Card"},
+	"language":  {"zh-CN": "🌐 切换语言", "zh-TW": "🌐 切換語言", "en-US": "🌐 Language"},
+	"help":      {"zh-CN": "❓ 帮助中心", "zh-TW": "❓ 幫助中心", "en-US": "❓ Help"},
 }
 
-// defaultBuiltinMenuItems 返回 7 项内置菜单的默认配置（用于 default seed 与缺失补齐）。
+// defaultBuiltinMenuItems 返回 5 项内置菜单的默认配置（用于 default seed 与缺失补齐）。
 func defaultBuiltinMenuItems() []TelegramBotMenuItem {
 	items := make([]TelegramBotMenuItem, 0, len(BuiltinTelegramBotMenuKeysOrder))
 	for i, key := range BuiltinTelegramBotMenuKeysOrder {
@@ -555,15 +541,32 @@ func defaultBuiltinMenuItems() []TelegramBotMenuItem {
 			Enabled: true,
 			Order:   i + 1,
 			Label:   label,
-			Action:  TelegramBotMenuAction{Type: "builtin", Value: ""},
+			Action:  TelegramBotMenuAction{Type: "builtin", Value: key},
 		})
 	}
 	return items
 }
 
 // EnsureBuiltinMenuItems 补齐缺失的内置菜单 key（保留已有项的 enabled/label/order）。
-// 这样后台 UI 总能看到 7 个内置菜单的开关，避免老库数据缺项导致管理员误以为某些菜单"无法配置"。
+// 这样后台 UI 总能看到 5 个内置菜单的开关，避免老库数据缺项导致管理员误以为某些菜单"无法配置"。
 func EnsureBuiltinMenuItems(items []TelegramBotMenuItem) []TelegramBotMenuItem {
+	filtered := make([]TelegramBotMenuItem, 0, len(items))
+	aliases := map[string]string{"shop_home": "shop", "my_orders": "orders", "my_wallet": "wallet", "switch_language": "language", "contact_support": "help"}
+	for _, item := range items {
+		if item.Action.Type == "builtin" {
+			if item.Action.Value == "" {
+				item.Action.Value = item.Key
+			}
+			if value, ok := aliases[item.Action.Value]; ok {
+				item.Action.Value = value
+			}
+			if value, ok := aliases[item.Key]; ok {
+				item.Key = value
+			}
+		}
+		filtered = append(filtered, item)
+	}
+	items = filtered
 	seen := make(map[string]bool, len(items))
 	maxOrder := 0
 	for _, it := range items {
@@ -587,13 +590,14 @@ func EnsureBuiltinMenuItems(items []TelegramBotMenuItem) []TelegramBotMenuItem {
 			Enabled: true,
 			Order:   maxOrder,
 			Label:   label,
-			Action:  TelegramBotMenuAction{Type: "builtin", Value: ""},
+			Action:  TelegramBotMenuAction{Type: "builtin", Value: key},
 		})
 	}
 	return items
 }
 
-// NormalizeTelegramBotMenuItems 归一化菜单项：trim、归一化 label、验证 action type、上限 20 项；最后补齐内置 key
+// NormalizeTelegramBotMenuItems trims values and backfills builtins without discarding legacy actions.
+// Runtime-specific validation belongs at the corresponding write boundary.
 func NormalizeTelegramBotMenuItems(items []TelegramBotMenuItem) []TelegramBotMenuItem {
 	if len(items) > menuItemsMaxCount {
 		items = items[:menuItemsMaxCount]
@@ -604,9 +608,6 @@ func NormalizeTelegramBotMenuItems(items []TelegramBotMenuItem) []TelegramBotMen
 		item.Label = NormalizeLocalizedText(item.Label)
 		item.Action.Type = strings.TrimSpace(item.Action.Type)
 		item.Action.Value = strings.TrimSpace(item.Action.Value)
-		if !validMenuActionTypes[item.Action.Type] {
-			item.Action.Type = "builtin"
-		}
 		result = append(result, item)
 	}
 	return EnsureBuiltinMenuItems(result)

@@ -1,6 +1,7 @@
 package queue
 
 import (
+	"context"
 	"fmt"
 	"strings"
 	"time"
@@ -72,6 +73,13 @@ func (c *Client) EnqueueOrderStatusEmail(payload OrderStatusEmailPayload, opts .
 
 // EnqueueOrderAutoFulfill 推送自动交付任务
 func (c *Client) EnqueueOrderAutoFulfill(payload OrderAutoFulfillPayload, opts ...asynq.Option) error {
+	return c.EnqueueOrderAutoFulfillContext(context.Background(), payload, opts...)
+}
+
+func (c *Client) EnqueueOrderAutoFulfillContext(ctx context.Context, payload OrderAutoFulfillPayload, opts ...asynq.Option) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
 	if !c.Enabled() {
 		return nil
 	}
@@ -80,7 +88,7 @@ func (c *Client) EnqueueOrderAutoFulfill(payload OrderAutoFulfillPayload, opts .
 		return err
 	}
 	options := append([]asynq.Option{asynq.Queue(c.defaultQueue)}, opts...)
-	_, err = c.client.Enqueue(task, options...)
+	_, err = c.client.EnqueueContext(ctx, task, options...)
 	return err
 }
 
@@ -148,6 +156,12 @@ func (c *Client) EnqueueNotificationDispatch(payload NotificationDispatchPayload
 
 // EnqueueProcurementSubmit 推送采购提交任务
 func (c *Client) EnqueueProcurementSubmit(payload ProcurementSubmitPayload, opts ...asynq.Option) error {
+	return c.EnqueueProcurementSubmitContext(context.Background(), payload, opts...)
+}
+func (c *Client) EnqueueProcurementSubmitContext(ctx context.Context, payload ProcurementSubmitPayload, opts ...asynq.Option) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
 	if !c.Enabled() {
 		return nil
 	}
@@ -157,7 +171,7 @@ func (c *Client) EnqueueProcurementSubmit(payload ProcurementSubmitPayload, opts
 	}
 	// 采购单服务自行管理重试逻辑，asynq 仅处理瞬态错误（DB/Redis 不可达等）
 	options := append([]asynq.Option{asynq.Queue(c.defaultQueue), asynq.MaxRetry(3)}, opts...)
-	_, err = c.client.Enqueue(task, options...)
+	_, err = c.client.EnqueueContext(ctx, task, options...)
 	return err
 }
 

@@ -1,9 +1,55 @@
 package mappingreader
 
 import (
+	"context"
+	"errors"
 	mappingdomain "github.com/XManCodeing/XMall/internal/modules/catalog/mapping/domain"
 	procurementcontract "github.com/XManCodeing/XMall/internal/modules/procurement/contract"
 )
+
+type contextProducts struct {
+	ctx    context.Context
+	source interface {
+		GetByLocalProductIDContext(context.Context, uint) (*mappingdomain.Mapping, error)
+	}
+}
+type contextSKUs struct {
+	ctx    context.Context
+	source interface {
+		GetByLocalSKUIDContext(context.Context, uint) (*mappingdomain.SKUMapping, error)
+	}
+}
+
+func (s *contextProducts) GetByLocalProductID(id uint) (*mappingdomain.Mapping, error) {
+	if err := s.ctx.Err(); err != nil {
+		return nil, err
+	}
+	return s.source.GetByLocalProductIDContext(s.ctx, id)
+}
+func (s *contextSKUs) GetByLocalSKUID(id uint) (*mappingdomain.SKUMapping, error) {
+	if err := s.ctx.Err(); err != nil {
+		return nil, err
+	}
+	return s.source.GetByLocalSKUIDContext(s.ctx, id)
+}
+func (r *ProductReader) WithContext(ctx context.Context) (procurementcontract.ProductMappingReader, error) {
+	source, ok := r.source.(interface {
+		GetByLocalProductIDContext(context.Context, uint) (*mappingdomain.Mapping, error)
+	})
+	if !ok {
+		return nil, errors.New("product mapping source does not support cancellation")
+	}
+	return NewProducts(&contextProducts{ctx, source}), nil
+}
+func (r *SKUReader) WithContext(ctx context.Context) (procurementcontract.SKUMappingReader, error) {
+	source, ok := r.source.(interface {
+		GetByLocalSKUIDContext(context.Context, uint) (*mappingdomain.SKUMapping, error)
+	})
+	if !ok {
+		return nil, errors.New("sku mapping source does not support cancellation")
+	}
+	return NewSKUs(&contextSKUs{ctx, source}), nil
+}
 
 type ProductSource interface {
 	GetByLocalProductID(productID uint) (*mappingdomain.Mapping, error)

@@ -21,11 +21,14 @@ const {
   languages,
   loading,
   menuActionTypes,
+  getMenuItemError,
+  menuValidationError,
   moveMenuItem,
   removeMenuItem,
   saveConfig,
+  canSave, error, loaded,
   saving,
-} = useTelegramBotSettings()
+} = useTelegramBotSettings(['menu'])
 
 onMounted(() => {
   fetchConfig()
@@ -34,6 +37,7 @@ onMounted(() => {
 
 <template>
   <div class="space-y-6">
+    <p v-if="error" role="alert" class="text-sm text-destructive">{{ error }} <Button variant="link" @click="fetchConfig">{{ t('telegramBot.instances.reload') }}</Button></p>
     <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
       <div>
         <h2 class="text-2xl font-bold tracking-tight">{{ t('telegramBot.settings.menuTitle') }}</h2>
@@ -53,7 +57,7 @@ onMounted(() => {
             </button>
           </div>
         </div>
-        <Button class="w-full sm:w-auto" :disabled="saving || loading" @click="saveConfig">
+        <Button class="w-full sm:w-auto" :disabled="saving || loading || !loaded || !canSave || !!menuValidationError" @click="saveConfig">
           <Loader2 v-if="saving" class="mr-2 h-4 w-4 animate-spin" />
           <Save v-else class="mr-2 h-4 w-4" />
           {{ t('telegramBot.settings.save') }}
@@ -133,7 +137,9 @@ onMounted(() => {
               <Label>{{ t('telegramBot.settings.menuActionType') }}</Label>
               <Select v-model="item.action.type">
                 <SelectTrigger>
-                  <SelectValue />
+                  <SelectValue>
+                    {{ menuActionTypes.includes(item.action.type) ? t(`telegramBot.settings.menuActionType_${item.action.type}`) : item.action.type }}
+                  </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem v-for="actionType in menuActionTypes" :key="actionType" :value="actionType">
@@ -145,7 +151,8 @@ onMounted(() => {
             <div class="space-y-1">
               <Label>{{ t('telegramBot.settings.menuActionValue') }}</Label>
               <Input v-model="item.action.value" :placeholder="getMenuActionValuePlaceholder(item.action.type)" />
-              <p class="text-xs text-muted-foreground">
+              <p v-if="getMenuItemError(item)" role="alert" class="text-xs text-destructive">{{ getMenuItemError(item) }}</p>
+              <p v-else class="text-xs text-muted-foreground">
                 {{ getMenuActionValueHint(item.action.type) }}
               </p>
             </div>

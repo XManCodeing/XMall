@@ -2,6 +2,7 @@ package channelclientapp
 
 // ClientDetail 渠道客户端详情（含明文 secret，供后台展示）。
 type ClientDetail struct {
+	Revision      uint64 `json:"revision"`
 	ID            uint   `json:"id"`
 	Name          string `json:"name"`
 	ChannelType   string `json:"channel_type"`

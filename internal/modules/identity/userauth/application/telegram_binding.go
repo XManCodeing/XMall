@@ -121,7 +121,7 @@ func (s *Service) bindVerifiedTelegram(userID uint, verified *telegramauthapp.Id
 	}
 	if applyTelegramIdentity(verified, current) || identityChanged {
 		current.UpdatedAt = time.Now()
-		if err := s.userOAuthIdentityRepo.Update(current); err != nil {
+		if err := s.updateTelegramIdentity(current); err != nil {
 			return nil, err
 		}
 	}

@@ -2,9 +2,9 @@ package application
 
 import (
 	"errors"
-	"strings"
-
 	paymentdomain "github.com/XManCodeing/XMall/internal/modules/payment/domain"
+	delivery "github.com/XManCodeing/XMall/internal/modules/telegram/delivery/contract"
+	"strings"
 
 	orderapp "github.com/XManCodeing/XMall/internal/modules/order/application"
 	orderdomain "github.com/XManCodeing/XMall/internal/modules/order/domain"
@@ -168,6 +168,11 @@ func (s *PaymentService) enqueueWalletRechargeSuccessAsync(recharge *walletdomai
 }
 
 func (s *PaymentService) enqueueOrderPaidBotNotifyAsync(order *orderdomain.Order, log *zap.SugaredLogger) {
+	// Transactional events own both explicit Bot and verified website destinations.
+	// Falling back by login identity would bypass contact checks and double-send.
+	if delivery.From(s.orderRepo) != nil {
+		return
+	}
 	if s.queue == nil || !s.queue.Enabled() || order == nil || order.UserID == 0 || s.userOAuthIdentityRepo == nil {
 		return
 	}

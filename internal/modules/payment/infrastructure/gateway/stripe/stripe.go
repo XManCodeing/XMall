@@ -608,6 +608,7 @@ func doFormRequest(ctx context.Context, cfg *Config, method, path string, form u
 	req.Header.Set("Authorization", "Bearer "+cfg.SecretKey)
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 
+	common.MarkCreationDispatched(ctx)
 	resp, err := (&http.Client{Timeout: defaultTimeout}).Do(req)
 	if err != nil {
 		return nil, 0, fmt.Errorf("%w: %v", ErrRequestFailed, err)
@@ -631,6 +632,7 @@ func doJSONRequest(ctx context.Context, cfg *Config, method, path string) ([]byt
 	}
 	req.Header.Set("Authorization", "Bearer "+cfg.SecretKey)
 
+	common.MarkCreationDispatched(ctx)
 	resp, err := (&http.Client{Timeout: defaultTimeout}).Do(req)
 	if err != nil {
 		return nil, 0, fmt.Errorf("%w: %v", ErrRequestFailed, err)

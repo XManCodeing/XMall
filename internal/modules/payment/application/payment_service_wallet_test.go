@@ -7,6 +7,9 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	identitydomain "github.com/XManCodeing/XMall/internal/modules/identity/externalidentity/domain"
+	delivery "github.com/XManCodeing/XMall/internal/modules/telegram/delivery/contract"
+	runtimedomain "github.com/XManCodeing/XMall/internal/modules/telegram/runtime/domain"
 	"go.uber.org/zap"
 	"strconv"
 	"sync"
@@ -57,6 +60,23 @@ import (
 	"github.com/shopspring/decimal"
 	"gorm.io/gorm"
 )
+
+type noLegacyBotQueue struct{ paymentcontract.Queue }
+
+func (noLegacyBotQueue) Enabled() bool {
+	panic("transactional Bot notifications must not enter legacy queue")
+}
+
+func TestTransactionalWebsiteOrderNeverFallsBackToLegacyBot(t *testing.T) {
+	svc, db := setupPaymentServiceWalletTest(t)
+	if err := db.AutoMigrate(&delivery.OrderSource{}); err != nil {
+		t.Fatal(err)
+	}
+	svc.orderRepo.(*ordergormstore.Store).EnableBusinessEvents()
+	svc.queue = noLegacyBotQueue{}
+	// Website orders intentionally have no persisted Bot checkout source.
+	svc.enqueueOrderPaidBotNotifyAsync(&orderdomain.Order{ID: 42, UserID: 7}, zap.NewNop().Sugar())
+}
 
 func setupPaymentServiceWalletTest(t *testing.T) (*PaymentService, *gorm.DB) {
 	t.Helper()
@@ -127,6 +147,11 @@ func setupPaymentServiceWalletTest(t *testing.T) (*PaymentService, *gorm.DB) {
 
 func TestCreatePaymentWalletFullAmountCreatesPaymentRecord(t *testing.T) {
 	svc, db := setupPaymentServiceWalletTest(t)
+	if err := db.AutoMigrate(&delivery.OrderSource{}, &delivery.OrderOperation{}, &delivery.Event{}); err != nil {
+		t.Fatal(err)
+	}
+	svc.orderRepo.(*ordergormstore.Store).EnableBusinessEvents()
+	svc.paymentRepo.(*paymentgormstore.Store).EnableBusinessEvents()
 	now := time.Now()
 
 	user := &userdomain.User{
@@ -159,6 +184,9 @@ func TestCreatePaymentWalletFullAmountCreatesPaymentRecord(t *testing.T) {
 		t.Fatalf("create order failed: %v", err)
 	}
 
+	if err := delivery.From(svc.orderRepo).SaveSource(order.ID, user.ID, delivery.Source{BotID: 7, TelegramID: 123, PrivateChatID: 123}); err != nil {
+		t.Fatal(err)
+	}
 	account := &walletdomain.Account{
 		UserID:    user.ID,
 		Balance:   money.FromDecimal(decimal.NewFromInt(100)),
@@ -190,6 +218,13 @@ func TestCreatePaymentWalletFullAmountCreatesPaymentRecord(t *testing.T) {
 		t.Fatalf("online_pay_amount want 0 got %s", result.OnlinePayAmount.String())
 	}
 
+	var event delivery.Event
+	if err := db.Where("order_id = ? AND kind = ?", order.ID, delivery.EventOrderPaid).First(&event).Error; err != nil {
+		t.Fatal(err)
+	}
+	if event.BotID != 7 || event.PrivateChatID != 123 {
+		t.Fatalf("incorrect route: %+v", event)
+	}
 	var payment paymentdomain.Payment
 	if err := db.Where("order_id = ?", order.ID).First(&payment).Error; err != nil {
 		t.Fatalf("wallet payment record not found: %v", err)
@@ -380,9 +415,99 @@ func TestWalletRechargeCallbackSuccessThenExpireKeepsSuccess(t *testing.T) {
 	assertWalletRechargeSuccessState(t, db, payment.ID, recharge.ID, recharge.UserID, recharge.Amount.Decimal)
 }
 
+func TestLegacyRechargeCurrentContactAndTransactionalRollback(t *testing.T) {
+	for _, scenario := range []string{"current", "no_contact", "ambiguous", "revoked", "rollback"} {
+		t.Run(scenario, func(t *testing.T) {
+			svc, db := setupPaymentServiceWalletTest(t)
+			sqlDB, _ := db.DB()
+			sqlDB.SetMaxOpenConns(1)
+			t.Cleanup(func() { sqlDB.Close() })
+			must := func(err error) {
+				t.Helper()
+				if err != nil {
+					t.Fatal(err)
+				}
+			}
+			must(db.AutoMigrate(&delivery.Event{}, &identitydomain.Identity{}, &runtimedomain.Contact{}, &runtimedomain.Instance{}))
+			svc.paymentRepo.(*paymentgormstore.Store).EnableBusinessEvents()
+			payment, recharge := createWalletRechargeFixture(t, db, constants.PaymentStatusPending, constants.WalletRechargeStatusPending)
+			if payment.SourceBotID != 0 {
+				t.Fatal("fixture must be legacy")
+			}
+			must(db.Create(&userdomain.User{ID: recharge.UserID, Status: "active"}).Error)
+			must(db.Create(&identitydomain.Identity{UserID: recharge.UserID, Provider: "telegram", ProviderUserID: "8"}).Error)
+			must(db.Create(&runtimedomain.Instance{ID: 7, TelegramID: 77, Enabled: true, Mode: "internal"}).Error)
+			if scenario != "no_contact" {
+				must(db.Create(&runtimedomain.Contact{UserID: recharge.UserID, BotID: 7, TelegramUserID: 8, ChatID: 8, Reachable: true}).Error)
+			}
+			if scenario == "ambiguous" {
+				must(db.Create(&runtimedomain.Instance{ID: 9, TelegramID: 99, Enabled: true, Mode: "internal"}).Error)
+				must(db.Create(&runtimedomain.Contact{UserID: recharge.UserID, BotID: 9, TelegramUserID: 8, ChatID: 8, Reachable: true}).Error)
+			}
+			if scenario == "revoked" {
+				must(db.Where("user_id = ?", recharge.UserID).Delete(&identitydomain.Identity{}).Error)
+			}
+			if scenario == "rollback" {
+				must(db.Callback().Update().Before("gorm:update").Register("fail_recharge_final_update", func(tx *gorm.DB) {
+					if tx.Statement.Table == "wallet_recharge_orders" {
+						tx.AddError(errors.New("forced final update failure"))
+					}
+				}))
+			}
+			_, err := svc.HandleCallback(buildWalletRechargeCallbackInput(payment, recharge, constants.PaymentStatusSuccess, "LEGACY-CURRENT"))
+			if scenario == "rollback" {
+				if err == nil {
+					t.Fatal("expected rollback")
+				}
+				var saved paymentdomain.Payment
+				must(db.First(&saved, payment.ID).Error)
+				if saved.Status != constants.PaymentStatusPending {
+					t.Fatal("payment escaped rollback")
+				}
+				var ledgerCount int64
+				must(db.Model(&walletdomain.Transaction{}).Count(&ledgerCount).Error)
+				if ledgerCount != 0 {
+					t.Fatal("wallet ledger escaped rollback")
+				}
+			} else {
+				must(err)
+				assertWalletRechargeSuccessState(t, db, payment.ID, recharge.ID, recharge.UserID, recharge.Amount.Decimal)
+				_, err = svc.HandleCallback(buildWalletRechargeCallbackInput(payment, recharge, constants.PaymentStatusSuccess, "LEGACY-DUPLICATE"))
+				must(err)
+			}
+			var rows []delivery.Event
+			must(db.Find(&rows).Error)
+			if scenario == "current" {
+				if len(rows) != 1 || rows[0].BotID != 7 || rows[0].UserID != recharge.UserID || rows[0].RechargeID != recharge.ID {
+					t.Fatalf("events=%+v", rows)
+				}
+			} else if len(rows) != 0 {
+				t.Fatalf("unexpected events=%+v", rows)
+			}
+		})
+	}
+}
+
 func TestWalletRechargeCallbackDuplicateSuccessDoesNotDuplicateCredit(t *testing.T) {
 	svc, db := setupPaymentServiceWalletTest(t)
 	payment, recharge := createWalletRechargeFixture(t, db, constants.PaymentStatusPending, constants.WalletRechargeStatusPending)
+	if err := db.AutoMigrate(&delivery.Event{}); err != nil {
+		t.Fatal(err)
+	}
+	svc.paymentRepo.(*paymentgormstore.Store).EnableBusinessEvents()
+	payment.SourceBotID = 7
+	payment.SourceTelegramID = 123
+	payment.SourcePrivateChatID = 123
+	if err := db.Save(payment).Error; err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() {
+		var count int64
+		db.Model(&delivery.Event{}).Where("recharge_id = ?", recharge.ID).Count(&count)
+		if count != 1 {
+			t.Errorf("recharge events: %d", count)
+		}
+	})
 
 	if _, err := svc.HandleCallback(buildWalletRechargeCallbackInput(payment, recharge, constants.PaymentStatusSuccess, "CALLBACK-SUCCESS-FIRST")); err != nil {
 		t.Fatalf("handle first wallet recharge callback failed: %v", err)

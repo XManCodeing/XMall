@@ -2,7 +2,6 @@ package container
 
 import (
 	catalogmappingbootstrap "github.com/XManCodeing/XMall/internal/bootstrap/catalogmapping"
-	telegrambroadcast "github.com/XManCodeing/XMall/internal/bootstrap/telegrambroadcast"
 	"github.com/XManCodeing/XMall/internal/logger"
 	apicredentialapp "github.com/XManCodeing/XMall/internal/modules/apicredential/application"
 	auditlogapp "github.com/XManCodeing/XMall/internal/modules/auditlog/application"
@@ -34,7 +33,6 @@ import (
 	reconciliationqueue "github.com/XManCodeing/XMall/internal/modules/reconciliation/infrastructure/queueadapter"
 	reconciliationupstream "github.com/XManCodeing/XMall/internal/modules/reconciliation/infrastructure/upstreamreader"
 	siteconnectionapp "github.com/XManCodeing/XMall/internal/modules/siteconnection/application"
-	broadcastapp "github.com/XManCodeing/XMall/internal/modules/telegram/broadcast/application"
 	notifyapp "github.com/XManCodeing/XMall/internal/modules/telegram/notify/application"
 	notifybotapi "github.com/XManCodeing/XMall/internal/modules/telegram/notify/infrastructure/botapi"
 	"github.com/XManCodeing/XMall/internal/platform/database/gormdb"
@@ -122,7 +120,7 @@ func (c *Container) initIntegrationServices() {
 		SKUMappings:        procurementmapping.NewSKUs(c.SKUMappingRepo),
 		Connections:        procurementupstream.New(c.SiteConnectionService),
 		Queue:              procurementqueue.New(c.QueueClient),
-		OrderLifecycle:     c.ProcurementOrderRepo.NewLifecycle(c.QueueClient, c.SettingService, c.Config.Email),
+		OrderLifecycle:     c.ProcurementOrderRepo.NewLifecycle(c.QueueClient, c.SettingService, c.Config.Email).EnableBusinessEvents(),
 		DownstreamCallback: c.DownstreamCallbackService,
 		BotNotifier:        c.FulfillmentService,
 		Notifications:      procurementnotification.New(c.NotificationService),
@@ -135,11 +133,5 @@ func (c *Container) initIntegrationServices() {
 		Notifications: reconciliationnotification.New(c.NotificationService),
 	})
 	c.ChannelClientService = channelclientapp.NewService(c.ChannelClientStore, c.Config.App.SecretKey)
-	c.TelegramBroadcastService = broadcastapp.NewService(
-		c.TelegramBroadcastRepo,
-		telegrambroadcast.NewUserDirectory(c.ExternalIdentityStore),
-		telegrambroadcast.NewBotTokenResolver(c.ChannelClientService),
-		telegrambroadcast.NewDispatcher(c.QueueClient),
-		telegramNotifyService,
-	)
+	c.initTelegramBot()
 }

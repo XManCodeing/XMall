@@ -193,6 +193,12 @@ Chinese, and English. Do not hard-code user-facing strings on either side.
 - demo 默认监听 `127.0.0.1:8080`，使用 SQLite；容器部署需按需修改监听地址，其他部署按实际情况设置数据库、可信代理、CORS 和邮件等参数。
 - 公开模板的 `update.repository` 默认是 `XManCodeing/XMall`，填写空字符串可关闭远程更新。修改模板不会修改既有运行配置。仓库改名后历史 Release 仍然保留，不代表旧附件兼容新的 `xmall_*` 更新器；须发布并验证 XMall 发行包后再使用更新功能，不要切到上游更新源。
 
+### 内置 Telegram Bot 升级门禁
+
+本版生产 worker 暂未装配旧 `bot:notify` 兼容路由；新版一旦消费旧任务就会 `SkipRetry` 归档，**不会等到执行 Bot 切换接口才停发**。首次升级必须进入维护窗口，先停止所有旧通知生产者，保留旧版 worker/接收端排空 pending、scheduled、retry、active 任务，确认在途事件完成且不再入队，再停止旧 worker 和外部 polling、备份数据库与 Redis、启动新版并完成显式接管。无法确认排空时不得升级；已归档或结果未知任务需人工核对，不删除队列或盲目重发。当前代码不自动证明排空，不能直接用后台一键重启代替此门禁。
+
+Telegram 二维码默认按原始支付内容本地编码，不对 HTTP(S) 内容做网络探测。图片网关需在支付渠道配置 JSON 手动声明 `"telegram_qr_code_kind": "image"`，或由网关返回 `qrcode_type: "image"`；明确响应类型优先，未声明默认 `text`。图片须是受限公网 HTTP(S) PNG/JPEG/GIF（标准端口、同源重定向、8 秒超时、2 MiB、2048×2048），失败时仅回退到独立收银台链接。内嵌 PNG data URI 仍直接支持。不要提交真实渠道配置或密钥。
+
 ### 后台更新与重启
 
 后台更新先下载、校验并替换二进制，再由管理员点击「立即重启」。重启方式按能力选择：

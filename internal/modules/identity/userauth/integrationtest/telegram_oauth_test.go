@@ -26,6 +26,7 @@ import (
 	googleauthapp "github.com/XManCodeing/XMall/internal/modules/identity/googleauth/application"
 	telegramauthapp "github.com/XManCodeing/XMall/internal/modules/identity/telegramauth/application"
 	userauthapp "github.com/XManCodeing/XMall/internal/modules/identity/userauth/application"
+	userauthdomain "github.com/XManCodeing/XMall/internal/modules/identity/userauth/domain"
 	userauthgormstore "github.com/XManCodeing/XMall/internal/modules/identity/userauth/infrastructure/gormstore"
 	memberlevelapp "github.com/XManCodeing/XMall/internal/modules/memberlevel/application"
 	memberlevelgormstore "github.com/XManCodeing/XMall/internal/modules/memberlevel/infrastructure/gormstore"
@@ -125,7 +126,7 @@ func setupTelegramOAuthTestService(t *testing.T, telegramService ...*telegramaut
 	if err != nil {
 		t.Fatalf("open sqlite failed: %v", err)
 	}
-	if err := db.AutoMigrate(&userdomain.User{}, &externalidentitydomain.Identity{}, &emailverificationdomain.Code{}, &settingsstore.SettingRecord{}); err != nil {
+	if err := db.AutoMigrate(&userauthdomain.TelegramHistoryGrant{}, &userdomain.User{}, &externalidentitydomain.Identity{}, &emailverificationdomain.Code{}, &settingsstore.SettingRecord{}); err != nil {
 		t.Fatalf("auto migrate failed: %v", err)
 	}
 	if err := db.Exec(

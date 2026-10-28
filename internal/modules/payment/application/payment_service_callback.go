@@ -2,6 +2,7 @@ package application
 
 import (
 	"fmt"
+	delivery "github.com/XManCodeing/XMall/internal/modules/telegram/delivery/contract"
 	"strings"
 	"time"
 
@@ -331,7 +332,7 @@ func (s *PaymentService) applyPaymentUpdate(payment *paymentdomain.Payment, orde
 			}
 		}
 		if canFulfillOrder {
-			if err := s.markOrderPaid(tx, lockedOrder, now); err != nil {
+			if err := s.markOrderPaid(tx, lockedOrder, lockedPayment.ID, now); err != nil {
 				return err
 			}
 			if s.resellerAccounting != nil {
@@ -420,7 +421,7 @@ func mergeProviderPayload(existing jsonmap.JSON, incoming jsonmap.JSON) jsonmap.
 }
 
 // markOrderPaid 在事务内将订单更新为已支付并处理库存
-func (s *PaymentService) markOrderPaid(tx paymentcontract.Transaction, order *orderdomain.Order, now time.Time) error {
+func (s *PaymentService) markOrderPaid(tx paymentcontract.Transaction, order *orderdomain.Order, paymentID uint, now time.Time) error {
 	if order == nil {
 		return orderapp.ErrOrderNotFound
 	}
@@ -447,6 +448,9 @@ func (s *PaymentService) markOrderPaid(tx paymentcontract.Transaction, order *or
 	order.PaidAt = &now
 	order.OnlinePaidAmount = money.FromDecimal(onlineAmount)
 	order.UpdatedAt = now
+	if err := delivery.AppendOrder(tx.Orders(), delivery.EventOrderPaid, order.ID, 0, paymentID, 0); err != nil {
+		return err
+	}
 
 	if len(order.Children) > 0 {
 		for idx := range order.Children {

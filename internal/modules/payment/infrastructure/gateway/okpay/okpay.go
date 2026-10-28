@@ -387,6 +387,7 @@ func postForm(ctx context.Context, endpoint string, payload map[string]string) (
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 
 	client := &http.Client{Timeout: 10 * time.Second}
+	common.MarkCreationDispatched(ctx)
 	resp, err := client.Do(req)
 	if err != nil {
 		return nil, err

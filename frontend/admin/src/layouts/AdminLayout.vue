@@ -453,7 +453,7 @@ const navGroups = computed<NavGroup[]>(() => {
           label: t('admin.navItems.telegramBotOverview'),
           to: '/telegram-bot',
           icon: Bot,
-          permission: 'GET:/admin/settings/telegram-bot',
+          permission: 'GET:/admin/telegram-bot/instances',
         },
         {
           label: t('admin.navItems.telegramBotSettings'),
@@ -477,7 +477,7 @@ const navGroups = computed<NavGroup[]>(() => {
           label: t('admin.navItems.telegramBotStatus'),
           to: '/telegram-bot/status',
           icon: Wifi,
-          permission: 'GET:/admin/settings/telegram-bot',
+          permission: 'GET:/admin/telegram-bot/instances',
         },
         {
           label: t('admin.navItems.telegramBotChannelClients'),

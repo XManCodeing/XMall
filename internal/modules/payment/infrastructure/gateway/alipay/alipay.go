@@ -490,6 +490,7 @@ func postGateway(ctx context.Context, gatewayURL string, params map[string]strin
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded; charset="+alipayReqCharset)
 	req.Header.Set("Accept", "application/json")
 
+	common.MarkCreationDispatched(ctx)
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("%w: http request failed", ErrRequestFailed)

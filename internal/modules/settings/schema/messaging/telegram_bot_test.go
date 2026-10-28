@@ -23,15 +23,14 @@ func TestNormalizeMenuItemsBackfillsBuiltinKeys(t *testing.T) {
 		}
 	}
 	// 已有项的 enabled 状态应保留（my_orders 仍为 false）
-	if keys["my_orders"].Enabled {
-		t.Fatalf("expected existing my_orders enabled=false to be preserved")
+	if keys["orders"].Enabled {
+		t.Fatalf("expected existing orders enabled=false to be preserved")
 	}
-	// 新补齐的内置项默认 enabled=true
-	if !keys["affiliate"].Enabled {
-		t.Fatalf("expected backfilled affiliate to default enabled=true")
+	if _, ok := keys["affiliate"]; ok {
+		t.Fatal("unsupported affiliate backfilled")
 	}
-	if !keys["gift_card"].Enabled {
-		t.Fatalf("expected backfilled gift_card to default enabled=true")
+	if _, ok := keys["gift_card"]; ok {
+		t.Fatal("unsupported gift card backfilled")
 	}
 }
 
