@@ -46,7 +46,11 @@ func BuildRunner(cfg *config.Config, mode string) (*Runner, error) {
 		return nil, errors.New("no services initialized (check mode and config)")
 	}
 
-	return NewRunner(services...), nil
+	runner := NewRunner(services...)
+	if dependencies.QueueClient != nil {
+		runner.cleanup = append(runner.cleanup, dependencies.QueueClient.Close)
+	}
+	return runner, nil
 }
 
 // Run 应用启动入口

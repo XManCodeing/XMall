@@ -90,25 +90,22 @@ func (h *AdminHandler) RollbackUpdate(c *gin.Context) {
 	}
 }
 
-// RestartService 让进程退出，由 systemd 拉起替换后的新二进制。
-// 没有守护进程时拒绝执行 —— 那种情况下退出等于停服。
+// RestartService reserves the update lock, then acknowledges before shutdown.
 // POST /api/v1/admin/system/restart
 func (h *AdminHandler) RestartService(c *gin.Context) {
-	if h.updates.Running() {
-		ginutil.RespondError(c, response.CodeBadRequest, "error.update_in_progress", selfupdate.ErrUpdateInProgress)
+	plan, err := h.updates.PrepareRestart()
+	if err != nil {
+		key := "error.restart_not_supported"
+		if errors.Is(err, selfupdate.ErrUpdateInProgress) {
+			key = "error.update_in_progress"
+		}
+		ginutil.RespondError(c, response.CodeBadRequest, key, err)
 		return
 	}
-	if !selfupdate.Detect().CanRestart {
-		ginutil.RespondError(c, response.CodeBadRequest, "error.restart_not_supported", selfupdate.ErrNotSupported)
-		return
-	}
-
 	logOperation(c, "self_update_restart_requested")
-
-	// 先应答再退出：Restart 内部延迟半秒发 SIGTERM，
-	// 保证这条响应能写回客户端，前端才知道该进入等待重连状态。
 	response.Success(c, gin.H{"restarting": true})
-	selfupdate.Restart()
+	c.Writer.Flush()
+	plan.Request()
 }
 
 // logOperation 记录升级类操作的操作者。这类接口会替换程序文件或重启进程，

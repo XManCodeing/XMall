@@ -1,60 +1,145 @@
 package selfupdate
 
 import (
+	"fmt"
 	"os"
+	"sync"
 	"sync/atomic"
 	"syscall"
 	"time"
 )
 
-// restartDelay 触发退出前的等待时间，保证 HTTP 响应已经写回客户端。
-// 前端需要先拿到「正在重启」的结果才能进入轮询等待状态。
 const restartDelay = 500 * time.Millisecond
 
-// RestartExitCode 自更新重启专用退出码。
-//
-// 关键点：systemd 把「收到 SIGTERM 后正常退出」视为 clean exit，而官方部署文档里的
-// Restart=on-failure 对 clean exit 不做任何处理 —— 进程停了就停了，服务直接下线。
-// 所以自更新触发的退出必须以非零码结束，才能被 on-failure / always 两种策略拉起。
-//
-// 取 70（EX_SOFTWARE）而不是 1，是为了在 journal 里能一眼把「自更新重启」和
-// 真正的启动失败区分开；同时它不能出现在 SuccessExitStatus= 中，否则又会被当成 clean exit。
+// RestartExitCode is deliberately nonzero: systemd Restart=on-failure must
+// relaunch this exit, unlike an ordinary SIGTERM / systemctl stop.
 const RestartExitCode = 70
 
-// restartRequested 标记本次退出是自更新重启，而不是 systemctl stop / Ctrl-C。
-// 二者都走 SIGTERM，只能靠这个标记区分：前者要以非零码退出换取 systemd 拉起，
-// 后者必须老老实实退 0，否则 systemctl stop 会把服务标成 failed 并被 always 策略反复拉起。
-var restartRequested atomic.Bool
+// RestartMethod is independent of Supervisor: exec does not add a watchdog.
+type RestartMethod string
 
-// RestartRequested 报告当前退出是否由自更新重启触发。
-// 由 cmd/server 在优雅关闭结束后调用，决定最终的进程退出码。
-func RestartRequested() bool {
-	return restartRequested.Load()
+const (
+	RestartNone    RestartMethod = "none"
+	RestartSystemd RestartMethod = "systemd"
+	RestartExec    RestartMethod = "exec"
+)
+
+// Capture the launch context before configuration or updates can change it.
+// Never reconstruct argv from a shell string, or log the environment.
+var launchArgs = append([]string(nil), os.Args...)
+var launchEnv = append([]string(nil), os.Environ()...)
+var launchCWD, launchCWDErr = os.Getwd()
+var launchCWDInfo, launchCWDStatErr = os.Stat(launchCWD)
+var pendingRestart atomic.Pointer[RestartPlan]
+var restartReserved atomic.Bool
+
+// RestartPlan owns the manager reservation and cross-process binary lock from
+// preflight until exec/exit. os.OpenFile makes the lock FD close-on-exec: keeping
+// it locked until the kernel commits exec avoids an unlock/rename race, without
+// inheriting a lock that would deadlock the new process's StartupGuard.
+type RestartPlan struct {
+	method      RestartMethod
+	path        string
+	release     func()
+	requestOnce sync.Once
+	finishOnce  sync.Once
 }
 
-// Restart 让当前进程退出，由 systemd 按 Restart= 策略拉起新二进制。
-//
-// 走 SIGTERM 而不是 os.Exit：cmd/server 用 signal.NotifyContext 监听 SIGTERM，
-// 收到后会依次 Stop 各个 Service —— HTTP server 优雅关闭、asynq worker 等待在途任务。
-// 直接 os.Exit 会让正在处理的订单请求和后台任务被硬切断。
-//
-// 优雅关闭走完后，cmd/server 会读 RestartRequested() 并以 RestartExitCode 退出。
-//
-// 调用前必须确认 Detect().CanRestart 为 true。没有守护进程、或 unit 的 Restart=
-// 策略不会因非零退出码拉起时，退出即停服，应由前端提示用户手动重启。
-func Restart() {
-	restartRequested.Store(true)
-	go func() {
-		time.Sleep(restartDelay)
-		p, err := os.FindProcess(os.Getpid())
-		if err != nil {
-			// 理论上对自身 PID 不会失败；真失败了就直接退出，
-			// 让 systemd 拉起新进程，代价是跳过优雅关闭。
-			os.Exit(RestartExitCode)
-			return
+func RestartRequested() bool { return pendingRestart.Load() != nil }
+
+// PrepareRestart serializes restart with updates, rollback and other restarts.
+// It does not signal or stop anything; the HTTP caller must first send/flush its
+// response, then call Request. Cancellation before Request leaves service live.
+func (m *Manager) PrepareRestart() (*RestartPlan, error) {
+	if err := m.acquire(); err != nil {
+		return nil, err
+	}
+	p := &RestartPlan{release: m.releaseBusy}
+	if !restartReserved.CompareAndSwap(false, true) {
+		m.releaseBusy()
+		return nil, ErrUpdateInProgress
+	}
+	fail := func(err error) (*RestartPlan, error) {
+		p.Cancel()
+		return nil, err
+	}
+	c := m.detect()
+	if !c.CanRestart || (c.RestartMethod != RestartSystemd && c.RestartMethod != RestartExec) {
+		return fail(ErrNotSupported)
+	}
+	p.method, p.path = c.RestartMethod, c.ExecPath
+	if p.path == "" {
+		return fail(ErrNotSupported)
+	}
+	unlock, err := acquireBinaryLock(p.path)
+	if err != nil {
+		return fail(err)
+	}
+	p.release = func() { unlock(); m.releaseBusy() }
+	// Recheck the selected target under the same lock used by CLI rollback.
+	// systemd keeps its existing policy; exec never bypasses a denied policy.
+	if p.method == RestartExec {
+		if err := preflightExec(p.path); err != nil {
+			return fail(fmt.Errorf("restart preflight: %w", err))
 		}
-		if err := p.Signal(syscall.SIGTERM); err != nil {
-			os.Exit(RestartExitCode)
-		}
-	}()
+	}
+	return p, nil
+}
+
+// Cancel is only for a plan whose shutdown has not been requested.
+func (p *RestartPlan) Cancel() {
+	p.finishOnce.Do(func() {
+		pendingRestart.CompareAndSwap(p, nil)
+		p.release()
+		restartReserved.Store(false)
+	})
+}
+
+// Request begins graceful shutdown after the response has been flushed. The
+// delay also lets request middleware finish; HTTP Shutdown drains requests.
+func (p *RestartPlan) Request() {
+	p.requestOnce.Do(func() {
+		pendingRestart.Store(p)
+		go func() {
+			time.Sleep(restartDelay)
+			process, err := os.FindProcess(os.Getpid())
+			if err == nil {
+				err = process.Signal(syscall.SIGTERM)
+			}
+			if err != nil {
+				// No hard-exit fallback: a failed signal must not abruptly kill
+				// an otherwise working service (especially without a supervisor).
+				fmt.Fprintf(os.Stderr, "self-update shutdown signal failed; service not restarted: %v\n", err)
+				p.Cancel()
+			}
+		}()
+	})
+}
+
+// FinishRestart runs ONLY after Runner.Stop and resource cleanup succeeded.
+// Failure strategy: preflight errors before shutdown leave the old service live;
+// errors here require an operator/panel restart and a nonzero exit. Successful
+// exec replaces the old process irreversibly. A subsequent startup/migration
+// failure cannot restore its old memory or service. Never auto-rollback the
+// binary/database: migration may have partially advanced the schema.
+func FinishRestart() error {
+	p := pendingRestart.Load()
+	if p == nil {
+		return nil
+	}
+	if p.method == RestartSystemd {
+		// Keep the lock until process exit, not until this function returns.
+		return nil
+	}
+	defer p.Cancel() // exec only returns on failure
+	if err := preflightExec(p.path); err != nil {
+		return fmt.Errorf("post-shutdown preflight failed; service stopped, manual restart required: %w", err)
+	}
+	if err := os.Chdir(launchCWD); err != nil {
+		return fmt.Errorf("restore launch working directory: %w", err)
+	}
+	if err := execProcess(p.path, launchArgs, launchEnv); err != nil {
+		return fmt.Errorf("exec failed; service stopped, manual restart required (no automatic rollback): %w", err)
+	}
+	return nil
 }

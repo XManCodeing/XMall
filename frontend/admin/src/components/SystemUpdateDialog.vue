@@ -99,8 +99,16 @@ const restarting = ref(false)
 const rollingBack = ref(false)
 const copied = ref(false)
 
-// 升级任务在后端异步执行，前端靠轮询拿进度；重启期间同一个定时器用来探活。
-let pollTimer: ReturnType<typeof setInterval> | null = null
+// 串行轮询；代次令牌让关闭面板/卸载后返回的请求失效。
+let pollTimer: ReturnType<typeof setTimeout> | null = null
+let restartTimer: ReturnType<typeof setTimeout> | null = null
+let pollGeneration = 0
+let session = 0
+let disposed = false
+let updateTargetVersion = ''
+// 回滚响应可能仍带升级目标，必须保存操作前的备份版本（空串表示未知）。
+let rollbackTargetVersion: string | null = null
+const isActive = (id: number) => !disposed && props.open && id === session
 const POLL_INTERVAL = 1500
 // 重启探活上限：systemd 拉起 + 数据库迁移在慢机器上可能要几十秒
 const RESTART_TIMEOUT_MS = 120_000
@@ -166,11 +174,13 @@ function extractErrorMessage(err: any): string {
 }
 
 async function loadCheck() {
+  const id = session
   checkLoading.value = true
   checkError.value = ''
   checkResult.value = null
   try {
     const res = await adminAPI.checkSystemUpdate()
+    if (!isActive(id)) return
     const payload = res.data?.data as UpdateCheckResult | undefined
     if (payload) {
       checkResult.value = payload
@@ -178,6 +188,7 @@ async function loadCheck() {
       checkError.value = t('admin.updateCheck.failedGeneric')
     }
   } catch (err: any) {
+    if (!isActive(id)) return
     const status = err?.response?.status
     const code = err?.response?.data?.status_code
     const msg = extractErrorMessage(err)
@@ -189,58 +200,75 @@ async function loadCheck() {
       checkError.value = t('admin.updateCheck.failedGeneric')
     }
   } finally {
-    checkLoading.value = false
+    if (isActive(id)) checkLoading.value = false
   }
 }
 
+function applyUpdateState(state: UpdateState | null) {
+  updateState.value = state
+  if (state?.target_version) updateTargetVersion = state.target_version
+}
+
 async function loadCapability() {
+  const id = session
+  const generation = pollGeneration
   try {
     const res = await adminAPI.getUpdateCapability()
+    if (!isActive(id) || generation !== pollGeneration) return
     const payload = res.data?.data as { capability: UpdateCapability; state: UpdateState } | undefined
     if (payload) {
       capability.value = payload.capability
-      updateState.value = payload.state
+      applyUpdateState(payload.state)
       // 打开面板时后端可能仍在跑上一次触发的升级，直接接上进度
       if (payload.state?.status === 'running') startPolling()
     }
   } catch {
     // 能力探测失败不阻断版本检测结果的展示，只是不显示升级按钮
-    capability.value = null
+    if (isActive(id) && generation === pollGeneration) capability.value = null
   }
 }
 
 function startPolling() {
   stopPolling()
-  pollTimer = setInterval(async () => {
+  const generation = pollGeneration
+  const id = session
+  const active = () => isActive(id) && generation === pollGeneration
+  const poll = async () => {
     try {
       const res = await adminAPI.getUpdateStatus()
+      if (!active()) return
       const state = res.data?.data as UpdateState | undefined
-      if (!state) return
-      updateState.value = state
-      if (state.status !== 'running') {
-        stopPolling()
-        if (state.status === 'succeeded') {
-          notifySuccess(t('admin.systemUpdate.downloadSucceeded'))
-          // 升级完成后备份已生成，刷新能力探测以显示回滚入口
-          void loadCapability()
-        } else if (state.status === 'failed') {
-          notifyError(state.error || t('admin.systemUpdate.failed'))
+      if (state) {
+        applyUpdateState(state)
+        if (state.status !== 'running') {
+          stopPolling()
+          if (state.status === 'succeeded') {
+            notifySuccess(t('admin.systemUpdate.downloadSucceeded'))
+            void loadCapability()
+          } else if (state.status === 'failed') {
+            notifyError(state.error || t('admin.systemUpdate.failed'))
+          }
+          return
         }
       }
     } catch {
-      // 轮询失败通常是网络抖动，保持定时器继续尝试
+      // 网络抖动后继续尝试，不让慢请求产生重叠。
     }
-  }, POLL_INTERVAL)
+    if (active()) pollTimer = setTimeout(poll, POLL_INTERVAL)
+  }
+  pollTimer = setTimeout(poll, POLL_INTERVAL)
 }
 
 function stopPolling() {
-  if (pollTimer) {
-    clearInterval(pollTimer)
-    pollTimer = null
-  }
+  pollGeneration++
+  if (pollTimer) clearTimeout(pollTimer)
+  if (restartTimer) clearTimeout(restartTimer)
+  pollTimer = null
+  restartTimer = null
 }
 
 async function handleStartUpdate() {
+  const id = session
   const ok = await confirmAction({
     title: t('admin.systemUpdate.confirmTitle'),
     description: t('admin.systemUpdate.confirmDescription', {
@@ -248,59 +276,85 @@ async function handleStartUpdate() {
     }),
     confirmText: t('admin.systemUpdate.upgradeNow'),
   })
-  if (!ok) return
+  if (!ok || !isActive(id)) return
 
   starting.value = true
+  stopPolling()
   try {
     const res = await adminAPI.startSystemUpdate()
-    updateState.value = (res.data?.data as UpdateState) || null
+    if (!disposed) {
+      rollbackTargetVersion = null
+      updateTargetVersion = (res.data?.data as UpdateState | undefined)?.target_version || ''
+    }
+    if (!isActive(id)) return
+    applyUpdateState((res.data?.data as UpdateState) || null)
     startPolling()
   } catch (err: any) {
-    notifyError(extractErrorMessage(err) || t('admin.systemUpdate.failed'))
+    if (isActive(id)) notifyError(extractErrorMessage(err) || t('admin.systemUpdate.failed'))
   } finally {
-    starting.value = false
+    if (isActive(id)) starting.value = false
   }
 }
 
 async function handleRestart() {
+  const id = session
+  // 固定本次操作的目标，绝不使用 GitHub latest（它可能已变化）。
+  const targetVersion = rollbackTargetVersion ?? updateTargetVersion
   const ok = await confirmAction({
     title: t('admin.systemUpdate.restartConfirmTitle'),
     description: t('admin.systemUpdate.restartConfirmDescription'),
     confirmText: t('admin.systemUpdate.restartNow'),
     variant: 'destructive',
   })
-  if (!ok) return
+  if (!ok || !isActive(id)) return
 
   restarting.value = true
+  stopPolling()
   try {
     await adminAPI.restartSystemService()
-    waitForBackend()
+    if (isActive(id)) waitForBackend(targetVersion)
   } catch (err: any) {
+    if (!isActive(id)) return
     restarting.value = false
     notifyError(extractErrorMessage(err) || t('admin.systemUpdate.restartFailed'))
   }
 }
 
-// 重启期间后端会短暂不可达，轮询到恢复后刷新整页，
-// 确保内嵌的前端资源也换成新版本二进制里的那一份。
-function waitForBackend() {
-  const deadline = Date.now() + RESTART_TIMEOUT_MS
+// 旧进程关闭前仍能响应；只有运行版本命中目标且不再待重启才刷新资源。
+// public/config 的 app_version 来自运行进程，缓存命中时后端也会重新赋值。
+function waitForBackend(targetVersion: string) {
   stopPolling()
-  pollTimer = setInterval(async () => {
-    if (Date.now() > deadline) {
-      stopPolling()
-      restarting.value = false
-      notifyError(t('admin.systemUpdate.restartTimeout'))
-      return
-    }
+  const generation = pollGeneration
+  const id = session
+  const active = () => isActive(id) && generation === pollGeneration
+  const deadline = Date.now() + RESTART_TIMEOUT_MS
+  restartTimer = setTimeout(() => {
+    if (!active()) return
+    stopPolling()
+    restarting.value = false
+    notifyError(t('admin.systemUpdate.restartTimeout'))
+  }, RESTART_TIMEOUT_MS)
+  const poll = async () => {
     try {
-      await adminAPI.getUpdateStatus()
-      stopPolling()
-      window.location.reload()
+      const statusRes = await adminAPI.getUpdateStatus()
+      if (!active()) return
+      const state = statusRes.data?.data as UpdateState | undefined
+      if (state?.restart_required === false && targetVersion.trim()) {
+        const configRes = await adminAPI.getPublicConfig()
+        if (!active() || Date.now() >= deadline) return
+        const runningVersion = configRes.data?.data?.app_version
+        if (typeof runningVersion === 'string' && runningVersion.trim() === targetVersion.trim()) {
+          stopPolling()
+          window.location.reload()
+          return
+        }
+      }
     } catch {
-      // 后端还没起来，继续等
+      // 后端未就绪或版本接口暂时失败，等待下次串行探测。
     }
-  }, 2000)
+    if (active()) pollTimer = setTimeout(poll, 2000)
+  }
+  pollTimer = setTimeout(poll, 2000)
 }
 
 // 迁移已经开始（即使服务后来没启动成功），或者元数据不可信、压根判断不了 ——
@@ -310,6 +364,7 @@ const rollbackIsRisky = computed(() => capability.value?.rollback_unsafe === tru
 const rollbackVersionUnknown = computed(() => !capability.value?.backup?.previous_version)
 
 async function handleRollback() {
+  const id = session
   const risky = rollbackIsRisky.value
   const backup = capability.value?.backup
   const ok = await confirmAction({
@@ -325,18 +380,22 @@ async function handleRollback() {
     confirmText: t('admin.systemUpdate.rollback'),
     variant: 'destructive',
   })
-  if (!ok) return
+  if (!ok || !isActive(id)) return
 
   rollingBack.value = true
+  stopPolling()
   try {
     const res = await adminAPI.rollbackSystemUpdate({ force: risky })
-    updateState.value = (res.data?.data as UpdateState) || null
+    // 面板关闭不撤销服务器上的回滚；保留结果供同一组件重新打开时确认目标。
+    if (!disposed) rollbackTargetVersion = backup?.previous_version || ''
+    if (!isActive(id)) return
+    applyUpdateState((res.data?.data as UpdateState) || null)
     notifySuccess(t('admin.systemUpdate.rollbackSucceeded'))
     void loadCapability()
   } catch (err: any) {
-    notifyError(extractErrorMessage(err) || t('admin.systemUpdate.rollbackFailed'))
+    if (isActive(id)) notifyError(extractErrorMessage(err) || t('admin.systemUpdate.rollbackFailed'))
   } finally {
-    rollingBack.value = false
+    if (isActive(id)) rollingBack.value = false
   }
 }
 
@@ -355,18 +414,25 @@ async function copyDockerCommand() {
 watch(
   () => props.open,
   (open) => {
+    session++
+    stopPolling()
+    starting.value = false
+    restarting.value = false
+    rollingBack.value = false
     if (open) {
       copied.value = false
       void loadCheck()
       void loadCapability()
-    } else {
-      // 关闭面板时停止轮询；升级任务本身在后端继续跑，重新打开会接上进度
-      stopPolling()
     }
   },
+  { immediate: true },
 )
 
-onBeforeUnmount(stopPolling)
+onBeforeUnmount(() => {
+  disposed = true
+  session++
+  stopPolling()
+})
 </script>
 
 <template>
@@ -502,7 +568,7 @@ onBeforeUnmount(stopPolling)
           variant="outline"
           size="sm"
           class="gap-1.5"
-          :disabled="rollingBack"
+          :disabled="rollingBack || restarting || starting"
           @click="handleRollback"
         >
           <RotateCcw class="h-4 w-4" :class="rollingBack ? 'animate-spin' : ''" />
@@ -524,7 +590,7 @@ onBeforeUnmount(stopPolling)
           v-if="needsRestart && capability?.can_restart"
           size="sm"
           class="gap-1.5"
-          :disabled="restarting"
+          :disabled="restarting || rollingBack || starting"
           @click="handleRestart"
         >
           <RefreshCw class="h-4 w-4" :class="restarting ? 'animate-spin' : ''" />

@@ -170,15 +170,36 @@ func main() {
 		Signals: []os.Signal{syscall.SIGINT, syscall.SIGTERM},
 		Mode:    mode,
 	}); err != nil {
+		if selfupdate.RestartRequested() {
+			stdLog.Fatalf("重启收尾失败，未执行 exec；服务可能已停止，请手动重启，不自动回滚: %v", err)
+		}
 		stdLog.Fatalf("服务运行失败: %v", err)
 	}
 
-	// 后台一键升级触发的重启也是走 SIGTERM 优雅关闭，走到这里说明已经收尾干净。
-	// 但 systemd 把 exit 0 当作 clean exit，官方 unit 的 Restart=on-failure 不会拉起，
-	// 服务就此下线。因此这种退出必须换成非零码，让 on-failure / always 都能重新拉起。
-	// systemctl stop / Ctrl-C 不会设置这个标记，仍然正常退 0。
+	// Runner has drained HTTP/workers and closed the queue producer. Close the
+	// remaining shared clients before exec; deferred cleanup does not run across
+	// syscall.Exec. On shutdown failure above, do not claim the old service lives.
 	if selfupdate.RestartRequested() {
-		stdLog.Printf("自更新重启：以退出码 %d 退出，等待 systemd 拉起新二进制", selfupdate.RestartExitCode)
+		if client := cache.Client(); client != nil {
+			if err := client.Close(); err != nil {
+				stdLog.Fatalf("重启收尾失败，服务已停止，请手动重启: %v", err)
+			}
+		}
+		if gormdb.DB != nil {
+			db, err := gormdb.DB.DB()
+			if err != nil {
+				stdLog.Fatalf("获取数据库关闭句柄失败，请手动重启: %v", err)
+			}
+			if err := db.Close(); err != nil {
+				stdLog.Fatalf("数据库关闭失败，请手动重启: %v", err)
+			}
+		}
+		startupGuard.Release()
+		stdLog.Printf("自更新重启：收尾完成；exec 或后续启动失败需手动恢复，不自动回滚数据库")
+		if err := selfupdate.FinishRestart(); err != nil {
+			stdLog.Fatalf("自更新重启失败: %v", err)
+		}
+		// exec succeeds without returning; only systemd reaches this exit.
 		os.Exit(selfupdate.RestartExitCode)
 	}
 }

@@ -19,6 +19,7 @@ type Service interface {
 // Runner 服务运行器
 type Runner struct {
 	services []Service
+	cleanup  []func() error
 }
 
 // NewRunner 创建服务运行器
@@ -87,18 +88,27 @@ func (r *Runner) Run(ctx context.Context, stopTimeout time.Duration, logger *zap
 	}
 	stopCtx, stopCancel := context.WithTimeout(context.Background(), stopTimeout)
 	defer stopCancel()
+	var stopErr error
 	for _, svc := range r.services {
 		if svc == nil {
 			continue
 		}
 		if err := svc.Stop(stopCtx); err != nil {
+			stopErr = errors.Join(stopErr, err)
 			if logger != nil {
 				logger.Errorw("service_stop_failed", "service", svc.Name(), "error", err)
 			}
 		}
 	}
-	if errors.Is(runErr, context.Canceled) {
-		return nil
+	if stopErr == nil {
+		for _, closeResource := range r.cleanup {
+			stopErr = errors.Join(stopErr, closeResource())
+		}
 	}
-	return runErr
+	if errors.Is(runErr, context.Canceled) {
+		runErr = nil
+	}
+	// Shutdown errors must reach main: exec after an incomplete drain could
+	// silently discard in-flight requests or worker writes.
+	return errors.Join(runErr, stopErr)
 }

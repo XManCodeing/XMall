@@ -51,7 +51,7 @@ type Supervisor string
 const (
 	// SupervisorSystemd 由 systemd 托管，进程退出后靠 Restart= 策略拉起
 	SupervisorSystemd Supervisor = "systemd"
-	// SupervisorNone 无守护进程，退出即停服，只能提示用户手动重启
+	// SupervisorNone 无 systemd；Linux 可经预检使用 exec，但没有新增进程守护。
 	SupervisorNone Supervisor = "none"
 )
 
@@ -60,7 +60,9 @@ type Capability struct {
 	// CanUpdate 是否允许下载并替换二进制
 	CanUpdate bool `json:"can_update"`
 	// CanRestart 替换完成后能否由后端自动重启进程；false 时需用户手动重启
-	CanRestart bool `json:"can_restart"`
+	CanRestart         bool          `json:"can_restart"`
+	RestartMethod      RestartMethod `json:"restart_method"`
+	RestartBlockReason string        `json:"restart_block_reason,omitempty"`
 	// BlockReason CanUpdate 为 false 时的原因码
 	BlockReason BlockReason `json:"block_reason,omitempty"`
 	Deployment  Deployment  `json:"deployment"`
@@ -85,12 +87,18 @@ type Capability struct {
 
 // Detect 探测当前运行环境是否支持一键升级。
 // 判定顺序按「越根本越先」排列，第一个不满足的条件即为阻断原因。
-func Detect() Capability {
-	c := Capability{
-		Deployment: DeploymentBinary,
-		Supervisor: SupervisorNone,
-		BuildType:  version.BuildType,
-		Platform:   runtime.GOOS + "/" + runtime.GOARCH,
+func Detect() (c Capability) {
+	defer func() {
+		if !c.CanRestart && c.RestartBlockReason == "" {
+			c.RestartBlockReason = string(c.BlockReason)
+		}
+	}()
+	c = Capability{
+		RestartMethod: RestartNone,
+		Deployment:    DeploymentBinary,
+		Supervisor:    SupervisorNone,
+		BuildType:     version.BuildType,
+		Platform:      runtime.GOOS + "/" + runtime.GOARCH,
 	}
 
 	if InContainer() {
@@ -134,12 +142,7 @@ func Detect() Capability {
 	//
 	// 查不到配置时一律判定为不能重启：查询失败证明不了任何事，而两种猜错的代价不对称——
 	// 猜「能重启」猜错是服务直接下线，猜「不能重启」猜错只是让用户多敲一条 systemctl restart。
-	if c.Supervisor == SupervisorSystemd {
-		if cfg, ok := systemdRestartConfig(); ok {
-			c.RestartPolicy = cfg.Restart
-			c.CanRestart = restartConfigRelaunches(cfg)
-		}
-	}
+	configureRestart(&c, runtime.GOOS, systemdRestartConfig, preflightExec)
 	if _, err := os.Stat(backupPath(execPath)); err == nil {
 		c.HasBackup = true
 		info, known, err := ReadBackupInfo(execPath)
@@ -155,10 +158,47 @@ func Detect() Capability {
 	return c
 }
 
+func configureRestart(c *Capability, goos string, systemd func() (unitRestartConfig, bool), preflight func(string) error) {
+	c.RestartMethod = RestartNone
+	c.CanRestart = false
+	c.RestartBlockReason = ""
+	if c.Supervisor == SupervisorSystemd {
+		cfg, ok := systemd()
+		if !ok {
+			c.RestartBlockReason = "systemd_policy_unknown"
+			return
+		}
+		c.RestartPolicy = cfg.Restart
+		if !restartConfigRelaunches(cfg) {
+			c.RestartBlockReason = "systemd_policy_disabled"
+			return
+		}
+		c.RestartMethod, c.CanRestart = RestartSystemd, true
+		return
+	}
+	if goos != "linux" {
+		c.RestartBlockReason = "unsupported_os"
+		return
+	}
+	if err := preflight(c.ExecPath); err != nil {
+		c.RestartBlockReason = "exec_preflight_failed"
+		return
+	}
+	c.RestartMethod, c.CanRestart = RestartExec, true
+}
+
 // ExecutablePath 返回当前可执行文件解析软链后的绝对路径。
 // 必须解析软链：常见部署会用 /usr/local/bin/xmall -> /opt/xmall/xmall，
 // 直接替换软链会把链接本身变成普通文件。
+// startupExecutable is resolved during package initialization, before any update can
+// rename the running inode to .backup (Linux os.Executable follows that rename).
+var startupExecutable, startupExecutableErr = resolveExecutablePath()
+
 func ExecutablePath() (string, error) {
+	return startupExecutable, startupExecutableErr
+}
+
+func resolveExecutablePath() (string, error) {
 	exe, err := os.Executable()
 	if err != nil {
 		return "", fmt.Errorf("locate executable: %w", err)
