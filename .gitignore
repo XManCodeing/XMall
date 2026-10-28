@@ -21,6 +21,11 @@ config.yml.*
 !config.yml.example
 .DS_Store
 node_modules/
+
+# Python 缓存
+__pycache__/
+*.pyc
+
 # Added by goreleaser init:
 dist/
 
