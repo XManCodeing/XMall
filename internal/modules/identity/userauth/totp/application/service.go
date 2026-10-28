@@ -7,14 +7,14 @@ import (
 	"strings"
 	"time"
 
-	usercontract "github.com/homles698698-lab/XMall/internal/modules/identity/user/contract"
+	usercontract "github.com/XManCodeing/XMall/internal/modules/identity/user/contract"
 
-	userdomain "github.com/homles698698-lab/XMall/internal/modules/identity/user/domain"
+	userdomain "github.com/XManCodeing/XMall/internal/modules/identity/user/domain"
 
-	"github.com/homles698698-lab/XMall/internal/cache"
-	"github.com/homles698698-lab/XMall/internal/config"
-	"github.com/homles698698-lab/XMall/internal/crypto"
-	totpapplication "github.com/homles698698-lab/XMall/internal/modules/identity/totp/application"
+	"github.com/XManCodeing/XMall/internal/cache"
+	"github.com/XManCodeing/XMall/internal/config"
+	"github.com/XManCodeing/XMall/internal/crypto"
+	totpapplication "github.com/XManCodeing/XMall/internal/modules/identity/totp/application"
 
 	"github.com/pquerna/otp/totp"
 	"github.com/redis/go-redis/v9"

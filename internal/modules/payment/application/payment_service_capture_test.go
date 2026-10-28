@@ -5,13 +5,13 @@ import (
 	"errors"
 	"testing"
 
-	paymentcontract "github.com/homles698698-lab/XMall/internal/modules/payment/contract"
+	paymentcontract "github.com/XManCodeing/XMall/internal/modules/payment/contract"
 
-	paymentdomain "github.com/homles698698-lab/XMall/internal/modules/payment/domain"
+	paymentdomain "github.com/XManCodeing/XMall/internal/modules/payment/domain"
 
-	"github.com/homles698698-lab/XMall/internal/constants"
-	"github.com/homles698698-lab/XMall/internal/modules/payment/infrastructure/gateway/provider"
-	"github.com/homles698698-lab/XMall/internal/shared/jsonmap"
+	"github.com/XManCodeing/XMall/internal/constants"
+	"github.com/XManCodeing/XMall/internal/modules/payment/infrastructure/gateway/provider"
+	"github.com/XManCodeing/XMall/internal/shared/jsonmap"
 )
 
 // recordingCapturer 捕获传入 ValidateConfig 的第二参数,用于回归测试。

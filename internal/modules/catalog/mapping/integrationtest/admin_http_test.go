@@ -10,26 +10,26 @@ import (
 	"testing"
 	"time"
 
-	mappingdomain "github.com/homles698698-lab/XMall/internal/modules/catalog/mapping/domain"
+	mappingdomain "github.com/XManCodeing/XMall/internal/modules/catalog/mapping/domain"
 
-	siteconnectiondomain "github.com/homles698698-lab/XMall/internal/modules/siteconnection/domain"
+	siteconnectiondomain "github.com/XManCodeing/XMall/internal/modules/siteconnection/domain"
 
-	productdomain "github.com/homles698698-lab/XMall/internal/modules/catalog/product/domain"
+	productdomain "github.com/XManCodeing/XMall/internal/modules/catalog/product/domain"
 
-	categoryapp "github.com/homles698698-lab/XMall/internal/modules/catalog/category/application"
-	categorydomain "github.com/homles698698-lab/XMall/internal/modules/catalog/category/domain"
+	categoryapp "github.com/XManCodeing/XMall/internal/modules/catalog/category/application"
+	categorydomain "github.com/XManCodeing/XMall/internal/modules/catalog/category/domain"
 
+	"github.com/XManCodeing/XMall/internal/constants"
+	categorygormstore "github.com/XManCodeing/XMall/internal/modules/catalog/category/infrastructure/gormstore"
+	mappingapp "github.com/XManCodeing/XMall/internal/modules/catalog/mapping/application"
+	mappingcontract "github.com/XManCodeing/XMall/internal/modules/catalog/mapping/contract"
+	mappinggormstore "github.com/XManCodeing/XMall/internal/modules/catalog/mapping/infrastructure/gormstore"
+	mappinghttp "github.com/XManCodeing/XMall/internal/modules/catalog/mapping/transport/http"
+	productgormstore "github.com/XManCodeing/XMall/internal/modules/catalog/product/store/gormstore"
+	"github.com/XManCodeing/XMall/internal/shared/jsonmap"
+	"github.com/XManCodeing/XMall/internal/upstream"
 	"github.com/gin-gonic/gin"
 	"github.com/glebarez/sqlite"
-	"github.com/homles698698-lab/XMall/internal/constants"
-	categorygormstore "github.com/homles698698-lab/XMall/internal/modules/catalog/category/infrastructure/gormstore"
-	mappingapp "github.com/homles698698-lab/XMall/internal/modules/catalog/mapping/application"
-	mappingcontract "github.com/homles698698-lab/XMall/internal/modules/catalog/mapping/contract"
-	mappinggormstore "github.com/homles698698-lab/XMall/internal/modules/catalog/mapping/infrastructure/gormstore"
-	mappinghttp "github.com/homles698698-lab/XMall/internal/modules/catalog/mapping/transport/http"
-	productgormstore "github.com/homles698698-lab/XMall/internal/modules/catalog/product/store/gormstore"
-	"github.com/homles698698-lab/XMall/internal/shared/jsonmap"
-	"github.com/homles698698-lab/XMall/internal/upstream"
 	"gorm.io/gorm"
 )
 

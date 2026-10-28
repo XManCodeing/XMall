@@ -5,12 +5,12 @@ import (
 	"testing"
 	"time"
 
-	fulfillmentdomain "github.com/homles698698-lab/XMall/internal/modules/fulfillment/domain"
-	orderdomain "github.com/homles698698-lab/XMall/internal/modules/order/domain"
-	ordergormstore "github.com/homles698698-lab/XMall/internal/modules/order/infrastructure/gormstore"
+	fulfillmentdomain "github.com/XManCodeing/XMall/internal/modules/fulfillment/domain"
+	orderdomain "github.com/XManCodeing/XMall/internal/modules/order/domain"
+	ordergormstore "github.com/XManCodeing/XMall/internal/modules/order/infrastructure/gormstore"
 
-	"github.com/homles698698-lab/XMall/internal/constants"
-	"github.com/homles698698-lab/XMall/internal/shared/money"
+	"github.com/XManCodeing/XMall/internal/constants"
+	"github.com/XManCodeing/XMall/internal/shared/money"
 
 	"github.com/glebarez/sqlite"
 	"github.com/shopspring/decimal"

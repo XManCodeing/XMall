@@ -13,10 +13,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/homles698698-lab/XMall/internal/constants"
-	userdomain "github.com/homles698698-lab/XMall/internal/modules/identity/user/domain"
-	resellercontract "github.com/homles698698-lab/XMall/internal/modules/reseller/contract"
-	"github.com/homles698698-lab/XMall/internal/platform/http/response"
+	"github.com/XManCodeing/XMall/internal/constants"
+	userdomain "github.com/XManCodeing/XMall/internal/modules/identity/user/domain"
+	resellercontract "github.com/XManCodeing/XMall/internal/modules/reseller/contract"
+	"github.com/XManCodeing/XMall/internal/platform/http/response"
 
 	"github.com/gin-gonic/gin"
 )

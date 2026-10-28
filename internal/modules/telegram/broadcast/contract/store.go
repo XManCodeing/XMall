@@ -1,6 +1,6 @@
 package broadcastcontract
 
-import broadcastdomain "github.com/homles698698-lab/XMall/internal/modules/telegram/broadcast/domain"
+import broadcastdomain "github.com/XManCodeing/XMall/internal/modules/telegram/broadcast/domain"
 
 type ListFilter struct {
 	Page     int

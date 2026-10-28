@@ -3,8 +3,8 @@ package gormstore
 import (
 	"errors"
 
-	downstreamcontract "github.com/homles698698-lab/XMall/internal/modules/downstreamcallback/contract"
-	downstreamdomain "github.com/homles698698-lab/XMall/internal/modules/downstreamcallback/domain"
+	downstreamcontract "github.com/XManCodeing/XMall/internal/modules/downstreamcallback/contract"
+	downstreamdomain "github.com/XManCodeing/XMall/internal/modules/downstreamcallback/domain"
 
 	"gorm.io/gorm"
 )

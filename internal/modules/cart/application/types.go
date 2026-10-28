@@ -1,8 +1,8 @@
 package application
 
 import (
-	productdomain "github.com/homles698698-lab/XMall/internal/modules/catalog/product/domain"
-	"github.com/homles698698-lab/XMall/internal/shared/money"
+	productdomain "github.com/XManCodeing/XMall/internal/modules/catalog/product/domain"
+	"github.com/XManCodeing/XMall/internal/shared/money"
 )
 
 // ItemDetail 购物车项详情。

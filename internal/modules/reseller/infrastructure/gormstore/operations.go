@@ -6,12 +6,12 @@ import (
 	"strings"
 	"time"
 
-	orderdomain "github.com/homles698698-lab/XMall/internal/modules/order/domain"
+	orderdomain "github.com/XManCodeing/XMall/internal/modules/order/domain"
 
-	resellerdomain "github.com/homles698698-lab/XMall/internal/modules/reseller/domain"
+	resellerdomain "github.com/XManCodeing/XMall/internal/modules/reseller/domain"
 
-	"github.com/homles698698-lab/XMall/internal/constants"
-	resellercontract "github.com/homles698698-lab/XMall/internal/modules/reseller/contract"
+	"github.com/XManCodeing/XMall/internal/constants"
+	resellercontract "github.com/XManCodeing/XMall/internal/modules/reseller/contract"
 	"github.com/shopspring/decimal"
 )
 

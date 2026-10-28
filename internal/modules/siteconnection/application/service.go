@@ -6,13 +6,13 @@ import (
 	"strings"
 	"time"
 
-	"github.com/homles698698-lab/XMall/internal/constants"
-	"github.com/homles698698-lab/XMall/internal/crypto"
-	"github.com/homles698698-lab/XMall/internal/logger"
-	siteconnectioncontract "github.com/homles698698-lab/XMall/internal/modules/siteconnection/contract"
-	siteconnectiondomain "github.com/homles698698-lab/XMall/internal/modules/siteconnection/domain"
-	"github.com/homles698698-lab/XMall/internal/shared/httpintegration"
-	"github.com/homles698698-lab/XMall/internal/upstream"
+	"github.com/XManCodeing/XMall/internal/constants"
+	"github.com/XManCodeing/XMall/internal/crypto"
+	"github.com/XManCodeing/XMall/internal/logger"
+	siteconnectioncontract "github.com/XManCodeing/XMall/internal/modules/siteconnection/contract"
+	siteconnectiondomain "github.com/XManCodeing/XMall/internal/modules/siteconnection/domain"
+	"github.com/XManCodeing/XMall/internal/shared/httpintegration"
+	"github.com/XManCodeing/XMall/internal/upstream"
 
 	"github.com/shopspring/decimal"
 )

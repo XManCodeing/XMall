@@ -6,11 +6,11 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/homles698698-lab/XMall/internal/constants"
-	"github.com/homles698698-lab/XMall/internal/logger"
-	reconciliationcontract "github.com/homles698698-lab/XMall/internal/modules/reconciliation/contract"
-	reconciliationdomain "github.com/homles698698-lab/XMall/internal/modules/reconciliation/domain"
-	"github.com/homles698698-lab/XMall/internal/shared/money"
+	"github.com/XManCodeing/XMall/internal/constants"
+	"github.com/XManCodeing/XMall/internal/logger"
+	reconciliationcontract "github.com/XManCodeing/XMall/internal/modules/reconciliation/contract"
+	reconciliationdomain "github.com/XManCodeing/XMall/internal/modules/reconciliation/domain"
+	"github.com/XManCodeing/XMall/internal/shared/money"
 
 	"github.com/shopspring/decimal"
 )

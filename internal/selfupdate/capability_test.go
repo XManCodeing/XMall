@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/homles698698-lab/XMall/internal/version"
+	"github.com/XManCodeing/XMall/internal/version"
 )
 
 // TestDetectBlocksSourceBuild 本地构建（BuildType=source）必须被阻断，

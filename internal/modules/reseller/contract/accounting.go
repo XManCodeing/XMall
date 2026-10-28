@@ -3,7 +3,7 @@ package contract
 import (
 	"time"
 
-	resellerdomain "github.com/homles698698-lab/XMall/internal/modules/reseller/domain"
+	resellerdomain "github.com/XManCodeing/XMall/internal/modules/reseller/domain"
 
 	"github.com/shopspring/decimal"
 )

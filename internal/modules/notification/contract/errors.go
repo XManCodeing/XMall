@@ -3,7 +3,7 @@ package contract
 import (
 	"errors"
 
-	settingsmessaging "github.com/homles698698-lab/XMall/internal/modules/settings/schema/messaging"
+	settingsmessaging "github.com/XManCodeing/XMall/internal/modules/settings/schema/messaging"
 )
 
 var (

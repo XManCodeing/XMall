@@ -5,16 +5,16 @@ import (
 	"testing"
 	"time"
 
-	resellerapplication "github.com/homles698698-lab/XMall/internal/modules/reseller/application"
-	resellergormstore "github.com/homles698698-lab/XMall/internal/modules/reseller/infrastructure/gormstore"
+	resellerapplication "github.com/XManCodeing/XMall/internal/modules/reseller/application"
+	resellergormstore "github.com/XManCodeing/XMall/internal/modules/reseller/infrastructure/gormstore"
 
-	resellerdomain "github.com/homles698698-lab/XMall/internal/modules/reseller/domain"
+	resellerdomain "github.com/XManCodeing/XMall/internal/modules/reseller/domain"
 
+	"github.com/XManCodeing/XMall/internal/app/container"
+	"github.com/XManCodeing/XMall/internal/queue"
+	"github.com/XManCodeing/XMall/internal/shared/money"
 	"github.com/glebarez/sqlite"
 	"github.com/hibiken/asynq"
-	"github.com/homles698698-lab/XMall/internal/app/container"
-	"github.com/homles698698-lab/XMall/internal/queue"
-	"github.com/homles698698-lab/XMall/internal/shared/money"
 	"github.com/shopspring/decimal"
 	"gorm.io/gorm"
 )

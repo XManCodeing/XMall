@@ -3,12 +3,12 @@ package productwrite
 import (
 	"strings"
 
-	productdomain "github.com/homles698698-lab/XMall/internal/modules/catalog/product/domain"
+	productdomain "github.com/XManCodeing/XMall/internal/modules/catalog/product/domain"
 
-	"github.com/homles698698-lab/XMall/internal/constants"
-	productcontract "github.com/homles698698-lab/XMall/internal/modules/catalog/product/contract"
-	"github.com/homles698698-lab/XMall/internal/shared/jsonmap"
-	"github.com/homles698698-lab/XMall/internal/shared/money"
+	"github.com/XManCodeing/XMall/internal/constants"
+	productcontract "github.com/XManCodeing/XMall/internal/modules/catalog/product/contract"
+	"github.com/XManCodeing/XMall/internal/shared/jsonmap"
+	"github.com/XManCodeing/XMall/internal/shared/money"
 
 	"github.com/shopspring/decimal"
 )

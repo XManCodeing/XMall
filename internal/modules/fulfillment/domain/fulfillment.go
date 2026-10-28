@@ -4,7 +4,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/homles698698-lab/XMall/internal/shared/jsonmap"
+	"github.com/XManCodeing/XMall/internal/shared/jsonmap"
 )
 
 // PayloadMaxPreviewLines 交付内容截断阈值（API 响应）

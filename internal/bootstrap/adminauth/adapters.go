@@ -6,18 +6,18 @@ import (
 	"fmt"
 	"strings"
 
-	totpapplication "github.com/homles698698-lab/XMall/internal/modules/identity/totp/application"
-	"github.com/homles698698-lab/XMall/internal/shared/passwordpolicy"
+	totpapplication "github.com/XManCodeing/XMall/internal/modules/identity/totp/application"
+	"github.com/XManCodeing/XMall/internal/shared/passwordpolicy"
 
-	userdomain "github.com/homles698698-lab/XMall/internal/modules/identity/user/domain"
-	usertotpapp "github.com/homles698698-lab/XMall/internal/modules/identity/userauth/totp/application"
+	userdomain "github.com/XManCodeing/XMall/internal/modules/identity/user/domain"
+	usertotpapp "github.com/XManCodeing/XMall/internal/modules/identity/userauth/totp/application"
 
-	"github.com/homles698698-lab/XMall/internal/cache"
-	auditlogapp "github.com/homles698698-lab/XMall/internal/modules/auditlog/application"
-	adminauthapp "github.com/homles698698-lab/XMall/internal/modules/identity/adminauth/application"
-	adminchallenge "github.com/homles698698-lab/XMall/internal/modules/identity/adminauth/challenge"
-	admintotpapp "github.com/homles698698-lab/XMall/internal/modules/identity/adminauth/totp/application"
-	adminauthtransport "github.com/homles698698-lab/XMall/internal/modules/identity/adminauth/transport/http"
+	"github.com/XManCodeing/XMall/internal/cache"
+	auditlogapp "github.com/XManCodeing/XMall/internal/modules/auditlog/application"
+	adminauthapp "github.com/XManCodeing/XMall/internal/modules/identity/adminauth/application"
+	adminchallenge "github.com/XManCodeing/XMall/internal/modules/identity/adminauth/challenge"
+	admintotpapp "github.com/XManCodeing/XMall/internal/modules/identity/adminauth/totp/application"
+	adminauthtransport "github.com/XManCodeing/XMall/internal/modules/identity/adminauth/transport/http"
 )
 
 type admin2FATOTPTransportAdapter struct {

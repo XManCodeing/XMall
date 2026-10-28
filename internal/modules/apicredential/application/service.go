@@ -5,9 +5,9 @@ import (
 	"encoding/hex"
 	"time"
 
-	"github.com/homles698698-lab/XMall/internal/constants"
-	apicredentialcontract "github.com/homles698698-lab/XMall/internal/modules/apicredential/contract"
-	apicredentialdomain "github.com/homles698698-lab/XMall/internal/modules/apicredential/domain"
+	"github.com/XManCodeing/XMall/internal/constants"
+	apicredentialcontract "github.com/XManCodeing/XMall/internal/modules/apicredential/contract"
+	apicredentialdomain "github.com/XManCodeing/XMall/internal/modules/apicredential/domain"
 )
 
 // Service API 凭证服务

@@ -5,8 +5,8 @@ import (
 	"testing"
 	"time"
 
+	emailverificationdomain "github.com/XManCodeing/XMall/internal/modules/identity/emailverification/domain"
 	"github.com/glebarez/sqlite"
-	emailverificationdomain "github.com/homles698698-lab/XMall/internal/modules/identity/emailverification/domain"
 	"gorm.io/gorm"
 )
 

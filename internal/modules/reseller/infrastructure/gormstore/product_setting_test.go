@@ -5,19 +5,19 @@ import (
 	"testing"
 	"time"
 
-	resellercontract "github.com/homles698698-lab/XMall/internal/modules/reseller/contract"
+	resellercontract "github.com/XManCodeing/XMall/internal/modules/reseller/contract"
 
-	resellerdomain "github.com/homles698698-lab/XMall/internal/modules/reseller/domain"
+	resellerdomain "github.com/XManCodeing/XMall/internal/modules/reseller/domain"
 
-	productdomain "github.com/homles698698-lab/XMall/internal/modules/catalog/product/domain"
+	productdomain "github.com/XManCodeing/XMall/internal/modules/catalog/product/domain"
 
-	categorydomain "github.com/homles698698-lab/XMall/internal/modules/catalog/category/domain"
+	categorydomain "github.com/XManCodeing/XMall/internal/modules/catalog/category/domain"
 
-	userdomain "github.com/homles698698-lab/XMall/internal/modules/identity/user/domain"
+	userdomain "github.com/XManCodeing/XMall/internal/modules/identity/user/domain"
 
+	"github.com/XManCodeing/XMall/internal/shared/jsonmap"
+	"github.com/XManCodeing/XMall/internal/shared/money"
 	"github.com/glebarez/sqlite"
-	"github.com/homles698698-lab/XMall/internal/shared/jsonmap"
-	"github.com/homles698698-lab/XMall/internal/shared/money"
 	"github.com/shopspring/decimal"
 	"gorm.io/gorm"
 )

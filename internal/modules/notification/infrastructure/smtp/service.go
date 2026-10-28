@@ -13,14 +13,14 @@ import (
 	"strings"
 	"time"
 
-	"github.com/homles698698-lab/XMall/internal/config"
-	"github.com/homles698698-lab/XMall/internal/constants"
-	"github.com/homles698698-lab/XMall/internal/i18n"
-	"github.com/homles698698-lab/XMall/internal/logger"
-	notificationcontract "github.com/homles698698-lab/XMall/internal/modules/notification/contract"
-	settingsmessaging "github.com/homles698698-lab/XMall/internal/modules/settings/schema/messaging"
-	"github.com/homles698698-lab/XMall/internal/shared/mailbrand"
-	"github.com/homles698698-lab/XMall/internal/telegramidentity"
+	"github.com/XManCodeing/XMall/internal/config"
+	"github.com/XManCodeing/XMall/internal/constants"
+	"github.com/XManCodeing/XMall/internal/i18n"
+	"github.com/XManCodeing/XMall/internal/logger"
+	notificationcontract "github.com/XManCodeing/XMall/internal/modules/notification/contract"
+	settingsmessaging "github.com/XManCodeing/XMall/internal/modules/settings/schema/messaging"
+	"github.com/XManCodeing/XMall/internal/shared/mailbrand"
+	"github.com/XManCodeing/XMall/internal/telegramidentity"
 )
 
 // writeStandardHeaders 写入 RFC 5322 要求的通用邮件头（Date、Message-ID、From、To、Subject、MIME-Version）。

@@ -4,10 +4,10 @@ import (
 	"context"
 	"net/http"
 
+	"github.com/XManCodeing/XMall/internal/i18n"
+	resellercontract "github.com/XManCodeing/XMall/internal/modules/reseller/contract"
+	"github.com/XManCodeing/XMall/internal/platform/http/response"
 	"github.com/gin-gonic/gin"
-	"github.com/homles698698-lab/XMall/internal/i18n"
-	resellercontract "github.com/homles698698-lab/XMall/internal/modules/reseller/contract"
-	"github.com/homles698698-lab/XMall/internal/platform/http/response"
 )
 
 type ResellerTenantResolver interface {

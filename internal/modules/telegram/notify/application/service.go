@@ -4,8 +4,8 @@ import (
 	"context"
 	"strings"
 
-	"github.com/homles698698-lab/XMall/internal/config"
-	notifycontract "github.com/homles698698-lab/XMall/internal/modules/telegram/notify/contract"
+	"github.com/XManCodeing/XMall/internal/config"
+	notifycontract "github.com/XManCodeing/XMall/internal/modules/telegram/notify/contract"
 )
 
 // Service 解析通知配置并编排 Telegram 消息发送。

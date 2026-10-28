@@ -3,9 +3,9 @@ package application
 import (
 	"errors"
 
-	productcontract "github.com/homles698698-lab/XMall/internal/modules/catalog/product/contract"
-	productdomain "github.com/homles698698-lab/XMall/internal/modules/catalog/product/domain"
-	resellercontract "github.com/homles698698-lab/XMall/internal/modules/reseller/contract"
+	productcontract "github.com/XManCodeing/XMall/internal/modules/catalog/product/contract"
+	productdomain "github.com/XManCodeing/XMall/internal/modules/catalog/product/domain"
+	resellercontract "github.com/XManCodeing/XMall/internal/modules/reseller/contract"
 )
 
 var (

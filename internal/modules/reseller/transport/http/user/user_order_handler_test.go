@@ -6,8 +6,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	resellermodule "github.com/homles698698-lab/XMall/internal/modules/reseller/contract"
-	"github.com/homles698698-lab/XMall/internal/platform/http/response"
+	resellermodule "github.com/XManCodeing/XMall/internal/modules/reseller/contract"
+	"github.com/XManCodeing/XMall/internal/platform/http/response"
 
 	"github.com/gin-gonic/gin"
 )

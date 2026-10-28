@@ -4,13 +4,13 @@ import (
 	"context"
 	"errors"
 
-	dashboardapp "github.com/homles698698-lab/XMall/internal/modules/dashboard/application"
-	dashboardcontract "github.com/homles698698-lab/XMall/internal/modules/dashboard/contract"
-	reportingdomain "github.com/homles698698-lab/XMall/internal/modules/reporting/domain"
-	reportinghttp "github.com/homles698698-lab/XMall/internal/modules/reporting/transport/http"
-	settingsstorefront "github.com/homles698698-lab/XMall/internal/modules/settings/schema/storefront"
-	"github.com/homles698698-lab/XMall/internal/platform/http/ginutil"
-	"github.com/homles698698-lab/XMall/internal/platform/http/response"
+	dashboardapp "github.com/XManCodeing/XMall/internal/modules/dashboard/application"
+	dashboardcontract "github.com/XManCodeing/XMall/internal/modules/dashboard/contract"
+	reportingdomain "github.com/XManCodeing/XMall/internal/modules/reporting/domain"
+	reportinghttp "github.com/XManCodeing/XMall/internal/modules/reporting/transport/http"
+	settingsstorefront "github.com/XManCodeing/XMall/internal/modules/settings/schema/storefront"
+	"github.com/XManCodeing/XMall/internal/platform/http/ginutil"
+	"github.com/XManCodeing/XMall/internal/platform/http/response"
 
 	"github.com/gin-gonic/gin"
 )

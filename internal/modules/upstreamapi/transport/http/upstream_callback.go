@@ -9,10 +9,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/homles698698-lab/XMall/internal/logger"
-	procurementcontract "github.com/homles698698-lab/XMall/internal/modules/procurement/contract"
-	"github.com/homles698698-lab/XMall/internal/shared/jsonmap"
-	upstreamadapter "github.com/homles698698-lab/XMall/internal/upstream"
+	"github.com/XManCodeing/XMall/internal/logger"
+	procurementcontract "github.com/XManCodeing/XMall/internal/modules/procurement/contract"
+	"github.com/XManCodeing/XMall/internal/shared/jsonmap"
+	upstreamadapter "github.com/XManCodeing/XMall/internal/upstream"
 
 	"github.com/gin-gonic/gin"
 )

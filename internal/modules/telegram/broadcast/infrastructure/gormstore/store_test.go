@@ -5,10 +5,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/XManCodeing/XMall/internal/constants"
+	broadcastcontract "github.com/XManCodeing/XMall/internal/modules/telegram/broadcast/contract"
+	broadcastdomain "github.com/XManCodeing/XMall/internal/modules/telegram/broadcast/domain"
 	"github.com/glebarez/sqlite"
-	"github.com/homles698698-lab/XMall/internal/constants"
-	broadcastcontract "github.com/homles698698-lab/XMall/internal/modules/telegram/broadcast/contract"
-	broadcastdomain "github.com/homles698698-lab/XMall/internal/modules/telegram/broadcast/domain"
 	"gorm.io/gorm"
 )
 

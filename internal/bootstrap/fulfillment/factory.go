@@ -1,8 +1,8 @@
 package fulfillmentwiring
 
 import (
-	"github.com/homles698698-lab/XMall/internal/app/container"
-	fulfillmenttransport "github.com/homles698698-lab/XMall/internal/modules/fulfillment/transport/http"
+	"github.com/XManCodeing/XMall/internal/app/container"
+	fulfillmenttransport "github.com/XManCodeing/XMall/internal/modules/fulfillment/transport/http"
 )
 
 func NewAdminHandler(c *container.Container) *fulfillmenttransport.AdminHandler {

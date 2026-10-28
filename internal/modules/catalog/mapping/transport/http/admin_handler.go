@@ -5,14 +5,14 @@ import (
 	"errors"
 	"strconv"
 
-	mappingapp "github.com/homles698698-lab/XMall/internal/modules/catalog/mapping/application"
-	mappingcontract "github.com/homles698698-lab/XMall/internal/modules/catalog/mapping/contract"
-	mappingdomain "github.com/homles698698-lab/XMall/internal/modules/catalog/mapping/domain"
-	productcontract "github.com/homles698698-lab/XMall/internal/modules/catalog/product/contract"
-	siteconnectioncontract "github.com/homles698698-lab/XMall/internal/modules/siteconnection/contract"
-	"github.com/homles698698-lab/XMall/internal/platform/http/ginutil"
-	"github.com/homles698698-lab/XMall/internal/platform/http/response"
-	"github.com/homles698698-lab/XMall/internal/upstream"
+	mappingapp "github.com/XManCodeing/XMall/internal/modules/catalog/mapping/application"
+	mappingcontract "github.com/XManCodeing/XMall/internal/modules/catalog/mapping/contract"
+	mappingdomain "github.com/XManCodeing/XMall/internal/modules/catalog/mapping/domain"
+	productcontract "github.com/XManCodeing/XMall/internal/modules/catalog/product/contract"
+	siteconnectioncontract "github.com/XManCodeing/XMall/internal/modules/siteconnection/contract"
+	"github.com/XManCodeing/XMall/internal/platform/http/ginutil"
+	"github.com/XManCodeing/XMall/internal/platform/http/response"
+	"github.com/XManCodeing/XMall/internal/upstream"
 
 	"github.com/gin-gonic/gin"
 )

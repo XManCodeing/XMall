@@ -5,11 +5,11 @@ import (
 	"errors"
 	"time"
 
-	userdomain "github.com/homles698698-lab/XMall/internal/modules/identity/user/domain"
+	userdomain "github.com/XManCodeing/XMall/internal/modules/identity/user/domain"
 
-	"github.com/homles698698-lab/XMall/internal/constants"
-	externalidentitydomain "github.com/homles698698-lab/XMall/internal/modules/identity/externalidentity/domain"
-	telegramauthapp "github.com/homles698698-lab/XMall/internal/modules/identity/telegramauth/application"
+	"github.com/XManCodeing/XMall/internal/constants"
+	externalidentitydomain "github.com/XManCodeing/XMall/internal/modules/identity/externalidentity/domain"
+	telegramauthapp "github.com/XManCodeing/XMall/internal/modules/identity/telegramauth/application"
 )
 
 // LoginWithTelegramInput Telegram 登录输入

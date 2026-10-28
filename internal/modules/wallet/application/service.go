@@ -5,7 +5,7 @@ import (
 	"strings"
 	"time"
 
-	walletcontract "github.com/homles698698-lab/XMall/internal/modules/wallet/contract"
+	walletcontract "github.com/XManCodeing/XMall/internal/modules/wallet/contract"
 )
 
 const defaultCurrency = "CNY"

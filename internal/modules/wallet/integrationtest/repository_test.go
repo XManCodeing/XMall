@@ -5,14 +5,14 @@ import (
 	"testing"
 	"time"
 
-	userdomain "github.com/homles698698-lab/XMall/internal/modules/identity/user/domain"
+	userdomain "github.com/XManCodeing/XMall/internal/modules/identity/user/domain"
 
-	"github.com/homles698698-lab/XMall/internal/constants"
-	walletapp "github.com/homles698698-lab/XMall/internal/modules/wallet/application"
-	walletcontract "github.com/homles698698-lab/XMall/internal/modules/wallet/contract"
-	walletdomain "github.com/homles698698-lab/XMall/internal/modules/wallet/domain"
-	walletgormstore "github.com/homles698698-lab/XMall/internal/modules/wallet/infrastructure/gormstore"
-	"github.com/homles698698-lab/XMall/internal/shared/money"
+	"github.com/XManCodeing/XMall/internal/constants"
+	walletapp "github.com/XManCodeing/XMall/internal/modules/wallet/application"
+	walletcontract "github.com/XManCodeing/XMall/internal/modules/wallet/contract"
+	walletdomain "github.com/XManCodeing/XMall/internal/modules/wallet/domain"
+	walletgormstore "github.com/XManCodeing/XMall/internal/modules/wallet/infrastructure/gormstore"
+	"github.com/XManCodeing/XMall/internal/shared/money"
 
 	"github.com/glebarez/sqlite"
 	"github.com/shopspring/decimal"

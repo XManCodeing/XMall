@@ -5,10 +5,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/homles698698-lab/XMall/internal/constants"
-	paymentcontract "github.com/homles698698-lab/XMall/internal/modules/payment/contract"
-	paymentdomain "github.com/homles698698-lab/XMall/internal/modules/payment/domain"
-	"github.com/homles698698-lab/XMall/internal/persistence/gormutil"
+	"github.com/XManCodeing/XMall/internal/constants"
+	paymentcontract "github.com/XManCodeing/XMall/internal/modules/payment/contract"
+	paymentdomain "github.com/XManCodeing/XMall/internal/modules/payment/domain"
+	"github.com/XManCodeing/XMall/internal/persistence/gormutil"
 
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"

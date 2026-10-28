@@ -3,9 +3,9 @@ package domain
 import (
 	"time"
 
-	productdomain "github.com/homles698698-lab/XMall/internal/modules/catalog/product/domain"
-	siteconnectiondomain "github.com/homles698698-lab/XMall/internal/modules/siteconnection/domain"
-	"github.com/homles698698-lab/XMall/internal/shared/money"
+	productdomain "github.com/XManCodeing/XMall/internal/modules/catalog/product/domain"
+	siteconnectiondomain "github.com/XManCodeing/XMall/internal/modules/siteconnection/domain"
+	"github.com/XManCodeing/XMall/internal/shared/money"
 )
 
 // 上游商品状态枚举（Mapping.UpstreamStatus）

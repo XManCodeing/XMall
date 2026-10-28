@@ -7,10 +7,10 @@ import (
 	"strings"
 	"time"
 
-	productcontract "github.com/homles698698-lab/XMall/internal/modules/catalog/product/contract"
-	productdomain "github.com/homles698698-lab/XMall/internal/modules/catalog/product/domain"
+	productcontract "github.com/XManCodeing/XMall/internal/modules/catalog/product/contract"
+	productdomain "github.com/XManCodeing/XMall/internal/modules/catalog/product/domain"
 
-	"github.com/homles698698-lab/XMall/internal/persistence/gormutil"
+	"github.com/XManCodeing/XMall/internal/persistence/gormutil"
 
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"

@@ -4,12 +4,12 @@ import (
 	"strings"
 	"time"
 
-	paymentcontract "github.com/homles698698-lab/XMall/internal/modules/payment/contract"
+	paymentcontract "github.com/XManCodeing/XMall/internal/modules/payment/contract"
 
-	paymentdomain "github.com/homles698698-lab/XMall/internal/modules/payment/domain"
+	paymentdomain "github.com/XManCodeing/XMall/internal/modules/payment/domain"
 
-	"github.com/homles698698-lab/XMall/internal/constants"
-	walletcontract "github.com/homles698698-lab/XMall/internal/modules/wallet/contract"
+	"github.com/XManCodeing/XMall/internal/constants"
+	walletcontract "github.com/XManCodeing/XMall/internal/modules/wallet/contract"
 )
 
 func (s *PaymentService) handleWalletRechargeCallback(payment *paymentdomain.Payment, status string, input PaymentCallbackInput) (*paymentdomain.Payment, error) {

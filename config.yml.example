@@ -176,4 +176,4 @@ reseller:
 # 默认更新源为本项目仓库；填写空字符串可关闭远程更新。
 # 仓库改名不代表已有 XMall 兼容发行包，发布前须验证新包及更新兼容性。
 update:
-  repository: "homles698698-lab/XMall"
+  repository: "XManCodeing/XMall"

@@ -46,14 +46,14 @@ func TestDownstreamCallbackLivesInCompleteVertical(t *testing.T) {
 	for _, forbiddenImport := range []string{
 		"net/http",
 		"github.com/hibiken/asynq",
-		"github.com/homles698698-lab/XMall/internal/models",
-		"github.com/homles698698-lab/XMall/internal/queue",
-		"github.com/homles698698-lab/XMall/internal/upstream",
+		"github.com/XManCodeing/XMall/internal/models",
+		"github.com/XManCodeing/XMall/internal/queue",
+		"github.com/XManCodeing/XMall/internal/upstream",
 	} {
 		assertProductionImportsAbsent(t, applicationRoot, forbiddenImport)
 	}
-	assertProductionImportsAbsent(t, contractRoot, "github.com/homles698698-lab/XMall/internal/models")
-	assertProductionImportsAbsent(t, domainRoot, "github.com/homles698698-lab/XMall/internal/models")
+	assertProductionImportsAbsent(t, contractRoot, "github.com/XManCodeing/XMall/internal/models")
+	assertProductionImportsAbsent(t, domainRoot, "github.com/XManCodeing/XMall/internal/models")
 
 	for _, legacy := range []string{
 		filepath.Join(repositoryRoot, "internal", "models", "downstream_order_ref.go"),

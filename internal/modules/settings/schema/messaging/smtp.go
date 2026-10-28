@@ -6,9 +6,9 @@ import (
 	"net/mail"
 	"strings"
 
-	"github.com/homles698698-lab/XMall/internal/config"
-	settingsvalue "github.com/homles698698-lab/XMall/internal/modules/settings/schema/value"
-	"github.com/homles698698-lab/XMall/internal/shared/jsonmap"
+	"github.com/XManCodeing/XMall/internal/config"
+	settingsvalue "github.com/XManCodeing/XMall/internal/modules/settings/schema/value"
+	"github.com/XManCodeing/XMall/internal/shared/jsonmap"
 )
 
 var ErrSMTPConfigInvalid = errors.New("smtp config invalid")

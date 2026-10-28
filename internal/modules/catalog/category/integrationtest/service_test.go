@@ -5,14 +5,14 @@ import (
 	"testing"
 	"time"
 
-	productdomain "github.com/homles698698-lab/XMall/internal/modules/catalog/product/domain"
+	productdomain "github.com/XManCodeing/XMall/internal/modules/catalog/product/domain"
 
+	categoryapp "github.com/XManCodeing/XMall/internal/modules/catalog/category/application"
+	categorydomain "github.com/XManCodeing/XMall/internal/modules/catalog/category/domain"
+	categorygormstore "github.com/XManCodeing/XMall/internal/modules/catalog/category/infrastructure/gormstore"
+	"github.com/XManCodeing/XMall/internal/shared/jsonmap"
+	"github.com/XManCodeing/XMall/internal/shared/money"
 	"github.com/glebarez/sqlite"
-	categoryapp "github.com/homles698698-lab/XMall/internal/modules/catalog/category/application"
-	categorydomain "github.com/homles698698-lab/XMall/internal/modules/catalog/category/domain"
-	categorygormstore "github.com/homles698698-lab/XMall/internal/modules/catalog/category/infrastructure/gormstore"
-	"github.com/homles698698-lab/XMall/internal/shared/jsonmap"
-	"github.com/homles698698-lab/XMall/internal/shared/money"
 	"github.com/shopspring/decimal"
 	"gorm.io/gorm"
 )

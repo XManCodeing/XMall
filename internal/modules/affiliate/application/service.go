@@ -3,8 +3,8 @@ package application
 import (
 	"time"
 
-	affiliatecontract "github.com/homles698698-lab/XMall/internal/modules/affiliate/contract"
-	usercontract "github.com/homles698698-lab/XMall/internal/modules/identity/user/contract"
+	affiliatecontract "github.com/XManCodeing/XMall/internal/modules/affiliate/contract"
+	usercontract "github.com/XManCodeing/XMall/internal/modules/identity/user/contract"
 )
 
 const (

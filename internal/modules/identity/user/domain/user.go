@@ -5,7 +5,7 @@ import (
 	"time"
 	"unicode"
 
-	"github.com/homles698698-lab/XMall/internal/shared/money"
+	"github.com/XManCodeing/XMall/internal/shared/money"
 )
 
 // User 用户表

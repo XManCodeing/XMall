@@ -5,20 +5,20 @@ import (
 	"fmt"
 	"time"
 
-	paymentapp "github.com/homles698698-lab/XMall/internal/modules/payment/application"
+	paymentapp "github.com/XManCodeing/XMall/internal/modules/payment/application"
 
-	orderapp "github.com/homles698698-lab/XMall/internal/modules/order/application"
-	orderdomain "github.com/homles698698-lab/XMall/internal/modules/order/domain"
+	orderapp "github.com/XManCodeing/XMall/internal/modules/order/application"
+	orderdomain "github.com/XManCodeing/XMall/internal/modules/order/domain"
 
-	productdomain "github.com/homles698698-lab/XMall/internal/modules/catalog/product/domain"
+	productdomain "github.com/XManCodeing/XMall/internal/modules/catalog/product/domain"
 
-	"github.com/homles698698-lab/XMall/internal/app/container"
-	productapplication "github.com/homles698698-lab/XMall/internal/modules/catalog/product/application"
-	productcontract "github.com/homles698698-lab/XMall/internal/modules/catalog/product/contract"
-	"github.com/homles698698-lab/XMall/internal/modules/catalog/product/manualform"
-	upstreamtransport "github.com/homles698698-lab/XMall/internal/modules/upstreamapi/transport/http"
-	walletcontract "github.com/homles698698-lab/XMall/internal/modules/wallet/contract"
-	"github.com/homles698698-lab/XMall/internal/shared/jsonmap"
+	"github.com/XManCodeing/XMall/internal/app/container"
+	productapplication "github.com/XManCodeing/XMall/internal/modules/catalog/product/application"
+	productcontract "github.com/XManCodeing/XMall/internal/modules/catalog/product/contract"
+	"github.com/XManCodeing/XMall/internal/modules/catalog/product/manualform"
+	upstreamtransport "github.com/XManCodeing/XMall/internal/modules/upstreamapi/transport/http"
+	walletcontract "github.com/XManCodeing/XMall/internal/modules/wallet/contract"
+	"github.com/XManCodeing/XMall/internal/shared/jsonmap"
 )
 
 // NewHandler connects application services to the upstream HTTP

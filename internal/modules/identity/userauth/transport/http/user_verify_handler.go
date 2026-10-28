@@ -5,12 +5,12 @@ import (
 	"errors"
 	"strings"
 
-	"github.com/homles698698-lab/XMall/internal/constants"
-	"github.com/homles698698-lab/XMall/internal/i18n"
-	captcha "github.com/homles698698-lab/XMall/internal/modules/captcha/contract"
-	captchahttp "github.com/homles698698-lab/XMall/internal/modules/captcha/transport/http"
-	"github.com/homles698698-lab/XMall/internal/platform/http/ginutil"
-	"github.com/homles698698-lab/XMall/internal/platform/http/response"
+	"github.com/XManCodeing/XMall/internal/constants"
+	"github.com/XManCodeing/XMall/internal/i18n"
+	captcha "github.com/XManCodeing/XMall/internal/modules/captcha/contract"
+	captchahttp "github.com/XManCodeing/XMall/internal/modules/captcha/transport/http"
+	"github.com/XManCodeing/XMall/internal/platform/http/ginutil"
+	"github.com/XManCodeing/XMall/internal/platform/http/response"
 
 	"github.com/gin-gonic/gin"
 )

@@ -4,18 +4,18 @@ import (
 	"errors"
 	"strings"
 
-	promotiondomain "github.com/homles698698-lab/XMall/internal/modules/promotion/domain"
+	promotiondomain "github.com/XManCodeing/XMall/internal/modules/promotion/domain"
 
-	productcontract "github.com/homles698698-lab/XMall/internal/modules/catalog/product/contract"
-	productdomain "github.com/homles698698-lab/XMall/internal/modules/catalog/product/domain"
-	productpresenter "github.com/homles698698-lab/XMall/internal/modules/catalog/product/transport/presenter"
+	productcontract "github.com/XManCodeing/XMall/internal/modules/catalog/product/contract"
+	productdomain "github.com/XManCodeing/XMall/internal/modules/catalog/product/domain"
+	productpresenter "github.com/XManCodeing/XMall/internal/modules/catalog/product/transport/presenter"
 
-	"github.com/homles698698-lab/XMall/internal/constants"
-	domaincatalog "github.com/homles698698-lab/XMall/internal/modules/catalog"
-	categorypresenter "github.com/homles698698-lab/XMall/internal/modules/catalog/category/transport/presenter"
-	promotioncontract "github.com/homles698698-lab/XMall/internal/modules/promotion/contract"
-	reseller "github.com/homles698698-lab/XMall/internal/modules/reseller/contract"
-	"github.com/homles698698-lab/XMall/internal/shared/money"
+	"github.com/XManCodeing/XMall/internal/constants"
+	domaincatalog "github.com/XManCodeing/XMall/internal/modules/catalog"
+	categorypresenter "github.com/XManCodeing/XMall/internal/modules/catalog/category/transport/presenter"
+	promotioncontract "github.com/XManCodeing/XMall/internal/modules/promotion/contract"
+	reseller "github.com/XManCodeing/XMall/internal/modules/reseller/contract"
+	"github.com/XManCodeing/XMall/internal/shared/money"
 )
 
 // publicSKUView 内部 SKU 计算结构，用于装饰逻辑

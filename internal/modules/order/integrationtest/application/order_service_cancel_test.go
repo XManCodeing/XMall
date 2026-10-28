@@ -5,22 +5,22 @@ import (
 	"testing"
 	"time"
 
-	paymentdomain "github.com/homles698698-lab/XMall/internal/modules/payment/domain"
+	paymentdomain "github.com/XManCodeing/XMall/internal/modules/payment/domain"
 
-	cardsecretdomain "github.com/homles698698-lab/XMall/internal/modules/cardsecret/domain"
-	fulfillmentdomain "github.com/homles698698-lab/XMall/internal/modules/fulfillment/domain"
-	. "github.com/homles698698-lab/XMall/internal/modules/order/application"
-	orderdomain "github.com/homles698698-lab/XMall/internal/modules/order/domain"
-	ordergormstore "github.com/homles698698-lab/XMall/internal/modules/order/infrastructure/gormstore"
+	cardsecretdomain "github.com/XManCodeing/XMall/internal/modules/cardsecret/domain"
+	fulfillmentdomain "github.com/XManCodeing/XMall/internal/modules/fulfillment/domain"
+	. "github.com/XManCodeing/XMall/internal/modules/order/application"
+	orderdomain "github.com/XManCodeing/XMall/internal/modules/order/domain"
+	ordergormstore "github.com/XManCodeing/XMall/internal/modules/order/infrastructure/gormstore"
 
-	coupondomain "github.com/homles698698-lab/XMall/internal/modules/coupon/domain"
+	coupondomain "github.com/XManCodeing/XMall/internal/modules/coupon/domain"
 
-	productdomain "github.com/homles698698-lab/XMall/internal/modules/catalog/product/domain"
-	productgormstore "github.com/homles698698-lab/XMall/internal/modules/catalog/product/store/gormstore"
+	productdomain "github.com/XManCodeing/XMall/internal/modules/catalog/product/domain"
+	productgormstore "github.com/XManCodeing/XMall/internal/modules/catalog/product/store/gormstore"
 
-	"github.com/homles698698-lab/XMall/internal/constants"
-	coupongormstore "github.com/homles698698-lab/XMall/internal/modules/coupon/infrastructure/gormstore"
-	"github.com/homles698698-lab/XMall/internal/shared/money"
+	"github.com/XManCodeing/XMall/internal/constants"
+	coupongormstore "github.com/XManCodeing/XMall/internal/modules/coupon/infrastructure/gormstore"
+	"github.com/XManCodeing/XMall/internal/shared/money"
 
 	"github.com/glebarez/sqlite"
 	"github.com/shopspring/decimal"

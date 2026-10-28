@@ -7,12 +7,12 @@ import (
 	"strings"
 	"time"
 
-	"github.com/homles698698-lab/XMall/internal/cache"
-	"github.com/homles698698-lab/XMall/internal/config"
-	"github.com/homles698698-lab/XMall/internal/crypto"
-	admincontract "github.com/homles698698-lab/XMall/internal/modules/identity/admin/contract"
-	admindomain "github.com/homles698698-lab/XMall/internal/modules/identity/admin/domain"
-	totpapplication "github.com/homles698698-lab/XMall/internal/modules/identity/totp/application"
+	"github.com/XManCodeing/XMall/internal/cache"
+	"github.com/XManCodeing/XMall/internal/config"
+	"github.com/XManCodeing/XMall/internal/crypto"
+	admincontract "github.com/XManCodeing/XMall/internal/modules/identity/admin/contract"
+	admindomain "github.com/XManCodeing/XMall/internal/modules/identity/admin/domain"
+	totpapplication "github.com/XManCodeing/XMall/internal/modules/identity/totp/application"
 
 	"github.com/pquerna/otp/totp"
 	"github.com/redis/go-redis/v9"

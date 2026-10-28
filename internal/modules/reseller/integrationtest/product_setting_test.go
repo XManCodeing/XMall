@@ -5,22 +5,22 @@ import (
 	"testing"
 	"time"
 
-	resellergormstore "github.com/homles698698-lab/XMall/internal/modules/reseller/infrastructure/gormstore"
+	resellergormstore "github.com/XManCodeing/XMall/internal/modules/reseller/infrastructure/gormstore"
 
-	resellerdomain "github.com/homles698698-lab/XMall/internal/modules/reseller/domain"
+	resellerdomain "github.com/XManCodeing/XMall/internal/modules/reseller/domain"
 
-	productdomain "github.com/homles698698-lab/XMall/internal/modules/catalog/product/domain"
+	productdomain "github.com/XManCodeing/XMall/internal/modules/catalog/product/domain"
 
-	categorydomain "github.com/homles698698-lab/XMall/internal/modules/catalog/category/domain"
+	categorydomain "github.com/XManCodeing/XMall/internal/modules/catalog/category/domain"
 
-	productgormstore "github.com/homles698698-lab/XMall/internal/modules/catalog/product/store/gormstore"
+	productgormstore "github.com/XManCodeing/XMall/internal/modules/catalog/product/store/gormstore"
 
-	userdomain "github.com/homles698698-lab/XMall/internal/modules/identity/user/domain"
+	userdomain "github.com/XManCodeing/XMall/internal/modules/identity/user/domain"
 
+	"github.com/XManCodeing/XMall/internal/constants"
+	"github.com/XManCodeing/XMall/internal/shared/jsonmap"
+	"github.com/XManCodeing/XMall/internal/shared/money"
 	"github.com/glebarez/sqlite"
-	"github.com/homles698698-lab/XMall/internal/constants"
-	"github.com/homles698698-lab/XMall/internal/shared/jsonmap"
-	"github.com/homles698698-lab/XMall/internal/shared/money"
 	"github.com/shopspring/decimal"
 	"gorm.io/gorm"
 )

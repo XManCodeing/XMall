@@ -1,9 +1,9 @@
 package gormstore
 
 import (
-	"github.com/homles698698-lab/XMall/internal/modules/notification/contract"
-	"github.com/homles698698-lab/XMall/internal/modules/notification/domain"
-	"github.com/homles698698-lab/XMall/internal/persistence/gormutil"
+	"github.com/XManCodeing/XMall/internal/modules/notification/contract"
+	"github.com/XManCodeing/XMall/internal/modules/notification/domain"
+	"github.com/XManCodeing/XMall/internal/persistence/gormutil"
 
 	"gorm.io/gorm"
 )

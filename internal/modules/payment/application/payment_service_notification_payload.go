@@ -4,17 +4,17 @@ import (
 	"fmt"
 	"strings"
 
-	paymentdomain "github.com/homles698698-lab/XMall/internal/modules/payment/domain"
+	paymentdomain "github.com/XManCodeing/XMall/internal/modules/payment/domain"
 
-	orderapp "github.com/homles698698-lab/XMall/internal/modules/order/application"
-	orderdomain "github.com/homles698698-lab/XMall/internal/modules/order/domain"
+	orderapp "github.com/XManCodeing/XMall/internal/modules/order/application"
+	orderdomain "github.com/XManCodeing/XMall/internal/modules/order/domain"
 
-	walletdomain "github.com/homles698698-lab/XMall/internal/modules/wallet/domain"
+	walletdomain "github.com/XManCodeing/XMall/internal/modules/wallet/domain"
 
-	"github.com/homles698698-lab/XMall/internal/constants"
-	notificationformat "github.com/homles698698-lab/XMall/internal/modules/notification/application/format"
-	settingsmessaging "github.com/homles698698-lab/XMall/internal/modules/settings/schema/messaging"
-	"github.com/homles698698-lab/XMall/internal/shared/jsonmap"
+	"github.com/XManCodeing/XMall/internal/constants"
+	notificationformat "github.com/XManCodeing/XMall/internal/modules/notification/application/format"
+	settingsmessaging "github.com/XManCodeing/XMall/internal/modules/settings/schema/messaging"
+	"github.com/XManCodeing/XMall/internal/shared/jsonmap"
 
 	"github.com/shopspring/decimal"
 )

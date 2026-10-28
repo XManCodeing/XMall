@@ -7,12 +7,12 @@ import (
 	"strings"
 	"time"
 
-	"github.com/homles698698-lab/XMall/internal/logger"
-	auditlogapp "github.com/homles698698-lab/XMall/internal/modules/auditlog/application"
-	admindomain "github.com/homles698698-lab/XMall/internal/modules/identity/admin/domain"
-	"github.com/homles698698-lab/XMall/internal/platform/http/ginutil"
-	"github.com/homles698698-lab/XMall/internal/platform/http/response"
-	"github.com/homles698698-lab/XMall/internal/shared/jsonmap"
+	"github.com/XManCodeing/XMall/internal/logger"
+	auditlogapp "github.com/XManCodeing/XMall/internal/modules/auditlog/application"
+	admindomain "github.com/XManCodeing/XMall/internal/modules/identity/admin/domain"
+	"github.com/XManCodeing/XMall/internal/platform/http/ginutil"
+	"github.com/XManCodeing/XMall/internal/platform/http/response"
+	"github.com/XManCodeing/XMall/internal/shared/jsonmap"
 
 	"github.com/gin-gonic/gin"
 )

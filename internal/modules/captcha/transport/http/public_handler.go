@@ -3,9 +3,9 @@ package captchahttp
 import (
 	"errors"
 
-	captchacontract "github.com/homles698698-lab/XMall/internal/modules/captcha/contract"
-	"github.com/homles698698-lab/XMall/internal/platform/http/ginutil"
-	"github.com/homles698698-lab/XMall/internal/platform/http/response"
+	captchacontract "github.com/XManCodeing/XMall/internal/modules/captcha/contract"
+	"github.com/XManCodeing/XMall/internal/platform/http/ginutil"
+	"github.com/XManCodeing/XMall/internal/platform/http/response"
 
 	"github.com/gin-gonic/gin"
 )

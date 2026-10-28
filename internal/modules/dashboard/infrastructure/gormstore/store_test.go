@@ -6,19 +6,19 @@ import (
 	"testing"
 	"time"
 
-	paymentdomain "github.com/homles698698-lab/XMall/internal/modules/payment/domain"
+	paymentdomain "github.com/XManCodeing/XMall/internal/modules/payment/domain"
 
-	orderdomain "github.com/homles698698-lab/XMall/internal/modules/order/domain"
+	orderdomain "github.com/XManCodeing/XMall/internal/modules/order/domain"
 
-	productdomain "github.com/homles698698-lab/XMall/internal/modules/catalog/product/domain"
+	productdomain "github.com/XManCodeing/XMall/internal/modules/catalog/product/domain"
 
-	categorydomain "github.com/homles698698-lab/XMall/internal/modules/catalog/category/domain"
+	categorydomain "github.com/XManCodeing/XMall/internal/modules/catalog/category/domain"
 
-	userdomain "github.com/homles698698-lab/XMall/internal/modules/identity/user/domain"
+	userdomain "github.com/XManCodeing/XMall/internal/modules/identity/user/domain"
 
-	"github.com/homles698698-lab/XMall/internal/constants"
-	"github.com/homles698698-lab/XMall/internal/shared/jsonmap"
-	"github.com/homles698698-lab/XMall/internal/shared/money"
+	"github.com/XManCodeing/XMall/internal/constants"
+	"github.com/XManCodeing/XMall/internal/shared/jsonmap"
+	"github.com/XManCodeing/XMall/internal/shared/money"
 
 	"github.com/glebarez/sqlite"
 	"github.com/shopspring/decimal"

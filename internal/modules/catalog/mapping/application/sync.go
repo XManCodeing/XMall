@@ -8,20 +8,20 @@ import (
 	"sync"
 	"time"
 
-	mappingcontract "github.com/homles698698-lab/XMall/internal/modules/catalog/mapping/contract"
-	mappingdomain "github.com/homles698698-lab/XMall/internal/modules/catalog/mapping/domain"
-	siteconnectioncontract "github.com/homles698698-lab/XMall/internal/modules/siteconnection/contract"
+	mappingcontract "github.com/XManCodeing/XMall/internal/modules/catalog/mapping/contract"
+	mappingdomain "github.com/XManCodeing/XMall/internal/modules/catalog/mapping/domain"
+	siteconnectioncontract "github.com/XManCodeing/XMall/internal/modules/siteconnection/contract"
 
-	siteconnectiondomain "github.com/homles698698-lab/XMall/internal/modules/siteconnection/domain"
+	siteconnectiondomain "github.com/XManCodeing/XMall/internal/modules/siteconnection/domain"
 
-	productdomain "github.com/homles698698-lab/XMall/internal/modules/catalog/product/domain"
+	productdomain "github.com/XManCodeing/XMall/internal/modules/catalog/product/domain"
 
-	"github.com/homles698698-lab/XMall/internal/cache"
-	"github.com/homles698698-lab/XMall/internal/constants"
-	"github.com/homles698698-lab/XMall/internal/logger"
-	settingsintegration "github.com/homles698698-lab/XMall/internal/modules/settings/schema/integration"
-	"github.com/homles698698-lab/XMall/internal/shared/money"
-	"github.com/homles698698-lab/XMall/internal/upstream"
+	"github.com/XManCodeing/XMall/internal/cache"
+	"github.com/XManCodeing/XMall/internal/constants"
+	"github.com/XManCodeing/XMall/internal/logger"
+	settingsintegration "github.com/XManCodeing/XMall/internal/modules/settings/schema/integration"
+	"github.com/XManCodeing/XMall/internal/shared/money"
+	"github.com/XManCodeing/XMall/internal/upstream"
 
 	"github.com/shopspring/decimal"
 )

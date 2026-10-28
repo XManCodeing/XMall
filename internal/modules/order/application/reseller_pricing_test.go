@@ -5,16 +5,16 @@ import (
 	"fmt"
 	"testing"
 
-	orderdomain "github.com/homles698698-lab/XMall/internal/modules/order/domain"
+	orderdomain "github.com/XManCodeing/XMall/internal/modules/order/domain"
 
-	resellercontract "github.com/homles698698-lab/XMall/internal/modules/reseller/contract"
-	resellerdomain "github.com/homles698698-lab/XMall/internal/modules/reseller/domain"
+	resellercontract "github.com/XManCodeing/XMall/internal/modules/reseller/contract"
+	resellerdomain "github.com/XManCodeing/XMall/internal/modules/reseller/domain"
 
-	productdomain "github.com/homles698698-lab/XMall/internal/modules/catalog/product/domain"
+	productdomain "github.com/XManCodeing/XMall/internal/modules/catalog/product/domain"
 
-	"github.com/homles698698-lab/XMall/internal/constants"
-	"github.com/homles698698-lab/XMall/internal/shared/jsonmap"
-	"github.com/homles698698-lab/XMall/internal/shared/money"
+	"github.com/XManCodeing/XMall/internal/constants"
+	"github.com/XManCodeing/XMall/internal/shared/jsonmap"
+	"github.com/XManCodeing/XMall/internal/shared/money"
 	"github.com/shopspring/decimal"
 )
 

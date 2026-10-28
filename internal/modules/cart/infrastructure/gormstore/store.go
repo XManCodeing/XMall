@@ -3,9 +3,9 @@ package gormstore
 import (
 	"errors"
 
-	"github.com/homles698698-lab/XMall/internal/modules/cart/contract"
-	"github.com/homles698698-lab/XMall/internal/modules/cart/domain"
-	productdomain "github.com/homles698698-lab/XMall/internal/modules/catalog/product/domain"
+	"github.com/XManCodeing/XMall/internal/modules/cart/contract"
+	"github.com/XManCodeing/XMall/internal/modules/cart/domain"
+	productdomain "github.com/XManCodeing/XMall/internal/modules/catalog/product/domain"
 
 	"gorm.io/gorm"
 )

@@ -6,10 +6,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/homles698698-lab/XMall/internal/constants"
-	"github.com/homles698698-lab/XMall/internal/logger"
-	downstreamcontract "github.com/homles698698-lab/XMall/internal/modules/downstreamcallback/contract"
-	downstreamdomain "github.com/homles698698-lab/XMall/internal/modules/downstreamcallback/domain"
+	"github.com/XManCodeing/XMall/internal/constants"
+	"github.com/XManCodeing/XMall/internal/logger"
+	downstreamcontract "github.com/XManCodeing/XMall/internal/modules/downstreamcallback/contract"
+	downstreamdomain "github.com/XManCodeing/XMall/internal/modules/downstreamcallback/domain"
 )
 
 const maxCallbackRetries = 5

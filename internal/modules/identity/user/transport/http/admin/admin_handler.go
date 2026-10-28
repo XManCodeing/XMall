@@ -7,21 +7,21 @@ import (
 	"strings"
 	"time"
 
-	walletdomain "github.com/homles698698-lab/XMall/internal/modules/wallet/domain"
+	walletdomain "github.com/XManCodeing/XMall/internal/modules/wallet/domain"
 
-	coupondomain "github.com/homles698698-lab/XMall/internal/modules/coupon/domain"
+	coupondomain "github.com/XManCodeing/XMall/internal/modules/coupon/domain"
 
-	productdomain "github.com/homles698698-lab/XMall/internal/modules/catalog/product/domain"
+	productdomain "github.com/XManCodeing/XMall/internal/modules/catalog/product/domain"
 
-	userdomain "github.com/homles698698-lab/XMall/internal/modules/identity/user/domain"
+	userdomain "github.com/XManCodeing/XMall/internal/modules/identity/user/domain"
 
-	"github.com/homles698698-lab/XMall/internal/constants"
-	couponcontract "github.com/homles698698-lab/XMall/internal/modules/coupon/contract"
-	externalidentitydomain "github.com/homles698698-lab/XMall/internal/modules/identity/externalidentity/domain"
-	"github.com/homles698698-lab/XMall/internal/platform/http/ginutil"
-	"github.com/homles698698-lab/XMall/internal/platform/http/response"
-	"github.com/homles698698-lab/XMall/internal/shared/jsonmap"
-	"github.com/homles698698-lab/XMall/internal/shared/money"
+	"github.com/XManCodeing/XMall/internal/constants"
+	couponcontract "github.com/XManCodeing/XMall/internal/modules/coupon/contract"
+	externalidentitydomain "github.com/XManCodeing/XMall/internal/modules/identity/externalidentity/domain"
+	"github.com/XManCodeing/XMall/internal/platform/http/ginutil"
+	"github.com/XManCodeing/XMall/internal/platform/http/response"
+	"github.com/XManCodeing/XMall/internal/shared/jsonmap"
+	"github.com/XManCodeing/XMall/internal/shared/money"
 
 	"github.com/gin-gonic/gin"
 	"github.com/shopspring/decimal"

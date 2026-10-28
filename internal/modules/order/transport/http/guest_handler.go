@@ -4,12 +4,12 @@ import (
 	"errors"
 	"strings"
 
-	orderdomain "github.com/homles698698-lab/XMall/internal/modules/order/domain"
+	orderdomain "github.com/XManCodeing/XMall/internal/modules/order/domain"
 
-	orderpresenter "github.com/homles698698-lab/XMall/internal/modules/order/transport/presenter"
-	reseller "github.com/homles698698-lab/XMall/internal/modules/reseller/contract"
-	"github.com/homles698698-lab/XMall/internal/platform/http/ginutil"
-	"github.com/homles698698-lab/XMall/internal/platform/http/response"
+	orderpresenter "github.com/XManCodeing/XMall/internal/modules/order/transport/presenter"
+	reseller "github.com/XManCodeing/XMall/internal/modules/reseller/contract"
+	"github.com/XManCodeing/XMall/internal/platform/http/ginutil"
+	"github.com/XManCodeing/XMall/internal/platform/http/response"
 
 	"github.com/gin-gonic/gin"
 )

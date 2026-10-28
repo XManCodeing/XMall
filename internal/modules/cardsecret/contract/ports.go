@@ -3,8 +3,8 @@ package contract
 import (
 	"time"
 
-	cardsecretdomain "github.com/homles698698-lab/XMall/internal/modules/cardsecret/domain"
-	productdomain "github.com/homles698698-lab/XMall/internal/modules/catalog/product/domain"
+	cardsecretdomain "github.com/XManCodeing/XMall/internal/modules/cardsecret/domain"
+	productdomain "github.com/XManCodeing/XMall/internal/modules/catalog/product/domain"
 )
 
 // Repository 持久化卡密库存并提供订单占用所需的原子状态迁移。

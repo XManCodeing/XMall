@@ -3,7 +3,7 @@ package settingshttp
 import (
 	"github.com/gin-gonic/gin"
 
-	settingssecurity "github.com/homles698698-lab/XMall/internal/modules/settings/schema/security"
+	settingssecurity "github.com/XManCodeing/XMall/internal/modules/settings/schema/security"
 )
 
 // GoogleAuthAdminService 是后台 Google Identity Services 登录设置端口。

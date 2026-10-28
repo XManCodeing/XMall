@@ -6,10 +6,10 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/homles698698-lab/XMall/internal/constants"
-	settingsapp "github.com/homles698698-lab/XMall/internal/modules/settings/application"
-	settingstransport "github.com/homles698698-lab/XMall/internal/modules/settings/transport/http"
-	"github.com/homles698698-lab/XMall/internal/shared/jsonmap"
+	"github.com/XManCodeing/XMall/internal/constants"
+	settingsapp "github.com/XManCodeing/XMall/internal/modules/settings/application"
+	settingstransport "github.com/XManCodeing/XMall/internal/modules/settings/transport/http"
+	"github.com/XManCodeing/XMall/internal/shared/jsonmap"
 
 	"github.com/gin-gonic/gin"
 )

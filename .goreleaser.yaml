@@ -34,7 +34,7 @@ builds:
     # BuildType=release 是后台一键升级的开关：只有 CI 正式产物才允许自我替换，
     # 本地 go build 的二进制版本号是占位值，放开会把开发者自己编译的产物覆盖掉。
     ldflags:
-      - -s -w -X github.com/homles698698-lab/XMall/internal/version.Version={{.Tag}} -X github.com/homles698698-lab/XMall/internal/version.BuildType=release
+      - -s -w -X github.com/XManCodeing/XMall/internal/version.Version={{.Tag}} -X github.com/XManCodeing/XMall/internal/version.BuildType=release
     flags:
       - "-tags=release,fullstack"
       - "-mod=readonly"

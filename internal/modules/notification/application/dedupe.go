@@ -9,11 +9,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/homles698698-lab/XMall/internal/cache"
-	"github.com/homles698698-lab/XMall/internal/constants"
-	"github.com/homles698698-lab/XMall/internal/modules/notification/application/format"
-	settingsmessaging "github.com/homles698698-lab/XMall/internal/modules/settings/schema/messaging"
-	"github.com/homles698698-lab/XMall/internal/queue"
+	"github.com/XManCodeing/XMall/internal/cache"
+	"github.com/XManCodeing/XMall/internal/constants"
+	"github.com/XManCodeing/XMall/internal/modules/notification/application/format"
+	settingsmessaging "github.com/XManCodeing/XMall/internal/modules/settings/schema/messaging"
+	"github.com/XManCodeing/XMall/internal/queue"
 )
 
 func isNotificationEventSupported(eventType string) bool {

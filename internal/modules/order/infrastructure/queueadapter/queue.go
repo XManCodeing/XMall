@@ -4,9 +4,9 @@ import (
 	"strings"
 	"time"
 
-	ordercontract "github.com/homles698698-lab/XMall/internal/modules/order/contract"
+	ordercontract "github.com/XManCodeing/XMall/internal/modules/order/contract"
 
-	"github.com/homles698698-lab/XMall/internal/queue"
+	"github.com/XManCodeing/XMall/internal/queue"
 )
 
 // Queue 把平台异步队列适配为订单应用端口。

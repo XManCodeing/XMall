@@ -9,8 +9,8 @@ import (
 	"net/http"
 	"strings"
 
-	downstreamcontract "github.com/homles698698-lab/XMall/internal/modules/downstreamcallback/contract"
-	"github.com/homles698698-lab/XMall/internal/upstream"
+	downstreamcontract "github.com/XManCodeing/XMall/internal/modules/downstreamcallback/contract"
+	"github.com/XManCodeing/XMall/internal/upstream"
 )
 
 const signaturePath = "/api/v1/upstream/callback"

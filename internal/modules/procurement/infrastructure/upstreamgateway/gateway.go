@@ -5,9 +5,9 @@ import (
 	"errors"
 	"fmt"
 
-	procurementcontract "github.com/homles698698-lab/XMall/internal/modules/procurement/contract"
-	siteconnectiondomain "github.com/homles698698-lab/XMall/internal/modules/siteconnection/domain"
-	"github.com/homles698698-lab/XMall/internal/upstream"
+	procurementcontract "github.com/XManCodeing/XMall/internal/modules/procurement/contract"
+	siteconnectiondomain "github.com/XManCodeing/XMall/internal/modules/siteconnection/domain"
+	"github.com/XManCodeing/XMall/internal/upstream"
 )
 
 type Provider interface {

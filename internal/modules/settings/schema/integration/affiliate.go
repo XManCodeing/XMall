@@ -6,8 +6,8 @@ import (
 	"math"
 	"strings"
 
-	settingsvalue "github.com/homles698698-lab/XMall/internal/modules/settings/schema/value"
-	"github.com/homles698698-lab/XMall/internal/shared/jsonmap"
+	settingsvalue "github.com/XManCodeing/XMall/internal/modules/settings/schema/value"
+	"github.com/XManCodeing/XMall/internal/shared/jsonmap"
 )
 
 const (

@@ -3,13 +3,13 @@ package gormstore
 import (
 	"context"
 	"errors"
-	"github.com/homles698698-lab/XMall/internal/persistence/gormutil"
+	"github.com/XManCodeing/XMall/internal/persistence/gormutil"
 	"strconv"
 	"strings"
 	"time"
 
-	"github.com/homles698698-lab/XMall/internal/modules/content/contract"
-	"github.com/homles698698-lab/XMall/internal/modules/content/domain"
+	"github.com/XManCodeing/XMall/internal/modules/content/contract"
+	"github.com/XManCodeing/XMall/internal/modules/content/domain"
 	"gorm.io/gorm"
 )
 

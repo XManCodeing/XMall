@@ -4,12 +4,12 @@ import (
 	"testing"
 	"time"
 
-	fulfillmentdomain "github.com/homles698698-lab/XMall/internal/modules/fulfillment/domain"
-	orderdomain "github.com/homles698698-lab/XMall/internal/modules/order/domain"
+	fulfillmentdomain "github.com/XManCodeing/XMall/internal/modules/fulfillment/domain"
+	orderdomain "github.com/XManCodeing/XMall/internal/modules/order/domain"
 
-	"github.com/homles698698-lab/XMall/internal/constants"
-	procurementcontract "github.com/homles698698-lab/XMall/internal/modules/procurement/contract"
-	procurementgormstore "github.com/homles698698-lab/XMall/internal/modules/procurement/infrastructure/gormstore"
+	"github.com/XManCodeing/XMall/internal/constants"
+	procurementcontract "github.com/XManCodeing/XMall/internal/modules/procurement/contract"
+	procurementgormstore "github.com/XManCodeing/XMall/internal/modules/procurement/infrastructure/gormstore"
 )
 
 type procurementCallbackStatusFixture struct {

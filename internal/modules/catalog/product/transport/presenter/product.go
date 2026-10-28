@@ -3,11 +3,11 @@ package presenter
 import (
 	"time"
 
-	categorypresenter "github.com/homles698698-lab/XMall/internal/modules/catalog/category/transport/presenter"
-	productdomain "github.com/homles698698-lab/XMall/internal/modules/catalog/product/domain"
-	"github.com/homles698698-lab/XMall/internal/shared/jsonmap"
-	"github.com/homles698698-lab/XMall/internal/shared/jsonslice"
-	"github.com/homles698698-lab/XMall/internal/shared/money"
+	categorypresenter "github.com/XManCodeing/XMall/internal/modules/catalog/category/transport/presenter"
+	productdomain "github.com/XManCodeing/XMall/internal/modules/catalog/product/domain"
+	"github.com/XManCodeing/XMall/internal/shared/jsonmap"
+	"github.com/XManCodeing/XMall/internal/shared/jsonslice"
+	"github.com/XManCodeing/XMall/internal/shared/money"
 
 	"github.com/shopspring/decimal"
 )

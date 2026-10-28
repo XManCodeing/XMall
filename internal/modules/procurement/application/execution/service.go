@@ -7,8 +7,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/homles698698-lab/XMall/internal/modules/procurement/contract"
-	"github.com/homles698698-lab/XMall/internal/modules/procurement/domain"
+	"github.com/XManCodeing/XMall/internal/modules/procurement/contract"
+	"github.com/XManCodeing/XMall/internal/modules/procurement/domain"
 )
 
 func Open(provider contract.ConnectionProvider, order *domain.Order) (contract.UpstreamConnection, error) {

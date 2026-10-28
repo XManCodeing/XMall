@@ -3,12 +3,12 @@ package presenter
 import (
 	"time"
 
-	paymentdomain "github.com/homles698698-lab/XMall/internal/modules/payment/domain"
-	paymentpresenter "github.com/homles698698-lab/XMall/internal/modules/payment/transport/presenter"
+	paymentdomain "github.com/XManCodeing/XMall/internal/modules/payment/domain"
+	paymentpresenter "github.com/XManCodeing/XMall/internal/modules/payment/transport/presenter"
 
-	walletdomain "github.com/homles698698-lab/XMall/internal/modules/wallet/domain"
+	walletdomain "github.com/XManCodeing/XMall/internal/modules/wallet/domain"
 
-	"github.com/homles698698-lab/XMall/internal/shared/money"
+	"github.com/XManCodeing/XMall/internal/shared/money"
 )
 
 // WalletAccountResp 钱包账户响应

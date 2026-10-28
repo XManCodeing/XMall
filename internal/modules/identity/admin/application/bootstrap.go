@@ -3,8 +3,8 @@ package adminapplication
 import (
 	"strings"
 
-	"github.com/homles698698-lab/XMall/internal/logger"
-	admindomain "github.com/homles698698-lab/XMall/internal/modules/identity/admin/domain"
+	"github.com/XManCodeing/XMall/internal/logger"
+	admindomain "github.com/XManCodeing/XMall/internal/modules/identity/admin/domain"
 
 	"golang.org/x/crypto/bcrypt"
 )

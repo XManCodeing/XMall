@@ -11,7 +11,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/homles698698-lab/XMall/internal/version"
+	"github.com/XManCodeing/XMall/internal/version"
 )
 
 // TestSelectAssets 用 v1.3.1 发行版结构的附件清单验证选择逻辑：

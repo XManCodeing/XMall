@@ -4,9 +4,9 @@ import (
 	"context"
 	"fmt"
 
-	reconciliationcontract "github.com/homles698698-lab/XMall/internal/modules/reconciliation/contract"
-	siteconnectiondomain "github.com/homles698698-lab/XMall/internal/modules/siteconnection/domain"
-	"github.com/homles698698-lab/XMall/internal/upstream"
+	reconciliationcontract "github.com/XManCodeing/XMall/internal/modules/reconciliation/contract"
+	siteconnectiondomain "github.com/XManCodeing/XMall/internal/modules/siteconnection/domain"
+	"github.com/XManCodeing/XMall/internal/upstream"
 )
 
 type ConnectionProvider interface {

@@ -10,13 +10,13 @@ import (
 	"strings"
 	"time"
 
-	"github.com/homles698698-lab/XMall/internal/constants"
-	"github.com/homles698698-lab/XMall/internal/i18n"
-	externalidentitydomain "github.com/homles698698-lab/XMall/internal/modules/identity/externalidentity/domain"
-	userpresenter "github.com/homles698698-lab/XMall/internal/modules/identity/userauth/transport/presenter"
-	resellercontract "github.com/homles698698-lab/XMall/internal/modules/reseller/contract"
-	"github.com/homles698698-lab/XMall/internal/platform/http/ginutil"
-	"github.com/homles698698-lab/XMall/internal/platform/http/response"
+	"github.com/XManCodeing/XMall/internal/constants"
+	"github.com/XManCodeing/XMall/internal/i18n"
+	externalidentitydomain "github.com/XManCodeing/XMall/internal/modules/identity/externalidentity/domain"
+	userpresenter "github.com/XManCodeing/XMall/internal/modules/identity/userauth/transport/presenter"
+	resellercontract "github.com/XManCodeing/XMall/internal/modules/reseller/contract"
+	"github.com/XManCodeing/XMall/internal/platform/http/ginutil"
+	"github.com/XManCodeing/XMall/internal/platform/http/response"
 
 	"github.com/gin-gonic/gin"
 )

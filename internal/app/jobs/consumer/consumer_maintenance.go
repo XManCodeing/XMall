@@ -6,8 +6,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/homles698698-lab/XMall/internal/logger"
-	"github.com/homles698698-lab/XMall/internal/queue"
+	"github.com/XManCodeing/XMall/internal/logger"
+	"github.com/XManCodeing/XMall/internal/queue"
 
 	"github.com/hibiken/asynq"
 )

@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	settingsintegration "github.com/homles698698-lab/XMall/internal/modules/settings/schema/integration"
+	settingsintegration "github.com/XManCodeing/XMall/internal/modules/settings/schema/integration"
 )
 
 // fakeSettingsProvider 以固定同步间隔实现 SettingsProvider。

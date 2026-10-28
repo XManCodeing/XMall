@@ -5,30 +5,30 @@ import (
 	"strconv"
 	"testing"
 
-	paymentgormstore "github.com/homles698698-lab/XMall/internal/modules/payment/infrastructure/gormstore"
+	paymentgormstore "github.com/XManCodeing/XMall/internal/modules/payment/infrastructure/gormstore"
 
-	cardsecretgormstore "github.com/homles698698-lab/XMall/internal/modules/cardsecret/infrastructure/gormstore"
-	memberleveldomain "github.com/homles698698-lab/XMall/internal/modules/memberlevel/domain"
+	cardsecretgormstore "github.com/XManCodeing/XMall/internal/modules/cardsecret/infrastructure/gormstore"
+	memberleveldomain "github.com/XManCodeing/XMall/internal/modules/memberlevel/domain"
 
-	mappingdomain "github.com/homles698698-lab/XMall/internal/modules/catalog/mapping/domain"
+	mappingdomain "github.com/XManCodeing/XMall/internal/modules/catalog/mapping/domain"
 
-	catalogproductbootstrap "github.com/homles698698-lab/XMall/internal/bootstrap/catalogproduct"
-	productcontract "github.com/homles698698-lab/XMall/internal/modules/catalog/product/contract"
-	productdomain "github.com/homles698698-lab/XMall/internal/modules/catalog/product/domain"
-	ordergormstore "github.com/homles698698-lab/XMall/internal/modules/order/infrastructure/gormstore"
+	catalogproductbootstrap "github.com/XManCodeing/XMall/internal/bootstrap/catalogproduct"
+	productcontract "github.com/XManCodeing/XMall/internal/modules/catalog/product/contract"
+	productdomain "github.com/XManCodeing/XMall/internal/modules/catalog/product/domain"
+	ordergormstore "github.com/XManCodeing/XMall/internal/modules/order/infrastructure/gormstore"
 
-	categorydomain "github.com/homles698698-lab/XMall/internal/modules/catalog/category/domain"
+	categorydomain "github.com/XManCodeing/XMall/internal/modules/catalog/category/domain"
 
-	productgormstore "github.com/homles698698-lab/XMall/internal/modules/catalog/product/store/gormstore"
+	productgormstore "github.com/XManCodeing/XMall/internal/modules/catalog/product/store/gormstore"
 
-	"github.com/homles698698-lab/XMall/internal/constants"
-	cartdomain "github.com/homles698698-lab/XMall/internal/modules/cart/domain"
-	cartgormstore "github.com/homles698698-lab/XMall/internal/modules/cart/infrastructure/gormstore"
-	categorygormstore "github.com/homles698698-lab/XMall/internal/modules/catalog/category/infrastructure/gormstore"
-	mappinggormstore "github.com/homles698698-lab/XMall/internal/modules/catalog/mapping/infrastructure/gormstore"
-	memberlevelgormstore "github.com/homles698698-lab/XMall/internal/modules/memberlevel/infrastructure/gormstore"
-	"github.com/homles698698-lab/XMall/internal/shared/jsonmap"
-	"github.com/homles698698-lab/XMall/internal/shared/money"
+	"github.com/XManCodeing/XMall/internal/constants"
+	cartdomain "github.com/XManCodeing/XMall/internal/modules/cart/domain"
+	cartgormstore "github.com/XManCodeing/XMall/internal/modules/cart/infrastructure/gormstore"
+	categorygormstore "github.com/XManCodeing/XMall/internal/modules/catalog/category/infrastructure/gormstore"
+	mappinggormstore "github.com/XManCodeing/XMall/internal/modules/catalog/mapping/infrastructure/gormstore"
+	memberlevelgormstore "github.com/XManCodeing/XMall/internal/modules/memberlevel/infrastructure/gormstore"
+	"github.com/XManCodeing/XMall/internal/shared/jsonmap"
+	"github.com/XManCodeing/XMall/internal/shared/money"
 	"github.com/shopspring/decimal"
 	"gorm.io/gorm"
 )

@@ -4,10 +4,10 @@ import (
 	"testing"
 	"time"
 
-	fulfillmentdomain "github.com/homles698698-lab/XMall/internal/modules/fulfillment/domain"
-	orderdomain "github.com/homles698698-lab/XMall/internal/modules/order/domain"
+	fulfillmentdomain "github.com/XManCodeing/XMall/internal/modules/fulfillment/domain"
+	orderdomain "github.com/XManCodeing/XMall/internal/modules/order/domain"
 
-	"github.com/homles698698-lab/XMall/internal/shared/jsonmap"
+	"github.com/XManCodeing/XMall/internal/shared/jsonmap"
 )
 
 type sourceStub struct {

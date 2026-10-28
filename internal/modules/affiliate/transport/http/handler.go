@@ -4,13 +4,13 @@ import (
 	"errors"
 	"strings"
 
-	affiliatedomain "github.com/homles698698-lab/XMall/internal/modules/affiliate/domain"
+	affiliatedomain "github.com/XManCodeing/XMall/internal/modules/affiliate/domain"
 
-	ginutil "github.com/homles698698-lab/XMall/internal/platform/http/ginutil"
+	ginutil "github.com/XManCodeing/XMall/internal/platform/http/ginutil"
 
-	affiliateapp "github.com/homles698698-lab/XMall/internal/modules/affiliate/application"
-	affiliatepresenter "github.com/homles698698-lab/XMall/internal/modules/affiliate/transport/presenter"
-	"github.com/homles698698-lab/XMall/internal/platform/http/response"
+	affiliateapp "github.com/XManCodeing/XMall/internal/modules/affiliate/application"
+	affiliatepresenter "github.com/XManCodeing/XMall/internal/modules/affiliate/transport/presenter"
+	"github.com/XManCodeing/XMall/internal/platform/http/response"
 
 	"github.com/gin-gonic/gin"
 	"github.com/shopspring/decimal"

@@ -3,8 +3,8 @@ package domain
 import (
 	"time"
 
-	admindomain "github.com/homles698698-lab/XMall/internal/modules/identity/admin/domain"
-	"github.com/homles698698-lab/XMall/internal/shared/money"
+	admindomain "github.com/XManCodeing/XMall/internal/modules/identity/admin/domain"
+	"github.com/XManCodeing/XMall/internal/shared/money"
 )
 
 // WithdrawRequest 推广返利提现申请

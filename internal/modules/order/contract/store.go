@@ -4,16 +4,16 @@ import (
 	"errors"
 	"time"
 
-	affiliatecontract "github.com/homles698698-lab/XMall/internal/modules/affiliate/contract"
-	cardsecretcontract "github.com/homles698698-lab/XMall/internal/modules/cardsecret/contract"
-	productcontract "github.com/homles698698-lab/XMall/internal/modules/catalog/product/contract"
-	couponcontract "github.com/homles698698-lab/XMall/internal/modules/coupon/contract"
-	fulfillmentcontract "github.com/homles698698-lab/XMall/internal/modules/fulfillment/contract"
-	orderdomain "github.com/homles698698-lab/XMall/internal/modules/order/domain"
-	resellercontract "github.com/homles698698-lab/XMall/internal/modules/reseller/contract"
-	resellerdomain "github.com/homles698698-lab/XMall/internal/modules/reseller/domain"
-	walletcontract "github.com/homles698698-lab/XMall/internal/modules/wallet/contract"
-	"github.com/homles698698-lab/XMall/internal/shared/money"
+	affiliatecontract "github.com/XManCodeing/XMall/internal/modules/affiliate/contract"
+	cardsecretcontract "github.com/XManCodeing/XMall/internal/modules/cardsecret/contract"
+	productcontract "github.com/XManCodeing/XMall/internal/modules/catalog/product/contract"
+	couponcontract "github.com/XManCodeing/XMall/internal/modules/coupon/contract"
+	fulfillmentcontract "github.com/XManCodeing/XMall/internal/modules/fulfillment/contract"
+	orderdomain "github.com/XManCodeing/XMall/internal/modules/order/domain"
+	resellercontract "github.com/XManCodeing/XMall/internal/modules/reseller/contract"
+	resellerdomain "github.com/XManCodeing/XMall/internal/modules/reseller/domain"
+	walletcontract "github.com/XManCodeing/XMall/internal/modules/wallet/contract"
+	"github.com/XManCodeing/XMall/internal/shared/money"
 )
 
 var ErrProcurementRefundBlocked = errors.New("active upstream procurement blocks local refund")

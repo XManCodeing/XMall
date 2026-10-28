@@ -5,9 +5,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/homles698698-lab/XMall/internal/constants"
-	affiliatecontract "github.com/homles698698-lab/XMall/internal/modules/affiliate/contract"
-	affiliatedomain "github.com/homles698698-lab/XMall/internal/modules/affiliate/domain"
+	"github.com/XManCodeing/XMall/internal/constants"
+	affiliatecontract "github.com/XManCodeing/XMall/internal/modules/affiliate/contract"
+	affiliatedomain "github.com/XManCodeing/XMall/internal/modules/affiliate/domain"
 	"github.com/shopspring/decimal"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"

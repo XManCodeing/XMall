@@ -3,9 +3,9 @@ package reportinghttp
 import (
 	"strings"
 
+	reportingdomain "github.com/XManCodeing/XMall/internal/modules/reporting/domain"
+	"github.com/XManCodeing/XMall/internal/platform/http/ginutil"
 	"github.com/gin-gonic/gin"
-	reportingdomain "github.com/homles698698-lab/XMall/internal/modules/reporting/domain"
-	"github.com/homles698698-lab/XMall/internal/platform/http/ginutil"
 )
 
 // ParseQuery parses the common range contract used by operational reports.

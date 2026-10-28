@@ -3,7 +3,7 @@ package domain
 import (
 	"time"
 
-	"github.com/homles698698-lab/XMall/internal/shared/money"
+	"github.com/XManCodeing/XMall/internal/shared/money"
 )
 
 // Item 是一条对账差异。

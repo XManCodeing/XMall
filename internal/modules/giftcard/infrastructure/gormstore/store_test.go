@@ -5,11 +5,11 @@ import (
 	"testing"
 	"time"
 
+	giftcardcontract "github.com/XManCodeing/XMall/internal/modules/giftcard/contract"
+	giftcarddomain "github.com/XManCodeing/XMall/internal/modules/giftcard/domain"
+	"github.com/XManCodeing/XMall/internal/modules/giftcard/infrastructure/gormstore"
+	"github.com/XManCodeing/XMall/internal/shared/money"
 	"github.com/glebarez/sqlite"
-	giftcardcontract "github.com/homles698698-lab/XMall/internal/modules/giftcard/contract"
-	giftcarddomain "github.com/homles698698-lab/XMall/internal/modules/giftcard/domain"
-	"github.com/homles698698-lab/XMall/internal/modules/giftcard/infrastructure/gormstore"
-	"github.com/homles698698-lab/XMall/internal/shared/money"
 	"github.com/shopspring/decimal"
 	"gorm.io/gorm"
 )

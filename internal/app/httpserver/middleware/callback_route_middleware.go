@@ -4,12 +4,12 @@ import (
 	"net/http"
 	"strings"
 
-	settingsapp "github.com/homles698698-lab/XMall/internal/modules/settings/application"
+	settingsapp "github.com/XManCodeing/XMall/internal/modules/settings/application"
 
-	"github.com/homles698698-lab/XMall/internal/constants"
-	paymenttransport "github.com/homles698698-lab/XMall/internal/modules/payment/transport/http"
-	paymentcallbacktransport "github.com/homles698698-lab/XMall/internal/modules/payment/transport/http/callback"
-	upstreamtransport "github.com/homles698698-lab/XMall/internal/modules/upstreamapi/transport/http"
+	"github.com/XManCodeing/XMall/internal/constants"
+	paymenttransport "github.com/XManCodeing/XMall/internal/modules/payment/transport/http"
+	paymentcallbacktransport "github.com/XManCodeing/XMall/internal/modules/payment/transport/http/callback"
+	upstreamtransport "github.com/XManCodeing/XMall/internal/modules/upstreamapi/transport/http"
 
 	"github.com/gin-gonic/gin"
 )

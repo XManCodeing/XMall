@@ -4,12 +4,12 @@ import (
 	"strings"
 	"time"
 
-	"github.com/homles698698-lab/XMall/internal/constants"
-	"github.com/homles698698-lab/XMall/internal/logger"
-	ordercontract "github.com/homles698698-lab/XMall/internal/modules/order/contract"
-	orderdomain "github.com/homles698698-lab/XMall/internal/modules/order/domain"
-	walletcontract "github.com/homles698698-lab/XMall/internal/modules/wallet/contract"
-	"github.com/homles698698-lab/XMall/internal/shared/money"
+	"github.com/XManCodeing/XMall/internal/constants"
+	"github.com/XManCodeing/XMall/internal/logger"
+	ordercontract "github.com/XManCodeing/XMall/internal/modules/order/contract"
+	orderdomain "github.com/XManCodeing/XMall/internal/modules/order/domain"
+	walletcontract "github.com/XManCodeing/XMall/internal/modules/wallet/contract"
+	"github.com/XManCodeing/XMall/internal/shared/money"
 
 	"github.com/shopspring/decimal"
 )

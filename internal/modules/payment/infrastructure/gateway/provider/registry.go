@@ -4,7 +4,7 @@ import (
 	"strings"
 	"sync"
 
-	paymentcontract "github.com/homles698698-lab/XMall/internal/modules/payment/contract"
+	paymentcontract "github.com/XManCodeing/XMall/internal/modules/payment/contract"
 )
 
 // Registry 按 (providerType, channelType) 路由 paymentcontract.GatewayProvider 实例。

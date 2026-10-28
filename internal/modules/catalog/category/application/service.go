@@ -4,9 +4,9 @@ import (
 	"errors"
 	"strconv"
 
-	categorycontract "github.com/homles698698-lab/XMall/internal/modules/catalog/category/contract"
-	categorydomain "github.com/homles698698-lab/XMall/internal/modules/catalog/category/domain"
-	"github.com/homles698698-lab/XMall/internal/shared/jsonmap"
+	categorycontract "github.com/XManCodeing/XMall/internal/modules/catalog/category/contract"
+	categorydomain "github.com/XManCodeing/XMall/internal/modules/catalog/category/domain"
+	"github.com/XManCodeing/XMall/internal/shared/jsonmap"
 )
 
 var (

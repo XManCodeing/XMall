@@ -3,11 +3,11 @@ package application
 import (
 	"strconv"
 
-	siteconnectioncontract "github.com/homles698698-lab/XMall/internal/modules/siteconnection/contract"
+	siteconnectioncontract "github.com/XManCodeing/XMall/internal/modules/siteconnection/contract"
 
-	productdomain "github.com/homles698698-lab/XMall/internal/modules/catalog/product/domain"
+	productdomain "github.com/XManCodeing/XMall/internal/modules/catalog/product/domain"
 
-	"github.com/homles698698-lab/XMall/internal/shared/money"
+	"github.com/XManCodeing/XMall/internal/shared/money"
 )
 
 // ReapplyMarkup 对指定连接的所有映射商品重新应用加价规则

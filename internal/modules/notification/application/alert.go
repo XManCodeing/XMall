@@ -4,10 +4,10 @@ import (
 	"context"
 	"time"
 
-	"github.com/homles698698-lab/XMall/internal/logger"
-	"github.com/homles698698-lab/XMall/internal/modules/notification/application/format"
-	settingsmessaging "github.com/homles698698-lab/XMall/internal/modules/settings/schema/messaging"
-	"github.com/homles698698-lab/XMall/internal/queue"
+	"github.com/XManCodeing/XMall/internal/logger"
+	"github.com/XManCodeing/XMall/internal/modules/notification/application/format"
+	settingsmessaging "github.com/XManCodeing/XMall/internal/modules/settings/schema/messaging"
+	"github.com/XManCodeing/XMall/internal/queue"
 )
 
 func (s *Service) dispatchExceptionAlertCheck(ctx context.Context, setting settingsmessaging.NotificationCenterSetting, payload queue.NotificationDispatchPayload) error {

@@ -3,8 +3,8 @@ package dashboardhttp
 import (
 	"testing"
 
-	dashboardcontract "github.com/homles698698-lab/XMall/internal/modules/dashboard/contract"
-	"github.com/homles698698-lab/XMall/internal/shared/jsonmap"
+	dashboardcontract "github.com/XManCodeing/XMall/internal/modules/dashboard/contract"
+	"github.com/XManCodeing/XMall/internal/shared/jsonmap"
 )
 
 func TestMapInventoryAlertsPreservesLocalizedAndSKUFields(t *testing.T) {

@@ -4,11 +4,11 @@ import (
 	"strings"
 	"time"
 
-	affiliatecontract "github.com/homles698698-lab/XMall/internal/modules/affiliate/contract"
-	affiliatedomain "github.com/homles698698-lab/XMall/internal/modules/affiliate/domain"
+	affiliatecontract "github.com/XManCodeing/XMall/internal/modules/affiliate/contract"
+	affiliatedomain "github.com/XManCodeing/XMall/internal/modules/affiliate/domain"
 
-	"github.com/homles698698-lab/XMall/internal/constants"
-	"github.com/homles698698-lab/XMall/internal/shared/money"
+	"github.com/XManCodeing/XMall/internal/constants"
+	"github.com/XManCodeing/XMall/internal/shared/money"
 
 	"github.com/shopspring/decimal"
 )

@@ -8,24 +8,24 @@ import (
 	"testing"
 	"time"
 
-	productdomain "github.com/homles698698-lab/XMall/internal/modules/catalog/product/domain"
+	productdomain "github.com/XManCodeing/XMall/internal/modules/catalog/product/domain"
 
-	categoryapp "github.com/homles698698-lab/XMall/internal/modules/catalog/category/application"
-	categorydomain "github.com/homles698698-lab/XMall/internal/modules/catalog/category/domain"
+	categoryapp "github.com/XManCodeing/XMall/internal/modules/catalog/category/application"
+	categorydomain "github.com/XManCodeing/XMall/internal/modules/catalog/category/domain"
 
-	productgormstore "github.com/homles698698-lab/XMall/internal/modules/catalog/product/store/gormstore"
+	productgormstore "github.com/XManCodeing/XMall/internal/modules/catalog/product/store/gormstore"
 
-	settingsapp "github.com/homles698698-lab/XMall/internal/modules/settings/application"
-	settingsstore "github.com/homles698698-lab/XMall/internal/modules/settings/infrastructure/gormstore"
+	settingsapp "github.com/XManCodeing/XMall/internal/modules/settings/application"
+	settingsstore "github.com/XManCodeing/XMall/internal/modules/settings/infrastructure/gormstore"
 
+	"github.com/XManCodeing/XMall/internal/constants"
+	categorygormstore "github.com/XManCodeing/XMall/internal/modules/catalog/category/infrastructure/gormstore"
+	productapplication "github.com/XManCodeing/XMall/internal/modules/catalog/product/application"
+	channeltransport "github.com/XManCodeing/XMall/internal/modules/channelapi/transport/http"
+	"github.com/XManCodeing/XMall/internal/shared/jsonmap"
+	"github.com/XManCodeing/XMall/internal/shared/money"
 	"github.com/gin-gonic/gin"
 	"github.com/glebarez/sqlite"
-	"github.com/homles698698-lab/XMall/internal/constants"
-	categorygormstore "github.com/homles698698-lab/XMall/internal/modules/catalog/category/infrastructure/gormstore"
-	productapplication "github.com/homles698698-lab/XMall/internal/modules/catalog/product/application"
-	channeltransport "github.com/homles698698-lab/XMall/internal/modules/channelapi/transport/http"
-	"github.com/homles698698-lab/XMall/internal/shared/jsonmap"
-	"github.com/homles698698-lab/XMall/internal/shared/money"
 	"github.com/shopspring/decimal"
 	"gorm.io/gorm"
 )

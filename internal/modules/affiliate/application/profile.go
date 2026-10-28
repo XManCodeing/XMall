@@ -6,10 +6,10 @@ import (
 	"strings"
 	"time"
 
-	affiliatedomain "github.com/homles698698-lab/XMall/internal/modules/affiliate/domain"
-	"github.com/homles698698-lab/XMall/internal/shared/dberror"
+	affiliatedomain "github.com/XManCodeing/XMall/internal/modules/affiliate/domain"
+	"github.com/XManCodeing/XMall/internal/shared/dberror"
 
-	"github.com/homles698698-lab/XMall/internal/constants"
+	"github.com/XManCodeing/XMall/internal/constants"
 )
 
 // UpdateAffiliateProfileStatus 管理端更新返利用户状态

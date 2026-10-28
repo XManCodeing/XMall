@@ -6,12 +6,12 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/homles698698-lab/XMall/internal/constants"
-	"github.com/homles698698-lab/XMall/internal/modules/notification/contract"
-	"github.com/homles698698-lab/XMall/internal/modules/notification/domain"
-	settingsmessaging "github.com/homles698698-lab/XMall/internal/modules/settings/schema/messaging"
-	settingsstorefront "github.com/homles698698-lab/XMall/internal/modules/settings/schema/storefront"
-	"github.com/homles698698-lab/XMall/internal/queue"
+	"github.com/XManCodeing/XMall/internal/constants"
+	"github.com/XManCodeing/XMall/internal/modules/notification/contract"
+	"github.com/XManCodeing/XMall/internal/modules/notification/domain"
+	settingsmessaging "github.com/XManCodeing/XMall/internal/modules/settings/schema/messaging"
+	settingsstorefront "github.com/XManCodeing/XMall/internal/modules/settings/schema/storefront"
+	"github.com/XManCodeing/XMall/internal/queue"
 )
 
 type notificationSettingsStub struct {

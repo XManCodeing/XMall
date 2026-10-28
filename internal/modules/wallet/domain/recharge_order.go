@@ -3,7 +3,7 @@ package domain
 import (
 	"time"
 
-	"github.com/homles698698-lab/XMall/internal/shared/money"
+	"github.com/XManCodeing/XMall/internal/shared/money"
 )
 
 // RechargeOrder 钱包充值支付单。

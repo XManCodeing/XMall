@@ -5,11 +5,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/homles698698-lab/XMall/internal/constants"
-	couponapp "github.com/homles698698-lab/XMall/internal/modules/coupon/application"
-	coupondomain "github.com/homles698698-lab/XMall/internal/modules/coupon/domain"
-	coupongormstore "github.com/homles698698-lab/XMall/internal/modules/coupon/infrastructure/gormstore"
-	"github.com/homles698698-lab/XMall/internal/shared/money"
+	"github.com/XManCodeing/XMall/internal/constants"
+	couponapp "github.com/XManCodeing/XMall/internal/modules/coupon/application"
+	coupondomain "github.com/XManCodeing/XMall/internal/modules/coupon/domain"
+	coupongormstore "github.com/XManCodeing/XMall/internal/modules/coupon/infrastructure/gormstore"
+	"github.com/XManCodeing/XMall/internal/shared/money"
 
 	"github.com/glebarez/sqlite"
 	"github.com/shopspring/decimal"

@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/homles698698-lab/XMall/internal/constants"
-	settingsstorefront "github.com/homles698698-lab/XMall/internal/modules/settings/schema/storefront"
+	"github.com/XManCodeing/XMall/internal/constants"
+	settingsstorefront "github.com/XManCodeing/XMall/internal/modules/settings/schema/storefront"
 )
 
 func thresholdValueByAlertType(setting settingsstorefront.DashboardAlertSetting, alertType string) int64 {

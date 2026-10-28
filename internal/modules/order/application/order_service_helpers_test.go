@@ -3,12 +3,12 @@ package application
 import (
 	"testing"
 
-	orderdomain "github.com/homles698698-lab/XMall/internal/modules/order/domain"
+	orderdomain "github.com/XManCodeing/XMall/internal/modules/order/domain"
 
-	coupondomain "github.com/homles698698-lab/XMall/internal/modules/coupon/domain"
+	coupondomain "github.com/XManCodeing/XMall/internal/modules/coupon/domain"
 
-	"github.com/homles698698-lab/XMall/internal/constants"
-	"github.com/homles698698-lab/XMall/internal/shared/jsonmap"
+	"github.com/XManCodeing/XMall/internal/constants"
+	"github.com/XManCodeing/XMall/internal/shared/jsonmap"
 
 	"github.com/shopspring/decimal"
 )

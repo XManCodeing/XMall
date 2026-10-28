@@ -1,6 +1,6 @@
 package presenter
 
-import "github.com/homles698698-lab/XMall/internal/shared/jsonmap"
+import "github.com/XManCodeing/XMall/internal/shared/jsonmap"
 
 // MemberLevel 是公开会员等级响应。
 type MemberLevel struct {

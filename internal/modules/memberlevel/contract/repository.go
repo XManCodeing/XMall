@@ -1,8 +1,8 @@
 package contract
 
 import (
-	userdomain "github.com/homles698698-lab/XMall/internal/modules/identity/user/domain"
-	memberleveldomain "github.com/homles698698-lab/XMall/internal/modules/memberlevel/domain"
+	userdomain "github.com/XManCodeing/XMall/internal/modules/identity/user/domain"
+	memberleveldomain "github.com/XManCodeing/XMall/internal/modules/memberlevel/domain"
 	"github.com/shopspring/decimal"
 )
 

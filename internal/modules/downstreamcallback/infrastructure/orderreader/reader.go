@@ -1,8 +1,8 @@
 package orderreader
 
 import (
-	downstreamcontract "github.com/homles698698-lab/XMall/internal/modules/downstreamcallback/contract"
-	orderdomain "github.com/homles698698-lab/XMall/internal/modules/order/domain"
+	downstreamcontract "github.com/XManCodeing/XMall/internal/modules/downstreamcallback/contract"
+	orderdomain "github.com/XManCodeing/XMall/internal/modules/order/domain"
 )
 
 // Source 是旧订单上下文暴露给防腐适配器的最小读取端口。

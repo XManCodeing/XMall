@@ -4,9 +4,9 @@ import (
 	"testing"
 	"time"
 
-	channelclientcontract "github.com/homles698698-lab/XMall/internal/modules/channelclient/contract"
-	channelclientdomain "github.com/homles698698-lab/XMall/internal/modules/channelclient/domain"
-	"github.com/homles698698-lab/XMall/internal/upstream"
+	channelclientcontract "github.com/XManCodeing/XMall/internal/modules/channelclient/contract"
+	channelclientdomain "github.com/XManCodeing/XMall/internal/modules/channelclient/domain"
+	"github.com/XManCodeing/XMall/internal/upstream"
 )
 
 var _ channelclientcontract.Store = (*storeStub)(nil)

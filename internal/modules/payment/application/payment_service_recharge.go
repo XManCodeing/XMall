@@ -5,19 +5,19 @@ import (
 	"strings"
 	"time"
 
-	paymentcontract "github.com/homles698698-lab/XMall/internal/modules/payment/contract"
+	paymentcontract "github.com/XManCodeing/XMall/internal/modules/payment/contract"
 
-	paymentdomain "github.com/homles698698-lab/XMall/internal/modules/payment/domain"
+	paymentdomain "github.com/XManCodeing/XMall/internal/modules/payment/domain"
 
-	orderdomain "github.com/homles698698-lab/XMall/internal/modules/order/domain"
-	settingsapp "github.com/homles698698-lab/XMall/internal/modules/settings/application"
+	orderdomain "github.com/XManCodeing/XMall/internal/modules/order/domain"
+	settingsapp "github.com/XManCodeing/XMall/internal/modules/settings/application"
 
-	"github.com/homles698698-lab/XMall/internal/constants"
-	"github.com/homles698698-lab/XMall/internal/logger"
-	walletcontract "github.com/homles698698-lab/XMall/internal/modules/wallet/contract"
-	walletdomain "github.com/homles698698-lab/XMall/internal/modules/wallet/domain"
-	"github.com/homles698698-lab/XMall/internal/shared/money"
-	"github.com/homles698698-lab/XMall/internal/shared/serial"
+	"github.com/XManCodeing/XMall/internal/constants"
+	"github.com/XManCodeing/XMall/internal/logger"
+	walletcontract "github.com/XManCodeing/XMall/internal/modules/wallet/contract"
+	walletdomain "github.com/XManCodeing/XMall/internal/modules/wallet/domain"
+	"github.com/XManCodeing/XMall/internal/shared/money"
+	"github.com/XManCodeing/XMall/internal/shared/serial"
 
 	"github.com/shopspring/decimal"
 )

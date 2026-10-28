@@ -1,9 +1,9 @@
 package settingsbootstrap
 
 import (
-	"github.com/homles698698-lab/XMall/internal/app/container"
-	"github.com/homles698698-lab/XMall/internal/config"
-	settingstransport "github.com/homles698698-lab/XMall/internal/modules/settings/transport/http"
+	"github.com/XManCodeing/XMall/internal/app/container"
+	"github.com/XManCodeing/XMall/internal/config"
+	settingstransport "github.com/XManCodeing/XMall/internal/modules/settings/transport/http"
 )
 
 func NewSMTPHandler(c *container.Container, cfg *config.Config) *settingstransport.SMTPHandler {

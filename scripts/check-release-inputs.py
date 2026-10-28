@@ -43,9 +43,9 @@ def check(skip_git=False):
         raise ValueError("Public template database.dsn must be ./db/xmall.db")
     # The owner confirmed the repository rename to XMall.
     # Empty explicitly disables updates; never fall back to an upstream source.
-    if config["update"]["repository"] not in ("", "homles698698-lab/XMall"):
+    if config["update"]["repository"] not in ("", "XManCodeing/XMall"):
         raise ValueError(
-            "Public template update.repository must be empty or homles698698-lab/XMall"
+            "Public template update.repository must be empty or XManCodeing/XMall"
         )
     release = yaml.safe_load((ROOT / ".goreleaser.yaml").read_text())
     if release["project_name"] != "xmall" or release["builds"][0]["binary"] != "xmall":

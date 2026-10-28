@@ -1,10 +1,10 @@
 package consumer
 
 import (
-	"github.com/homles698698-lab/XMall/internal/app/container"
-	"github.com/homles698698-lab/XMall/internal/logger"
-	orderdomain "github.com/homles698698-lab/XMall/internal/modules/order/domain"
-	"github.com/homles698698-lab/XMall/internal/queue"
+	"github.com/XManCodeing/XMall/internal/app/container"
+	"github.com/XManCodeing/XMall/internal/logger"
+	orderdomain "github.com/XManCodeing/XMall/internal/modules/order/domain"
+	"github.com/XManCodeing/XMall/internal/queue"
 
 	"github.com/hibiken/asynq"
 )

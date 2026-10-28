@@ -3,11 +3,11 @@ package presenter
 import (
 	"time"
 
-	walletdomain "github.com/homles698698-lab/XMall/internal/modules/wallet/domain"
+	walletdomain "github.com/XManCodeing/XMall/internal/modules/wallet/domain"
 
-	giftcarddomain "github.com/homles698698-lab/XMall/internal/modules/giftcard/domain"
-	walletpresenter "github.com/homles698698-lab/XMall/internal/modules/wallet/transport/presenter"
-	"github.com/homles698698-lab/XMall/internal/shared/money"
+	giftcarddomain "github.com/XManCodeing/XMall/internal/modules/giftcard/domain"
+	walletpresenter "github.com/XManCodeing/XMall/internal/modules/wallet/transport/presenter"
+	"github.com/XManCodeing/XMall/internal/shared/money"
 )
 
 // GiftCardRedeemResp 礼品卡兑换结果响应

@@ -3,10 +3,10 @@ package notificationadapter
 import (
 	"fmt"
 
-	"github.com/homles698698-lab/XMall/internal/constants"
-	"github.com/homles698698-lab/XMall/internal/modules/notification/contract"
-	reconciliationcontract "github.com/homles698698-lab/XMall/internal/modules/reconciliation/contract"
-	reconciliationdomain "github.com/homles698698-lab/XMall/internal/modules/reconciliation/domain"
+	"github.com/XManCodeing/XMall/internal/constants"
+	"github.com/XManCodeing/XMall/internal/modules/notification/contract"
+	reconciliationcontract "github.com/XManCodeing/XMall/internal/modules/reconciliation/contract"
+	reconciliationdomain "github.com/XManCodeing/XMall/internal/modules/reconciliation/domain"
 )
 
 type Notifier struct {

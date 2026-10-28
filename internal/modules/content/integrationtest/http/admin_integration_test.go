@@ -10,14 +10,14 @@ import (
 	"testing"
 	"time"
 
+	contentapp "github.com/XManCodeing/XMall/internal/modules/content/application"
+	contentdomain "github.com/XManCodeing/XMall/internal/modules/content/domain"
+	localfilestore "github.com/XManCodeing/XMall/internal/modules/content/infrastructure/filestore/local"
+	"github.com/XManCodeing/XMall/internal/modules/content/infrastructure/gormstore"
+	contenttransport "github.com/XManCodeing/XMall/internal/modules/content/transport/http"
+	"github.com/XManCodeing/XMall/internal/platform/http/response"
 	"github.com/gin-gonic/gin"
 	"github.com/glebarez/sqlite"
-	contentapp "github.com/homles698698-lab/XMall/internal/modules/content/application"
-	contentdomain "github.com/homles698698-lab/XMall/internal/modules/content/domain"
-	localfilestore "github.com/homles698698-lab/XMall/internal/modules/content/infrastructure/filestore/local"
-	"github.com/homles698698-lab/XMall/internal/modules/content/infrastructure/gormstore"
-	contenttransport "github.com/homles698698-lab/XMall/internal/modules/content/transport/http"
-	"github.com/homles698698-lab/XMall/internal/platform/http/response"
 	"gorm.io/gorm"
 )
 

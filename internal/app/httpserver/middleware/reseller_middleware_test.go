@@ -7,9 +7,9 @@ import (
 	"strings"
 	"testing"
 
+	resellermodule "github.com/XManCodeing/XMall/internal/modules/reseller/application"
+	resellercontract "github.com/XManCodeing/XMall/internal/modules/reseller/contract"
 	"github.com/gin-gonic/gin"
-	resellermodule "github.com/homles698698-lab/XMall/internal/modules/reseller/application"
-	resellercontract "github.com/homles698698-lab/XMall/internal/modules/reseller/contract"
 )
 
 type middlewareResolverStub struct {

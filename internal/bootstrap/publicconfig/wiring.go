@@ -1,8 +1,8 @@
 package publicconfigwiring
 
 import (
-	"github.com/homles698698-lab/XMall/internal/app/container"
-	publicconfigtransport "github.com/homles698698-lab/XMall/internal/modules/settings/transport/http/public"
+	"github.com/XManCodeing/XMall/internal/app/container"
+	publicconfigtransport "github.com/XManCodeing/XMall/internal/modules/settings/transport/http/public"
 )
 
 func NewHandler(c *container.Container) *publicconfigtransport.Handler {

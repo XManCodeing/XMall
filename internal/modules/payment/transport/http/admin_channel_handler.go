@@ -5,15 +5,15 @@ import (
 	"errors"
 	"strings"
 
-	paymentcontract "github.com/homles698698-lab/XMall/internal/modules/payment/contract"
-	paymentdomain "github.com/homles698698-lab/XMall/internal/modules/payment/domain"
+	paymentcontract "github.com/XManCodeing/XMall/internal/modules/payment/contract"
+	paymentdomain "github.com/XManCodeing/XMall/internal/modules/payment/domain"
 
-	ginutil "github.com/homles698698-lab/XMall/internal/platform/http/ginutil"
+	ginutil "github.com/XManCodeing/XMall/internal/platform/http/ginutil"
 
-	"github.com/homles698698-lab/XMall/internal/cache"
-	"github.com/homles698698-lab/XMall/internal/platform/http/response"
-	"github.com/homles698698-lab/XMall/internal/shared/jsonmap"
-	"github.com/homles698698-lab/XMall/internal/shared/money"
+	"github.com/XManCodeing/XMall/internal/cache"
+	"github.com/XManCodeing/XMall/internal/platform/http/response"
+	"github.com/XManCodeing/XMall/internal/shared/jsonmap"
+	"github.com/XManCodeing/XMall/internal/shared/money"
 
 	"github.com/gin-gonic/gin"
 )

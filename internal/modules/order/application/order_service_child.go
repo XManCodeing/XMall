@@ -5,11 +5,11 @@ import (
 	"strings"
 	"time"
 
-	ordercontract "github.com/homles698698-lab/XMall/internal/modules/order/contract"
-	orderdomain "github.com/homles698698-lab/XMall/internal/modules/order/domain"
+	ordercontract "github.com/XManCodeing/XMall/internal/modules/order/contract"
+	orderdomain "github.com/XManCodeing/XMall/internal/modules/order/domain"
 
-	"github.com/homles698698-lab/XMall/internal/constants"
-	"github.com/homles698698-lab/XMall/internal/logger"
+	"github.com/XManCodeing/XMall/internal/constants"
+	"github.com/XManCodeing/XMall/internal/logger"
 )
 
 // cancelOrderWithChildren 取消父订单并级联子订单

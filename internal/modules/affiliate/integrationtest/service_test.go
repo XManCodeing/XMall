@@ -5,22 +5,22 @@ import (
 	"testing"
 	"time"
 
-	affiliateapp "github.com/homles698698-lab/XMall/internal/modules/affiliate/application"
-	affiliatecontract "github.com/homles698698-lab/XMall/internal/modules/affiliate/contract"
-	affiliatedomain "github.com/homles698698-lab/XMall/internal/modules/affiliate/domain"
-	affiliategormstore "github.com/homles698698-lab/XMall/internal/modules/affiliate/infrastructure/gormstore"
+	affiliateapp "github.com/XManCodeing/XMall/internal/modules/affiliate/application"
+	affiliatecontract "github.com/XManCodeing/XMall/internal/modules/affiliate/contract"
+	affiliatedomain "github.com/XManCodeing/XMall/internal/modules/affiliate/domain"
+	affiliategormstore "github.com/XManCodeing/XMall/internal/modules/affiliate/infrastructure/gormstore"
 
-	userstore "github.com/homles698698-lab/XMall/internal/modules/identity/user/infrastructure/gormstore"
+	userstore "github.com/XManCodeing/XMall/internal/modules/identity/user/infrastructure/gormstore"
 
-	userdomain "github.com/homles698698-lab/XMall/internal/modules/identity/user/domain"
+	userdomain "github.com/XManCodeing/XMall/internal/modules/identity/user/domain"
 
-	"github.com/homles698698-lab/XMall/internal/testkit/memorysettings"
+	"github.com/XManCodeing/XMall/internal/testkit/memorysettings"
 
-	settingsapp "github.com/homles698698-lab/XMall/internal/modules/settings/application"
-	settingsintegration "github.com/homles698698-lab/XMall/internal/modules/settings/schema/integration"
+	settingsapp "github.com/XManCodeing/XMall/internal/modules/settings/application"
+	settingsintegration "github.com/XManCodeing/XMall/internal/modules/settings/schema/integration"
 
+	"github.com/XManCodeing/XMall/internal/constants"
 	"github.com/glebarez/sqlite"
-	"github.com/homles698698-lab/XMall/internal/constants"
 	"gorm.io/gorm"
 )
 

@@ -4,9 +4,9 @@ import (
 	"errors"
 	"strings"
 
-	"github.com/homles698698-lab/XMall/internal/constants"
-	settingsvalue "github.com/homles698698-lab/XMall/internal/modules/settings/schema/value"
-	"github.com/homles698698-lab/XMall/internal/shared/jsonmap"
+	"github.com/XManCodeing/XMall/internal/constants"
+	settingsvalue "github.com/XManCodeing/XMall/internal/modules/settings/schema/value"
+	"github.com/XManCodeing/XMall/internal/shared/jsonmap"
 )
 
 var ErrOrderEmailTemplateConfigInvalid = errors.New("order email template config invalid")

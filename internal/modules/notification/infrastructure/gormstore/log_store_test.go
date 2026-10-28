@@ -5,9 +5,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/homles698698-lab/XMall/internal/modules/notification/contract"
-	"github.com/homles698698-lab/XMall/internal/modules/notification/domain"
-	"github.com/homles698698-lab/XMall/internal/modules/notification/infrastructure/gormstore"
+	"github.com/XManCodeing/XMall/internal/modules/notification/contract"
+	"github.com/XManCodeing/XMall/internal/modules/notification/domain"
+	"github.com/XManCodeing/XMall/internal/modules/notification/infrastructure/gormstore"
 
 	"github.com/glebarez/sqlite"
 	"gorm.io/gorm"

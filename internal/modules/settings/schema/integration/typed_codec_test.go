@@ -6,9 +6,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/homles698698-lab/XMall/internal/constants"
-	settingsstorefront "github.com/homles698698-lab/XMall/internal/modules/settings/schema/storefront"
-	"github.com/homles698698-lab/XMall/internal/shared/jsonmap"
+	"github.com/XManCodeing/XMall/internal/constants"
+	settingsstorefront "github.com/XManCodeing/XMall/internal/modules/settings/schema/storefront"
+	"github.com/XManCodeing/XMall/internal/shared/jsonmap"
 )
 
 func TestDashboardSettingCodecPreservesDefaultsAndAcceptedNumberShapes(t *testing.T) {

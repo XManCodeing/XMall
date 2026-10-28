@@ -2,13 +2,13 @@ package gormstore
 
 import (
 	"errors"
-	"github.com/homles698698-lab/XMall/internal/persistence/gormutil"
+	"github.com/XManCodeing/XMall/internal/persistence/gormutil"
 	"strings"
 	"time"
 
-	"github.com/homles698698-lab/XMall/internal/constants"
-	promotioncontract "github.com/homles698698-lab/XMall/internal/modules/promotion/contract"
-	promotiondomain "github.com/homles698698-lab/XMall/internal/modules/promotion/domain"
+	"github.com/XManCodeing/XMall/internal/constants"
+	promotioncontract "github.com/XManCodeing/XMall/internal/modules/promotion/contract"
+	promotiondomain "github.com/XManCodeing/XMall/internal/modules/promotion/domain"
 
 	"gorm.io/gorm"
 )

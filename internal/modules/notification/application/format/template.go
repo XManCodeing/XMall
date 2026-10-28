@@ -6,9 +6,9 @@ import (
 	"strings"
 	"time"
 
-	settingsmessaging "github.com/homles698698-lab/XMall/internal/modules/settings/schema/messaging"
-	"github.com/homles698698-lab/XMall/internal/queue"
-	"github.com/homles698698-lab/XMall/internal/shared/jsonmap"
+	settingsmessaging "github.com/XManCodeing/XMall/internal/modules/settings/schema/messaging"
+	"github.com/XManCodeing/XMall/internal/queue"
+	"github.com/XManCodeing/XMall/internal/shared/jsonmap"
 )
 
 var notificationTemplateVariablePattern = regexp.MustCompile(`\{\{\s*([a-zA-Z0-9_]+)\s*\}\}`)

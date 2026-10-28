@@ -1,6 +1,6 @@
 package application
 
-import "github.com/homles698698-lab/XMall/internal/shared/jsonmap"
+import "github.com/XManCodeing/XMall/internal/shared/jsonmap"
 
 type OverviewResponse struct {
 	Range    string      `json:"range"`

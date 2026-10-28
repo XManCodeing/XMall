@@ -1,6 +1,6 @@
 package contract
 
-import settingssecurity "github.com/homles698698-lab/XMall/internal/modules/settings/schema/security"
+import settingssecurity "github.com/XManCodeing/XMall/internal/modules/settings/schema/security"
 
 type SettingReader interface {
 	GetOrderRiskControlConfig() (settingssecurity.OrderRiskControlConfig, error)

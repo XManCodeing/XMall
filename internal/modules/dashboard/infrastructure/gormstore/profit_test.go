@@ -6,15 +6,15 @@ import (
 	"testing"
 	"time"
 
-	orderdomain "github.com/homles698698-lab/XMall/internal/modules/order/domain"
-	paymentdomain "github.com/homles698698-lab/XMall/internal/modules/payment/domain"
+	orderdomain "github.com/XManCodeing/XMall/internal/modules/order/domain"
+	paymentdomain "github.com/XManCodeing/XMall/internal/modules/payment/domain"
 
-	productdomain "github.com/homles698698-lab/XMall/internal/modules/catalog/product/domain"
+	productdomain "github.com/XManCodeing/XMall/internal/modules/catalog/product/domain"
 
-	"github.com/homles698698-lab/XMall/internal/constants"
-	dashboard "github.com/homles698698-lab/XMall/internal/modules/dashboard/contract"
-	"github.com/homles698698-lab/XMall/internal/shared/jsonmap"
-	"github.com/homles698698-lab/XMall/internal/shared/money"
+	"github.com/XManCodeing/XMall/internal/constants"
+	dashboard "github.com/XManCodeing/XMall/internal/modules/dashboard/contract"
+	"github.com/XManCodeing/XMall/internal/shared/jsonmap"
+	"github.com/XManCodeing/XMall/internal/shared/money"
 
 	"github.com/shopspring/decimal"
 )

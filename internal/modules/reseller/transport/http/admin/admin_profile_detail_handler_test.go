@@ -6,12 +6,12 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	resellerdomain "github.com/homles698698-lab/XMall/internal/modules/reseller/domain"
+	resellerdomain "github.com/XManCodeing/XMall/internal/modules/reseller/domain"
 
-	productcontract "github.com/homles698698-lab/XMall/internal/modules/catalog/product/contract"
+	productcontract "github.com/XManCodeing/XMall/internal/modules/catalog/product/contract"
 
-	resellermodule "github.com/homles698698-lab/XMall/internal/modules/reseller/contract"
-	"github.com/homles698698-lab/XMall/internal/platform/http/response"
+	resellermodule "github.com/XManCodeing/XMall/internal/modules/reseller/contract"
+	"github.com/XManCodeing/XMall/internal/platform/http/response"
 
 	"github.com/gin-gonic/gin"
 )

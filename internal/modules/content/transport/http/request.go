@@ -1,9 +1,9 @@
 package contenthttp
 
 import (
-	contentapp "github.com/homles698698-lab/XMall/internal/modules/content/application"
-	"github.com/homles698698-lab/XMall/internal/platform/http/ginutil"
-	"github.com/homles698698-lab/XMall/internal/shared/jsonmap"
+	contentapp "github.com/XManCodeing/XMall/internal/modules/content/application"
+	"github.com/XManCodeing/XMall/internal/platform/http/ginutil"
+	"github.com/XManCodeing/XMall/internal/shared/jsonmap"
 )
 
 // CreatePostRequest 创建或更新文章的 HTTP 请求。

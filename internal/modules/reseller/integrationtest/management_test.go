@@ -9,32 +9,32 @@ import (
 	"testing"
 	"time"
 
-	orderdomain "github.com/homles698698-lab/XMall/internal/modules/order/domain"
+	orderdomain "github.com/XManCodeing/XMall/internal/modules/order/domain"
 
-	resellergormstore "github.com/homles698698-lab/XMall/internal/modules/reseller/infrastructure/gormstore"
+	resellergormstore "github.com/XManCodeing/XMall/internal/modules/reseller/infrastructure/gormstore"
 
-	resellerdomain "github.com/homles698698-lab/XMall/internal/modules/reseller/domain"
+	resellerdomain "github.com/XManCodeing/XMall/internal/modules/reseller/domain"
 
-	productdomain "github.com/homles698698-lab/XMall/internal/modules/catalog/product/domain"
+	productdomain "github.com/XManCodeing/XMall/internal/modules/catalog/product/domain"
 
-	categorydomain "github.com/homles698698-lab/XMall/internal/modules/catalog/category/domain"
+	categorydomain "github.com/XManCodeing/XMall/internal/modules/catalog/category/domain"
 
-	productgormstore "github.com/homles698698-lab/XMall/internal/modules/catalog/product/store/gormstore"
+	productgormstore "github.com/XManCodeing/XMall/internal/modules/catalog/product/store/gormstore"
 
-	userdomain "github.com/homles698698-lab/XMall/internal/modules/identity/user/domain"
+	userdomain "github.com/XManCodeing/XMall/internal/modules/identity/user/domain"
 
-	"github.com/homles698698-lab/XMall/internal/app/container"
-	"github.com/homles698698-lab/XMall/internal/config"
-	"github.com/homles698698-lab/XMall/internal/constants"
-	auditlogapp "github.com/homles698698-lab/XMall/internal/modules/auditlog/application"
-	auditlogdomain "github.com/homles698698-lab/XMall/internal/modules/auditlog/domain"
-	auditloggormstore "github.com/homles698698-lab/XMall/internal/modules/auditlog/infrastructure/gormstore"
-	admindomain "github.com/homles698698-lab/XMall/internal/modules/identity/admin/domain"
-	resellermodule "github.com/homles698698-lab/XMall/internal/modules/reseller/application"
-	resellerhttp "github.com/homles698698-lab/XMall/internal/modules/reseller/transport/http/admin"
-	"github.com/homles698698-lab/XMall/internal/platform/http/response"
-	"github.com/homles698698-lab/XMall/internal/shared/jsonmap"
-	"github.com/homles698698-lab/XMall/internal/shared/money"
+	"github.com/XManCodeing/XMall/internal/app/container"
+	"github.com/XManCodeing/XMall/internal/config"
+	"github.com/XManCodeing/XMall/internal/constants"
+	auditlogapp "github.com/XManCodeing/XMall/internal/modules/auditlog/application"
+	auditlogdomain "github.com/XManCodeing/XMall/internal/modules/auditlog/domain"
+	auditloggormstore "github.com/XManCodeing/XMall/internal/modules/auditlog/infrastructure/gormstore"
+	admindomain "github.com/XManCodeing/XMall/internal/modules/identity/admin/domain"
+	resellermodule "github.com/XManCodeing/XMall/internal/modules/reseller/application"
+	resellerhttp "github.com/XManCodeing/XMall/internal/modules/reseller/transport/http/admin"
+	"github.com/XManCodeing/XMall/internal/platform/http/response"
+	"github.com/XManCodeing/XMall/internal/shared/jsonmap"
+	"github.com/XManCodeing/XMall/internal/shared/money"
 
 	"github.com/gin-gonic/gin"
 	"github.com/glebarez/sqlite"

@@ -4,8 +4,8 @@ import (
 	"errors"
 	"time"
 
-	apicredentialcontract "github.com/homles698698-lab/XMall/internal/modules/apicredential/contract"
-	apicredentialdomain "github.com/homles698698-lab/XMall/internal/modules/apicredential/domain"
+	apicredentialcontract "github.com/XManCodeing/XMall/internal/modules/apicredential/contract"
+	apicredentialdomain "github.com/XManCodeing/XMall/internal/modules/apicredential/domain"
 
 	"gorm.io/gorm"
 )

@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	procurementdomain "github.com/homles698698-lab/XMall/internal/modules/procurement/domain"
+	procurementdomain "github.com/XManCodeing/XMall/internal/modules/procurement/domain"
 )
 
 type Repository interface {

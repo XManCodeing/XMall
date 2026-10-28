@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/homles698698-lab/XMall/internal/version"
+	"github.com/XManCodeing/XMall/internal/version"
 )
 
 // BackupInfo 一次升级留下的元数据，与 <exec>.backup 同目录持久化。

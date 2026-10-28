@@ -3,12 +3,12 @@ package contract
 import (
 	"time"
 
-	walletdomain "github.com/homles698698-lab/XMall/internal/modules/wallet/domain"
+	walletdomain "github.com/XManCodeing/XMall/internal/modules/wallet/domain"
 
-	userdomain "github.com/homles698698-lab/XMall/internal/modules/identity/user/domain"
+	userdomain "github.com/XManCodeing/XMall/internal/modules/identity/user/domain"
 
-	giftcarddomain "github.com/homles698698-lab/XMall/internal/modules/giftcard/domain"
-	"github.com/homles698698-lab/XMall/internal/shared/money"
+	giftcarddomain "github.com/XManCodeing/XMall/internal/modules/giftcard/domain"
+	"github.com/XManCodeing/XMall/internal/shared/money"
 )
 
 // ListFilter 礼品卡仓储列表筛选。

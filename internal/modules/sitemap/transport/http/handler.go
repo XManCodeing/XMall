@@ -4,7 +4,7 @@ import (
 	"context"
 	"strings"
 
-	"github.com/homles698698-lab/XMall/internal/logger"
+	"github.com/XManCodeing/XMall/internal/logger"
 
 	"github.com/gin-gonic/gin"
 )

@@ -4,21 +4,21 @@ import (
 	"context"
 	"time"
 
-	paymentapp "github.com/homles698698-lab/XMall/internal/modules/payment/application"
-	paymentcontract "github.com/homles698698-lab/XMall/internal/modules/payment/contract"
+	paymentapp "github.com/XManCodeing/XMall/internal/modules/payment/application"
+	paymentcontract "github.com/XManCodeing/XMall/internal/modules/payment/contract"
 
-	paymentdomain "github.com/homles698698-lab/XMall/internal/modules/payment/domain"
+	paymentdomain "github.com/XManCodeing/XMall/internal/modules/payment/domain"
 
-	ordercontract "github.com/homles698698-lab/XMall/internal/modules/order/contract"
-	orderdomain "github.com/homles698698-lab/XMall/internal/modules/order/domain"
+	ordercontract "github.com/XManCodeing/XMall/internal/modules/order/contract"
+	orderdomain "github.com/XManCodeing/XMall/internal/modules/order/domain"
 
-	"github.com/homles698698-lab/XMall/internal/constants"
-	notificationcontract "github.com/homles698698-lab/XMall/internal/modules/notification/contract"
-	paymenttransport "github.com/homles698698-lab/XMall/internal/modules/payment/transport/http"
-	paymentcallbacktransport "github.com/homles698698-lab/XMall/internal/modules/payment/transport/http/callback"
-	walletcontract "github.com/homles698698-lab/XMall/internal/modules/wallet/contract"
-	walletdomain "github.com/homles698698-lab/XMall/internal/modules/wallet/domain"
-	"github.com/homles698698-lab/XMall/internal/shared/jsonmap"
+	"github.com/XManCodeing/XMall/internal/constants"
+	notificationcontract "github.com/XManCodeing/XMall/internal/modules/notification/contract"
+	paymenttransport "github.com/XManCodeing/XMall/internal/modules/payment/transport/http"
+	paymentcallbacktransport "github.com/XManCodeing/XMall/internal/modules/payment/transport/http/callback"
+	walletcontract "github.com/XManCodeing/XMall/internal/modules/wallet/contract"
+	walletdomain "github.com/XManCodeing/XMall/internal/modules/wallet/domain"
+	"github.com/XManCodeing/XMall/internal/shared/jsonmap"
 )
 
 type adminQueryAdapter struct {

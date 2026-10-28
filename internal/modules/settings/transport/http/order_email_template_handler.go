@@ -3,10 +3,10 @@ package settingshttp
 import (
 	"errors"
 
-	ginutil "github.com/homles698698-lab/XMall/internal/platform/http/ginutil"
+	ginutil "github.com/XManCodeing/XMall/internal/platform/http/ginutil"
 
-	settingsmessaging "github.com/homles698698-lab/XMall/internal/modules/settings/schema/messaging"
-	"github.com/homles698698-lab/XMall/internal/platform/http/response"
+	settingsmessaging "github.com/XManCodeing/XMall/internal/modules/settings/schema/messaging"
+	"github.com/XManCodeing/XMall/internal/platform/http/response"
 
 	"github.com/gin-gonic/gin"
 )

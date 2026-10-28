@@ -4,9 +4,9 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/homles698698-lab/XMall/internal/config"
-	"github.com/homles698698-lab/XMall/internal/constants"
-	settingssecurity "github.com/homles698698-lab/XMall/internal/modules/settings/schema/security"
+	"github.com/XManCodeing/XMall/internal/config"
+	"github.com/XManCodeing/XMall/internal/constants"
+	settingssecurity "github.com/XManCodeing/XMall/internal/modules/settings/schema/security"
 )
 
 func TestGoogleAuthSettingNormalizeValidateAndPublicConfig(t *testing.T) {

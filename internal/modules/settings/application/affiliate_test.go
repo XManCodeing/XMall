@@ -3,8 +3,8 @@ package settingsapp
 import (
 	"testing"
 
-	"github.com/homles698698-lab/XMall/internal/constants"
-	settingsintegration "github.com/homles698698-lab/XMall/internal/modules/settings/schema/integration"
+	"github.com/XManCodeing/XMall/internal/constants"
+	settingsintegration "github.com/XManCodeing/XMall/internal/modules/settings/schema/integration"
 )
 
 func TestGetAffiliateSettingFallback(t *testing.T) {

@@ -5,14 +5,14 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/homles698698-lab/XMall/internal/authz"
-	"github.com/homles698698-lab/XMall/internal/cache"
-	auditlogapp "github.com/homles698698-lab/XMall/internal/modules/auditlog/application"
-	admincontract "github.com/homles698698-lab/XMall/internal/modules/identity/admin/contract"
-	admindomain "github.com/homles698698-lab/XMall/internal/modules/identity/admin/domain"
-	adminauthapp "github.com/homles698698-lab/XMall/internal/modules/identity/adminauth/application"
-	adminauthztransport "github.com/homles698698-lab/XMall/internal/modules/identity/adminauthorization/transport/http"
-	"github.com/homles698698-lab/XMall/internal/shared/passwordpolicy"
+	"github.com/XManCodeing/XMall/internal/authz"
+	"github.com/XManCodeing/XMall/internal/cache"
+	auditlogapp "github.com/XManCodeing/XMall/internal/modules/auditlog/application"
+	admincontract "github.com/XManCodeing/XMall/internal/modules/identity/admin/contract"
+	admindomain "github.com/XManCodeing/XMall/internal/modules/identity/admin/domain"
+	adminauthapp "github.com/XManCodeing/XMall/internal/modules/identity/adminauth/application"
+	adminauthztransport "github.com/XManCodeing/XMall/internal/modules/identity/adminauthorization/transport/http"
+	"github.com/XManCodeing/XMall/internal/shared/passwordpolicy"
 )
 
 type adminAuthzRolePolicyAdapter struct {

@@ -5,9 +5,9 @@ import (
 	"strconv"
 	"strings"
 
-	categorydomain "github.com/homles698698-lab/XMall/internal/modules/catalog/category/domain"
+	categorydomain "github.com/XManCodeing/XMall/internal/modules/catalog/category/domain"
 
-	"github.com/homles698698-lab/XMall/internal/constants"
+	"github.com/XManCodeing/XMall/internal/constants"
 )
 
 var (

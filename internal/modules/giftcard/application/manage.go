@@ -4,10 +4,10 @@ import (
 	"strings"
 	"time"
 
-	userdomain "github.com/homles698698-lab/XMall/internal/modules/identity/user/domain"
+	userdomain "github.com/XManCodeing/XMall/internal/modules/identity/user/domain"
 
-	giftcardcontract "github.com/homles698698-lab/XMall/internal/modules/giftcard/contract"
-	giftcarddomain "github.com/homles698698-lab/XMall/internal/modules/giftcard/domain"
+	giftcardcontract "github.com/XManCodeing/XMall/internal/modules/giftcard/contract"
+	giftcarddomain "github.com/XManCodeing/XMall/internal/modules/giftcard/domain"
 )
 
 // List 获取礼品卡列表。

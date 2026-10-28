@@ -4,37 +4,37 @@ import (
 	"errors"
 	"fmt"
 
-	paymentapp "github.com/homles698698-lab/XMall/internal/modules/payment/application"
-	paymentcontract "github.com/homles698698-lab/XMall/internal/modules/payment/contract"
+	paymentapp "github.com/XManCodeing/XMall/internal/modules/payment/application"
+	paymentcontract "github.com/XManCodeing/XMall/internal/modules/payment/contract"
 
-	paymentdomain "github.com/homles698698-lab/XMall/internal/modules/payment/domain"
+	paymentdomain "github.com/XManCodeing/XMall/internal/modules/payment/domain"
 
-	orderapp "github.com/homles698698-lab/XMall/internal/modules/order/application"
-	orderrefund "github.com/homles698698-lab/XMall/internal/modules/order/application/refund"
-	ordercontract "github.com/homles698698-lab/XMall/internal/modules/order/contract"
-	orderdomain "github.com/homles698698-lab/XMall/internal/modules/order/domain"
+	orderapp "github.com/XManCodeing/XMall/internal/modules/order/application"
+	orderrefund "github.com/XManCodeing/XMall/internal/modules/order/application/refund"
+	ordercontract "github.com/XManCodeing/XMall/internal/modules/order/contract"
+	orderdomain "github.com/XManCodeing/XMall/internal/modules/order/domain"
 
-	walletdomain "github.com/homles698698-lab/XMall/internal/modules/wallet/domain"
+	walletdomain "github.com/XManCodeing/XMall/internal/modules/wallet/domain"
 
-	coupondomain "github.com/homles698698-lab/XMall/internal/modules/coupon/domain"
+	coupondomain "github.com/XManCodeing/XMall/internal/modules/coupon/domain"
 
-	promotiondomain "github.com/homles698698-lab/XMall/internal/modules/promotion/domain"
+	promotiondomain "github.com/XManCodeing/XMall/internal/modules/promotion/domain"
 
-	usercontract "github.com/homles698698-lab/XMall/internal/modules/identity/user/contract"
+	usercontract "github.com/XManCodeing/XMall/internal/modules/identity/user/contract"
 
-	userdomain "github.com/homles698698-lab/XMall/internal/modules/identity/user/domain"
+	userdomain "github.com/XManCodeing/XMall/internal/modules/identity/user/domain"
 
-	"github.com/homles698698-lab/XMall/internal/constants"
-	captchaapp "github.com/homles698698-lab/XMall/internal/modules/captcha/application"
-	captchahttp "github.com/homles698698-lab/XMall/internal/modules/captcha/transport/http"
-	couponcontract "github.com/homles698698-lab/XMall/internal/modules/coupon/contract"
-	ordertransport "github.com/homles698698-lab/XMall/internal/modules/order/transport/http"
-	orderriskcontract "github.com/homles698698-lab/XMall/internal/modules/orderrisk/contract"
-	promotioncontract "github.com/homles698698-lab/XMall/internal/modules/promotion/contract"
-	reseller "github.com/homles698698-lab/XMall/internal/modules/reseller/contract"
-	walletcontract "github.com/homles698698-lab/XMall/internal/modules/wallet/contract"
-	"github.com/homles698698-lab/XMall/internal/queue"
-	"github.com/homles698698-lab/XMall/internal/shared/money"
+	"github.com/XManCodeing/XMall/internal/constants"
+	captchaapp "github.com/XManCodeing/XMall/internal/modules/captcha/application"
+	captchahttp "github.com/XManCodeing/XMall/internal/modules/captcha/transport/http"
+	couponcontract "github.com/XManCodeing/XMall/internal/modules/coupon/contract"
+	ordertransport "github.com/XManCodeing/XMall/internal/modules/order/transport/http"
+	orderriskcontract "github.com/XManCodeing/XMall/internal/modules/orderrisk/contract"
+	promotioncontract "github.com/XManCodeing/XMall/internal/modules/promotion/contract"
+	reseller "github.com/XManCodeing/XMall/internal/modules/reseller/contract"
+	walletcontract "github.com/XManCodeing/XMall/internal/modules/wallet/contract"
+	"github.com/XManCodeing/XMall/internal/queue"
+	"github.com/XManCodeing/XMall/internal/shared/money"
 )
 
 type orderAdminQueryAdapter struct {

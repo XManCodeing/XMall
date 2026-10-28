@@ -5,14 +5,14 @@ import (
 	"testing"
 	"time"
 
-	resellercontract "github.com/homles698698-lab/XMall/internal/modules/reseller/contract"
+	resellercontract "github.com/XManCodeing/XMall/internal/modules/reseller/contract"
 
-	resellerdomain "github.com/homles698698-lab/XMall/internal/modules/reseller/domain"
+	resellerdomain "github.com/XManCodeing/XMall/internal/modules/reseller/domain"
 
-	userdomain "github.com/homles698698-lab/XMall/internal/modules/identity/user/domain"
+	userdomain "github.com/XManCodeing/XMall/internal/modules/identity/user/domain"
 
+	"github.com/XManCodeing/XMall/internal/shared/jsonmap"
 	"github.com/glebarez/sqlite"
-	"github.com/homles698698-lab/XMall/internal/shared/jsonmap"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 )

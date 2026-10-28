@@ -6,15 +6,15 @@ import (
 	"fmt"
 	"strconv"
 
-	paymentpresenter "github.com/homles698698-lab/XMall/internal/modules/payment/transport/presenter"
+	paymentpresenter "github.com/XManCodeing/XMall/internal/modules/payment/transport/presenter"
 
-	paymentdomain "github.com/homles698698-lab/XMall/internal/modules/payment/domain"
+	paymentdomain "github.com/XManCodeing/XMall/internal/modules/payment/domain"
 
-	ginutil "github.com/homles698698-lab/XMall/internal/platform/http/ginutil"
-	"github.com/homles698698-lab/XMall/internal/shared/money"
+	ginutil "github.com/XManCodeing/XMall/internal/platform/http/ginutil"
+	"github.com/XManCodeing/XMall/internal/shared/money"
 
-	"github.com/homles698698-lab/XMall/internal/i18n"
-	"github.com/homles698698-lab/XMall/internal/platform/http/response"
+	"github.com/XManCodeing/XMall/internal/i18n"
+	"github.com/XManCodeing/XMall/internal/platform/http/response"
 
 	"github.com/gin-gonic/gin"
 )

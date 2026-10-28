@@ -1,6 +1,6 @@
 package contract
 
-import notificationcontract "github.com/homles698698-lab/XMall/internal/modules/notification/contract"
+import notificationcontract "github.com/XManCodeing/XMall/internal/modules/notification/contract"
 
 var (
 	ErrNotifyConfigInvalid = notificationcontract.ErrConfigInvalid

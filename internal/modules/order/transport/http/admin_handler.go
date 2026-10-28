@@ -6,18 +6,18 @@ import (
 	"strings"
 	"time"
 
-	paymentdomain "github.com/homles698698-lab/XMall/internal/modules/payment/domain"
+	paymentdomain "github.com/XManCodeing/XMall/internal/modules/payment/domain"
 
-	orderdomain "github.com/homles698698-lab/XMall/internal/modules/order/domain"
+	orderdomain "github.com/XManCodeing/XMall/internal/modules/order/domain"
 
-	coupondomain "github.com/homles698698-lab/XMall/internal/modules/coupon/domain"
+	coupondomain "github.com/XManCodeing/XMall/internal/modules/coupon/domain"
 
-	promotiondomain "github.com/homles698698-lab/XMall/internal/modules/promotion/domain"
+	promotiondomain "github.com/XManCodeing/XMall/internal/modules/promotion/domain"
 
-	userdomain "github.com/homles698698-lab/XMall/internal/modules/identity/user/domain"
+	userdomain "github.com/XManCodeing/XMall/internal/modules/identity/user/domain"
 
-	"github.com/homles698698-lab/XMall/internal/platform/http/ginutil"
-	"github.com/homles698698-lab/XMall/internal/platform/http/response"
+	"github.com/XManCodeing/XMall/internal/platform/http/ginutil"
+	"github.com/XManCodeing/XMall/internal/platform/http/response"
 
 	"github.com/gin-gonic/gin"
 )

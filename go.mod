@@ -1,4 +1,4 @@
-module github.com/homles698698-lab/XMall
+module github.com/XManCodeing/XMall
 
 go 1.26.5
 

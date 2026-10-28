@@ -1,8 +1,8 @@
 package queueadapter
 
 import (
-	reconciliationcontract "github.com/homles698698-lab/XMall/internal/modules/reconciliation/contract"
-	"github.com/homles698698-lab/XMall/internal/queue"
+	reconciliationcontract "github.com/XManCodeing/XMall/internal/modules/reconciliation/contract"
+	"github.com/XManCodeing/XMall/internal/queue"
 
 	"github.com/hibiken/asynq"
 )

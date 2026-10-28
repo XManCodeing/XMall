@@ -3,7 +3,7 @@ package catalog
 import (
 	"testing"
 
-	"github.com/homles698698-lab/XMall/internal/constants"
+	"github.com/XManCodeing/XMall/internal/constants"
 )
 
 func TestStockPolicyStatusKeepsContextThresholdsExplicit(t *testing.T) {

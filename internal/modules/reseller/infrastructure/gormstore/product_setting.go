@@ -6,10 +6,10 @@ import (
 	"strings"
 	"time"
 
-	productdomain "github.com/homles698698-lab/XMall/internal/modules/catalog/product/domain"
-	resellercontract "github.com/homles698698-lab/XMall/internal/modules/reseller/contract"
-	resellerdomain "github.com/homles698698-lab/XMall/internal/modules/reseller/domain"
-	"github.com/homles698698-lab/XMall/internal/persistence/gormutil"
+	productdomain "github.com/XManCodeing/XMall/internal/modules/catalog/product/domain"
+	resellercontract "github.com/XManCodeing/XMall/internal/modules/reseller/contract"
+	resellerdomain "github.com/XManCodeing/XMall/internal/modules/reseller/domain"
+	"github.com/XManCodeing/XMall/internal/persistence/gormutil"
 
 	"gorm.io/gorm"
 )

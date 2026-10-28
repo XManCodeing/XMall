@@ -1,6 +1,6 @@
 package categorycontract
 
-import categorydomain "github.com/homles698698-lab/XMall/internal/modules/catalog/category/domain"
+import categorydomain "github.com/XManCodeing/XMall/internal/modules/catalog/category/domain"
 
 // Repository 定义 Category 应用服务和相邻 Catalog 子域共享的持久化契约。
 type Repository interface {

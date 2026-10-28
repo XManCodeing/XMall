@@ -5,9 +5,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/homles698698-lab/XMall/internal/modules/cart/domain"
-	productdomain "github.com/homles698698-lab/XMall/internal/modules/catalog/product/domain"
-	"github.com/homles698698-lab/XMall/internal/shared/jsonmap"
+	"github.com/XManCodeing/XMall/internal/modules/cart/domain"
+	productdomain "github.com/XManCodeing/XMall/internal/modules/catalog/product/domain"
+	"github.com/XManCodeing/XMall/internal/shared/jsonmap"
 
 	"github.com/glebarez/sqlite"
 	"gorm.io/gorm"

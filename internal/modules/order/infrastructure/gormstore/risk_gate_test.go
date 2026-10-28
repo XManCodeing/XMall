@@ -9,10 +9,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/homles698698-lab/XMall/internal/constants"
-	orderdomain "github.com/homles698698-lab/XMall/internal/modules/order/domain"
-	orderriskdomain "github.com/homles698698-lab/XMall/internal/modules/orderrisk/domain"
-	"github.com/homles698698-lab/XMall/internal/shared/jsonmap"
+	"github.com/XManCodeing/XMall/internal/constants"
+	orderdomain "github.com/XManCodeing/XMall/internal/modules/order/domain"
+	orderriskdomain "github.com/XManCodeing/XMall/internal/modules/orderrisk/domain"
+	"github.com/XManCodeing/XMall/internal/shared/jsonmap"
 
 	"github.com/glebarez/sqlite"
 	"gorm.io/gorm"

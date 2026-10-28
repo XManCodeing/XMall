@@ -1,6 +1,6 @@
 package channeluserwiring
 
-import userauthapp "github.com/homles698698-lab/XMall/internal/modules/identity/userauth/application"
+import userauthapp "github.com/XManCodeing/XMall/internal/modules/identity/userauth/application"
 
 type SimpleProvisioner struct {
 	auth *userauthapp.Service

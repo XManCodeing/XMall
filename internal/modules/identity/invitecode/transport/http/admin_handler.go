@@ -5,12 +5,12 @@ import (
 	"strings"
 	"time"
 
-	invitecodeapp "github.com/homles698698-lab/XMall/internal/modules/identity/invitecode/application"
-	invitecodedomain "github.com/homles698698-lab/XMall/internal/modules/identity/invitecode/domain"
-	usercontract "github.com/homles698698-lab/XMall/internal/modules/identity/user/contract"
-	userdomain "github.com/homles698698-lab/XMall/internal/modules/identity/user/domain"
-	"github.com/homles698698-lab/XMall/internal/platform/http/ginutil"
-	"github.com/homles698698-lab/XMall/internal/platform/http/response"
+	invitecodeapp "github.com/XManCodeing/XMall/internal/modules/identity/invitecode/application"
+	invitecodedomain "github.com/XManCodeing/XMall/internal/modules/identity/invitecode/domain"
+	usercontract "github.com/XManCodeing/XMall/internal/modules/identity/user/contract"
+	userdomain "github.com/XManCodeing/XMall/internal/modules/identity/user/domain"
+	"github.com/XManCodeing/XMall/internal/platform/http/ginutil"
+	"github.com/XManCodeing/XMall/internal/platform/http/response"
 
 	"github.com/gin-gonic/gin"
 )

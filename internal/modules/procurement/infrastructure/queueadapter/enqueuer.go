@@ -3,8 +3,8 @@ package queueadapter
 import (
 	"time"
 
-	procurementcontract "github.com/homles698698-lab/XMall/internal/modules/procurement/contract"
-	"github.com/homles698698-lab/XMall/internal/queue"
+	procurementcontract "github.com/XManCodeing/XMall/internal/modules/procurement/contract"
+	"github.com/XManCodeing/XMall/internal/queue"
 
 	"github.com/hibiken/asynq"
 )

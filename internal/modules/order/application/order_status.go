@@ -4,10 +4,10 @@ import (
 	"strings"
 	"time"
 
-	orderdomain "github.com/homles698698-lab/XMall/internal/modules/order/domain"
+	orderdomain "github.com/XManCodeing/XMall/internal/modules/order/domain"
 
-	"github.com/homles698698-lab/XMall/internal/constants"
-	ordercontract "github.com/homles698698-lab/XMall/internal/modules/order/contract"
+	"github.com/XManCodeing/XMall/internal/constants"
+	ordercontract "github.com/XManCodeing/XMall/internal/modules/order/contract"
 )
 
 // SyncParentStatus 汇总父订单状态并写入

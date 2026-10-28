@@ -4,20 +4,20 @@ import (
 	"context"
 	"time"
 
-	paymentapp "github.com/homles698698-lab/XMall/internal/modules/payment/application"
+	paymentapp "github.com/XManCodeing/XMall/internal/modules/payment/application"
 
-	settingsapp "github.com/homles698698-lab/XMall/internal/modules/settings/application"
-	settingsintegration "github.com/homles698698-lab/XMall/internal/modules/settings/schema/integration"
+	settingsapp "github.com/XManCodeing/XMall/internal/modules/settings/application"
+	settingsintegration "github.com/XManCodeing/XMall/internal/modules/settings/schema/integration"
 
-	"github.com/homles698698-lab/XMall/internal/cache"
-	"github.com/homles698698-lab/XMall/internal/config"
-	"github.com/homles698698-lab/XMall/internal/constants"
-	captchaapp "github.com/homles698698-lab/XMall/internal/modules/captcha/application"
-	googleauthapp "github.com/homles698698-lab/XMall/internal/modules/identity/googleauth/application"
-	telegramauthapp "github.com/homles698698-lab/XMall/internal/modules/identity/telegramauth/application"
-	resellerapplication "github.com/homles698698-lab/XMall/internal/modules/reseller/application"
-	resellercontract "github.com/homles698698-lab/XMall/internal/modules/reseller/contract"
-	"github.com/homles698698-lab/XMall/internal/shared/jsonmap"
+	"github.com/XManCodeing/XMall/internal/cache"
+	"github.com/XManCodeing/XMall/internal/config"
+	"github.com/XManCodeing/XMall/internal/constants"
+	captchaapp "github.com/XManCodeing/XMall/internal/modules/captcha/application"
+	googleauthapp "github.com/XManCodeing/XMall/internal/modules/identity/googleauth/application"
+	telegramauthapp "github.com/XManCodeing/XMall/internal/modules/identity/telegramauth/application"
+	resellerapplication "github.com/XManCodeing/XMall/internal/modules/reseller/application"
+	resellercontract "github.com/XManCodeing/XMall/internal/modules/reseller/contract"
+	"github.com/XManCodeing/XMall/internal/shared/jsonmap"
 )
 
 type publicConfigCacheAdapter struct{}

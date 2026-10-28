@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	invitecodedomain "github.com/homles698698-lab/XMall/internal/modules/identity/invitecode/domain"
+	invitecodedomain "github.com/XManCodeing/XMall/internal/modules/identity/invitecode/domain"
 )
 
 var (

@@ -11,10 +11,10 @@ import (
 	"strings"
 	"testing"
 
-	contentapp "github.com/homles698698-lab/XMall/internal/modules/content/application"
-	contentdomain "github.com/homles698698-lab/XMall/internal/modules/content/domain"
-	uploadcontract "github.com/homles698698-lab/XMall/internal/modules/upload/contract"
-	"github.com/homles698698-lab/XMall/internal/platform/http/response"
+	contentapp "github.com/XManCodeing/XMall/internal/modules/content/application"
+	contentdomain "github.com/XManCodeing/XMall/internal/modules/content/domain"
+	uploadcontract "github.com/XManCodeing/XMall/internal/modules/upload/contract"
+	"github.com/XManCodeing/XMall/internal/platform/http/response"
 
 	"github.com/gin-gonic/gin"
 )

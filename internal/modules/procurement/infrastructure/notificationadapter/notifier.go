@@ -1,11 +1,11 @@
 package notificationadapter
 
 import (
-	"github.com/homles698698-lab/XMall/internal/constants"
-	notificationcontract "github.com/homles698698-lab/XMall/internal/modules/notification/contract"
-	procurementcontract "github.com/homles698698-lab/XMall/internal/modules/procurement/contract"
-	procurementdomain "github.com/homles698698-lab/XMall/internal/modules/procurement/domain"
-	"github.com/homles698698-lab/XMall/internal/shared/jsonmap"
+	"github.com/XManCodeing/XMall/internal/constants"
+	notificationcontract "github.com/XManCodeing/XMall/internal/modules/notification/contract"
+	procurementcontract "github.com/XManCodeing/XMall/internal/modules/procurement/contract"
+	procurementdomain "github.com/XManCodeing/XMall/internal/modules/procurement/domain"
+	"github.com/XManCodeing/XMall/internal/shared/jsonmap"
 )
 
 type Notifier struct {

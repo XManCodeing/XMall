@@ -4,7 +4,7 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/homles698698-lab/XMall/internal/shared/jsonmap"
+	"github.com/XManCodeing/XMall/internal/shared/jsonmap"
 )
 
 func TestValidateAndNormalizeManualFormRequiredMissing(t *testing.T) {

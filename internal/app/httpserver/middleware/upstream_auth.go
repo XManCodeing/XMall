@@ -5,11 +5,11 @@ import (
 	"net/http"
 	"time"
 
-	apicredentialdomain "github.com/homles698698-lab/XMall/internal/modules/apicredential/domain"
+	apicredentialdomain "github.com/XManCodeing/XMall/internal/modules/apicredential/domain"
 
-	"github.com/homles698698-lab/XMall/internal/constants"
-	"github.com/homles698698-lab/XMall/internal/logger"
-	"github.com/homles698698-lab/XMall/internal/upstream"
+	"github.com/XManCodeing/XMall/internal/constants"
+	"github.com/XManCodeing/XMall/internal/logger"
+	"github.com/XManCodeing/XMall/internal/upstream"
 
 	"github.com/gin-gonic/gin"
 )

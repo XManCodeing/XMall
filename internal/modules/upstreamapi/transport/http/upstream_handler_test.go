@@ -9,14 +9,14 @@ import (
 	"testing"
 	"time"
 
-	"github.com/homles698698-lab/XMall/internal/constants"
-	productdomain "github.com/homles698698-lab/XMall/internal/modules/catalog/product/domain"
-	downstreamcallbackdomain "github.com/homles698698-lab/XMall/internal/modules/downstreamcallback/domain"
-	orderdomain "github.com/homles698698-lab/XMall/internal/modules/order/domain"
-	procurementcontract "github.com/homles698698-lab/XMall/internal/modules/procurement/contract"
-	procurementdomain "github.com/homles698698-lab/XMall/internal/modules/procurement/domain"
-	siteconnectiondomain "github.com/homles698698-lab/XMall/internal/modules/siteconnection/domain"
-	upstreamadapter "github.com/homles698698-lab/XMall/internal/upstream"
+	"github.com/XManCodeing/XMall/internal/constants"
+	productdomain "github.com/XManCodeing/XMall/internal/modules/catalog/product/domain"
+	downstreamcallbackdomain "github.com/XManCodeing/XMall/internal/modules/downstreamcallback/domain"
+	orderdomain "github.com/XManCodeing/XMall/internal/modules/order/domain"
+	procurementcontract "github.com/XManCodeing/XMall/internal/modules/procurement/contract"
+	procurementdomain "github.com/XManCodeing/XMall/internal/modules/procurement/domain"
+	siteconnectiondomain "github.com/XManCodeing/XMall/internal/modules/siteconnection/domain"
+	upstreamadapter "github.com/XManCodeing/XMall/internal/upstream"
 
 	"github.com/gin-gonic/gin"
 )

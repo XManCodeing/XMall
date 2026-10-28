@@ -6,12 +6,12 @@ import (
 	"strings"
 	"testing"
 
-	resellergormstore "github.com/homles698698-lab/XMall/internal/modules/reseller/infrastructure/gormstore"
+	resellergormstore "github.com/XManCodeing/XMall/internal/modules/reseller/infrastructure/gormstore"
 
-	resellerdomain "github.com/homles698698-lab/XMall/internal/modules/reseller/domain"
+	resellerdomain "github.com/XManCodeing/XMall/internal/modules/reseller/domain"
 
-	auditlogdomain "github.com/homles698698-lab/XMall/internal/modules/auditlog/domain"
-	resellermodule "github.com/homles698698-lab/XMall/internal/modules/reseller/application"
+	auditlogdomain "github.com/XManCodeing/XMall/internal/modules/auditlog/domain"
+	resellermodule "github.com/XManCodeing/XMall/internal/modules/reseller/application"
 
 	"github.com/gin-gonic/gin"
 )

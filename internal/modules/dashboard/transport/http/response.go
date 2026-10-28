@@ -1,6 +1,6 @@
 package dashboardhttp
 
-import dashboardcontract "github.com/homles698698-lab/XMall/internal/modules/dashboard/contract"
+import dashboardcontract "github.com/XManCodeing/XMall/internal/modules/dashboard/contract"
 
 type inventoryAlertResponse struct {
 	ProductID       uint                   `json:"product_id"`

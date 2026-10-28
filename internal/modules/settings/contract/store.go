@@ -1,6 +1,6 @@
 package contract
 
-import "github.com/homles698698-lab/XMall/internal/shared/jsonmap"
+import "github.com/XManCodeing/XMall/internal/shared/jsonmap"
 
 // Store is the persistence contract shared by settings use cases and the few
 // modules that own reserved settings keys. It exposes values rather than GORM

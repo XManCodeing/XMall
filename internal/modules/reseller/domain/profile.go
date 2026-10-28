@@ -3,8 +3,8 @@ package domain
 import (
 	"time"
 
-	userdomain "github.com/homles698698-lab/XMall/internal/modules/identity/user/domain"
-	"github.com/homles698698-lab/XMall/internal/shared/money"
+	userdomain "github.com/XManCodeing/XMall/internal/modules/identity/user/domain"
+	"github.com/XManCodeing/XMall/internal/shared/money"
 )
 
 // Profile 分销商资料。

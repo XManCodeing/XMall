@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	downstreamdomain "github.com/homles698698-lab/XMall/internal/modules/downstreamcallback/domain"
+	downstreamdomain "github.com/XManCodeing/XMall/internal/modules/downstreamcallback/domain"
 )
 
 // Repository 持久化下游订单回调引用。

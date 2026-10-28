@@ -5,12 +5,12 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/homles698698-lab/XMall/internal/app/container"
-	"github.com/homles698698-lab/XMall/internal/i18n"
-	"github.com/homles698698-lab/XMall/internal/logger"
-	channelclientapp "github.com/homles698698-lab/XMall/internal/modules/channelclient/application"
-	"github.com/homles698698-lab/XMall/internal/platform/http/response"
-	"github.com/homles698698-lab/XMall/internal/upstream"
+	"github.com/XManCodeing/XMall/internal/app/container"
+	"github.com/XManCodeing/XMall/internal/i18n"
+	"github.com/XManCodeing/XMall/internal/logger"
+	channelclientapp "github.com/XManCodeing/XMall/internal/modules/channelclient/application"
+	"github.com/XManCodeing/XMall/internal/platform/http/response"
+	"github.com/XManCodeing/XMall/internal/upstream"
 
 	"github.com/gin-gonic/gin"
 )

@@ -3,10 +3,10 @@ package presenter
 import (
 	"time"
 
-	contentcontract "github.com/homles698698-lab/XMall/internal/modules/content/contract"
-	contentdomain "github.com/homles698698-lab/XMall/internal/modules/content/domain"
-	"github.com/homles698698-lab/XMall/internal/shared/jsonmap"
-	"github.com/homles698698-lab/XMall/internal/shared/money"
+	contentcontract "github.com/XManCodeing/XMall/internal/modules/content/contract"
+	contentdomain "github.com/XManCodeing/XMall/internal/modules/content/domain"
+	"github.com/XManCodeing/XMall/internal/shared/jsonmap"
+	"github.com/XManCodeing/XMall/internal/shared/money"
 )
 
 // PostResp 文章/公告公共响应

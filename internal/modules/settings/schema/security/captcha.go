@@ -5,10 +5,10 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/homles698698-lab/XMall/internal/config"
-	"github.com/homles698698-lab/XMall/internal/constants"
-	settingsvalue "github.com/homles698698-lab/XMall/internal/modules/settings/schema/value"
-	"github.com/homles698698-lab/XMall/internal/shared/jsonmap"
+	"github.com/XManCodeing/XMall/internal/config"
+	"github.com/XManCodeing/XMall/internal/constants"
+	settingsvalue "github.com/XManCodeing/XMall/internal/modules/settings/schema/value"
+	"github.com/XManCodeing/XMall/internal/shared/jsonmap"
 )
 
 var ErrCaptchaConfigInvalid = errors.New("captcha config invalid")

@@ -6,13 +6,13 @@ import (
 	"testing"
 	"time"
 
-	"github.com/homles698698-lab/XMall/internal/constants"
-	invitecodeapp "github.com/homles698698-lab/XMall/internal/modules/identity/invitecode/application"
-	invitecodedomain "github.com/homles698698-lab/XMall/internal/modules/identity/invitecode/domain"
-	invitecodestore "github.com/homles698698-lab/XMall/internal/modules/identity/invitecode/infrastructure/gormstore"
-	telegramauthapp "github.com/homles698698-lab/XMall/internal/modules/identity/telegramauth/application"
-	userdomain "github.com/homles698698-lab/XMall/internal/modules/identity/user/domain"
-	userauthapp "github.com/homles698698-lab/XMall/internal/modules/identity/userauth/application"
+	"github.com/XManCodeing/XMall/internal/constants"
+	invitecodeapp "github.com/XManCodeing/XMall/internal/modules/identity/invitecode/application"
+	invitecodedomain "github.com/XManCodeing/XMall/internal/modules/identity/invitecode/domain"
+	invitecodestore "github.com/XManCodeing/XMall/internal/modules/identity/invitecode/infrastructure/gormstore"
+	telegramauthapp "github.com/XManCodeing/XMall/internal/modules/identity/telegramauth/application"
+	userdomain "github.com/XManCodeing/XMall/internal/modules/identity/user/domain"
+	userauthapp "github.com/XManCodeing/XMall/internal/modules/identity/userauth/application"
 
 	"gorm.io/gorm"
 )

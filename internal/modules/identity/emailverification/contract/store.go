@@ -3,7 +3,7 @@ package emailverificationcontract
 import (
 	"time"
 
-	emailverificationdomain "github.com/homles698698-lab/XMall/internal/modules/identity/emailverification/domain"
+	emailverificationdomain "github.com/XManCodeing/XMall/internal/modules/identity/emailverification/domain"
 )
 
 type Store interface {

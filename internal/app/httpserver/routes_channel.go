@@ -1,14 +1,14 @@
 package httpserver
 
 import (
-	"github.com/homles698698-lab/XMall/internal/app/container"
-	"github.com/homles698698-lab/XMall/internal/app/httpserver/middleware"
-	affiliatetransport "github.com/homles698698-lab/XMall/internal/modules/affiliate/transport/http"
-	channeltransport "github.com/homles698698-lab/XMall/internal/modules/channelapi/transport/http"
-	giftcardtransport "github.com/homles698698-lab/XMall/internal/modules/giftcard/transport/http"
-	memberleveltransport "github.com/homles698698-lab/XMall/internal/modules/memberlevel/transport/http"
-	telegramtransport "github.com/homles698698-lab/XMall/internal/modules/telegram/channelbot/transport/http"
-	wallettransport "github.com/homles698698-lab/XMall/internal/modules/wallet/transport/http"
+	"github.com/XManCodeing/XMall/internal/app/container"
+	"github.com/XManCodeing/XMall/internal/app/httpserver/middleware"
+	affiliatetransport "github.com/XManCodeing/XMall/internal/modules/affiliate/transport/http"
+	channeltransport "github.com/XManCodeing/XMall/internal/modules/channelapi/transport/http"
+	giftcardtransport "github.com/XManCodeing/XMall/internal/modules/giftcard/transport/http"
+	memberleveltransport "github.com/XManCodeing/XMall/internal/modules/memberlevel/transport/http"
+	telegramtransport "github.com/XManCodeing/XMall/internal/modules/telegram/channelbot/transport/http"
+	wallettransport "github.com/XManCodeing/XMall/internal/modules/wallet/transport/http"
 
 	"github.com/gin-gonic/gin"
 	"github.com/redis/go-redis/v9"

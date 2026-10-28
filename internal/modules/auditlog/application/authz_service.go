@@ -4,9 +4,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/homles698698-lab/XMall/internal/modules/auditlog/contract"
-	"github.com/homles698698-lab/XMall/internal/modules/auditlog/domain"
-	"github.com/homles698698-lab/XMall/internal/shared/jsonmap"
+	"github.com/XManCodeing/XMall/internal/modules/auditlog/contract"
+	"github.com/XManCodeing/XMall/internal/modules/auditlog/domain"
+	"github.com/XManCodeing/XMall/internal/shared/jsonmap"
 )
 
 // AuthzRecord 权限审计记录输入

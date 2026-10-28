@@ -4,8 +4,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/homles698698-lab/XMall/internal/modules/auditlog/contract"
-	"github.com/homles698698-lab/XMall/internal/modules/auditlog/domain"
+	"github.com/XManCodeing/XMall/internal/modules/auditlog/contract"
+	"github.com/XManCodeing/XMall/internal/modules/auditlog/domain"
 )
 
 // AdminLoginRecord 描述一次管理员认证或 2FA 操作的审计事实。

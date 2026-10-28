@@ -7,8 +7,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	cartcontract "github.com/homles698698-lab/XMall/internal/modules/cart/contract"
-	"github.com/homles698698-lab/XMall/internal/platform/http/response"
+	cartcontract "github.com/XManCodeing/XMall/internal/modules/cart/contract"
+	"github.com/XManCodeing/XMall/internal/platform/http/response"
 
 	"github.com/gin-gonic/gin"
 )

@@ -4,10 +4,10 @@ import (
 	"errors"
 	"net/http"
 
-	telegramauthapp "github.com/homles698698-lab/XMall/internal/modules/identity/telegramauth/application"
-	userauthapp "github.com/homles698698-lab/XMall/internal/modules/identity/userauth/application"
-	"github.com/homles698698-lab/XMall/internal/platform/http/channelresponse"
-	"github.com/homles698698-lab/XMall/internal/platform/http/response"
+	telegramauthapp "github.com/XManCodeing/XMall/internal/modules/identity/telegramauth/application"
+	userauthapp "github.com/XManCodeing/XMall/internal/modules/identity/userauth/application"
+	"github.com/XManCodeing/XMall/internal/platform/http/channelresponse"
+	"github.com/XManCodeing/XMall/internal/platform/http/response"
 
 	"github.com/gin-gonic/gin"
 )

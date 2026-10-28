@@ -6,12 +6,12 @@ import (
 	"testing"
 	"time"
 
+	"github.com/XManCodeing/XMall/internal/constants"
+	apicredentialapp "github.com/XManCodeing/XMall/internal/modules/apicredential/application"
+	apicredentialcontract "github.com/XManCodeing/XMall/internal/modules/apicredential/contract"
+	apicredentialdomain "github.com/XManCodeing/XMall/internal/modules/apicredential/domain"
+	apicredentialgormstore "github.com/XManCodeing/XMall/internal/modules/apicredential/infrastructure/gormstore"
 	"github.com/glebarez/sqlite"
-	"github.com/homles698698-lab/XMall/internal/constants"
-	apicredentialapp "github.com/homles698698-lab/XMall/internal/modules/apicredential/application"
-	apicredentialcontract "github.com/homles698698-lab/XMall/internal/modules/apicredential/contract"
-	apicredentialdomain "github.com/homles698698-lab/XMall/internal/modules/apicredential/domain"
-	apicredentialgormstore "github.com/homles698698-lab/XMall/internal/modules/apicredential/infrastructure/gormstore"
 	"gorm.io/gorm"
 )
 

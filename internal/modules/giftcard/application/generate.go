@@ -5,10 +5,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/homles698698-lab/XMall/internal/constants"
-	giftcardcontract "github.com/homles698698-lab/XMall/internal/modules/giftcard/contract"
-	giftcarddomain "github.com/homles698698-lab/XMall/internal/modules/giftcard/domain"
-	"github.com/homles698698-lab/XMall/internal/shared/money"
+	"github.com/XManCodeing/XMall/internal/constants"
+	giftcardcontract "github.com/XManCodeing/XMall/internal/modules/giftcard/contract"
+	giftcarddomain "github.com/XManCodeing/XMall/internal/modules/giftcard/domain"
+	"github.com/XManCodeing/XMall/internal/shared/money"
 
 	"github.com/shopspring/decimal"
 )

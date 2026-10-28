@@ -5,12 +5,12 @@ import (
 	"strings"
 	"time"
 
-	"github.com/homles698698-lab/XMall/internal/constants"
-	broadcastcontract "github.com/homles698698-lab/XMall/internal/modules/telegram/broadcast/contract"
-	broadcastdomain "github.com/homles698698-lab/XMall/internal/modules/telegram/broadcast/domain"
-	notifycontract "github.com/homles698698-lab/XMall/internal/modules/telegram/notify/contract"
-	"github.com/homles698698-lab/XMall/internal/shared/jsonmap"
-	"github.com/homles698698-lab/XMall/internal/shared/jsonslice"
+	"github.com/XManCodeing/XMall/internal/constants"
+	broadcastcontract "github.com/XManCodeing/XMall/internal/modules/telegram/broadcast/contract"
+	broadcastdomain "github.com/XManCodeing/XMall/internal/modules/telegram/broadcast/domain"
+	notifycontract "github.com/XManCodeing/XMall/internal/modules/telegram/notify/contract"
+	"github.com/XManCodeing/XMall/internal/shared/jsonmap"
+	"github.com/XManCodeing/XMall/internal/shared/jsonslice"
 )
 
 // ListInput describes broadcast-list pagination.

@@ -11,9 +11,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/homles698698-lab/XMall/internal/constants"
-	cardsecretcontract "github.com/homles698698-lab/XMall/internal/modules/cardsecret/contract"
-	cardsecretdomain "github.com/homles698698-lab/XMall/internal/modules/cardsecret/domain"
+	"github.com/XManCodeing/XMall/internal/constants"
+	cardsecretcontract "github.com/XManCodeing/XMall/internal/modules/cardsecret/contract"
+	cardsecretdomain "github.com/XManCodeing/XMall/internal/modules/cardsecret/domain"
 )
 
 // CreateCardSecretBatchInput 批量录入卡密输入

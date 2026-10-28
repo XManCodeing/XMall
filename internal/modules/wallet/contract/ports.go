@@ -3,8 +3,8 @@ package contract
 import (
 	"time"
 
-	walletdomain "github.com/homles698698-lab/XMall/internal/modules/wallet/domain"
-	"github.com/homles698698-lab/XMall/internal/shared/money"
+	walletdomain "github.com/XManCodeing/XMall/internal/modules/wallet/domain"
+	"github.com/XManCodeing/XMall/internal/shared/money"
 )
 
 // Repository owns all wallet aggregate persistence. Transactional callers

@@ -3,8 +3,8 @@ package settingscurrency
 import (
 	"strings"
 
-	"github.com/homles698698-lab/XMall/internal/constants"
-	settingsapp "github.com/homles698698-lab/XMall/internal/modules/settings/application"
+	"github.com/XManCodeing/XMall/internal/constants"
+	settingsapp "github.com/XManCodeing/XMall/internal/modules/settings/application"
 )
 
 type Provider struct {

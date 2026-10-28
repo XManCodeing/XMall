@@ -5,10 +5,10 @@ import (
 	"strconv"
 	"time"
 
-	productdomain "github.com/homles698698-lab/XMall/internal/modules/catalog/product/domain"
+	productdomain "github.com/XManCodeing/XMall/internal/modules/catalog/product/domain"
 
-	categorycontract "github.com/homles698698-lab/XMall/internal/modules/catalog/category/contract"
-	categorydomain "github.com/homles698698-lab/XMall/internal/modules/catalog/category/domain"
+	categorycontract "github.com/XManCodeing/XMall/internal/modules/catalog/category/contract"
+	categorydomain "github.com/XManCodeing/XMall/internal/modules/catalog/category/domain"
 
 	"gorm.io/gorm"
 )

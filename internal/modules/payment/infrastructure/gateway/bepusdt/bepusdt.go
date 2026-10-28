@@ -15,8 +15,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/homles698698-lab/XMall/internal/constants"
-	"github.com/homles698698-lab/XMall/internal/modules/payment/infrastructure/gateway/common"
+	"github.com/XManCodeing/XMall/internal/constants"
+	"github.com/XManCodeing/XMall/internal/modules/payment/infrastructure/gateway/common"
 )
 
 var (

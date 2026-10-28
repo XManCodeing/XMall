@@ -1,8 +1,8 @@
 package contract
 
 import (
-	"github.com/homles698698-lab/XMall/internal/config"
-	settingssecurity "github.com/homles698698-lab/XMall/internal/modules/settings/schema/security"
+	"github.com/XManCodeing/XMall/internal/config"
+	settingssecurity "github.com/XManCodeing/XMall/internal/modules/settings/schema/security"
 )
 
 // SettingReader 是验证码运行时读取动态配置所需的最小端口。

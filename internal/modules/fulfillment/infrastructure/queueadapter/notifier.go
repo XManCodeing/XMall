@@ -3,9 +3,9 @@ package queueadapter
 import (
 	"strings"
 
-	fulfillmentapp "github.com/homles698698-lab/XMall/internal/modules/fulfillment/application"
+	fulfillmentapp "github.com/XManCodeing/XMall/internal/modules/fulfillment/application"
 
-	"github.com/homles698698-lab/XMall/internal/queue"
+	"github.com/XManCodeing/XMall/internal/queue"
 )
 
 // BotNotifier 把平台队列适配成交付通知端口。

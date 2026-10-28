@@ -3,10 +3,10 @@ package application
 import (
 	"testing"
 
-	orderdomain "github.com/homles698698-lab/XMall/internal/modules/order/domain"
-	paymentdomain "github.com/homles698698-lab/XMall/internal/modules/payment/domain"
+	orderdomain "github.com/XManCodeing/XMall/internal/modules/order/domain"
+	paymentdomain "github.com/XManCodeing/XMall/internal/modules/payment/domain"
 
-	"github.com/homles698698-lab/XMall/internal/constants"
+	"github.com/XManCodeing/XMall/internal/constants"
 )
 
 func TestShouldUseCNYPaymentCurrency(t *testing.T) {

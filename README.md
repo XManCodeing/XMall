@@ -7,7 +7,7 @@
 - **上游项目**：Dujiao-Next，<https://github.com/dujiao-next/dujiao-next>。
 - **基础版本核验状态**：当前工作副本来自名为 `dujiao-next-1.5.0` 的目录；该名称仅作来源线索，尚未通过上游 tag 或 commit 核实。正式发布前须补充准确的上游版本及提交号，不应将目录名当作已核验版本。
 - **修改声明日期**：2026-10-26。本工作副本已作修改，下方列出本轮二次开发的主要内容；此日期不是所有文件的修改时间，也不是正式发布日期。
-- **维护账号与发布地址**：[homles698698-lab](https://github.com/homles698698-lab) · [XMall 源码仓库](https://github.com/homles698698-lab/XMall) · [版本下载](https://github.com/homles698698-lab/XMall/releases)。仓库由 `dujiao-auv` 重命名而来，保留历史提交和版本；新品牌发行包使用 `xmall` 前缀，实际版本以已发布的 tag 为准。
+- **维护账号与发布地址**：[XManCodeing](https://github.com/XManCodeing) · [XMall 源码仓库](https://github.com/XManCodeing/XMall) · [版本下载](https://github.com/XManCodeing/XMall/releases)。仓库由 `dujiao-auv` 重命名而来，保留历史提交和版本；新品牌发行包使用 `xmall` 前缀，实际版本以已发布的 tag 为准。
 - **许可**：本修改版作为衍生作品整体依照 **GNU GPL v3** 发布，完整条款见 [LICENSE](LICENSE)。保留上游及其他权利人的版权、许可和免责声明；新增修改不改变原代码的权利归属。不对 GPL 授予的商用、修改和再分发权利另加限制。
 - **第三方组件**：独立第三方组件和素材仍遵循各自许可证及署名要求。根目录许可证不能代替第三方授权核验，也不授予上游或第三方的商标使用权。
 - **无担保**：除适用法律或书面约定另有要求外，本软件按 GPL v3 所述不附带担保。请在部署前自行测试和备份。
@@ -191,7 +191,7 @@ Chinese, and English. Do not hard-code user-facing strings on either side.
 - 分别运行三次 `openssl rand -hex 32`，把三个不同的随机值填入 `app.secret_key`、`jwt.secret`、`user_jwt.secret`。这些字段在示例中为空，必须先填写，不能直接用于生产。
 - 已有部署不要随意更换 `app.secret_key`，否则可能无法解密已有敏感数据。管理员初始化参数及第三方凭据仅在私有运行配置中填写。
 - demo 默认监听 `127.0.0.1:8080`，使用 SQLite；容器部署需按需修改监听地址，其他部署按实际情况设置数据库、可信代理、CORS 和邮件等参数。
-- 公开模板的 `update.repository` 默认是 `homles698698-lab/XMall`，填写空字符串可关闭远程更新。修改模板不会修改既有运行配置。仓库改名后历史 Release 仍然保留，不代表旧附件兼容新的 `xmall_*` 更新器；须发布并验证 XMall 发行包后再使用更新功能，不要切到上游更新源。
+- 公开模板的 `update.repository` 默认是 `XManCodeing/XMall`，填写空字符串可关闭远程更新。修改模板不会修改既有运行配置。仓库改名后历史 Release 仍然保留，不代表旧附件兼容新的 `xmall_*` 更新器；须发布并验证 XMall 发行包后再使用更新功能，不要切到上游更新源。
 
 ### GitHub Actions 云端打包与发布
 
@@ -204,7 +204,7 @@ Chinese, and English. Do not hard-code user-facing strings on either side.
 
 发布 token 使用 Actions 自带的 `GITHUB_TOKEN`，不需要将个人 token 或运行配置写进仓库。工作流需要仓库允许 `contents: write`；仓库或组织策略可能需要管理员授权。
 
-配置模板统一为 `config.yml.example`。GoReleaser 归档和 Docker 最终镜像均包含 `LICENSE`；构建前使用 `go mod tidy -diff` 检查依赖而不静默改写。本版安装脚本要求显式设置 `XMALL_UPDATE_REPOSITORY=homles698698-lab/XMall`，不会默认下载上游。运行本仓库安装脚本时，在同一条 sudo 命令中通过 `env` 传入此变量；自行 fork 后应改为经过验证的自有发行仓库。
+配置模板统一为 `config.yml.example`。GoReleaser 归档和 Docker 最终镜像均包含 `LICENSE`；构建前使用 `go mod tidy -diff` 检查依赖而不静默改写。本版安装脚本要求显式设置 `XMALL_UPDATE_REPOSITORY=XManCodeing/XMall`，不会默认下载上游。运行本仓库安装脚本时，在同一条 sudo 命令中通过 `env` 传入此变量；自行 fork 后应改为经过验证的自有发行仓库。
 
 当前工作流只发布二进制安装包，**不会自动推送 Docker 镜像**。Dockerfile 已补许可证及可传入的 `SOURCE_URL`、`VCS_REF`、`APP_VERSION` 元数据参数；若以后发布镜像，需要另行配置镜像构建、推送及源码说明。本地检查不等于 GitHub Actions 和目标系统安装已通过。
 

@@ -3,9 +3,9 @@ package application
 import (
 	"context"
 
-	"github.com/homles698698-lab/XMall/internal/modules/content/contract"
-	"github.com/homles698698-lab/XMall/internal/modules/content/domain"
-	"github.com/homles698698-lab/XMall/internal/shared/jsonmap"
+	"github.com/XManCodeing/XMall/internal/modules/content/contract"
+	"github.com/XManCodeing/XMall/internal/modules/content/domain"
+	"github.com/XManCodeing/XMall/internal/shared/jsonmap"
 )
 
 // CreatePostCategoryInput 描述文章分类创建和更新所需字段。

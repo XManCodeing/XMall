@@ -1,8 +1,8 @@
 package affiliatebootstrap
 
 import (
-	"github.com/homles698698-lab/XMall/internal/app/container"
-	affiliatetransport "github.com/homles698698-lab/XMall/internal/modules/affiliate/transport/http"
+	"github.com/XManCodeing/XMall/internal/app/container"
+	affiliatetransport "github.com/XManCodeing/XMall/internal/modules/affiliate/transport/http"
 )
 
 func NewStorefrontHandler(c *container.Container) *affiliatetransport.Handler {

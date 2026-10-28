@@ -7,13 +7,13 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/homles698698-lab/XMall/internal/constants"
-	"github.com/homles698698-lab/XMall/internal/crypto"
-	app "github.com/homles698698-lab/XMall/internal/modules/siteconnection/application"
-	contract "github.com/homles698698-lab/XMall/internal/modules/siteconnection/contract"
-	domain "github.com/homles698698-lab/XMall/internal/modules/siteconnection/domain"
-	"github.com/homles698698-lab/XMall/internal/shared/httpintegration"
-	"github.com/homles698698-lab/XMall/internal/upstream"
+	"github.com/XManCodeing/XMall/internal/constants"
+	"github.com/XManCodeing/XMall/internal/crypto"
+	app "github.com/XManCodeing/XMall/internal/modules/siteconnection/application"
+	contract "github.com/XManCodeing/XMall/internal/modules/siteconnection/contract"
+	domain "github.com/XManCodeing/XMall/internal/modules/siteconnection/domain"
+	"github.com/XManCodeing/XMall/internal/shared/httpintegration"
+	"github.com/XManCodeing/XMall/internal/upstream"
 )
 
 func httpTestService() (*app.Service, *siteConnectionRepoStub) {

@@ -3,7 +3,7 @@ package contract
 import (
 	"time"
 
-	"github.com/homles698698-lab/XMall/internal/shared/jsonmap"
+	"github.com/XManCodeing/XMall/internal/shared/jsonmap"
 )
 
 // RefListFilter 描述凭证维度的回调引用分页筛选。

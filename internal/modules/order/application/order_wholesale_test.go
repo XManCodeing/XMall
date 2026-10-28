@@ -8,32 +8,32 @@ import (
 	"testing"
 	"time"
 
-	orderdomain "github.com/homles698698-lab/XMall/internal/modules/order/domain"
+	orderdomain "github.com/XManCodeing/XMall/internal/modules/order/domain"
 
-	coupondomain "github.com/homles698698-lab/XMall/internal/modules/coupon/domain"
+	coupondomain "github.com/XManCodeing/XMall/internal/modules/coupon/domain"
 
-	promotiondomain "github.com/homles698698-lab/XMall/internal/modules/promotion/domain"
+	promotiondomain "github.com/XManCodeing/XMall/internal/modules/promotion/domain"
 
-	memberleveldomain "github.com/homles698698-lab/XMall/internal/modules/memberlevel/domain"
+	memberleveldomain "github.com/XManCodeing/XMall/internal/modules/memberlevel/domain"
 
-	productdomain "github.com/homles698698-lab/XMall/internal/modules/catalog/product/domain"
+	productdomain "github.com/XManCodeing/XMall/internal/modules/catalog/product/domain"
 
-	categorydomain "github.com/homles698698-lab/XMall/internal/modules/catalog/category/domain"
+	categorydomain "github.com/XManCodeing/XMall/internal/modules/catalog/category/domain"
 
-	productgormstore "github.com/homles698698-lab/XMall/internal/modules/catalog/product/store/gormstore"
+	productgormstore "github.com/XManCodeing/XMall/internal/modules/catalog/product/store/gormstore"
 
-	userstore "github.com/homles698698-lab/XMall/internal/modules/identity/user/infrastructure/gormstore"
+	userstore "github.com/XManCodeing/XMall/internal/modules/identity/user/infrastructure/gormstore"
 
-	userdomain "github.com/homles698698-lab/XMall/internal/modules/identity/user/domain"
+	userdomain "github.com/XManCodeing/XMall/internal/modules/identity/user/domain"
 
-	"github.com/homles698698-lab/XMall/internal/constants"
-	couponcontract "github.com/homles698698-lab/XMall/internal/modules/coupon/contract"
-	coupongormstore "github.com/homles698698-lab/XMall/internal/modules/coupon/infrastructure/gormstore"
-	memberlevelapp "github.com/homles698698-lab/XMall/internal/modules/memberlevel/application"
-	memberlevelgormstore "github.com/homles698698-lab/XMall/internal/modules/memberlevel/infrastructure/gormstore"
-	promotiongormstore "github.com/homles698698-lab/XMall/internal/modules/promotion/infrastructure/gormstore"
-	"github.com/homles698698-lab/XMall/internal/shared/jsonmap"
-	"github.com/homles698698-lab/XMall/internal/shared/money"
+	"github.com/XManCodeing/XMall/internal/constants"
+	couponcontract "github.com/XManCodeing/XMall/internal/modules/coupon/contract"
+	coupongormstore "github.com/XManCodeing/XMall/internal/modules/coupon/infrastructure/gormstore"
+	memberlevelapp "github.com/XManCodeing/XMall/internal/modules/memberlevel/application"
+	memberlevelgormstore "github.com/XManCodeing/XMall/internal/modules/memberlevel/infrastructure/gormstore"
+	promotiongormstore "github.com/XManCodeing/XMall/internal/modules/promotion/infrastructure/gormstore"
+	"github.com/XManCodeing/XMall/internal/shared/jsonmap"
+	"github.com/XManCodeing/XMall/internal/shared/money"
 
 	"github.com/glebarez/sqlite"
 	"github.com/shopspring/decimal"

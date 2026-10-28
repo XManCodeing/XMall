@@ -1,9 +1,9 @@
 package gormstore
 
 import (
-	"github.com/homles698698-lab/XMall/internal/modules/auditlog/contract"
-	"github.com/homles698698-lab/XMall/internal/modules/auditlog/domain"
-	"github.com/homles698698-lab/XMall/internal/persistence/gormutil"
+	"github.com/XManCodeing/XMall/internal/modules/auditlog/contract"
+	"github.com/XManCodeing/XMall/internal/modules/auditlog/domain"
+	"github.com/XManCodeing/XMall/internal/persistence/gormutil"
 
 	"gorm.io/gorm"
 )

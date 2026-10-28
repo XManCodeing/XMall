@@ -1,13 +1,13 @@
 package settingsapp
 
 import (
-	settingsvalue "github.com/homles698698-lab/XMall/internal/modules/settings/schema/value"
+	settingsvalue "github.com/XManCodeing/XMall/internal/modules/settings/schema/value"
 	"regexp"
 	"strings"
 
-	"github.com/homles698698-lab/XMall/internal/constants"
-	"github.com/homles698698-lab/XMall/internal/shared/contactlink"
-	"github.com/homles698698-lab/XMall/internal/shared/jsonmap"
+	"github.com/XManCodeing/XMall/internal/constants"
+	"github.com/XManCodeing/XMall/internal/shared/contactlink"
+	"github.com/XManCodeing/XMall/internal/shared/jsonmap"
 )
 
 var settingSupportedLanguages = append([]string(nil), constants.SupportedLocales...)

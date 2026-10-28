@@ -3,7 +3,7 @@ package settingssecurity
 import (
 	"testing"
 
-	"github.com/homles698698-lab/XMall/internal/shared/jsonmap"
+	"github.com/XManCodeing/XMall/internal/shared/jsonmap"
 )
 
 func TestNormalizeOrderRiskControlConfig_Defaults(t *testing.T) {

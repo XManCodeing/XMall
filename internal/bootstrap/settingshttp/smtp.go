@@ -3,13 +3,13 @@ package settingsbootstrap
 import (
 	"errors"
 
-	notificationcontract "github.com/homles698698-lab/XMall/internal/modules/notification/contract"
-	notificationsmtp "github.com/homles698698-lab/XMall/internal/modules/notification/infrastructure/smtp"
-	settingsapp "github.com/homles698698-lab/XMall/internal/modules/settings/application"
-	settingsmessaging "github.com/homles698698-lab/XMall/internal/modules/settings/schema/messaging"
+	notificationcontract "github.com/XManCodeing/XMall/internal/modules/notification/contract"
+	notificationsmtp "github.com/XManCodeing/XMall/internal/modules/notification/infrastructure/smtp"
+	settingsapp "github.com/XManCodeing/XMall/internal/modules/settings/application"
+	settingsmessaging "github.com/XManCodeing/XMall/internal/modules/settings/schema/messaging"
 
-	"github.com/homles698698-lab/XMall/internal/config"
-	settingstransport "github.com/homles698698-lab/XMall/internal/modules/settings/transport/http"
+	"github.com/XManCodeing/XMall/internal/config"
+	settingstransport "github.com/XManCodeing/XMall/internal/modules/settings/transport/http"
 )
 
 type settingsSMTPAdapter struct {

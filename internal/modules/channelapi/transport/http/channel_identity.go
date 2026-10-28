@@ -3,8 +3,8 @@ package channelhttp
 import (
 	"strings"
 
-	externalidentitydomain "github.com/homles698698-lab/XMall/internal/modules/identity/externalidentity/domain"
-	userdomain "github.com/homles698698-lab/XMall/internal/modules/identity/user/domain"
+	externalidentitydomain "github.com/XManCodeing/XMall/internal/modules/identity/externalidentity/domain"
+	userdomain "github.com/XManCodeing/XMall/internal/modules/identity/user/domain"
 
 	"github.com/gin-gonic/gin"
 )

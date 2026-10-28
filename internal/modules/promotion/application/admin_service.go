@@ -4,10 +4,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/homles698698-lab/XMall/internal/constants"
-	promotioncontract "github.com/homles698698-lab/XMall/internal/modules/promotion/contract"
-	promotiondomain "github.com/homles698698-lab/XMall/internal/modules/promotion/domain"
-	"github.com/homles698698-lab/XMall/internal/shared/money"
+	"github.com/XManCodeing/XMall/internal/constants"
+	promotioncontract "github.com/XManCodeing/XMall/internal/modules/promotion/contract"
+	promotiondomain "github.com/XManCodeing/XMall/internal/modules/promotion/domain"
+	"github.com/XManCodeing/XMall/internal/shared/money"
 
 	"github.com/shopspring/decimal"
 )

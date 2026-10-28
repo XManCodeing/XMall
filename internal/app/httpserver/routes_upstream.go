@@ -1,9 +1,9 @@
 package httpserver
 
 import (
-	"github.com/homles698698-lab/XMall/internal/app/container"
-	"github.com/homles698698-lab/XMall/internal/app/httpserver/middleware"
-	upstreamtransport "github.com/homles698698-lab/XMall/internal/modules/upstreamapi/transport/http"
+	"github.com/XManCodeing/XMall/internal/app/container"
+	"github.com/XManCodeing/XMall/internal/app/httpserver/middleware"
+	upstreamtransport "github.com/XManCodeing/XMall/internal/modules/upstreamapi/transport/http"
 
 	"github.com/gin-gonic/gin"
 	"github.com/redis/go-redis/v9"

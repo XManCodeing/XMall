@@ -6,26 +6,26 @@ import (
 	"testing"
 	"time"
 
-	paymentdomain "github.com/homles698698-lab/XMall/internal/modules/payment/domain"
+	paymentdomain "github.com/XManCodeing/XMall/internal/modules/payment/domain"
 
-	orderdomain "github.com/homles698698-lab/XMall/internal/modules/order/domain"
+	orderdomain "github.com/XManCodeing/XMall/internal/modules/order/domain"
 
-	userstore "github.com/homles698698-lab/XMall/internal/modules/identity/user/infrastructure/gormstore"
+	userstore "github.com/XManCodeing/XMall/internal/modules/identity/user/infrastructure/gormstore"
 
-	userdomain "github.com/homles698698-lab/XMall/internal/modules/identity/user/domain"
+	userdomain "github.com/XManCodeing/XMall/internal/modules/identity/user/domain"
 
-	"github.com/homles698698-lab/XMall/internal/testkit/memorysettings"
+	"github.com/XManCodeing/XMall/internal/testkit/memorysettings"
 
-	settingsapp "github.com/homles698698-lab/XMall/internal/modules/settings/application"
-	settingsmessaging "github.com/homles698698-lab/XMall/internal/modules/settings/schema/messaging"
-	settingsstorefront "github.com/homles698698-lab/XMall/internal/modules/settings/schema/storefront"
+	settingsapp "github.com/XManCodeing/XMall/internal/modules/settings/application"
+	settingsmessaging "github.com/XManCodeing/XMall/internal/modules/settings/schema/messaging"
+	settingsstorefront "github.com/XManCodeing/XMall/internal/modules/settings/schema/storefront"
 
-	"github.com/homles698698-lab/XMall/internal/constants"
-	dashboard "github.com/homles698698-lab/XMall/internal/modules/dashboard/contract"
-	notificationformat "github.com/homles698698-lab/XMall/internal/modules/notification/application/format"
-	"github.com/homles698698-lab/XMall/internal/queue"
-	"github.com/homles698698-lab/XMall/internal/shared/jsonmap"
-	"github.com/homles698698-lab/XMall/internal/shared/money"
+	"github.com/XManCodeing/XMall/internal/constants"
+	dashboard "github.com/XManCodeing/XMall/internal/modules/dashboard/contract"
+	notificationformat "github.com/XManCodeing/XMall/internal/modules/notification/application/format"
+	"github.com/XManCodeing/XMall/internal/queue"
+	"github.com/XManCodeing/XMall/internal/shared/jsonmap"
+	"github.com/XManCodeing/XMall/internal/shared/money"
 
 	"github.com/glebarez/sqlite"
 	"github.com/shopspring/decimal"

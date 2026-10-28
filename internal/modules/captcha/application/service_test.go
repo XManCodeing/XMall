@@ -3,10 +3,10 @@ package application
 import (
 	"testing"
 
-	"github.com/homles698698-lab/XMall/internal/config"
-	"github.com/homles698698-lab/XMall/internal/constants"
-	"github.com/homles698698-lab/XMall/internal/modules/captcha/contract"
-	settingssecurity "github.com/homles698698-lab/XMall/internal/modules/settings/schema/security"
+	"github.com/XManCodeing/XMall/internal/config"
+	"github.com/XManCodeing/XMall/internal/constants"
+	"github.com/XManCodeing/XMall/internal/modules/captcha/contract"
+	settingssecurity "github.com/XManCodeing/XMall/internal/modules/settings/schema/security"
 )
 
 type settingReaderStub struct {

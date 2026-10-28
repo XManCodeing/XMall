@@ -1,9 +1,9 @@
 package settingsapp
 
 import (
-	"github.com/homles698698-lab/XMall/internal/config"
-	settingscontract "github.com/homles698698-lab/XMall/internal/modules/settings/contract"
-	"github.com/homles698698-lab/XMall/internal/shared/jsonmap"
+	"github.com/XManCodeing/XMall/internal/config"
+	settingscontract "github.com/XManCodeing/XMall/internal/modules/settings/contract"
+	"github.com/XManCodeing/XMall/internal/shared/jsonmap"
 )
 
 // Service 是站点设置的核心用例入口：读写、Registry 归一化与声明式副作用。

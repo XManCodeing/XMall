@@ -5,13 +5,13 @@ import (
 	"testing"
 	"time"
 
-	totpapplication "github.com/homles698698-lab/XMall/internal/modules/identity/totp/application"
+	totpapplication "github.com/XManCodeing/XMall/internal/modules/identity/totp/application"
 
-	"github.com/homles698698-lab/XMall/internal/config"
-	admincontract "github.com/homles698698-lab/XMall/internal/modules/identity/admin/contract"
-	admindomain "github.com/homles698698-lab/XMall/internal/modules/identity/admin/domain"
-	adminstore "github.com/homles698698-lab/XMall/internal/modules/identity/admin/infrastructure/gormstore"
-	admintotpapp "github.com/homles698698-lab/XMall/internal/modules/identity/adminauth/totp/application"
+	"github.com/XManCodeing/XMall/internal/config"
+	admincontract "github.com/XManCodeing/XMall/internal/modules/identity/admin/contract"
+	admindomain "github.com/XManCodeing/XMall/internal/modules/identity/admin/domain"
+	adminstore "github.com/XManCodeing/XMall/internal/modules/identity/admin/infrastructure/gormstore"
+	admintotpapp "github.com/XManCodeing/XMall/internal/modules/identity/adminauth/totp/application"
 
 	"github.com/glebarez/sqlite"
 	"github.com/pquerna/otp/totp"

@@ -4,13 +4,13 @@ import (
 	"errors"
 	"strings"
 
-	orderdomain "github.com/homles698698-lab/XMall/internal/modules/order/domain"
+	orderdomain "github.com/XManCodeing/XMall/internal/modules/order/domain"
 
-	resellercontract "github.com/homles698698-lab/XMall/internal/modules/reseller/contract"
+	resellercontract "github.com/XManCodeing/XMall/internal/modules/reseller/contract"
 
-	resellerdomain "github.com/homles698698-lab/XMall/internal/modules/reseller/domain"
+	resellerdomain "github.com/XManCodeing/XMall/internal/modules/reseller/domain"
 
-	userdomain "github.com/homles698698-lab/XMall/internal/modules/identity/user/domain"
+	userdomain "github.com/XManCodeing/XMall/internal/modules/identity/user/domain"
 
 	"gorm.io/gorm"
 )

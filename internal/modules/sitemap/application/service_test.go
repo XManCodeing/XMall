@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/homles698698-lab/XMall/internal/modules/sitemap/contract"
+	"github.com/XManCodeing/XMall/internal/modules/sitemap/contract"
 )
 
 type catalogStub struct {

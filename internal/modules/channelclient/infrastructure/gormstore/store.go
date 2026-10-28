@@ -4,7 +4,7 @@ import (
 	"errors"
 	"time"
 
-	channelclientdomain "github.com/homles698698-lab/XMall/internal/modules/channelclient/domain"
+	channelclientdomain "github.com/XManCodeing/XMall/internal/modules/channelclient/domain"
 
 	"gorm.io/gorm"
 )

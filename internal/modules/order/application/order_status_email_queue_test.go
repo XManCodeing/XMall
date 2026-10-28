@@ -4,15 +4,15 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/homles698698-lab/XMall/internal/testkit/memorysettings"
+	"github.com/XManCodeing/XMall/internal/testkit/memorysettings"
 
-	orderqueueadapter "github.com/homles698698-lab/XMall/internal/modules/order/infrastructure/queueadapter"
-	settingsapp "github.com/homles698698-lab/XMall/internal/modules/settings/application"
+	orderqueueadapter "github.com/XManCodeing/XMall/internal/modules/order/infrastructure/queueadapter"
+	settingsapp "github.com/XManCodeing/XMall/internal/modules/settings/application"
 
-	"github.com/homles698698-lab/XMall/internal/config"
-	"github.com/homles698698-lab/XMall/internal/constants"
-	"github.com/homles698698-lab/XMall/internal/queue"
-	"github.com/homles698698-lab/XMall/internal/shared/jsonmap"
+	"github.com/XManCodeing/XMall/internal/config"
+	"github.com/XManCodeing/XMall/internal/constants"
+	"github.com/XManCodeing/XMall/internal/queue"
+	"github.com/XManCodeing/XMall/internal/shared/jsonmap"
 )
 
 type orderStatusEmailOrderRepoStub struct {

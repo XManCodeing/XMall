@@ -1,8 +1,8 @@
 package asyncqueue
 
 import (
-	"github.com/homles698698-lab/XMall/internal/modules/notification/contract"
-	"github.com/homles698698-lab/XMall/internal/queue"
+	"github.com/XManCodeing/XMall/internal/modules/notification/contract"
+	"github.com/XManCodeing/XMall/internal/queue"
 
 	"github.com/hibiken/asynq"
 )

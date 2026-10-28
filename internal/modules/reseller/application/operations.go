@@ -5,10 +5,10 @@ import (
 	"strings"
 	"time"
 
-	resellercontract "github.com/homles698698-lab/XMall/internal/modules/reseller/contract"
+	resellercontract "github.com/XManCodeing/XMall/internal/modules/reseller/contract"
 
-	reportingapp "github.com/homles698698-lab/XMall/internal/modules/reporting/application"
-	reportingdomain "github.com/homles698698-lab/XMall/internal/modules/reporting/domain"
+	reportingapp "github.com/XManCodeing/XMall/internal/modules/reporting/application"
+	reportingdomain "github.com/XManCodeing/XMall/internal/modules/reporting/domain"
 	"github.com/shopspring/decimal"
 )
 

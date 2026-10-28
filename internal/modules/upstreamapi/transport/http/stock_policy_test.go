@@ -3,9 +3,9 @@ package upstreamhttp
 import (
 	"testing"
 
-	productdomain "github.com/homles698698-lab/XMall/internal/modules/catalog/product/domain"
+	productdomain "github.com/XManCodeing/XMall/internal/modules/catalog/product/domain"
 
-	"github.com/homles698698-lab/XMall/internal/constants"
+	"github.com/XManCodeing/XMall/internal/constants"
 )
 
 func TestComputeSKUStockUsesRemainingManualStockWithoutSubtractingLockedAgain(t *testing.T) {

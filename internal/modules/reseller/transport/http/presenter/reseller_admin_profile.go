@@ -3,9 +3,9 @@ package presenter
 import (
 	"time"
 
-	resellerdomain "github.com/homles698698-lab/XMall/internal/modules/reseller/domain"
+	resellerdomain "github.com/XManCodeing/XMall/internal/modules/reseller/domain"
 
-	resellermodule "github.com/homles698698-lab/XMall/internal/modules/reseller/contract"
+	resellermodule "github.com/XManCodeing/XMall/internal/modules/reseller/contract"
 )
 
 type AdminResellerProfileUserResp struct {

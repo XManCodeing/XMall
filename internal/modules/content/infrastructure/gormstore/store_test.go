@@ -3,20 +3,20 @@ package gormstore
 import (
 	"context"
 	"fmt"
-	"github.com/homles698698-lab/XMall/internal/persistence/gormutil"
+	"github.com/XManCodeing/XMall/internal/persistence/gormutil"
 	"strings"
 	"testing"
 	"time"
 
-	productdomain "github.com/homles698698-lab/XMall/internal/modules/catalog/product/domain"
+	productdomain "github.com/XManCodeing/XMall/internal/modules/catalog/product/domain"
 
-	categorydomain "github.com/homles698698-lab/XMall/internal/modules/catalog/category/domain"
+	categorydomain "github.com/XManCodeing/XMall/internal/modules/catalog/category/domain"
 
+	"github.com/XManCodeing/XMall/internal/constants"
+	contentcontract "github.com/XManCodeing/XMall/internal/modules/content/contract"
+	contentdomain "github.com/XManCodeing/XMall/internal/modules/content/domain"
+	"github.com/XManCodeing/XMall/internal/shared/jsonmap"
 	"github.com/glebarez/sqlite"
-	"github.com/homles698698-lab/XMall/internal/constants"
-	contentcontract "github.com/homles698698-lab/XMall/internal/modules/content/contract"
-	contentdomain "github.com/homles698698-lab/XMall/internal/modules/content/domain"
-	"github.com/homles698698-lab/XMall/internal/shared/jsonmap"
 	"gorm.io/gorm"
 )
 

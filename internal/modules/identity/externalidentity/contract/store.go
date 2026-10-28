@@ -3,7 +3,7 @@ package externalidentitycontract
 import (
 	"time"
 
-	externalidentitydomain "github.com/homles698698-lab/XMall/internal/modules/identity/externalidentity/domain"
+	externalidentitydomain "github.com/XManCodeing/XMall/internal/modules/identity/externalidentity/domain"
 )
 
 type TelegramUserFilter struct {

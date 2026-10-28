@@ -3,12 +3,12 @@ package memberlevelhttp
 import (
 	"errors"
 
-	memberlevelcontract "github.com/homles698698-lab/XMall/internal/modules/memberlevel/contract"
-	memberleveldomain "github.com/homles698698-lab/XMall/internal/modules/memberlevel/domain"
-	"github.com/homles698698-lab/XMall/internal/platform/http/ginutil"
-	"github.com/homles698698-lab/XMall/internal/platform/http/response"
-	"github.com/homles698698-lab/XMall/internal/shared/jsonmap"
-	"github.com/homles698698-lab/XMall/internal/shared/money"
+	memberlevelcontract "github.com/XManCodeing/XMall/internal/modules/memberlevel/contract"
+	memberleveldomain "github.com/XManCodeing/XMall/internal/modules/memberlevel/domain"
+	"github.com/XManCodeing/XMall/internal/platform/http/ginutil"
+	"github.com/XManCodeing/XMall/internal/platform/http/response"
+	"github.com/XManCodeing/XMall/internal/shared/jsonmap"
+	"github.com/XManCodeing/XMall/internal/shared/money"
 
 	"github.com/gin-gonic/gin"
 	"github.com/shopspring/decimal"

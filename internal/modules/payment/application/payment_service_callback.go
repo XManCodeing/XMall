@@ -5,16 +5,16 @@ import (
 	"strings"
 	"time"
 
-	productcontract "github.com/homles698698-lab/XMall/internal/modules/catalog/product/contract"
-	orderapp "github.com/homles698698-lab/XMall/internal/modules/order/application"
-	orderdomain "github.com/homles698698-lab/XMall/internal/modules/order/domain"
-	paymentcontract "github.com/homles698698-lab/XMall/internal/modules/payment/contract"
-	paymentdomain "github.com/homles698698-lab/XMall/internal/modules/payment/domain"
-	walletcontract "github.com/homles698698-lab/XMall/internal/modules/wallet/contract"
+	productcontract "github.com/XManCodeing/XMall/internal/modules/catalog/product/contract"
+	orderapp "github.com/XManCodeing/XMall/internal/modules/order/application"
+	orderdomain "github.com/XManCodeing/XMall/internal/modules/order/domain"
+	paymentcontract "github.com/XManCodeing/XMall/internal/modules/payment/contract"
+	paymentdomain "github.com/XManCodeing/XMall/internal/modules/payment/domain"
+	walletcontract "github.com/XManCodeing/XMall/internal/modules/wallet/contract"
 
-	"github.com/homles698698-lab/XMall/internal/constants"
-	"github.com/homles698698-lab/XMall/internal/shared/jsonmap"
-	"github.com/homles698698-lab/XMall/internal/shared/money"
+	"github.com/XManCodeing/XMall/internal/constants"
+	"github.com/XManCodeing/XMall/internal/shared/jsonmap"
+	"github.com/XManCodeing/XMall/internal/shared/money"
 
 	"github.com/shopspring/decimal"
 )

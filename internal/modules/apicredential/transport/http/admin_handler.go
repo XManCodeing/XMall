@@ -3,11 +3,11 @@ package apicredentialhttp
 import (
 	"errors"
 
-	apicredentialdomain "github.com/homles698698-lab/XMall/internal/modules/apicredential/domain"
+	apicredentialdomain "github.com/XManCodeing/XMall/internal/modules/apicredential/domain"
 
-	apicredentialcontract "github.com/homles698698-lab/XMall/internal/modules/apicredential/contract"
-	"github.com/homles698698-lab/XMall/internal/platform/http/ginutil"
-	"github.com/homles698698-lab/XMall/internal/platform/http/response"
+	apicredentialcontract "github.com/XManCodeing/XMall/internal/modules/apicredential/contract"
+	"github.com/XManCodeing/XMall/internal/platform/http/ginutil"
+	"github.com/XManCodeing/XMall/internal/platform/http/response"
 
 	"github.com/gin-gonic/gin"
 )

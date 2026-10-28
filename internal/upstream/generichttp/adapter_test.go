@@ -9,8 +9,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/homles698698-lab/XMall/internal/shared/httpintegration"
-	"github.com/homles698698-lab/XMall/internal/upstream"
+	"github.com/XManCodeing/XMall/internal/shared/httpintegration"
+	"github.com/XManCodeing/XMall/internal/upstream"
 	"github.com/shopspring/decimal"
 )
 

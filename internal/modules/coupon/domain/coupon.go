@@ -3,8 +3,8 @@ package domain
 import (
 	"time"
 
-	"github.com/homles698698-lab/XMall/internal/shared/jsonslice"
-	"github.com/homles698698-lab/XMall/internal/shared/money"
+	"github.com/XManCodeing/XMall/internal/shared/jsonslice"
+	"github.com/XManCodeing/XMall/internal/shared/money"
 )
 
 // Coupon 优惠券

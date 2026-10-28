@@ -3,11 +3,11 @@ package app
 import (
 	"errors"
 
-	"github.com/homles698698-lab/XMall/internal/app/container"
-	"github.com/homles698698-lab/XMall/internal/app/httpserver"
-	"github.com/homles698698-lab/XMall/internal/app/jobs"
-	jobconsumer "github.com/homles698698-lab/XMall/internal/app/jobs/consumer"
-	"github.com/homles698698-lab/XMall/internal/config"
+	"github.com/XManCodeing/XMall/internal/app/container"
+	"github.com/XManCodeing/XMall/internal/app/httpserver"
+	"github.com/XManCodeing/XMall/internal/app/jobs"
+	jobconsumer "github.com/XManCodeing/XMall/internal/app/jobs/consumer"
+	"github.com/XManCodeing/XMall/internal/config"
 )
 
 // BuildRunner 构建服务运行器

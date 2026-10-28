@@ -1,9 +1,9 @@
 package contract
 
 import (
-	categorydomain "github.com/homles698698-lab/XMall/internal/modules/catalog/category/domain"
-	mappingdomain "github.com/homles698698-lab/XMall/internal/modules/catalog/mapping/domain"
-	productdomain "github.com/homles698698-lab/XMall/internal/modules/catalog/product/domain"
+	categorydomain "github.com/XManCodeing/XMall/internal/modules/catalog/category/domain"
+	mappingdomain "github.com/XManCodeing/XMall/internal/modules/catalog/mapping/domain"
+	productdomain "github.com/XManCodeing/XMall/internal/modules/catalog/product/domain"
 )
 
 // ListFilter 是商品映射列表筛选条件。

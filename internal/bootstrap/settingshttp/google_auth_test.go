@@ -5,11 +5,11 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/homles698698-lab/XMall/internal/config"
-	"github.com/homles698698-lab/XMall/internal/constants"
-	settingsapp "github.com/homles698698-lab/XMall/internal/modules/settings/application"
-	settingssecurity "github.com/homles698698-lab/XMall/internal/modules/settings/schema/security"
-	"github.com/homles698698-lab/XMall/internal/shared/jsonmap"
+	"github.com/XManCodeing/XMall/internal/config"
+	"github.com/XManCodeing/XMall/internal/constants"
+	settingsapp "github.com/XManCodeing/XMall/internal/modules/settings/application"
+	settingssecurity "github.com/XManCodeing/XMall/internal/modules/settings/schema/security"
+	"github.com/XManCodeing/XMall/internal/shared/jsonmap"
 )
 
 type googleAuthSettingStore struct {

@@ -6,11 +6,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/homles698698-lab/XMall/internal/constants"
-	cardsecretapp "github.com/homles698698-lab/XMall/internal/modules/cardsecret/application"
-	cardsecretdomain "github.com/homles698698-lab/XMall/internal/modules/cardsecret/domain"
-	"github.com/homles698698-lab/XMall/internal/platform/http/ginutil"
-	"github.com/homles698698-lab/XMall/internal/platform/http/response"
+	"github.com/XManCodeing/XMall/internal/constants"
+	cardsecretapp "github.com/XManCodeing/XMall/internal/modules/cardsecret/application"
+	cardsecretdomain "github.com/XManCodeing/XMall/internal/modules/cardsecret/domain"
+	"github.com/XManCodeing/XMall/internal/platform/http/ginutil"
+	"github.com/XManCodeing/XMall/internal/platform/http/response"
 
 	"github.com/gin-gonic/gin"
 )

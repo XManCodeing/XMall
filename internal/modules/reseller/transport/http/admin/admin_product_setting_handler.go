@@ -3,15 +3,15 @@ package adminhttp
 import (
 	"strings"
 
-	resellerdomain "github.com/homles698698-lab/XMall/internal/modules/reseller/domain"
+	resellerdomain "github.com/XManCodeing/XMall/internal/modules/reseller/domain"
 
-	auditlogapp "github.com/homles698698-lab/XMall/internal/modules/auditlog/application"
-	resellermodule "github.com/homles698698-lab/XMall/internal/modules/reseller/application"
-	dto "github.com/homles698698-lab/XMall/internal/modules/reseller/transport/http/presenter"
-	transportshared "github.com/homles698698-lab/XMall/internal/modules/reseller/transport/http/shared"
-	"github.com/homles698698-lab/XMall/internal/platform/http/ginutil"
-	"github.com/homles698698-lab/XMall/internal/platform/http/response"
-	"github.com/homles698698-lab/XMall/internal/shared/jsonmap"
+	auditlogapp "github.com/XManCodeing/XMall/internal/modules/auditlog/application"
+	resellermodule "github.com/XManCodeing/XMall/internal/modules/reseller/application"
+	dto "github.com/XManCodeing/XMall/internal/modules/reseller/transport/http/presenter"
+	transportshared "github.com/XManCodeing/XMall/internal/modules/reseller/transport/http/shared"
+	"github.com/XManCodeing/XMall/internal/platform/http/ginutil"
+	"github.com/XManCodeing/XMall/internal/platform/http/response"
+	"github.com/XManCodeing/XMall/internal/shared/jsonmap"
 
 	"github.com/gin-gonic/gin"
 )

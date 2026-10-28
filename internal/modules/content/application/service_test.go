@@ -9,9 +9,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/homles698698-lab/XMall/internal/constants"
-	"github.com/homles698698-lab/XMall/internal/modules/content/contract"
-	"github.com/homles698698-lab/XMall/internal/modules/content/domain"
+	"github.com/XManCodeing/XMall/internal/constants"
+	"github.com/XManCodeing/XMall/internal/modules/content/contract"
+	"github.com/XManCodeing/XMall/internal/modules/content/domain"
 )
 
 type fixedClock struct {

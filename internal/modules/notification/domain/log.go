@@ -3,7 +3,7 @@ package domain
 import (
 	"time"
 
-	"github.com/homles698698-lab/XMall/internal/shared/jsonmap"
+	"github.com/XManCodeing/XMall/internal/shared/jsonmap"
 )
 
 // NotificationLog 通知发送日志

@@ -5,11 +5,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/homles698698-lab/XMall/internal/constants"
-	couponcontract "github.com/homles698698-lab/XMall/internal/modules/coupon/contract"
-	coupondomain "github.com/homles698698-lab/XMall/internal/modules/coupon/domain"
-	"github.com/homles698698-lab/XMall/internal/shared/jsonslice"
-	"github.com/homles698698-lab/XMall/internal/shared/money"
+	"github.com/XManCodeing/XMall/internal/constants"
+	couponcontract "github.com/XManCodeing/XMall/internal/modules/coupon/contract"
+	coupondomain "github.com/XManCodeing/XMall/internal/modules/coupon/domain"
+	"github.com/XManCodeing/XMall/internal/shared/jsonslice"
+	"github.com/XManCodeing/XMall/internal/shared/money"
 
 	"github.com/shopspring/decimal"
 )

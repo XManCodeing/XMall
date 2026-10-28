@@ -3,7 +3,7 @@ package memberlevelhttp
 import (
 	"testing"
 
-	"github.com/homles698698-lab/XMall/internal/shared/jsonmap"
+	"github.com/XManCodeing/XMall/internal/shared/jsonmap"
 )
 
 func TestResolveLocalizedJSONPrefersLocaleThenDefault(t *testing.T) {

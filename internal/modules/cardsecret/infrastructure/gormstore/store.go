@@ -5,8 +5,8 @@ import (
 	"strings"
 	"time"
 
-	cardsecretcontract "github.com/homles698698-lab/XMall/internal/modules/cardsecret/contract"
-	cardsecretdomain "github.com/homles698698-lab/XMall/internal/modules/cardsecret/domain"
+	cardsecretcontract "github.com/XManCodeing/XMall/internal/modules/cardsecret/contract"
+	cardsecretdomain "github.com/XManCodeing/XMall/internal/modules/cardsecret/domain"
 
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"

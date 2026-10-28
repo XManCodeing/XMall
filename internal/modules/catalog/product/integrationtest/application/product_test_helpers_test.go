@@ -5,32 +5,32 @@ import (
 	"testing"
 	"time"
 
-	paymentgormstore "github.com/homles698698-lab/XMall/internal/modules/payment/infrastructure/gormstore"
+	paymentgormstore "github.com/XManCodeing/XMall/internal/modules/payment/infrastructure/gormstore"
 
-	paymentdomain "github.com/homles698698-lab/XMall/internal/modules/payment/domain"
+	paymentdomain "github.com/XManCodeing/XMall/internal/modules/payment/domain"
 
-	orderdomain "github.com/homles698698-lab/XMall/internal/modules/order/domain"
-	ordergormstore "github.com/homles698698-lab/XMall/internal/modules/order/infrastructure/gormstore"
+	orderdomain "github.com/XManCodeing/XMall/internal/modules/order/domain"
+	ordergormstore "github.com/XManCodeing/XMall/internal/modules/order/infrastructure/gormstore"
 
-	cardsecretdomain "github.com/homles698698-lab/XMall/internal/modules/cardsecret/domain"
-	cardsecretgormstore "github.com/homles698698-lab/XMall/internal/modules/cardsecret/infrastructure/gormstore"
-	memberleveldomain "github.com/homles698698-lab/XMall/internal/modules/memberlevel/domain"
+	cardsecretdomain "github.com/XManCodeing/XMall/internal/modules/cardsecret/domain"
+	cardsecretgormstore "github.com/XManCodeing/XMall/internal/modules/cardsecret/infrastructure/gormstore"
+	memberleveldomain "github.com/XManCodeing/XMall/internal/modules/memberlevel/domain"
 
-	mappingdomain "github.com/homles698698-lab/XMall/internal/modules/catalog/mapping/domain"
+	mappingdomain "github.com/XManCodeing/XMall/internal/modules/catalog/mapping/domain"
 
-	productdomain "github.com/homles698698-lab/XMall/internal/modules/catalog/product/domain"
+	productdomain "github.com/XManCodeing/XMall/internal/modules/catalog/product/domain"
 
-	categorydomain "github.com/homles698698-lab/XMall/internal/modules/catalog/category/domain"
+	categorydomain "github.com/XManCodeing/XMall/internal/modules/catalog/category/domain"
 
-	productgormstore "github.com/homles698698-lab/XMall/internal/modules/catalog/product/store/gormstore"
+	productgormstore "github.com/XManCodeing/XMall/internal/modules/catalog/product/store/gormstore"
 
+	catalogproductbootstrap "github.com/XManCodeing/XMall/internal/bootstrap/catalogproduct"
+	cartdomain "github.com/XManCodeing/XMall/internal/modules/cart/domain"
+	cartgormstore "github.com/XManCodeing/XMall/internal/modules/cart/infrastructure/gormstore"
+	categorygormstore "github.com/XManCodeing/XMall/internal/modules/catalog/category/infrastructure/gormstore"
+	mappinggormstore "github.com/XManCodeing/XMall/internal/modules/catalog/mapping/infrastructure/gormstore"
+	memberlevelgormstore "github.com/XManCodeing/XMall/internal/modules/memberlevel/infrastructure/gormstore"
 	"github.com/glebarez/sqlite"
-	catalogproductbootstrap "github.com/homles698698-lab/XMall/internal/bootstrap/catalogproduct"
-	cartdomain "github.com/homles698698-lab/XMall/internal/modules/cart/domain"
-	cartgormstore "github.com/homles698698-lab/XMall/internal/modules/cart/infrastructure/gormstore"
-	categorygormstore "github.com/homles698698-lab/XMall/internal/modules/catalog/category/infrastructure/gormstore"
-	mappinggormstore "github.com/homles698698-lab/XMall/internal/modules/catalog/mapping/infrastructure/gormstore"
-	memberlevelgormstore "github.com/homles698698-lab/XMall/internal/modules/memberlevel/infrastructure/gormstore"
 	"gorm.io/gorm"
 )
 

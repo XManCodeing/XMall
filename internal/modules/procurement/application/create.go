@@ -6,10 +6,10 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/homles698698-lab/XMall/internal/constants"
-	"github.com/homles698698-lab/XMall/internal/logger"
-	procurementcontract "github.com/homles698698-lab/XMall/internal/modules/procurement/contract"
-	procurementdomain "github.com/homles698698-lab/XMall/internal/modules/procurement/domain"
+	"github.com/XManCodeing/XMall/internal/constants"
+	"github.com/XManCodeing/XMall/internal/logger"
+	procurementcontract "github.com/XManCodeing/XMall/internal/modules/procurement/contract"
+	procurementdomain "github.com/XManCodeing/XMall/internal/modules/procurement/domain"
 
 	"github.com/google/uuid"
 )

@@ -4,10 +4,10 @@ import (
 	"context"
 	"strings"
 
-	"github.com/homles698698-lab/XMall/internal/constants"
-	"github.com/homles698698-lab/XMall/internal/modules/notification/application/format"
-	"github.com/homles698698-lab/XMall/internal/modules/notification/contract"
-	"github.com/homles698698-lab/XMall/internal/queue"
+	"github.com/XManCodeing/XMall/internal/constants"
+	"github.com/XManCodeing/XMall/internal/modules/notification/application/format"
+	"github.com/XManCodeing/XMall/internal/modules/notification/contract"
+	"github.com/XManCodeing/XMall/internal/queue"
 )
 
 // Service 通知中心服务。

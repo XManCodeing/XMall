@@ -3,8 +3,8 @@ package application
 import (
 	"errors"
 
-	productcontract "github.com/homles698698-lab/XMall/internal/modules/catalog/product/contract"
-	orderapp "github.com/homles698698-lab/XMall/internal/modules/order/application"
+	productcontract "github.com/XManCodeing/XMall/internal/modules/catalog/product/contract"
+	orderapp "github.com/XManCodeing/XMall/internal/modules/order/application"
 )
 
 var (

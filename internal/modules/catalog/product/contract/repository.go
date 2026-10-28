@@ -3,7 +3,7 @@ package productcontract
 import (
 	"time"
 
-	productdomain "github.com/homles698698-lab/XMall/internal/modules/catalog/product/domain"
+	productdomain "github.com/XManCodeing/XMall/internal/modules/catalog/product/domain"
 )
 
 // ListFilter 描述 Catalog 商品列表的持久化筛选条件。

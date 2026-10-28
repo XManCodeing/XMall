@@ -4,8 +4,8 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/homles698698-lab/XMall/internal/constants"
-	"github.com/homles698698-lab/XMall/internal/shared/jsonmap"
+	"github.com/XManCodeing/XMall/internal/constants"
+	"github.com/XManCodeing/XMall/internal/shared/jsonmap"
 )
 
 func TestDefaultSettingRegistryCoversLegacyNormalizedKeys(t *testing.T) {

@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"strings"
 
-	resellercontract "github.com/homles698698-lab/XMall/internal/modules/reseller/contract"
-	resellerdomain "github.com/homles698698-lab/XMall/internal/modules/reseller/domain"
+	resellercontract "github.com/XManCodeing/XMall/internal/modules/reseller/contract"
+	resellerdomain "github.com/XManCodeing/XMall/internal/modules/reseller/domain"
 	"gorm.io/gorm"
 )
 

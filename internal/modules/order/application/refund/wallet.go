@@ -5,16 +5,16 @@ import (
 	"strings"
 	"time"
 
-	orderapp "github.com/homles698698-lab/XMall/internal/modules/order/application"
+	orderapp "github.com/XManCodeing/XMall/internal/modules/order/application"
 
-	ordercontract "github.com/homles698698-lab/XMall/internal/modules/order/contract"
-	orderdomain "github.com/homles698698-lab/XMall/internal/modules/order/domain"
+	ordercontract "github.com/XManCodeing/XMall/internal/modules/order/contract"
+	orderdomain "github.com/XManCodeing/XMall/internal/modules/order/domain"
 
-	"github.com/homles698698-lab/XMall/internal/constants"
-	settingsapp "github.com/homles698698-lab/XMall/internal/modules/settings/application"
-	walletcontract "github.com/homles698698-lab/XMall/internal/modules/wallet/contract"
-	walletdomain "github.com/homles698698-lab/XMall/internal/modules/wallet/domain"
-	"github.com/homles698698-lab/XMall/internal/shared/money"
+	"github.com/XManCodeing/XMall/internal/constants"
+	settingsapp "github.com/XManCodeing/XMall/internal/modules/settings/application"
+	walletcontract "github.com/XManCodeing/XMall/internal/modules/wallet/contract"
+	walletdomain "github.com/XManCodeing/XMall/internal/modules/wallet/domain"
+	"github.com/XManCodeing/XMall/internal/shared/money"
 
 	"github.com/shopspring/decimal"
 )

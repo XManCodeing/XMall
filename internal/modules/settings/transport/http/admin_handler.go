@@ -4,12 +4,12 @@ import (
 	"errors"
 	"strings"
 
-	"github.com/homles698698-lab/XMall/internal/cache"
-	"github.com/homles698698-lab/XMall/internal/constants"
-	settingsapp "github.com/homles698698-lab/XMall/internal/modules/settings/application"
-	ginutil "github.com/homles698698-lab/XMall/internal/platform/http/ginutil"
-	"github.com/homles698698-lab/XMall/internal/platform/http/response"
-	"github.com/homles698698-lab/XMall/internal/shared/jsonmap"
+	"github.com/XManCodeing/XMall/internal/cache"
+	"github.com/XManCodeing/XMall/internal/constants"
+	settingsapp "github.com/XManCodeing/XMall/internal/modules/settings/application"
+	ginutil "github.com/XManCodeing/XMall/internal/platform/http/ginutil"
+	"github.com/XManCodeing/XMall/internal/platform/http/response"
+	"github.com/XManCodeing/XMall/internal/shared/jsonmap"
 
 	"github.com/gin-gonic/gin"
 )

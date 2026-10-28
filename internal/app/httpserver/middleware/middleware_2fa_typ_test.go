@@ -8,14 +8,14 @@ import (
 	"testing"
 	"time"
 
-	"github.com/homles698698-lab/XMall/internal/modules/identity/jwttoken"
-	usercontract "github.com/homles698698-lab/XMall/internal/modules/identity/user/contract"
-	userstore "github.com/homles698698-lab/XMall/internal/modules/identity/user/infrastructure/gormstore"
-	userauthapp "github.com/homles698698-lab/XMall/internal/modules/identity/userauth/application"
-	"github.com/homles698698-lab/XMall/internal/modules/identity/userauth/challenge"
-	resellercontract "github.com/homles698698-lab/XMall/internal/modules/reseller/contract"
+	"github.com/XManCodeing/XMall/internal/modules/identity/jwttoken"
+	usercontract "github.com/XManCodeing/XMall/internal/modules/identity/user/contract"
+	userstore "github.com/XManCodeing/XMall/internal/modules/identity/user/infrastructure/gormstore"
+	userauthapp "github.com/XManCodeing/XMall/internal/modules/identity/userauth/application"
+	"github.com/XManCodeing/XMall/internal/modules/identity/userauth/challenge"
+	resellercontract "github.com/XManCodeing/XMall/internal/modules/reseller/contract"
 
-	userdomain "github.com/homles698698-lab/XMall/internal/modules/identity/user/domain"
+	userdomain "github.com/XManCodeing/XMall/internal/modules/identity/user/domain"
 
 	"github.com/gin-gonic/gin"
 	"github.com/glebarez/sqlite"

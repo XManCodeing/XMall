@@ -7,12 +7,12 @@ import (
 	"strings"
 	"time"
 
-	paymentcontract "github.com/homles698698-lab/XMall/internal/modules/payment/contract"
+	paymentcontract "github.com/XManCodeing/XMall/internal/modules/payment/contract"
 
-	"github.com/homles698698-lab/XMall/internal/constants"
-	"github.com/homles698698-lab/XMall/internal/modules/payment/infrastructure/gateway/wechatpay"
-	"github.com/homles698698-lab/XMall/internal/shared/jsonmap"
-	"github.com/homles698698-lab/XMall/internal/shared/money"
+	"github.com/XManCodeing/XMall/internal/constants"
+	"github.com/XManCodeing/XMall/internal/modules/payment/infrastructure/gateway/wechatpay"
+	"github.com/XManCodeing/XMall/internal/shared/jsonmap"
+	"github.com/XManCodeing/XMall/internal/shared/money"
 
 	"github.com/shopspring/decimal"
 )

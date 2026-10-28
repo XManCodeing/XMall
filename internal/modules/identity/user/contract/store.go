@@ -3,7 +3,7 @@ package usercontract
 import (
 	"time"
 
-	userdomain "github.com/homles698698-lab/XMall/internal/modules/identity/user/domain"
+	userdomain "github.com/XManCodeing/XMall/internal/modules/identity/user/domain"
 )
 
 // ListFilter describes the administration user-directory query.

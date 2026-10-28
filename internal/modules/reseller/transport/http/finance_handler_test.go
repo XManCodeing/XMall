@@ -7,14 +7,14 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	resellerdomain "github.com/homles698698-lab/XMall/internal/modules/reseller/domain"
+	resellerdomain "github.com/XManCodeing/XMall/internal/modules/reseller/domain"
 
-	productcontract "github.com/homles698698-lab/XMall/internal/modules/catalog/product/contract"
+	productcontract "github.com/XManCodeing/XMall/internal/modules/catalog/product/contract"
 
-	resellermodule "github.com/homles698698-lab/XMall/internal/modules/reseller/contract"
-	adminhttp "github.com/homles698698-lab/XMall/internal/modules/reseller/transport/http/admin"
-	userhttp "github.com/homles698698-lab/XMall/internal/modules/reseller/transport/http/user"
-	"github.com/homles698698-lab/XMall/internal/platform/http/response"
+	resellermodule "github.com/XManCodeing/XMall/internal/modules/reseller/contract"
+	adminhttp "github.com/XManCodeing/XMall/internal/modules/reseller/transport/http/admin"
+	userhttp "github.com/XManCodeing/XMall/internal/modules/reseller/transport/http/user"
+	"github.com/XManCodeing/XMall/internal/platform/http/response"
 
 	"github.com/gin-gonic/gin"
 )

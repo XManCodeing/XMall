@@ -3,8 +3,8 @@ package broadcastdomain
 import (
 	"time"
 
-	"github.com/homles698698-lab/XMall/internal/shared/jsonmap"
-	"github.com/homles698698-lab/XMall/internal/shared/jsonslice"
+	"github.com/XManCodeing/XMall/internal/shared/jsonmap"
+	"github.com/XManCodeing/XMall/internal/shared/jsonslice"
 )
 
 // Broadcast is a persisted Telegram broadcast job.

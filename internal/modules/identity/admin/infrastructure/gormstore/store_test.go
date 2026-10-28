@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	admindomain "github.com/homles698698-lab/XMall/internal/modules/identity/admin/domain"
+	admindomain "github.com/XManCodeing/XMall/internal/modules/identity/admin/domain"
 
 	"github.com/glebarez/sqlite"
 	"gorm.io/gorm"

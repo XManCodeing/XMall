@@ -8,8 +8,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/homles698698-lab/XMall/internal/modules/sitemap/contract"
-	"github.com/homles698698-lab/XMall/internal/modules/sitemap/domain"
+	"github.com/XManCodeing/XMall/internal/modules/sitemap/contract"
+	"github.com/XManCodeing/XMall/internal/modules/sitemap/domain"
 )
 
 // Service 生成 sitemap.xml / robots.txt 内容。

@@ -4,8 +4,8 @@ import (
 	"context"
 	"time"
 
-	"github.com/homles698698-lab/XMall/internal/cache"
-	"github.com/homles698698-lab/XMall/internal/modules/sitemap/contract"
+	"github.com/XManCodeing/XMall/internal/cache"
+	"github.com/XManCodeing/XMall/internal/modules/sitemap/contract"
 )
 
 // Cache 将共享缓存能力适配为 Sitemap 应用端口。

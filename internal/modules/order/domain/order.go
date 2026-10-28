@@ -3,8 +3,8 @@ package domain
 import (
 	"time"
 
-	fulfillmentdomain "github.com/homles698698-lab/XMall/internal/modules/fulfillment/domain"
-	"github.com/homles698698-lab/XMall/internal/shared/money"
+	fulfillmentdomain "github.com/XManCodeing/XMall/internal/modules/fulfillment/domain"
+	"github.com/XManCodeing/XMall/internal/shared/money"
 )
 
 // Order 订单表

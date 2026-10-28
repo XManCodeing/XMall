@@ -5,16 +5,16 @@ import (
 	"errors"
 	"strings"
 
-	paymentdomain "github.com/homles698698-lab/XMall/internal/modules/payment/domain"
-	walletdomain "github.com/homles698698-lab/XMall/internal/modules/wallet/domain"
+	paymentdomain "github.com/XManCodeing/XMall/internal/modules/payment/domain"
+	walletdomain "github.com/XManCodeing/XMall/internal/modules/wallet/domain"
 
-	userdomain "github.com/homles698698-lab/XMall/internal/modules/identity/user/domain"
+	userdomain "github.com/XManCodeing/XMall/internal/modules/identity/user/domain"
 
-	"github.com/homles698698-lab/XMall/internal/constants"
-	walletpresenter "github.com/homles698698-lab/XMall/internal/modules/wallet/transport/presenter"
-	"github.com/homles698698-lab/XMall/internal/platform/http/ginutil"
-	"github.com/homles698698-lab/XMall/internal/platform/http/response"
-	"github.com/homles698698-lab/XMall/internal/shared/money"
+	"github.com/XManCodeing/XMall/internal/constants"
+	walletpresenter "github.com/XManCodeing/XMall/internal/modules/wallet/transport/presenter"
+	"github.com/XManCodeing/XMall/internal/platform/http/ginutil"
+	"github.com/XManCodeing/XMall/internal/platform/http/response"
+	"github.com/XManCodeing/XMall/internal/shared/money"
 
 	"github.com/gin-gonic/gin"
 	"github.com/shopspring/decimal"

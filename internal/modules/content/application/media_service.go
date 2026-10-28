@@ -12,8 +12,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/homles698698-lab/XMall/internal/modules/content/contract"
-	"github.com/homles698698-lab/XMall/internal/modules/content/domain"
+	"github.com/XManCodeing/XMall/internal/modules/content/contract"
+	"github.com/XManCodeing/XMall/internal/modules/content/domain"
 )
 
 // UploadResult 是 Media 用例记录上传元数据所需的最小输入。

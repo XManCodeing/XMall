@@ -6,18 +6,18 @@ import (
 	"testing"
 	"time"
 
-	procurementdomain "github.com/homles698698-lab/XMall/internal/modules/procurement/domain"
-	"github.com/homles698698-lab/XMall/internal/modules/reconciliation/infrastructure/procurementreader"
-	"github.com/homles698698-lab/XMall/internal/shared/money"
+	procurementdomain "github.com/XManCodeing/XMall/internal/modules/procurement/domain"
+	"github.com/XManCodeing/XMall/internal/modules/reconciliation/infrastructure/procurementreader"
+	"github.com/XManCodeing/XMall/internal/shared/money"
 	"github.com/shopspring/decimal"
 
+	reconciliationcontract "github.com/XManCodeing/XMall/internal/modules/reconciliation/contract"
+	reconciliationdomain "github.com/XManCodeing/XMall/internal/modules/reconciliation/domain"
+	"github.com/XManCodeing/XMall/internal/modules/reconciliation/infrastructure/gormstore"
+	"github.com/XManCodeing/XMall/internal/modules/reconciliation/infrastructure/upstreamreader"
+	siteconnectiondomain "github.com/XManCodeing/XMall/internal/modules/siteconnection/domain"
+	"github.com/XManCodeing/XMall/internal/upstream"
 	"github.com/glebarez/sqlite"
-	reconciliationcontract "github.com/homles698698-lab/XMall/internal/modules/reconciliation/contract"
-	reconciliationdomain "github.com/homles698698-lab/XMall/internal/modules/reconciliation/domain"
-	"github.com/homles698698-lab/XMall/internal/modules/reconciliation/infrastructure/gormstore"
-	"github.com/homles698698-lab/XMall/internal/modules/reconciliation/infrastructure/upstreamreader"
-	siteconnectiondomain "github.com/homles698698-lab/XMall/internal/modules/siteconnection/domain"
-	"github.com/homles698698-lab/XMall/internal/upstream"
 	"gorm.io/gorm"
 )
 

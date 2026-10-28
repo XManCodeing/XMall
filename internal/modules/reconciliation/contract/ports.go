@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	reconciliationdomain "github.com/homles698698-lab/XMall/internal/modules/reconciliation/domain"
+	reconciliationdomain "github.com/XManCodeing/XMall/internal/modules/reconciliation/domain"
 )
 
 type JobRepository interface {

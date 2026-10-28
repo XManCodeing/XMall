@@ -4,10 +4,10 @@ import (
 	"context"
 	"testing"
 
-	paymentdomain "github.com/homles698698-lab/XMall/internal/modules/payment/domain"
+	paymentdomain "github.com/XManCodeing/XMall/internal/modules/payment/domain"
 
-	resellercontract "github.com/homles698698-lab/XMall/internal/modules/reseller/contract"
-	"github.com/homles698698-lab/XMall/internal/shared/jsonmap"
+	resellercontract "github.com/XManCodeing/XMall/internal/modules/reseller/contract"
+	"github.com/XManCodeing/XMall/internal/shared/jsonmap"
 )
 
 func TestResolveTenantReturnURLMainTenantKeepsConfigFallback(t *testing.T) {

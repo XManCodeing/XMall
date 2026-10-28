@@ -5,12 +5,12 @@ import (
 	"testing"
 	"time"
 
-	walletdomain "github.com/homles698698-lab/XMall/internal/modules/wallet/domain"
+	walletdomain "github.com/XManCodeing/XMall/internal/modules/wallet/domain"
 
+	usercontract "github.com/XManCodeing/XMall/internal/modules/identity/user/contract"
+	userdomain "github.com/XManCodeing/XMall/internal/modules/identity/user/domain"
+	"github.com/XManCodeing/XMall/internal/shared/money"
 	"github.com/glebarez/sqlite"
-	usercontract "github.com/homles698698-lab/XMall/internal/modules/identity/user/contract"
-	userdomain "github.com/homles698698-lab/XMall/internal/modules/identity/user/domain"
-	"github.com/homles698698-lab/XMall/internal/shared/money"
 	"github.com/shopspring/decimal"
 	"gorm.io/gorm"
 )

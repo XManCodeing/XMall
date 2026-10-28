@@ -4,10 +4,10 @@ import (
 	"strings"
 	"time"
 
-	resellermodule "github.com/homles698698-lab/XMall/internal/modules/reseller/contract"
-	dto "github.com/homles698698-lab/XMall/internal/modules/reseller/transport/http/presenter"
-	"github.com/homles698698-lab/XMall/internal/platform/http/ginutil"
-	"github.com/homles698698-lab/XMall/internal/platform/http/response"
+	resellermodule "github.com/XManCodeing/XMall/internal/modules/reseller/contract"
+	dto "github.com/XManCodeing/XMall/internal/modules/reseller/transport/http/presenter"
+	"github.com/XManCodeing/XMall/internal/platform/http/ginutil"
+	"github.com/XManCodeing/XMall/internal/platform/http/response"
 
 	"github.com/gin-gonic/gin"
 )

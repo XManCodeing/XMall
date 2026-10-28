@@ -7,14 +7,14 @@ import (
 	"strings"
 	"time"
 
-	userdomain "github.com/homles698698-lab/XMall/internal/modules/identity/user/domain"
+	userdomain "github.com/XManCodeing/XMall/internal/modules/identity/user/domain"
 
-	giftcardapp "github.com/homles698698-lab/XMall/internal/modules/giftcard/application"
-	giftcardcontract "github.com/homles698698-lab/XMall/internal/modules/giftcard/contract"
-	giftcarddomain "github.com/homles698698-lab/XMall/internal/modules/giftcard/domain"
-	"github.com/homles698698-lab/XMall/internal/platform/http/ginutil"
-	"github.com/homles698698-lab/XMall/internal/platform/http/response"
-	"github.com/homles698698-lab/XMall/internal/shared/money"
+	giftcardapp "github.com/XManCodeing/XMall/internal/modules/giftcard/application"
+	giftcardcontract "github.com/XManCodeing/XMall/internal/modules/giftcard/contract"
+	giftcarddomain "github.com/XManCodeing/XMall/internal/modules/giftcard/domain"
+	"github.com/XManCodeing/XMall/internal/platform/http/ginutil"
+	"github.com/XManCodeing/XMall/internal/platform/http/response"
+	"github.com/XManCodeing/XMall/internal/shared/money"
 
 	"github.com/gin-gonic/gin"
 	"github.com/shopspring/decimal"

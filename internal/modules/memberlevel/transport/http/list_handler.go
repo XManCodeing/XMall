@@ -4,12 +4,12 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/homles698698-lab/XMall/internal/i18n"
-	memberleveldomain "github.com/homles698698-lab/XMall/internal/modules/memberlevel/domain"
-	memberlevelpresenter "github.com/homles698698-lab/XMall/internal/modules/memberlevel/transport/presenter"
-	"github.com/homles698698-lab/XMall/internal/platform/http/ginutil"
-	"github.com/homles698698-lab/XMall/internal/platform/http/response"
-	"github.com/homles698698-lab/XMall/internal/shared/jsonmap"
+	"github.com/XManCodeing/XMall/internal/i18n"
+	memberleveldomain "github.com/XManCodeing/XMall/internal/modules/memberlevel/domain"
+	memberlevelpresenter "github.com/XManCodeing/XMall/internal/modules/memberlevel/transport/presenter"
+	"github.com/XManCodeing/XMall/internal/platform/http/ginutil"
+	"github.com/XManCodeing/XMall/internal/platform/http/response"
+	"github.com/XManCodeing/XMall/internal/shared/jsonmap"
 
 	"github.com/gin-gonic/gin"
 )

@@ -3,7 +3,7 @@ package application
 import (
 	"time"
 
-	cardsecretdomain "github.com/homles698698-lab/XMall/internal/modules/cardsecret/domain"
+	cardsecretdomain "github.com/XManCodeing/XMall/internal/modules/cardsecret/domain"
 )
 
 // CardSecretStats 卡密统计

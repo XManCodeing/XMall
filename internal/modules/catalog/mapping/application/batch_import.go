@@ -4,18 +4,18 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/homles698698-lab/XMall/internal/cache"
+	"github.com/XManCodeing/XMall/internal/cache"
 	"time"
 
-	mappingcontract "github.com/homles698698-lab/XMall/internal/modules/catalog/mapping/contract"
-	mappingdomain "github.com/homles698698-lab/XMall/internal/modules/catalog/mapping/domain"
-	siteconnectioncontract "github.com/homles698698-lab/XMall/internal/modules/siteconnection/contract"
+	mappingcontract "github.com/XManCodeing/XMall/internal/modules/catalog/mapping/contract"
+	mappingdomain "github.com/XManCodeing/XMall/internal/modules/catalog/mapping/domain"
+	siteconnectioncontract "github.com/XManCodeing/XMall/internal/modules/siteconnection/contract"
 
-	categoryapp "github.com/homles698698-lab/XMall/internal/modules/catalog/category/application"
-	categorydomain "github.com/homles698698-lab/XMall/internal/modules/catalog/category/domain"
+	categoryapp "github.com/XManCodeing/XMall/internal/modules/catalog/category/application"
+	categorydomain "github.com/XManCodeing/XMall/internal/modules/catalog/category/domain"
 
-	"github.com/homles698698-lab/XMall/internal/shared/jsonmap"
-	"github.com/homles698698-lab/XMall/internal/upstream"
+	"github.com/XManCodeing/XMall/internal/shared/jsonmap"
+	"github.com/XManCodeing/XMall/internal/upstream"
 )
 
 // acquireBatchImportLock 同一连接同时只允许一个批量导入：大批量导入常超过 HTTP 超时，

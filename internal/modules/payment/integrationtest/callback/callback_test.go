@@ -11,29 +11,29 @@ import (
 	"testing"
 	"time"
 
-	okpayadapter "github.com/homles698698-lab/XMall/internal/modules/payment/infrastructure/gateway/adapters/okpay"
+	okpayadapter "github.com/XManCodeing/XMall/internal/modules/payment/infrastructure/gateway/adapters/okpay"
 
-	paymentapp "github.com/homles698698-lab/XMall/internal/modules/payment/application"
-	paymentcontract "github.com/homles698698-lab/XMall/internal/modules/payment/contract"
-	paymentgormstore "github.com/homles698698-lab/XMall/internal/modules/payment/infrastructure/gormstore"
+	paymentapp "github.com/XManCodeing/XMall/internal/modules/payment/application"
+	paymentcontract "github.com/XManCodeing/XMall/internal/modules/payment/contract"
+	paymentgormstore "github.com/XManCodeing/XMall/internal/modules/payment/infrastructure/gormstore"
 
-	paymentdomain "github.com/homles698698-lab/XMall/internal/modules/payment/domain"
+	paymentdomain "github.com/XManCodeing/XMall/internal/modules/payment/domain"
 
-	fulfillmentdomain "github.com/homles698698-lab/XMall/internal/modules/fulfillment/domain"
-	ordercontract "github.com/homles698698-lab/XMall/internal/modules/order/contract"
-	orderdomain "github.com/homles698698-lab/XMall/internal/modules/order/domain"
-	ordergormstore "github.com/homles698698-lab/XMall/internal/modules/order/infrastructure/gormstore"
+	fulfillmentdomain "github.com/XManCodeing/XMall/internal/modules/fulfillment/domain"
+	ordercontract "github.com/XManCodeing/XMall/internal/modules/order/contract"
+	orderdomain "github.com/XManCodeing/XMall/internal/modules/order/domain"
+	ordergormstore "github.com/XManCodeing/XMall/internal/modules/order/infrastructure/gormstore"
 
-	productdomain "github.com/homles698698-lab/XMall/internal/modules/catalog/product/domain"
-	productgormstore "github.com/homles698698-lab/XMall/internal/modules/catalog/product/store/gormstore"
+	productdomain "github.com/XManCodeing/XMall/internal/modules/catalog/product/domain"
+	productgormstore "github.com/XManCodeing/XMall/internal/modules/catalog/product/store/gormstore"
 
-	userdomain "github.com/homles698698-lab/XMall/internal/modules/identity/user/domain"
+	userdomain "github.com/XManCodeing/XMall/internal/modules/identity/user/domain"
 
-	"github.com/homles698698-lab/XMall/internal/constants"
-	paymentprovider "github.com/homles698698-lab/XMall/internal/modules/payment/infrastructure/gateway/provider"
-	paymentcallback "github.com/homles698698-lab/XMall/internal/modules/payment/transport/http/callback"
-	"github.com/homles698698-lab/XMall/internal/shared/jsonmap"
-	"github.com/homles698698-lab/XMall/internal/shared/money"
+	"github.com/XManCodeing/XMall/internal/constants"
+	paymentprovider "github.com/XManCodeing/XMall/internal/modules/payment/infrastructure/gateway/provider"
+	paymentcallback "github.com/XManCodeing/XMall/internal/modules/payment/transport/http/callback"
+	"github.com/XManCodeing/XMall/internal/shared/jsonmap"
+	"github.com/XManCodeing/XMall/internal/shared/money"
 
 	"github.com/gin-gonic/gin"
 	"github.com/glebarez/sqlite"

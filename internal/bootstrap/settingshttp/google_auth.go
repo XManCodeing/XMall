@@ -1,9 +1,9 @@
 package settingsbootstrap
 
 import (
-	"github.com/homles698698-lab/XMall/internal/config"
-	settingsapp "github.com/homles698698-lab/XMall/internal/modules/settings/application"
-	settingssecurity "github.com/homles698698-lab/XMall/internal/modules/settings/schema/security"
+	"github.com/XManCodeing/XMall/internal/config"
+	settingsapp "github.com/XManCodeing/XMall/internal/modules/settings/application"
+	settingssecurity "github.com/XManCodeing/XMall/internal/modules/settings/schema/security"
 )
 
 type googleAuthRuntime interface {

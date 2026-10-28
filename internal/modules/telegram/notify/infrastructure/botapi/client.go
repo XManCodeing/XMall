@@ -15,7 +15,7 @@ import (
 	"strings"
 	"time"
 
-	notifycontract "github.com/homles698698-lab/XMall/internal/modules/telegram/notify/contract"
+	notifycontract "github.com/XManCodeing/XMall/internal/modules/telegram/notify/contract"
 )
 
 type telegramSendMessageResponse struct {

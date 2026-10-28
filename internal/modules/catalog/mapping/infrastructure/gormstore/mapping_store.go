@@ -4,9 +4,9 @@ import (
 	"errors"
 	"time"
 
-	mappingcontract "github.com/homles698698-lab/XMall/internal/modules/catalog/mapping/contract"
-	mappingdomain "github.com/homles698698-lab/XMall/internal/modules/catalog/mapping/domain"
-	"github.com/homles698698-lab/XMall/internal/persistence/gormutil"
+	mappingcontract "github.com/XManCodeing/XMall/internal/modules/catalog/mapping/contract"
+	mappingdomain "github.com/XManCodeing/XMall/internal/modules/catalog/mapping/domain"
+	"github.com/XManCodeing/XMall/internal/persistence/gormutil"
 
 	"gorm.io/gorm"
 )

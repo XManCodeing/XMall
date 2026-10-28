@@ -3,12 +3,12 @@ package producthttp
 import (
 	"strings"
 
-	mappingdomain "github.com/homles698698-lab/XMall/internal/modules/catalog/mapping/domain"
+	mappingdomain "github.com/XManCodeing/XMall/internal/modules/catalog/mapping/domain"
 
-	productdomain "github.com/homles698698-lab/XMall/internal/modules/catalog/product/domain"
+	productdomain "github.com/XManCodeing/XMall/internal/modules/catalog/product/domain"
 
-	"github.com/homles698698-lab/XMall/internal/constants"
-	domaincatalog "github.com/homles698698-lab/XMall/internal/modules/catalog"
+	"github.com/XManCodeing/XMall/internal/constants"
+	domaincatalog "github.com/XManCodeing/XMall/internal/modules/catalog"
 )
 
 func (h *PublicHandler) decorateProductStock(product *productdomain.Product, item *publicProductView) {

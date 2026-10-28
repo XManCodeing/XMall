@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"time"
 
-	orderdomain "github.com/homles698698-lab/XMall/internal/modules/order/domain"
+	orderdomain "github.com/XManCodeing/XMall/internal/modules/order/domain"
 
-	dashboard "github.com/homles698698-lab/XMall/internal/modules/dashboard/contract"
+	dashboard "github.com/XManCodeing/XMall/internal/modules/dashboard/contract"
 )
 
 // GetTopProducts 获取商品排行榜

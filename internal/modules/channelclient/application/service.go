@@ -7,10 +7,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/homles698698-lab/XMall/internal/crypto"
-	channelclientcontract "github.com/homles698698-lab/XMall/internal/modules/channelclient/contract"
-	channelclientdomain "github.com/homles698698-lab/XMall/internal/modules/channelclient/domain"
-	"github.com/homles698698-lab/XMall/internal/upstream"
+	"github.com/XManCodeing/XMall/internal/crypto"
+	channelclientcontract "github.com/XManCodeing/XMall/internal/modules/channelclient/contract"
+	channelclientdomain "github.com/XManCodeing/XMall/internal/modules/channelclient/domain"
+	"github.com/XManCodeing/XMall/internal/upstream"
 )
 
 // Service 渠道客户端业务服务。

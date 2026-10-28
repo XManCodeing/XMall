@@ -3,12 +3,12 @@ package settingsapp
 import (
 	"time"
 
-	"github.com/homles698698-lab/XMall/internal/config"
-	"github.com/homles698698-lab/XMall/internal/constants"
-	settingsintegration "github.com/homles698698-lab/XMall/internal/modules/settings/schema/integration"
-	settingsmessaging "github.com/homles698698-lab/XMall/internal/modules/settings/schema/messaging"
-	settingssecurity "github.com/homles698698-lab/XMall/internal/modules/settings/schema/security"
-	settingsstorefront "github.com/homles698698-lab/XMall/internal/modules/settings/schema/storefront"
+	"github.com/XManCodeing/XMall/internal/config"
+	"github.com/XManCodeing/XMall/internal/constants"
+	settingsintegration "github.com/XManCodeing/XMall/internal/modules/settings/schema/integration"
+	settingsmessaging "github.com/XManCodeing/XMall/internal/modules/settings/schema/messaging"
+	settingssecurity "github.com/XManCodeing/XMall/internal/modules/settings/schema/security"
+	settingsstorefront "github.com/XManCodeing/XMall/internal/modules/settings/schema/storefront"
 )
 
 // GetDashboardSetting 获取仪表盘设置（优先 settings，空时回退默认）。

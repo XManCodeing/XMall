@@ -3,7 +3,7 @@ package contract
 import (
 	"time"
 
-	ordercontract "github.com/homles698698-lab/XMall/internal/modules/order/contract"
+	ordercontract "github.com/XManCodeing/XMall/internal/modules/order/contract"
 )
 
 const (

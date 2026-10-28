@@ -3,7 +3,7 @@ package telegramauthapp
 import (
 	"errors"
 
-	settingssecurity "github.com/homles698698-lab/XMall/internal/modules/settings/schema/security"
+	settingssecurity "github.com/XManCodeing/XMall/internal/modules/settings/schema/security"
 )
 
 var (

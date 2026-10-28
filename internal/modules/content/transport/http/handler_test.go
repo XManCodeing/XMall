@@ -6,10 +6,10 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	contentapp "github.com/XManCodeing/XMall/internal/modules/content/application"
+	contentcontract "github.com/XManCodeing/XMall/internal/modules/content/contract"
+	contentdomain "github.com/XManCodeing/XMall/internal/modules/content/domain"
 	"github.com/gin-gonic/gin"
-	contentapp "github.com/homles698698-lab/XMall/internal/modules/content/application"
-	contentcontract "github.com/homles698698-lab/XMall/internal/modules/content/contract"
-	contentdomain "github.com/homles698698-lab/XMall/internal/modules/content/domain"
 )
 
 type requestContextKey struct{}

@@ -4,11 +4,11 @@ import (
 	"context"
 	"errors"
 
-	jobconsumer "github.com/homles698698-lab/XMall/internal/app/jobs/consumer"
-	"github.com/homles698698-lab/XMall/internal/config"
-	"github.com/homles698698-lab/XMall/internal/logger"
-	settingsintegration "github.com/homles698698-lab/XMall/internal/modules/settings/schema/integration"
-	"github.com/homles698698-lab/XMall/internal/queue"
+	jobconsumer "github.com/XManCodeing/XMall/internal/app/jobs/consumer"
+	"github.com/XManCodeing/XMall/internal/config"
+	"github.com/XManCodeing/XMall/internal/logger"
+	settingsintegration "github.com/XManCodeing/XMall/internal/modules/settings/schema/integration"
+	"github.com/XManCodeing/XMall/internal/queue"
 
 	"github.com/hibiken/asynq"
 )

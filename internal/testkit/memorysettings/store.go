@@ -2,7 +2,7 @@
 // persistence contract for tests outside the settings bounded context.
 package memorysettings
 
-import "github.com/homles698698-lab/XMall/internal/shared/jsonmap"
+import "github.com/XManCodeing/XMall/internal/shared/jsonmap"
 
 // Store keeps settings values in memory.
 type Store struct {

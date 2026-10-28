@@ -7,14 +7,14 @@ import (
 	"strings"
 	"time"
 
-	gatewaycommon "github.com/homles698698-lab/XMall/internal/modules/payment/infrastructure/gateway/common"
+	gatewaycommon "github.com/XManCodeing/XMall/internal/modules/payment/infrastructure/gateway/common"
 
-	paymentcontract "github.com/homles698698-lab/XMall/internal/modules/payment/contract"
+	paymentcontract "github.com/XManCodeing/XMall/internal/modules/payment/contract"
 
-	"github.com/homles698698-lab/XMall/internal/constants"
-	"github.com/homles698698-lab/XMall/internal/modules/payment/infrastructure/gateway/alipay"
-	"github.com/homles698698-lab/XMall/internal/shared/jsonmap"
-	"github.com/homles698698-lab/XMall/internal/shared/money"
+	"github.com/XManCodeing/XMall/internal/constants"
+	"github.com/XManCodeing/XMall/internal/modules/payment/infrastructure/gateway/alipay"
+	"github.com/XManCodeing/XMall/internal/shared/jsonmap"
+	"github.com/XManCodeing/XMall/internal/shared/money"
 
 	"github.com/shopspring/decimal"
 )

@@ -1,9 +1,9 @@
 package application
 
 import (
-	"github.com/homles698698-lab/XMall/internal/constants"
-	walletcontract "github.com/homles698698-lab/XMall/internal/modules/wallet/contract"
-	walletdomain "github.com/homles698698-lab/XMall/internal/modules/wallet/domain"
+	"github.com/XManCodeing/XMall/internal/constants"
+	walletcontract "github.com/XManCodeing/XMall/internal/modules/wallet/contract"
+	walletdomain "github.com/XManCodeing/XMall/internal/modules/wallet/domain"
 
 	"github.com/shopspring/decimal"
 )

@@ -1,10 +1,10 @@
 package settingsbootstrap
 
 import (
-	"github.com/homles698698-lab/XMall/internal/config"
-	telegramauthapp "github.com/homles698698-lab/XMall/internal/modules/identity/telegramauth/application"
-	settingsapp "github.com/homles698698-lab/XMall/internal/modules/settings/application"
-	settingssecurity "github.com/homles698698-lab/XMall/internal/modules/settings/schema/security"
+	"github.com/XManCodeing/XMall/internal/config"
+	telegramauthapp "github.com/XManCodeing/XMall/internal/modules/identity/telegramauth/application"
+	settingsapp "github.com/XManCodeing/XMall/internal/modules/settings/application"
+	settingssecurity "github.com/XManCodeing/XMall/internal/modules/settings/schema/security"
 )
 
 type settingsTelegramAuthAdapter struct {

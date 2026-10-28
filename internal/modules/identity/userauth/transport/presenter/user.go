@@ -3,10 +3,10 @@ package presenter
 import (
 	"time"
 
-	userdomain "github.com/homles698698-lab/XMall/internal/modules/identity/user/domain"
+	userdomain "github.com/XManCodeing/XMall/internal/modules/identity/user/domain"
 
-	externalidentitydomain "github.com/homles698698-lab/XMall/internal/modules/identity/externalidentity/domain"
-	"github.com/homles698698-lab/XMall/internal/shared/money"
+	externalidentitydomain "github.com/XManCodeing/XMall/internal/modules/identity/externalidentity/domain"
+	"github.com/XManCodeing/XMall/internal/shared/money"
 )
 
 // UserProfileResp 用户资料响应

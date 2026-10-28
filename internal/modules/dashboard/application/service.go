@@ -7,11 +7,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/homles698698-lab/XMall/internal/cache"
-	dashboardcontract "github.com/homles698698-lab/XMall/internal/modules/dashboard/contract"
-	reportingapp "github.com/homles698698-lab/XMall/internal/modules/reporting/application"
-	reportingdomain "github.com/homles698698-lab/XMall/internal/modules/reporting/domain"
-	settingsstorefront "github.com/homles698698-lab/XMall/internal/modules/settings/schema/storefront"
+	"github.com/XManCodeing/XMall/internal/cache"
+	dashboardcontract "github.com/XManCodeing/XMall/internal/modules/dashboard/contract"
+	reportingapp "github.com/XManCodeing/XMall/internal/modules/reporting/application"
+	reportingdomain "github.com/XManCodeing/XMall/internal/modules/reporting/domain"
+	settingsstorefront "github.com/XManCodeing/XMall/internal/modules/settings/schema/storefront"
 )
 
 const dashboardCacheTTL = 45 * time.Second

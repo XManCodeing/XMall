@@ -7,19 +7,19 @@ import (
 	"strings"
 	"time"
 
-	fulfillmentcontract "github.com/homles698698-lab/XMall/internal/modules/fulfillment/contract"
-	fulfillmentdomain "github.com/homles698698-lab/XMall/internal/modules/fulfillment/domain"
-	externalidentitycontract "github.com/homles698698-lab/XMall/internal/modules/identity/externalidentity/contract"
-	orderapp "github.com/homles698698-lab/XMall/internal/modules/order/application"
-	ordercontract "github.com/homles698698-lab/XMall/internal/modules/order/contract"
-	orderdomain "github.com/homles698698-lab/XMall/internal/modules/order/domain"
-	settingsapp "github.com/homles698698-lab/XMall/internal/modules/settings/application"
+	fulfillmentcontract "github.com/XManCodeing/XMall/internal/modules/fulfillment/contract"
+	fulfillmentdomain "github.com/XManCodeing/XMall/internal/modules/fulfillment/domain"
+	externalidentitycontract "github.com/XManCodeing/XMall/internal/modules/identity/externalidentity/contract"
+	orderapp "github.com/XManCodeing/XMall/internal/modules/order/application"
+	ordercontract "github.com/XManCodeing/XMall/internal/modules/order/contract"
+	orderdomain "github.com/XManCodeing/XMall/internal/modules/order/domain"
+	settingsapp "github.com/XManCodeing/XMall/internal/modules/settings/application"
 
-	"github.com/homles698698-lab/XMall/internal/config"
-	"github.com/homles698698-lab/XMall/internal/constants"
-	"github.com/homles698698-lab/XMall/internal/logger"
-	cardsecretdomain "github.com/homles698698-lab/XMall/internal/modules/cardsecret/domain"
-	"github.com/homles698698-lab/XMall/internal/shared/jsonmap"
+	"github.com/XManCodeing/XMall/internal/config"
+	"github.com/XManCodeing/XMall/internal/constants"
+	"github.com/XManCodeing/XMall/internal/logger"
+	cardsecretdomain "github.com/XManCodeing/XMall/internal/modules/cardsecret/domain"
+	"github.com/XManCodeing/XMall/internal/shared/jsonmap"
 )
 
 // Service 编排人工交付与自动交付。

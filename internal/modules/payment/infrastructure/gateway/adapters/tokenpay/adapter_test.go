@@ -5,11 +5,11 @@ import (
 	"errors"
 	"testing"
 
-	paymentcontract "github.com/homles698698-lab/XMall/internal/modules/payment/contract"
-	"github.com/homles698698-lab/XMall/internal/modules/payment/infrastructure/gateway/tokenpay"
+	paymentcontract "github.com/XManCodeing/XMall/internal/modules/payment/contract"
+	"github.com/XManCodeing/XMall/internal/modules/payment/infrastructure/gateway/tokenpay"
 
-	"github.com/homles698698-lab/XMall/internal/constants"
-	"github.com/homles698698-lab/XMall/internal/shared/jsonmap"
+	"github.com/XManCodeing/XMall/internal/constants"
+	"github.com/XManCodeing/XMall/internal/shared/jsonmap"
 )
 
 func TestTokenpayAdapter_Type(t *testing.T) {

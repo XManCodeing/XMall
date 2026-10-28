@@ -4,8 +4,8 @@ import (
 	"os"
 	"time"
 
-	"github.com/homles698698-lab/XMall/internal/config"
-	"github.com/homles698698-lab/XMall/internal/logger"
+	"github.com/XManCodeing/XMall/internal/config"
+	"github.com/XManCodeing/XMall/internal/logger"
 
 	"go.uber.org/zap"
 )

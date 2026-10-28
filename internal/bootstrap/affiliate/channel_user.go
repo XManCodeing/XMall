@@ -1,8 +1,8 @@
 package affiliatebootstrap
 
 import (
-	affiliatetransport "github.com/homles698698-lab/XMall/internal/modules/affiliate/transport/http"
-	userauthapp "github.com/homles698698-lab/XMall/internal/modules/identity/userauth/application"
+	affiliatetransport "github.com/XManCodeing/XMall/internal/modules/affiliate/transport/http"
+	userauthapp "github.com/XManCodeing/XMall/internal/modules/identity/userauth/application"
 )
 
 // affiliateChannelUserAdapter 连接身份模块与 Affiliate 渠道 transport。

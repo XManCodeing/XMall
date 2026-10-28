@@ -4,13 +4,13 @@ import (
 	"fmt"
 	"strings"
 
-	paymentdomain "github.com/homles698698-lab/XMall/internal/modules/payment/domain"
+	paymentdomain "github.com/XManCodeing/XMall/internal/modules/payment/domain"
 
-	orderapp "github.com/homles698698-lab/XMall/internal/modules/order/application"
-	orderdomain "github.com/homles698698-lab/XMall/internal/modules/order/domain"
+	orderapp "github.com/XManCodeing/XMall/internal/modules/order/application"
+	orderdomain "github.com/XManCodeing/XMall/internal/modules/order/domain"
 
-	"github.com/homles698698-lab/XMall/internal/constants"
-	settingsapp "github.com/homles698698-lab/XMall/internal/modules/settings/application"
+	"github.com/XManCodeing/XMall/internal/constants"
+	settingsapp "github.com/XManCodeing/XMall/internal/modules/settings/application"
 
 	"github.com/shopspring/decimal"
 )

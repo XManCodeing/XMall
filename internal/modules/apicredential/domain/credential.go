@@ -3,7 +3,7 @@ package domain
 import (
 	"time"
 
-	userdomain "github.com/homles698698-lab/XMall/internal/modules/identity/user/domain"
+	userdomain "github.com/XManCodeing/XMall/internal/modules/identity/user/domain"
 )
 
 // ApiCredential API 凭证表（用户申请 + admin 审核）

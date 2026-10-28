@@ -7,9 +7,9 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	reportingdomain "github.com/homles698698-lab/XMall/internal/modules/reporting/domain"
-	resellermodule "github.com/homles698698-lab/XMall/internal/modules/reseller/application"
-	"github.com/homles698698-lab/XMall/internal/platform/http/response"
+	reportingdomain "github.com/XManCodeing/XMall/internal/modules/reporting/domain"
+	resellermodule "github.com/XManCodeing/XMall/internal/modules/reseller/application"
+	"github.com/XManCodeing/XMall/internal/platform/http/response"
 
 	"github.com/gin-gonic/gin"
 )

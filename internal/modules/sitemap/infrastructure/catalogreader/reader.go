@@ -1,9 +1,9 @@
 package catalogreader
 
 import (
-	categorycontract "github.com/homles698698-lab/XMall/internal/modules/catalog/category/contract"
-	productcontract "github.com/homles698698-lab/XMall/internal/modules/catalog/product/contract"
-	"github.com/homles698698-lab/XMall/internal/modules/sitemap/contract"
+	categorycontract "github.com/XManCodeing/XMall/internal/modules/catalog/category/contract"
+	productcontract "github.com/XManCodeing/XMall/internal/modules/catalog/product/contract"
+	"github.com/XManCodeing/XMall/internal/modules/sitemap/contract"
 )
 
 // Reader 将 Catalog 的仓储契约收窄为 Sitemap 投影。

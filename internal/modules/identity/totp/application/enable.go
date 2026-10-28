@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/homles698698-lab/XMall/internal/crypto"
+	"github.com/XManCodeing/XMall/internal/crypto"
 )
 
 var (

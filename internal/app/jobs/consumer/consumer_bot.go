@@ -12,10 +12,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/homles698698-lab/XMall/internal/logger"
-	channelclientapp "github.com/homles698698-lab/XMall/internal/modules/channelclient/application"
-	"github.com/homles698698-lab/XMall/internal/queue"
-	"github.com/homles698698-lab/XMall/internal/upstream"
+	"github.com/XManCodeing/XMall/internal/logger"
+	channelclientapp "github.com/XManCodeing/XMall/internal/modules/channelclient/application"
+	"github.com/XManCodeing/XMall/internal/queue"
+	"github.com/XManCodeing/XMall/internal/upstream"
 
 	"github.com/hibiken/asynq"
 )

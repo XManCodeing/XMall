@@ -5,17 +5,17 @@ import (
 	"strconv"
 	"strings"
 
-	mappingdomain "github.com/homles698698-lab/XMall/internal/modules/catalog/mapping/domain"
+	mappingdomain "github.com/XManCodeing/XMall/internal/modules/catalog/mapping/domain"
 
-	productcontract "github.com/homles698698-lab/XMall/internal/modules/catalog/product/contract"
+	productcontract "github.com/XManCodeing/XMall/internal/modules/catalog/product/contract"
 
-	"github.com/homles698698-lab/XMall/internal/constants"
-	"github.com/homles698698-lab/XMall/internal/i18n"
-	productwrite "github.com/homles698698-lab/XMall/internal/modules/catalog/product/application/write"
-	productdomain "github.com/homles698698-lab/XMall/internal/modules/catalog/product/domain"
-	"github.com/homles698698-lab/XMall/internal/modules/catalog/product/manualform"
-	"github.com/homles698698-lab/XMall/internal/platform/http/ginutil"
-	"github.com/homles698698-lab/XMall/internal/platform/http/response"
+	"github.com/XManCodeing/XMall/internal/constants"
+	"github.com/XManCodeing/XMall/internal/i18n"
+	productwrite "github.com/XManCodeing/XMall/internal/modules/catalog/product/application/write"
+	productdomain "github.com/XManCodeing/XMall/internal/modules/catalog/product/domain"
+	"github.com/XManCodeing/XMall/internal/modules/catalog/product/manualform"
+	"github.com/XManCodeing/XMall/internal/platform/http/ginutil"
+	"github.com/XManCodeing/XMall/internal/platform/http/response"
 
 	"github.com/gin-gonic/gin"
 	"github.com/shopspring/decimal"

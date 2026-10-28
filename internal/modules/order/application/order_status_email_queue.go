@@ -3,11 +3,11 @@ package application
 import (
 	"strings"
 
-	ordercontract "github.com/homles698698-lab/XMall/internal/modules/order/contract"
-	settingsapp "github.com/homles698698-lab/XMall/internal/modules/settings/application"
+	ordercontract "github.com/XManCodeing/XMall/internal/modules/order/contract"
+	settingsapp "github.com/XManCodeing/XMall/internal/modules/settings/application"
 
-	"github.com/homles698698-lab/XMall/internal/config"
-	"github.com/homles698698-lab/XMall/internal/telegramidentity"
+	"github.com/XManCodeing/XMall/internal/config"
+	"github.com/XManCodeing/XMall/internal/telegramidentity"
 )
 
 type receiverEmailResolver interface {

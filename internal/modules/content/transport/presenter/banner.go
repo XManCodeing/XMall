@@ -1,8 +1,8 @@
 package presenter
 
 import (
-	contentdomain "github.com/homles698698-lab/XMall/internal/modules/content/domain"
-	"github.com/homles698698-lab/XMall/internal/shared/jsonmap"
+	contentdomain "github.com/XManCodeing/XMall/internal/modules/content/domain"
+	"github.com/XManCodeing/XMall/internal/shared/jsonmap"
 )
 
 // BannerResp 前台 Banner 响应

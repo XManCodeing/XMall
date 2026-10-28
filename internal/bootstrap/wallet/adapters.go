@@ -4,18 +4,18 @@ import (
 	"errors"
 	"fmt"
 
-	paymentapp "github.com/homles698698-lab/XMall/internal/modules/payment/application"
+	paymentapp "github.com/XManCodeing/XMall/internal/modules/payment/application"
 
-	paymentdomain "github.com/homles698698-lab/XMall/internal/modules/payment/domain"
+	paymentdomain "github.com/XManCodeing/XMall/internal/modules/payment/domain"
 
-	"github.com/homles698698-lab/XMall/internal/constants"
-	userdomain "github.com/homles698698-lab/XMall/internal/modules/identity/user/domain"
-	orderapp "github.com/homles698698-lab/XMall/internal/modules/order/application"
-	walletapp "github.com/homles698698-lab/XMall/internal/modules/wallet/application"
-	walletcontract "github.com/homles698698-lab/XMall/internal/modules/wallet/contract"
-	walletdomain "github.com/homles698698-lab/XMall/internal/modules/wallet/domain"
-	wallettransport "github.com/homles698698-lab/XMall/internal/modules/wallet/transport/http"
-	"github.com/homles698698-lab/XMall/internal/shared/money"
+	"github.com/XManCodeing/XMall/internal/constants"
+	userdomain "github.com/XManCodeing/XMall/internal/modules/identity/user/domain"
+	orderapp "github.com/XManCodeing/XMall/internal/modules/order/application"
+	walletapp "github.com/XManCodeing/XMall/internal/modules/wallet/application"
+	walletcontract "github.com/XManCodeing/XMall/internal/modules/wallet/contract"
+	walletdomain "github.com/XManCodeing/XMall/internal/modules/wallet/domain"
+	wallettransport "github.com/XManCodeing/XMall/internal/modules/wallet/transport/http"
+	"github.com/XManCodeing/XMall/internal/shared/money"
 )
 
 // walletTransportAdapter composes wallet use cases with payment capabilities

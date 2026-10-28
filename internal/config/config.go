@@ -5,9 +5,9 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/homles698698-lab/XMall/internal/constants"
-	"github.com/homles698698-lab/XMall/internal/logger"
-	"github.com/homles698698-lab/XMall/internal/shared/passwordpolicy"
+	"github.com/XManCodeing/XMall/internal/constants"
+	"github.com/XManCodeing/XMall/internal/logger"
+	"github.com/XManCodeing/XMall/internal/shared/passwordpolicy"
 
 	"github.com/spf13/viper"
 )

@@ -5,12 +5,12 @@ import (
 	"strings"
 	"time"
 
-	"github.com/homles698698-lab/XMall/internal/constants"
-	"github.com/homles698698-lab/XMall/internal/modules/cart/contract"
-	"github.com/homles698698-lab/XMall/internal/modules/cart/domain"
-	productdomain "github.com/homles698698-lab/XMall/internal/modules/catalog/product/domain"
-	promotionapp "github.com/homles698698-lab/XMall/internal/modules/promotion/application"
-	promotioncontract "github.com/homles698698-lab/XMall/internal/modules/promotion/contract"
+	"github.com/XManCodeing/XMall/internal/constants"
+	"github.com/XManCodeing/XMall/internal/modules/cart/contract"
+	"github.com/XManCodeing/XMall/internal/modules/cart/domain"
+	productdomain "github.com/XManCodeing/XMall/internal/modules/catalog/product/domain"
+	promotionapp "github.com/XManCodeing/XMall/internal/modules/promotion/application"
+	promotioncontract "github.com/XManCodeing/XMall/internal/modules/promotion/contract"
 )
 
 // Service 购物车服务。

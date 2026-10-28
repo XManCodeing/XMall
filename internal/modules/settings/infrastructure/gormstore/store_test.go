@@ -4,8 +4,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/XManCodeing/XMall/internal/shared/jsonmap"
 	"github.com/glebarez/sqlite"
-	"github.com/homles698698-lab/XMall/internal/shared/jsonmap"
 	"gorm.io/driver/mysql"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"

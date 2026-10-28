@@ -7,17 +7,17 @@ import (
 	"testing"
 	"time"
 
-	paymentapp "github.com/homles698698-lab/XMall/internal/modules/payment/application"
-	paymentdomain "github.com/homles698698-lab/XMall/internal/modules/payment/domain"
-	paymentgormstore "github.com/homles698698-lab/XMall/internal/modules/payment/infrastructure/gormstore"
-	settingsapp "github.com/homles698698-lab/XMall/internal/modules/settings/application"
-	settingsstore "github.com/homles698698-lab/XMall/internal/modules/settings/infrastructure/gormstore"
+	paymentapp "github.com/XManCodeing/XMall/internal/modules/payment/application"
+	paymentdomain "github.com/XManCodeing/XMall/internal/modules/payment/domain"
+	paymentgormstore "github.com/XManCodeing/XMall/internal/modules/payment/infrastructure/gormstore"
+	settingsapp "github.com/XManCodeing/XMall/internal/modules/settings/application"
+	settingsstore "github.com/XManCodeing/XMall/internal/modules/settings/infrastructure/gormstore"
 
-	userdomain "github.com/homles698698-lab/XMall/internal/modules/identity/user/domain"
+	userdomain "github.com/XManCodeing/XMall/internal/modules/identity/user/domain"
 
-	"github.com/homles698698-lab/XMall/internal/constants"
-	"github.com/homles698698-lab/XMall/internal/shared/jsonslice"
-	"github.com/homles698698-lab/XMall/internal/shared/money"
+	"github.com/XManCodeing/XMall/internal/constants"
+	"github.com/XManCodeing/XMall/internal/shared/jsonslice"
+	"github.com/XManCodeing/XMall/internal/shared/money"
 
 	"github.com/glebarez/sqlite"
 	"github.com/shopspring/decimal"

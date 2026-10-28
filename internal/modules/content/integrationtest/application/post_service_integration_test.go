@@ -6,13 +6,13 @@ import (
 	"testing"
 	"time"
 
+	"github.com/XManCodeing/XMall/internal/constants"
+	contentapp "github.com/XManCodeing/XMall/internal/modules/content/application"
+	contentcontract "github.com/XManCodeing/XMall/internal/modules/content/contract"
+	contentdomain "github.com/XManCodeing/XMall/internal/modules/content/domain"
+	"github.com/XManCodeing/XMall/internal/modules/content/infrastructure/gormstore"
+	"github.com/XManCodeing/XMall/internal/shared/jsonmap"
 	"github.com/glebarez/sqlite"
-	"github.com/homles698698-lab/XMall/internal/constants"
-	contentapp "github.com/homles698698-lab/XMall/internal/modules/content/application"
-	contentcontract "github.com/homles698698-lab/XMall/internal/modules/content/contract"
-	contentdomain "github.com/homles698698-lab/XMall/internal/modules/content/domain"
-	"github.com/homles698698-lab/XMall/internal/modules/content/infrastructure/gormstore"
-	"github.com/homles698698-lab/XMall/internal/shared/jsonmap"
 	"gorm.io/gorm"
 )
 

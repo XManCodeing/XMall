@@ -1,7 +1,7 @@
 package settingshttp
 
 import (
-	settingssecurity "github.com/homles698698-lab/XMall/internal/modules/settings/schema/security"
+	settingssecurity "github.com/XManCodeing/XMall/internal/modules/settings/schema/security"
 
 	"github.com/gin-gonic/gin"
 )

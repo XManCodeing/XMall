@@ -5,10 +5,10 @@ import (
 	"net/mail"
 	"strings"
 
-	resellercontract "github.com/homles698698-lab/XMall/internal/modules/reseller/contract"
-	resellerdomain "github.com/homles698698-lab/XMall/internal/modules/reseller/domain"
-	settingsapp "github.com/homles698698-lab/XMall/internal/modules/settings/application"
-	"github.com/homles698698-lab/XMall/internal/shared/mailbrand"
+	resellercontract "github.com/XManCodeing/XMall/internal/modules/reseller/contract"
+	resellerdomain "github.com/XManCodeing/XMall/internal/modules/reseller/domain"
+	settingsapp "github.com/XManCodeing/XMall/internal/modules/settings/application"
+	"github.com/XManCodeing/XMall/internal/shared/mailbrand"
 )
 
 type mainBrandReader interface {

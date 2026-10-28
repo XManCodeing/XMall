@@ -3,11 +3,11 @@ package integrationtest
 import (
 	"testing"
 
-	cardsecretdomain "github.com/homles698698-lab/XMall/internal/modules/cardsecret/domain"
-	cardsecretgormstore "github.com/homles698698-lab/XMall/internal/modules/cardsecret/infrastructure/gormstore"
-	productdomain "github.com/homles698698-lab/XMall/internal/modules/catalog/product/domain"
+	cardsecretdomain "github.com/XManCodeing/XMall/internal/modules/cardsecret/domain"
+	cardsecretgormstore "github.com/XManCodeing/XMall/internal/modules/cardsecret/infrastructure/gormstore"
+	productdomain "github.com/XManCodeing/XMall/internal/modules/catalog/product/domain"
 
-	"github.com/homles698698-lab/XMall/internal/constants"
+	"github.com/XManCodeing/XMall/internal/constants"
 )
 
 func TestApplyAutoStockCounts_LegacyStockPrefersDefaultSKU(t *testing.T) {

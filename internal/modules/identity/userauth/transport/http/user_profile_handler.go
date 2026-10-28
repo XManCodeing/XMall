@@ -3,11 +3,11 @@ package userauthhttp
 import (
 	"errors"
 
-	userdomain "github.com/homles698698-lab/XMall/internal/modules/identity/user/domain"
+	userdomain "github.com/XManCodeing/XMall/internal/modules/identity/user/domain"
 
-	userpresenter "github.com/homles698698-lab/XMall/internal/modules/identity/userauth/transport/presenter"
-	"github.com/homles698698-lab/XMall/internal/platform/http/ginutil"
-	"github.com/homles698698-lab/XMall/internal/platform/http/response"
+	userpresenter "github.com/XManCodeing/XMall/internal/modules/identity/userauth/transport/presenter"
+	"github.com/XManCodeing/XMall/internal/platform/http/ginutil"
+	"github.com/XManCodeing/XMall/internal/platform/http/response"
 
 	"github.com/gin-gonic/gin"
 )

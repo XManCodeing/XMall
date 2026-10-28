@@ -1,7 +1,7 @@
 package version
 
 // Version is the application version, injected at build time via ldflags.
-// Example: go build -ldflags "-X github.com/homles698698-lab/XMall/internal/version.Version=v1.2.3"
+// Example: go build -ldflags "-X github.com/XManCodeing/XMall/internal/version.Version=v1.2.3"
 var Version = "v1.1.0"
 
 // BuildType 标识二进制来源。CI 正式发布（goreleaser / Dockerfile）注入 "release"，

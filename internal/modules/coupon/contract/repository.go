@@ -1,8 +1,8 @@
 package contract
 
 import (
-	coupondomain "github.com/homles698698-lab/XMall/internal/modules/coupon/domain"
-	"github.com/homles698698-lab/XMall/internal/shared/money"
+	coupondomain "github.com/XManCodeing/XMall/internal/modules/coupon/domain"
+	"github.com/XManCodeing/XMall/internal/shared/money"
 )
 
 type ListFilter struct {

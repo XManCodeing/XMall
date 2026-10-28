@@ -5,10 +5,10 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/homles698698-lab/XMall/internal/cache"
-	"github.com/homles698698-lab/XMall/internal/logger"
-	orderriskcontract "github.com/homles698698-lab/XMall/internal/modules/orderrisk/contract"
-	settingssecurity "github.com/homles698698-lab/XMall/internal/modules/settings/schema/security"
+	"github.com/XManCodeing/XMall/internal/cache"
+	"github.com/XManCodeing/XMall/internal/logger"
+	orderriskcontract "github.com/XManCodeing/XMall/internal/modules/orderrisk/contract"
+	settingssecurity "github.com/XManCodeing/XMall/internal/modules/settings/schema/security"
 
 	"github.com/redis/go-redis/v9"
 )

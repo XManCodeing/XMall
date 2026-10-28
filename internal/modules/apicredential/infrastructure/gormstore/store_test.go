@@ -5,10 +5,10 @@ import (
 	"testing"
 	"time"
 
+	apicredentialcontract "github.com/XManCodeing/XMall/internal/modules/apicredential/contract"
+	apicredentialdomain "github.com/XManCodeing/XMall/internal/modules/apicredential/domain"
+	"github.com/XManCodeing/XMall/internal/modules/apicredential/infrastructure/gormstore"
 	"github.com/glebarez/sqlite"
-	apicredentialcontract "github.com/homles698698-lab/XMall/internal/modules/apicredential/contract"
-	apicredentialdomain "github.com/homles698698-lab/XMall/internal/modules/apicredential/domain"
-	"github.com/homles698698-lab/XMall/internal/modules/apicredential/infrastructure/gormstore"
 	"gorm.io/gorm"
 )
 

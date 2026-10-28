@@ -7,8 +7,8 @@ import (
 	"strings"
 	"testing"
 
-	reconciliationcontract "github.com/homles698698-lab/XMall/internal/modules/reconciliation/contract"
-	reconciliationdomain "github.com/homles698698-lab/XMall/internal/modules/reconciliation/domain"
+	reconciliationcontract "github.com/XManCodeing/XMall/internal/modules/reconciliation/contract"
+	reconciliationdomain "github.com/XManCodeing/XMall/internal/modules/reconciliation/domain"
 
 	"github.com/gin-gonic/gin"
 )

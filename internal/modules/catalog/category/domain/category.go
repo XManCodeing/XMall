@@ -3,7 +3,7 @@ package categorydomain
 import (
 	"time"
 
-	"github.com/homles698698-lab/XMall/internal/shared/jsonmap"
+	"github.com/XManCodeing/XMall/internal/shared/jsonmap"
 )
 
 // Category 分类表

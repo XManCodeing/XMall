@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/homles698698-lab/XMall/internal/i18n"
-	"github.com/homles698698-lab/XMall/internal/logger"
-	"github.com/homles698698-lab/XMall/internal/platform/http/response"
+	"github.com/XManCodeing/XMall/internal/i18n"
+	"github.com/XManCodeing/XMall/internal/logger"
+	"github.com/XManCodeing/XMall/internal/platform/http/response"
 
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator/v10"

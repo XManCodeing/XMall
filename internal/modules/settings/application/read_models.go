@@ -3,10 +3,10 @@ package settingsapp
 import (
 	"time"
 
-	"github.com/homles698698-lab/XMall/internal/constants"
-	settingssecurity "github.com/homles698698-lab/XMall/internal/modules/settings/schema/security"
-	settingsstorefront "github.com/homles698698-lab/XMall/internal/modules/settings/schema/storefront"
-	"github.com/homles698698-lab/XMall/internal/shared/jsonmap"
+	"github.com/XManCodeing/XMall/internal/constants"
+	settingssecurity "github.com/XManCodeing/XMall/internal/modules/settings/schema/security"
+	settingsstorefront "github.com/XManCodeing/XMall/internal/modules/settings/schema/storefront"
+	"github.com/XManCodeing/XMall/internal/shared/jsonmap"
 )
 
 // GetActiveHomeAnnouncement returns the currently displayable announcement.

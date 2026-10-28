@@ -4,18 +4,18 @@ import (
 	"errors"
 	"strings"
 
-	paymentdomain "github.com/homles698698-lab/XMall/internal/modules/payment/domain"
+	paymentdomain "github.com/XManCodeing/XMall/internal/modules/payment/domain"
 
-	orderapp "github.com/homles698698-lab/XMall/internal/modules/order/application"
-	orderdomain "github.com/homles698698-lab/XMall/internal/modules/order/domain"
-	paymentcontract "github.com/homles698698-lab/XMall/internal/modules/payment/contract"
+	orderapp "github.com/XManCodeing/XMall/internal/modules/order/application"
+	orderdomain "github.com/XManCodeing/XMall/internal/modules/order/domain"
+	paymentcontract "github.com/XManCodeing/XMall/internal/modules/payment/contract"
 
-	walletdomain "github.com/homles698698-lab/XMall/internal/modules/wallet/domain"
+	walletdomain "github.com/XManCodeing/XMall/internal/modules/wallet/domain"
 
-	"github.com/homles698698-lab/XMall/internal/constants"
-	notificationformat "github.com/homles698698-lab/XMall/internal/modules/notification/application/format"
-	notificationcontract "github.com/homles698698-lab/XMall/internal/modules/notification/contract"
-	procurementcontract "github.com/homles698698-lab/XMall/internal/modules/procurement/contract"
+	"github.com/XManCodeing/XMall/internal/constants"
+	notificationformat "github.com/XManCodeing/XMall/internal/modules/notification/application/format"
+	notificationcontract "github.com/XManCodeing/XMall/internal/modules/notification/contract"
+	procurementcontract "github.com/XManCodeing/XMall/internal/modules/procurement/contract"
 	"go.uber.org/zap"
 )
 

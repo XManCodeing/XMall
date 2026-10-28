@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/homles698698-lab/XMall/internal/constants"
+	"github.com/XManCodeing/XMall/internal/constants"
 )
 
 func TestParseAndValidateConfig(t *testing.T) {

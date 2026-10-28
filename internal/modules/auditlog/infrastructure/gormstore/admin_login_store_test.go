@@ -3,10 +3,10 @@ package gormstore_test
 import (
 	"testing"
 
-	"github.com/homles698698-lab/XMall/internal/constants"
-	"github.com/homles698698-lab/XMall/internal/modules/auditlog/contract"
-	"github.com/homles698698-lab/XMall/internal/modules/auditlog/domain"
-	auditloggormstore "github.com/homles698698-lab/XMall/internal/modules/auditlog/infrastructure/gormstore"
+	"github.com/XManCodeing/XMall/internal/constants"
+	"github.com/XManCodeing/XMall/internal/modules/auditlog/contract"
+	"github.com/XManCodeing/XMall/internal/modules/auditlog/domain"
+	auditloggormstore "github.com/XManCodeing/XMall/internal/modules/auditlog/infrastructure/gormstore"
 
 	"github.com/glebarez/sqlite"
 	"gorm.io/gorm"

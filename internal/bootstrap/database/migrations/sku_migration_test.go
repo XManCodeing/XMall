@@ -23,20 +23,20 @@ import (
 	"testing"
 	"time"
 
-	"github.com/homles698698-lab/XMall/internal/constants"
-	cardsecretdomain "github.com/homles698698-lab/XMall/internal/modules/cardsecret/domain"
-	cartdomain "github.com/homles698698-lab/XMall/internal/modules/cart/domain"
-	externalidentitydomain "github.com/homles698698-lab/XMall/internal/modules/identity/externalidentity/domain"
+	"github.com/XManCodeing/XMall/internal/constants"
+	cardsecretdomain "github.com/XManCodeing/XMall/internal/modules/cardsecret/domain"
+	cartdomain "github.com/XManCodeing/XMall/internal/modules/cart/domain"
+	externalidentitydomain "github.com/XManCodeing/XMall/internal/modules/identity/externalidentity/domain"
 
+	productdomain "github.com/XManCodeing/XMall/internal/modules/catalog/product/domain"
+	orderdomain "github.com/XManCodeing/XMall/internal/modules/order/domain"
+	procurementdomain "github.com/XManCodeing/XMall/internal/modules/procurement/domain"
+	resellerdomain "github.com/XManCodeing/XMall/internal/modules/reseller/domain"
+	settingsstore "github.com/XManCodeing/XMall/internal/modules/settings/infrastructure/gormstore"
+	"github.com/XManCodeing/XMall/internal/platform/database/gormdb"
+	"github.com/XManCodeing/XMall/internal/shared/jsonmap"
+	"github.com/XManCodeing/XMall/internal/shared/money"
 	"github.com/glebarez/sqlite"
-	productdomain "github.com/homles698698-lab/XMall/internal/modules/catalog/product/domain"
-	orderdomain "github.com/homles698698-lab/XMall/internal/modules/order/domain"
-	procurementdomain "github.com/homles698698-lab/XMall/internal/modules/procurement/domain"
-	resellerdomain "github.com/homles698698-lab/XMall/internal/modules/reseller/domain"
-	settingsstore "github.com/homles698698-lab/XMall/internal/modules/settings/infrastructure/gormstore"
-	"github.com/homles698698-lab/XMall/internal/platform/database/gormdb"
-	"github.com/homles698698-lab/XMall/internal/shared/jsonmap"
-	"github.com/homles698698-lab/XMall/internal/shared/money"
 	"github.com/shopspring/decimal"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
@@ -54,8 +54,12 @@ const legacyWholePackageV1Fingerprint = "14a135bc9b1cc99bc28c03a1f4a5a8f27e928ce
 // step or schemaVersion change is required for this package-path-only change.
 const preXMallScopedV1Fingerprint = "85555e2b375b75da42e9e25d8a68dcc8cae4f41e34217ea211472b3cac20d899"
 
+// The GitHub owner rename also changes imports only. Retain the previous XMall
+// baseline for audit; database schema and schemaVersion remain unchanged.
+const preOwnerRenameScopedV1Fingerprint = "f5c4c4d544768db1ce8eb2768d082671c6476aca3ddf8635830ae2f751d3b281"
+
 var schemaFingerprints = map[int64]string{
-	1: "f5c4c4d544768db1ce8eb2768d082671c6476aca3ddf8635830ae2f751d3b281",
+	1: "6aa3cd137e927bbeee42774a013fec690c0930f262434d2c686dc6464f7a6c26",
 }
 
 func TestSchemaVersionCoversModelsAndMigrations(t *testing.T) {

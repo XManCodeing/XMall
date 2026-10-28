@@ -4,11 +4,11 @@ import (
 	"context"
 	"errors"
 
-	reportingdomain "github.com/homles698698-lab/XMall/internal/modules/reporting/domain"
-	reportinghttp "github.com/homles698698-lab/XMall/internal/modules/reporting/transport/http"
-	resellermodule "github.com/homles698698-lab/XMall/internal/modules/reseller/application"
-	"github.com/homles698698-lab/XMall/internal/platform/http/ginutil"
-	"github.com/homles698698-lab/XMall/internal/platform/http/response"
+	reportingdomain "github.com/XManCodeing/XMall/internal/modules/reporting/domain"
+	reportinghttp "github.com/XManCodeing/XMall/internal/modules/reporting/transport/http"
+	resellermodule "github.com/XManCodeing/XMall/internal/modules/reseller/application"
+	"github.com/XManCodeing/XMall/internal/platform/http/ginutil"
+	"github.com/XManCodeing/XMall/internal/platform/http/response"
 
 	"github.com/gin-gonic/gin"
 )

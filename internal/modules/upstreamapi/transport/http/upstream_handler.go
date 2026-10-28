@@ -5,26 +5,26 @@ import (
 	"net/http"
 	"time"
 
-	orderdomain "github.com/homles698698-lab/XMall/internal/modules/order/domain"
+	orderdomain "github.com/XManCodeing/XMall/internal/modules/order/domain"
 
-	walletdomain "github.com/homles698698-lab/XMall/internal/modules/wallet/domain"
+	walletdomain "github.com/XManCodeing/XMall/internal/modules/wallet/domain"
 
-	downstreamcallbackdomain "github.com/homles698698-lab/XMall/internal/modules/downstreamcallback/domain"
-	memberleveldomain "github.com/homles698698-lab/XMall/internal/modules/memberlevel/domain"
-	procurementcontract "github.com/homles698698-lab/XMall/internal/modules/procurement/contract"
-	procurementdomain "github.com/homles698698-lab/XMall/internal/modules/procurement/domain"
+	downstreamcallbackdomain "github.com/XManCodeing/XMall/internal/modules/downstreamcallback/domain"
+	memberleveldomain "github.com/XManCodeing/XMall/internal/modules/memberlevel/domain"
+	procurementcontract "github.com/XManCodeing/XMall/internal/modules/procurement/contract"
+	procurementdomain "github.com/XManCodeing/XMall/internal/modules/procurement/domain"
 
-	mappingdomain "github.com/homles698698-lab/XMall/internal/modules/catalog/mapping/domain"
+	mappingdomain "github.com/XManCodeing/XMall/internal/modules/catalog/mapping/domain"
 
-	siteconnectiondomain "github.com/homles698698-lab/XMall/internal/modules/siteconnection/domain"
+	siteconnectiondomain "github.com/XManCodeing/XMall/internal/modules/siteconnection/domain"
 
-	productdomain "github.com/homles698698-lab/XMall/internal/modules/catalog/product/domain"
+	productdomain "github.com/XManCodeing/XMall/internal/modules/catalog/product/domain"
 
-	categorydomain "github.com/homles698698-lab/XMall/internal/modules/catalog/category/domain"
+	categorydomain "github.com/XManCodeing/XMall/internal/modules/catalog/category/domain"
 
-	userdomain "github.com/homles698698-lab/XMall/internal/modules/identity/user/domain"
+	userdomain "github.com/XManCodeing/XMall/internal/modules/identity/user/domain"
 
-	"github.com/homles698698-lab/XMall/internal/shared/jsonmap"
+	"github.com/XManCodeing/XMall/internal/shared/jsonmap"
 
 	"github.com/gin-gonic/gin"
 	"github.com/shopspring/decimal"

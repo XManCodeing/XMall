@@ -4,25 +4,25 @@ import (
 	"errors"
 	"fmt"
 
-	paymentapp "github.com/homles698698-lab/XMall/internal/modules/payment/application"
-	paymentcontract "github.com/homles698698-lab/XMall/internal/modules/payment/contract"
+	paymentapp "github.com/XManCodeing/XMall/internal/modules/payment/application"
+	paymentcontract "github.com/XManCodeing/XMall/internal/modules/payment/contract"
 
-	paymentdomain "github.com/homles698698-lab/XMall/internal/modules/payment/domain"
+	paymentdomain "github.com/XManCodeing/XMall/internal/modules/payment/domain"
 
-	orderapp "github.com/homles698698-lab/XMall/internal/modules/order/application"
-	ordercontract "github.com/homles698698-lab/XMall/internal/modules/order/contract"
-	orderdomain "github.com/homles698698-lab/XMall/internal/modules/order/domain"
+	orderapp "github.com/XManCodeing/XMall/internal/modules/order/application"
+	ordercontract "github.com/XManCodeing/XMall/internal/modules/order/contract"
+	orderdomain "github.com/XManCodeing/XMall/internal/modules/order/domain"
 
-	userdomain "github.com/homles698698-lab/XMall/internal/modules/identity/user/domain"
+	userdomain "github.com/XManCodeing/XMall/internal/modules/identity/user/domain"
 
-	"github.com/homles698698-lab/XMall/internal/app/container"
-	productcontract "github.com/homles698698-lab/XMall/internal/modules/catalog/product/contract"
-	"github.com/homles698698-lab/XMall/internal/modules/catalog/product/manualform"
-	channeltransport "github.com/homles698698-lab/XMall/internal/modules/channelapi/transport/http"
-	externalidentitydomain "github.com/homles698698-lab/XMall/internal/modules/identity/externalidentity/domain"
-	userauthapp "github.com/homles698698-lab/XMall/internal/modules/identity/userauth/application"
-	orderriskcontract "github.com/homles698698-lab/XMall/internal/modules/orderrisk/contract"
-	walletcontract "github.com/homles698698-lab/XMall/internal/modules/wallet/contract"
+	"github.com/XManCodeing/XMall/internal/app/container"
+	productcontract "github.com/XManCodeing/XMall/internal/modules/catalog/product/contract"
+	"github.com/XManCodeing/XMall/internal/modules/catalog/product/manualform"
+	channeltransport "github.com/XManCodeing/XMall/internal/modules/channelapi/transport/http"
+	externalidentitydomain "github.com/XManCodeing/XMall/internal/modules/identity/externalidentity/domain"
+	userauthapp "github.com/XManCodeing/XMall/internal/modules/identity/userauth/application"
+	orderriskcontract "github.com/XManCodeing/XMall/internal/modules/orderrisk/contract"
+	walletcontract "github.com/XManCodeing/XMall/internal/modules/wallet/contract"
 )
 
 // NewHandler connects application services to the channel HTTP

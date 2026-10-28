@@ -5,9 +5,9 @@ import (
 	"testing"
 	"time"
 
-	dashboardcontract "github.com/homles698698-lab/XMall/internal/modules/dashboard/contract"
-	reportingdomain "github.com/homles698698-lab/XMall/internal/modules/reporting/domain"
-	settingsstorefront "github.com/homles698698-lab/XMall/internal/modules/settings/schema/storefront"
+	dashboardcontract "github.com/XManCodeing/XMall/internal/modules/dashboard/contract"
+	reportingdomain "github.com/XManCodeing/XMall/internal/modules/reporting/domain"
+	settingsstorefront "github.com/XManCodeing/XMall/internal/modules/settings/schema/storefront"
 )
 
 type dashboardServiceRepoStub struct {

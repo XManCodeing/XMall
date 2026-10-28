@@ -3,22 +3,22 @@ package integrationtest
 import (
 	"context"
 	"fmt"
-	userauthgormstore "github.com/homles698698-lab/XMall/internal/modules/identity/userauth/infrastructure/gormstore"
+	userauthgormstore "github.com/XManCodeing/XMall/internal/modules/identity/userauth/infrastructure/gormstore"
 	"testing"
 	"time"
 
-	userstore "github.com/homles698698-lab/XMall/internal/modules/identity/user/infrastructure/gormstore"
+	userstore "github.com/XManCodeing/XMall/internal/modules/identity/user/infrastructure/gormstore"
 
-	userdomain "github.com/homles698698-lab/XMall/internal/modules/identity/user/domain"
+	userdomain "github.com/XManCodeing/XMall/internal/modules/identity/user/domain"
 
-	"github.com/homles698698-lab/XMall/internal/config"
-	"github.com/homles698698-lab/XMall/internal/constants"
-	emailverificationdomain "github.com/homles698698-lab/XMall/internal/modules/identity/emailverification/domain"
-	emailverificationstore "github.com/homles698698-lab/XMall/internal/modules/identity/emailverification/infrastructure/gormstore"
-	externalidentitydomain "github.com/homles698698-lab/XMall/internal/modules/identity/externalidentity/domain"
-	externalidentitystore "github.com/homles698698-lab/XMall/internal/modules/identity/externalidentity/infrastructure/gormstore"
-	telegramauthapp "github.com/homles698698-lab/XMall/internal/modules/identity/telegramauth/application"
-	userauthapp "github.com/homles698698-lab/XMall/internal/modules/identity/userauth/application"
+	"github.com/XManCodeing/XMall/internal/config"
+	"github.com/XManCodeing/XMall/internal/constants"
+	emailverificationdomain "github.com/XManCodeing/XMall/internal/modules/identity/emailverification/domain"
+	emailverificationstore "github.com/XManCodeing/XMall/internal/modules/identity/emailverification/infrastructure/gormstore"
+	externalidentitydomain "github.com/XManCodeing/XMall/internal/modules/identity/externalidentity/domain"
+	externalidentitystore "github.com/XManCodeing/XMall/internal/modules/identity/externalidentity/infrastructure/gormstore"
+	telegramauthapp "github.com/XManCodeing/XMall/internal/modules/identity/telegramauth/application"
+	userauthapp "github.com/XManCodeing/XMall/internal/modules/identity/userauth/application"
 
 	"github.com/glebarez/sqlite"
 	"gorm.io/gorm"

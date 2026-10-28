@@ -5,15 +5,15 @@ import (
 	"reflect"
 	"testing"
 
-	productdomain "github.com/homles698698-lab/XMall/internal/modules/catalog/product/domain"
+	productdomain "github.com/XManCodeing/XMall/internal/modules/catalog/product/domain"
 
-	categorydomain "github.com/homles698698-lab/XMall/internal/modules/catalog/category/domain"
+	categorydomain "github.com/XManCodeing/XMall/internal/modules/catalog/category/domain"
 
-	"github.com/homles698698-lab/XMall/internal/constants"
-	cardsecretcontract "github.com/homles698698-lab/XMall/internal/modules/cardsecret/contract"
-	cardsecretdomain "github.com/homles698698-lab/XMall/internal/modules/cardsecret/domain"
-	productcontract "github.com/homles698698-lab/XMall/internal/modules/catalog/product/contract"
-	resellercontract "github.com/homles698698-lab/XMall/internal/modules/reseller/contract"
+	"github.com/XManCodeing/XMall/internal/constants"
+	cardsecretcontract "github.com/XManCodeing/XMall/internal/modules/cardsecret/contract"
+	cardsecretdomain "github.com/XManCodeing/XMall/internal/modules/cardsecret/domain"
+	productcontract "github.com/XManCodeing/XMall/internal/modules/catalog/product/contract"
+	resellercontract "github.com/XManCodeing/XMall/internal/modules/reseller/contract"
 )
 
 type productRepositoryStub struct {

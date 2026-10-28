@@ -5,13 +5,13 @@ import (
 	"testing"
 	"time"
 
-	orderdomain "github.com/homles698698-lab/XMall/internal/modules/order/domain"
+	orderdomain "github.com/XManCodeing/XMall/internal/modules/order/domain"
 
+	userdomain "github.com/XManCodeing/XMall/internal/modules/identity/user/domain"
+	resellerdomain "github.com/XManCodeing/XMall/internal/modules/reseller/domain"
+	resellerstore "github.com/XManCodeing/XMall/internal/modules/reseller/infrastructure/gormstore"
+	"github.com/XManCodeing/XMall/internal/shared/money"
 	"github.com/glebarez/sqlite"
-	userdomain "github.com/homles698698-lab/XMall/internal/modules/identity/user/domain"
-	resellerdomain "github.com/homles698698-lab/XMall/internal/modules/reseller/domain"
-	resellerstore "github.com/homles698698-lab/XMall/internal/modules/reseller/infrastructure/gormstore"
-	"github.com/homles698698-lab/XMall/internal/shared/money"
 	"github.com/shopspring/decimal"
 	"gorm.io/gorm"
 )

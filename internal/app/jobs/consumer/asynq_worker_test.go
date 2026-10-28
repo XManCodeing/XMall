@@ -5,17 +5,17 @@ import (
 	"errors"
 	"testing"
 
-	fulfillmentdomain "github.com/homles698698-lab/XMall/internal/modules/fulfillment/domain"
-	orderdomain "github.com/homles698698-lab/XMall/internal/modules/order/domain"
+	fulfillmentdomain "github.com/XManCodeing/XMall/internal/modules/fulfillment/domain"
+	orderdomain "github.com/XManCodeing/XMall/internal/modules/order/domain"
 
-	"github.com/homles698698-lab/XMall/internal/app/container"
-	"github.com/homles698698-lab/XMall/internal/config"
-	"github.com/homles698698-lab/XMall/internal/constants"
-	notificationcontract "github.com/homles698698-lab/XMall/internal/modules/notification/contract"
-	notificationsmtp "github.com/homles698698-lab/XMall/internal/modules/notification/infrastructure/smtp"
-	"github.com/homles698698-lab/XMall/internal/queue"
-	"github.com/homles698698-lab/XMall/internal/shared/jsonmap"
-	"github.com/homles698698-lab/XMall/internal/shared/mailbrand"
+	"github.com/XManCodeing/XMall/internal/app/container"
+	"github.com/XManCodeing/XMall/internal/config"
+	"github.com/XManCodeing/XMall/internal/constants"
+	notificationcontract "github.com/XManCodeing/XMall/internal/modules/notification/contract"
+	notificationsmtp "github.com/XManCodeing/XMall/internal/modules/notification/infrastructure/smtp"
+	"github.com/XManCodeing/XMall/internal/queue"
+	"github.com/XManCodeing/XMall/internal/shared/jsonmap"
+	"github.com/XManCodeing/XMall/internal/shared/mailbrand"
 )
 
 func TestBuildBotNotifyRequestURLReplacesPath(t *testing.T) {

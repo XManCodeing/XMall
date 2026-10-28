@@ -3,7 +3,7 @@ package application
 import (
 	"testing"
 
-	orderdomain "github.com/homles698698-lab/XMall/internal/modules/order/domain"
+	orderdomain "github.com/XManCodeing/XMall/internal/modules/order/domain"
 )
 
 func TestBuildPaymentReturnQueryForOrder(t *testing.T) {

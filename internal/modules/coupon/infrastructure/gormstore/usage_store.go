@@ -1,11 +1,11 @@
 package gormstore
 
 import (
-	"github.com/homles698698-lab/XMall/internal/persistence/gormutil"
+	"github.com/XManCodeing/XMall/internal/persistence/gormutil"
 	"time"
 
-	couponcontract "github.com/homles698698-lab/XMall/internal/modules/coupon/contract"
-	coupondomain "github.com/homles698698-lab/XMall/internal/modules/coupon/domain"
+	couponcontract "github.com/XManCodeing/XMall/internal/modules/coupon/contract"
+	coupondomain "github.com/XManCodeing/XMall/internal/modules/coupon/domain"
 
 	"gorm.io/gorm"
 )

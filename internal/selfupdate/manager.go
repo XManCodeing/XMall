@@ -7,7 +7,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/homles698698-lab/XMall/internal/version"
+	"github.com/XManCodeing/XMall/internal/version"
 )
 
 // Stage 升级过程中的阶段，用于前端展示进度条文案

@@ -5,7 +5,7 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/homles698698-lab/XMall/internal/modules/notification/contract"
+	"github.com/XManCodeing/XMall/internal/modules/notification/contract"
 
 	larkcore "github.com/larksuite/oapi-sdk-go/v3/core"
 )

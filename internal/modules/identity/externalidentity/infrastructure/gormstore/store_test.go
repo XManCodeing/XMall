@@ -4,11 +4,11 @@ import (
 	"testing"
 	"time"
 
-	userdomain "github.com/homles698698-lab/XMall/internal/modules/identity/user/domain"
+	userdomain "github.com/XManCodeing/XMall/internal/modules/identity/user/domain"
 
+	externalidentitycontract "github.com/XManCodeing/XMall/internal/modules/identity/externalidentity/contract"
+	externalidentitydomain "github.com/XManCodeing/XMall/internal/modules/identity/externalidentity/domain"
 	"github.com/glebarez/sqlite"
-	externalidentitycontract "github.com/homles698698-lab/XMall/internal/modules/identity/externalidentity/contract"
-	externalidentitydomain "github.com/homles698698-lab/XMall/internal/modules/identity/externalidentity/domain"
 	"gorm.io/gorm"
 )
 

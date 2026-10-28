@@ -3,14 +3,14 @@ package settingsapp
 import (
 	"encoding/json"
 	"errors"
-	settingsvalue "github.com/homles698698-lab/XMall/internal/modules/settings/schema/value"
+	settingsvalue "github.com/XManCodeing/XMall/internal/modules/settings/schema/value"
 	"net/mail"
 	"strings"
 	"time"
 
-	"github.com/homles698698-lab/XMall/internal/config"
-	"github.com/homles698698-lab/XMall/internal/constants"
-	"github.com/homles698698-lab/XMall/internal/shared/jsonmap"
+	"github.com/XManCodeing/XMall/internal/config"
+	"github.com/XManCodeing/XMall/internal/constants"
+	"github.com/XManCodeing/XMall/internal/shared/jsonmap"
 )
 
 var (

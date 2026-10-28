@@ -5,14 +5,14 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/homles698698-lab/XMall/internal/config"
-	orderrefund "github.com/homles698698-lab/XMall/internal/modules/order/application/refund"
-	ordercontract "github.com/homles698698-lab/XMall/internal/modules/order/contract"
-	ordstore "github.com/homles698698-lab/XMall/internal/modules/order/infrastructure/gormstore"
-	procurementapp "github.com/homles698698-lab/XMall/internal/modules/procurement/application"
-	procurementstore "github.com/homles698698-lab/XMall/internal/modules/procurement/infrastructure/gormstore"
-	procurementreader "github.com/homles698698-lab/XMall/internal/modules/procurement/infrastructure/orderreader"
-	"github.com/homles698698-lab/XMall/internal/shared/money"
+	"github.com/XManCodeing/XMall/internal/config"
+	orderrefund "github.com/XManCodeing/XMall/internal/modules/order/application/refund"
+	ordercontract "github.com/XManCodeing/XMall/internal/modules/order/contract"
+	ordstore "github.com/XManCodeing/XMall/internal/modules/order/infrastructure/gormstore"
+	procurementapp "github.com/XManCodeing/XMall/internal/modules/procurement/application"
+	procurementstore "github.com/XManCodeing/XMall/internal/modules/procurement/infrastructure/gormstore"
+	procurementreader "github.com/XManCodeing/XMall/internal/modules/procurement/infrastructure/orderreader"
+	"github.com/XManCodeing/XMall/internal/shared/money"
 	"github.com/shopspring/decimal"
 	"gorm.io/gorm"
 	"net/http"
@@ -22,13 +22,13 @@ import (
 	"testing"
 	"time"
 
-	orderdomain "github.com/homles698698-lab/XMall/internal/modules/order/domain"
+	orderdomain "github.com/XManCodeing/XMall/internal/modules/order/domain"
 
-	mappingdomain "github.com/homles698698-lab/XMall/internal/modules/catalog/mapping/domain"
+	mappingdomain "github.com/XManCodeing/XMall/internal/modules/catalog/mapping/domain"
 
-	"github.com/homles698698-lab/XMall/internal/constants"
-	procurementcontract "github.com/homles698698-lab/XMall/internal/modules/procurement/contract"
-	siteconnectionapp "github.com/homles698698-lab/XMall/internal/modules/siteconnection/application"
+	"github.com/XManCodeing/XMall/internal/constants"
+	procurementcontract "github.com/XManCodeing/XMall/internal/modules/procurement/contract"
+	siteconnectionapp "github.com/XManCodeing/XMall/internal/modules/siteconnection/application"
 )
 
 type safeConnection struct {

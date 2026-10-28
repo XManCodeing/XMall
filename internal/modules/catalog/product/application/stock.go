@@ -3,10 +3,10 @@ package productapplication
 import (
 	"strings"
 
-	productdomain "github.com/homles698698-lab/XMall/internal/modules/catalog/product/domain"
+	productdomain "github.com/XManCodeing/XMall/internal/modules/catalog/product/domain"
 
-	"github.com/homles698698-lab/XMall/internal/constants"
-	cardsecretdomain "github.com/homles698698-lab/XMall/internal/modules/cardsecret/domain"
+	"github.com/XManCodeing/XMall/internal/constants"
+	cardsecretdomain "github.com/XManCodeing/XMall/internal/modules/cardsecret/domain"
 )
 
 // ApplyAutoStockCounts 聚合卡密自动发货库存信息并填充到商品中

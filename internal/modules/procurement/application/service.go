@@ -1,6 +1,6 @@
 package application
 
-import procurementcontract "github.com/homles698698-lab/XMall/internal/modules/procurement/contract"
+import procurementcontract "github.com/XManCodeing/XMall/internal/modules/procurement/contract"
 
 type Options struct {
 	Repository         procurementcontract.Repository

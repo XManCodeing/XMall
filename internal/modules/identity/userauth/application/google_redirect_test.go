@@ -7,8 +7,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/homles698698-lab/XMall/internal/config"
-	googleauthapp "github.com/homles698698-lab/XMall/internal/modules/identity/googleauth/application"
+	"github.com/XManCodeing/XMall/internal/config"
+	googleauthapp "github.com/XManCodeing/XMall/internal/modules/identity/googleauth/application"
 )
 
 type fakeGoogleRedirectStore struct {

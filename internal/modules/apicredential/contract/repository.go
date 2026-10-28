@@ -3,7 +3,7 @@ package contract
 import (
 	"time"
 
-	apicredentialdomain "github.com/homles698698-lab/XMall/internal/modules/apicredential/domain"
+	apicredentialdomain "github.com/XManCodeing/XMall/internal/modules/apicredential/domain"
 )
 
 type ListFilter struct {

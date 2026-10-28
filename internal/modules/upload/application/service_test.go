@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/homles698698-lab/XMall/internal/modules/upload/contract"
+	"github.com/XManCodeing/XMall/internal/modules/upload/contract"
 )
 
 type memoryStore struct {

@@ -2,14 +2,14 @@ package procurement_test
 
 import (
 	"errors"
-	procurementstore "github.com/homles698698-lab/XMall/internal/modules/procurement/infrastructure/gormstore"
-	"github.com/homles698698-lab/XMall/internal/modules/siteconnection/application"
+	procurementstore "github.com/XManCodeing/XMall/internal/modules/procurement/infrastructure/gormstore"
+	"github.com/XManCodeing/XMall/internal/modules/siteconnection/application"
 	"sync"
 	"testing"
 
-	mappingdomain "github.com/homles698698-lab/XMall/internal/modules/catalog/mapping/domain"
+	mappingdomain "github.com/XManCodeing/XMall/internal/modules/catalog/mapping/domain"
 
-	"github.com/homles698698-lab/XMall/internal/constants"
+	"github.com/XManCodeing/XMall/internal/constants"
 )
 
 func TestMissingPaidProcurementCompensationCandidates(t *testing.T) {

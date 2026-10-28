@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	reportingdomain "github.com/homles698698-lab/XMall/internal/modules/reporting/domain"
+	reportingdomain "github.com/XManCodeing/XMall/internal/modules/reporting/domain"
 )
 
 func TestResolveTodayInRequestedTimezone(t *testing.T) {

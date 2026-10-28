@@ -1,8 +1,8 @@
 package orderwiring
 
 import (
-	"github.com/homles698698-lab/XMall/internal/app/container"
-	ordertransport "github.com/homles698698-lab/XMall/internal/modules/order/transport/http"
+	"github.com/XManCodeing/XMall/internal/app/container"
+	ordertransport "github.com/XManCodeing/XMall/internal/modules/order/transport/http"
 )
 
 // Handlers contains every order HTTP entrypoint required by the router.

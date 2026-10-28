@@ -3,8 +3,8 @@ package contract
 import (
 	"time"
 
-	settingsstorefront "github.com/homles698698-lab/XMall/internal/modules/settings/schema/storefront"
-	"github.com/homles698698-lab/XMall/internal/shared/jsonmap"
+	settingsstorefront "github.com/XManCodeing/XMall/internal/modules/settings/schema/storefront"
+	"github.com/XManCodeing/XMall/internal/shared/jsonmap"
 )
 
 // Repository is the persistence port consumed by the dashboard use cases.

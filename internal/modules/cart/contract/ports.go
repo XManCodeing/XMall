@@ -1,8 +1,8 @@
 package contract
 
 import (
-	"github.com/homles698698-lab/XMall/internal/modules/cart/domain"
-	productdomain "github.com/homles698698-lab/XMall/internal/modules/catalog/product/domain"
+	"github.com/XManCodeing/XMall/internal/modules/cart/domain"
+	productdomain "github.com/XManCodeing/XMall/internal/modules/catalog/product/domain"
 )
 
 // StoredItem 是购物车持久化端口返回的条目及其商品快照。

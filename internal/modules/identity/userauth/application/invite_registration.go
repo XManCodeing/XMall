@@ -7,12 +7,12 @@ import (
 	"strings"
 	"time"
 
-	"github.com/homles698698-lab/XMall/internal/constants"
-	googleauthapp "github.com/homles698698-lab/XMall/internal/modules/identity/googleauth/application"
-	telegramauthapp "github.com/homles698698-lab/XMall/internal/modules/identity/telegramauth/application"
-	userdomain "github.com/homles698698-lab/XMall/internal/modules/identity/user/domain"
-	settingsapp "github.com/homles698698-lab/XMall/internal/modules/settings/application"
-	"github.com/homles698698-lab/XMall/internal/telegramidentity"
+	"github.com/XManCodeing/XMall/internal/constants"
+	googleauthapp "github.com/XManCodeing/XMall/internal/modules/identity/googleauth/application"
+	telegramauthapp "github.com/XManCodeing/XMall/internal/modules/identity/telegramauth/application"
+	userdomain "github.com/XManCodeing/XMall/internal/modules/identity/user/domain"
+	settingsapp "github.com/XManCodeing/XMall/internal/modules/settings/application"
+	"github.com/XManCodeing/XMall/internal/telegramidentity"
 
 	"github.com/golang-jwt/jwt/v5"
 )

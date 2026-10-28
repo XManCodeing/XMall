@@ -5,11 +5,11 @@ import (
 	"errors"
 	"time"
 
-	ginutil "github.com/homles698698-lab/XMall/internal/platform/http/ginutil"
+	ginutil "github.com/XManCodeing/XMall/internal/platform/http/ginutil"
 
-	"github.com/homles698698-lab/XMall/internal/constants"
-	admindomain "github.com/homles698698-lab/XMall/internal/modules/identity/admin/domain"
-	"github.com/homles698698-lab/XMall/internal/platform/http/response"
+	"github.com/XManCodeing/XMall/internal/constants"
+	admindomain "github.com/XManCodeing/XMall/internal/modules/identity/admin/domain"
+	"github.com/XManCodeing/XMall/internal/platform/http/response"
 
 	"github.com/gin-gonic/gin"
 )

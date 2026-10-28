@@ -6,9 +6,9 @@ import (
 	"strings"
 	"time"
 
-	giftcardcontract "github.com/homles698698-lab/XMall/internal/modules/giftcard/contract"
+	giftcardcontract "github.com/XManCodeing/XMall/internal/modules/giftcard/contract"
 
-	"github.com/homles698698-lab/XMall/internal/constants"
+	"github.com/XManCodeing/XMall/internal/constants"
 )
 
 // Export 导出礼品卡。

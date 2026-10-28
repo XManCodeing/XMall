@@ -3,7 +3,7 @@ package common
 import (
 	"strings"
 
-	"github.com/homles698698-lab/XMall/internal/shared/jsonmap"
+	"github.com/XManCodeing/XMall/internal/shared/jsonmap"
 )
 
 func FormValue(form map[string][]string, key string) string {

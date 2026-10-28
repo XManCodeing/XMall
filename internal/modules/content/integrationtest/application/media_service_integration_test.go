@@ -8,12 +8,12 @@ import (
 	"testing"
 	"time"
 
+	contentapp "github.com/XManCodeing/XMall/internal/modules/content/application"
+	contentcontract "github.com/XManCodeing/XMall/internal/modules/content/contract"
+	contentdomain "github.com/XManCodeing/XMall/internal/modules/content/domain"
+	localfilestore "github.com/XManCodeing/XMall/internal/modules/content/infrastructure/filestore/local"
+	"github.com/XManCodeing/XMall/internal/modules/content/infrastructure/gormstore"
 	"github.com/glebarez/sqlite"
-	contentapp "github.com/homles698698-lab/XMall/internal/modules/content/application"
-	contentcontract "github.com/homles698698-lab/XMall/internal/modules/content/contract"
-	contentdomain "github.com/homles698698-lab/XMall/internal/modules/content/domain"
-	localfilestore "github.com/homles698698-lab/XMall/internal/modules/content/infrastructure/filestore/local"
-	"github.com/homles698698-lab/XMall/internal/modules/content/infrastructure/gormstore"
 	"gorm.io/gorm"
 )
 

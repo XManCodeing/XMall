@@ -18,9 +18,9 @@ import (
 	"strings"
 	"time"
 
+	"github.com/XManCodeing/XMall/internal/constants"
+	settingssecurity "github.com/XManCodeing/XMall/internal/modules/settings/schema/security"
 	"github.com/golang-jwt/jwt/v5"
-	"github.com/homles698698-lab/XMall/internal/constants"
-	settingssecurity "github.com/homles698698-lab/XMall/internal/modules/settings/schema/security"
 )
 
 const (

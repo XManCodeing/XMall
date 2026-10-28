@@ -4,10 +4,10 @@ import (
 	"errors"
 	"time"
 
-	userdomain "github.com/homles698698-lab/XMall/internal/modules/identity/user/domain"
+	userdomain "github.com/XManCodeing/XMall/internal/modules/identity/user/domain"
 
-	memberlevelcontract "github.com/homles698698-lab/XMall/internal/modules/memberlevel/contract"
-	"github.com/homles698698-lab/XMall/internal/shared/money"
+	memberlevelcontract "github.com/XManCodeing/XMall/internal/modules/memberlevel/contract"
+	"github.com/XManCodeing/XMall/internal/shared/money"
 	"github.com/shopspring/decimal"
 	"gorm.io/gorm"
 )

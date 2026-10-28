@@ -4,12 +4,12 @@ import (
 	"errors"
 	"fmt"
 
-	fulfillmentapp "github.com/homles698698-lab/XMall/internal/modules/fulfillment/application"
-	fulfillmentdomain "github.com/homles698698-lab/XMall/internal/modules/fulfillment/domain"
-	orderapp "github.com/homles698698-lab/XMall/internal/modules/order/application"
-	orderdomain "github.com/homles698698-lab/XMall/internal/modules/order/domain"
+	fulfillmentapp "github.com/XManCodeing/XMall/internal/modules/fulfillment/application"
+	fulfillmentdomain "github.com/XManCodeing/XMall/internal/modules/fulfillment/domain"
+	orderapp "github.com/XManCodeing/XMall/internal/modules/order/application"
+	orderdomain "github.com/XManCodeing/XMall/internal/modules/order/domain"
 
-	fulfillmenttransport "github.com/homles698698-lab/XMall/internal/modules/fulfillment/transport/http"
+	fulfillmenttransport "github.com/XManCodeing/XMall/internal/modules/fulfillment/transport/http"
 )
 
 type fulfillmentManualCreatorAdapter struct {

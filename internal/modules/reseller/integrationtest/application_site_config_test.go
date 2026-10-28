@@ -5,12 +5,12 @@ import (
 	"errors"
 	"testing"
 
-	resellergormstore "github.com/homles698698-lab/XMall/internal/modules/reseller/infrastructure/gormstore"
+	resellergormstore "github.com/XManCodeing/XMall/internal/modules/reseller/infrastructure/gormstore"
 
-	resellerdomain "github.com/homles698698-lab/XMall/internal/modules/reseller/domain"
+	resellerdomain "github.com/XManCodeing/XMall/internal/modules/reseller/domain"
 
-	resellermodule "github.com/homles698698-lab/XMall/internal/modules/reseller/application"
-	"github.com/homles698698-lab/XMall/internal/shared/jsonmap"
+	resellermodule "github.com/XManCodeing/XMall/internal/modules/reseller/application"
+	"github.com/XManCodeing/XMall/internal/shared/jsonmap"
 )
 
 func TestResellerSiteConfigServiceUserUpdateRequiresActiveProfile(t *testing.T) {

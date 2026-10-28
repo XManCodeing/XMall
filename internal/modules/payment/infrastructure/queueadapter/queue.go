@@ -4,10 +4,10 @@ import (
 	"strings"
 	"time"
 
-	ordercontract "github.com/homles698698-lab/XMall/internal/modules/order/contract"
-	orderqueue "github.com/homles698698-lab/XMall/internal/modules/order/infrastructure/queueadapter"
-	paymentcontract "github.com/homles698698-lab/XMall/internal/modules/payment/contract"
-	"github.com/homles698698-lab/XMall/internal/queue"
+	ordercontract "github.com/XManCodeing/XMall/internal/modules/order/contract"
+	orderqueue "github.com/XManCodeing/XMall/internal/modules/order/infrastructure/queueadapter"
+	paymentcontract "github.com/XManCodeing/XMall/internal/modules/payment/contract"
+	"github.com/XManCodeing/XMall/internal/queue"
 
 	"github.com/hibiken/asynq"
 )

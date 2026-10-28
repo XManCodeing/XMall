@@ -4,8 +4,8 @@ import (
 	"context"
 	"time"
 
-	"github.com/homles698698-lab/XMall/internal/shared/jsonmap"
-	"github.com/homles698698-lab/XMall/internal/shared/money"
+	"github.com/XManCodeing/XMall/internal/shared/jsonmap"
+	"github.com/XManCodeing/XMall/internal/shared/money"
 )
 
 // GatewayPayloadFiatCurrencySent 标记创建支付时实际提交给网关的法币币种。

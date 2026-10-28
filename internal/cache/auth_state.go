@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"time"
 
-	userdomain "github.com/homles698698-lab/XMall/internal/modules/identity/user/domain"
+	userdomain "github.com/XManCodeing/XMall/internal/modules/identity/user/domain"
 
-	admindomain "github.com/homles698698-lab/XMall/internal/modules/identity/admin/domain"
+	admindomain "github.com/XManCodeing/XMall/internal/modules/identity/admin/domain"
 )
 
 const authStateCacheTTL = 10 * time.Minute

@@ -92,17 +92,17 @@ func TestWalletOwnsCompleteVerticalSlice(t *testing.T) {
 	assertDirectoryGoFileBudget(t, bootstrapRoot, 3)
 
 	for _, forbiddenImport := range []string{
-		"github.com/homles698698-lab/XMall/internal/models",
-		"github.com/homles698698-lab/XMall/internal/repository",
-		"github.com/homles698698-lab/XMall/internal/service",
+		"github.com/XManCodeing/XMall/internal/models",
+		"github.com/XManCodeing/XMall/internal/repository",
+		"github.com/XManCodeing/XMall/internal/service",
 		"gorm.io/gorm",
 	} {
 		assertProductionImportsAbsent(t, applicationRoot, forbiddenImport)
 	}
 	for _, forbiddenImport := range []string{
-		"github.com/homles698698-lab/XMall/internal/models",
-		"github.com/homles698698-lab/XMall/internal/repository",
-		"github.com/homles698698-lab/XMall/internal/service",
+		"github.com/XManCodeing/XMall/internal/models",
+		"github.com/XManCodeing/XMall/internal/repository",
+		"github.com/XManCodeing/XMall/internal/service",
 	} {
 		assertProductionImportsAbsent(t, contractRoot, forbiddenImport)
 		assertProductionImportsAbsent(t, domainRoot, forbiddenImport)

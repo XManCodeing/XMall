@@ -3,13 +3,13 @@ package catalogmappingbootstrap
 import (
 	"errors"
 
-	productcontract "github.com/homles698698-lab/XMall/internal/modules/catalog/product/contract"
+	productcontract "github.com/XManCodeing/XMall/internal/modules/catalog/product/contract"
 
-	categorycontract "github.com/homles698698-lab/XMall/internal/modules/catalog/category/contract"
+	categorycontract "github.com/XManCodeing/XMall/internal/modules/catalog/category/contract"
 
-	mappingapp "github.com/homles698698-lab/XMall/internal/modules/catalog/mapping/application"
-	mappingcontract "github.com/homles698698-lab/XMall/internal/modules/catalog/mapping/contract"
-	siteconnectionapp "github.com/homles698698-lab/XMall/internal/modules/siteconnection/application"
+	mappingapp "github.com/XManCodeing/XMall/internal/modules/catalog/mapping/application"
+	mappingcontract "github.com/XManCodeing/XMall/internal/modules/catalog/mapping/contract"
+	siteconnectionapp "github.com/XManCodeing/XMall/internal/modules/siteconnection/application"
 
 	"gorm.io/gorm"
 )

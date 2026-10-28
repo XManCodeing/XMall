@@ -9,15 +9,15 @@ import (
 	"testing"
 	"time"
 
-	orderdomain "github.com/homles698698-lab/XMall/internal/modules/order/domain"
+	orderdomain "github.com/XManCodeing/XMall/internal/modules/order/domain"
 
-	"github.com/homles698698-lab/XMall/internal/constants"
-	ordergormstore "github.com/homles698698-lab/XMall/internal/modules/order/infrastructure/gormstore"
-	procurementapp "github.com/homles698698-lab/XMall/internal/modules/procurement/application"
-	procurementgormstore "github.com/homles698698-lab/XMall/internal/modules/procurement/infrastructure/gormstore"
-	procurementorder "github.com/homles698698-lab/XMall/internal/modules/procurement/infrastructure/orderreader"
-	procurementupstream "github.com/homles698698-lab/XMall/internal/modules/procurement/infrastructure/upstreamgateway"
-	siteconnectionapp "github.com/homles698698-lab/XMall/internal/modules/siteconnection/application"
+	"github.com/XManCodeing/XMall/internal/constants"
+	ordergormstore "github.com/XManCodeing/XMall/internal/modules/order/infrastructure/gormstore"
+	procurementapp "github.com/XManCodeing/XMall/internal/modules/procurement/application"
+	procurementgormstore "github.com/XManCodeing/XMall/internal/modules/procurement/infrastructure/gormstore"
+	procurementorder "github.com/XManCodeing/XMall/internal/modules/procurement/infrastructure/orderreader"
+	procurementupstream "github.com/XManCodeing/XMall/internal/modules/procurement/infrastructure/upstreamgateway"
+	siteconnectionapp "github.com/XManCodeing/XMall/internal/modules/siteconnection/application"
 )
 
 // ── PollUpstreamStatus test ──
