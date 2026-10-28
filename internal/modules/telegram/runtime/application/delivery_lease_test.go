@@ -11,22 +11,27 @@ import (
 
 type deliveryLossStore struct {
 	*lifecycleStore
-	item      *d.Delivery
-	polled    <-chan struct{}
-	inboxDone chan struct{}
+	item             *d.Delivery
+	polled           <-chan struct{}
+	inboxStarted     chan struct{}
+	reconcileStarted chan struct{}
+	inboxDone        chan struct{}
 }
 
 func (s *deliveryLossStore) ClaimDelivery(ctx context.Context, _ uint, _ string, _ time.Time) (*d.Delivery, error) {
-	select {
-	case <-ctx.Done():
-		return nil, ctx.Err()
-	case <-s.polled:
+	for _, started := range []<-chan struct{}{s.polled, s.inboxStarted, s.reconcileStarted} {
+		select {
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		case <-started:
+		}
 	}
 	item := s.item
 	s.item = nil
 	return item, nil
 }
 func (s *deliveryLossStore) ClaimInbox(ctx context.Context, _ uint, _ string, _ time.Time) (*d.Inbox, error) {
+	close(s.inboxStarted)
 	<-ctx.Done()
 	close(s.inboxDone)
 	return nil, ctx.Err()
@@ -51,7 +56,7 @@ type deliveryLossLeaser struct{ c.Lease }
 func (l deliveryLossLeaser) Acquire(context.Context, string) (c.Lease, error) { return l.Lease, nil }
 func TestDeliveryLeaseLossCancelsWholeBot(t *testing.T) {
 	api := &lifecycleAPI{polled: make(chan struct{})}
-	s := &deliveryLossStore{lifecycleStore: &lifecycleStore{instance: d.Instance{ID: 1, TelegramID: 42, Enabled: true, Mode: "internal", Version: 1}, began: make(chan struct{})}, polled: api.polled, inboxDone: make(chan struct{})}
+	s := &deliveryLossStore{lifecycleStore: &lifecycleStore{instance: d.Instance{ID: 1, TelegramID: 42, Enabled: true, Mode: "internal", Version: 1}, began: make(chan struct{})}, polled: api.polled, inboxStarted: make(chan struct{}), reconcileStarted: make(chan struct{}), inboxDone: make(chan struct{})}
 	m := NewManager(s, api, "test-key")
 	s.instance.TokenCipher, _ = m.Seal("dummy")
 	payload, _ := m.Seal(`{"text":"test"}`)
@@ -59,7 +64,12 @@ func TestDeliveryLeaseLossCancelsWholeBot(t *testing.T) {
 	lease := &deliveryLossLease{polled: api.polled}
 	runtime := NewRuntime(m, deliveryLossLeaser{lease}, &deliveryGuardHandler{})
 	reconciled := make(chan struct{})
-	runtime.Reconcile = func(ctx context.Context, _ uint) error { <-ctx.Done(); close(reconciled); return ctx.Err() }
+	runtime.Reconcile = func(ctx context.Context, _ uint) error {
+		close(s.reconcileStarted)
+		<-ctx.Done()
+		close(reconciled)
+		return ctx.Err()
+	}
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 	defer cancel()
 	done := make(chan struct{})
