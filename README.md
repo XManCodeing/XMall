@@ -120,7 +120,7 @@ sudo xmall-manager admin-reset-2fa
 
 ### 方式三：自行构建 Docker 镜像
 
-仓库提供 [Dockerfile](Dockerfile)。现有安装包发行流程不变；新增的 [Docker 内测工作流](.github/workflows/docker-internal.yml) 仅手动运行，暂不发布公共镜像，也不绑定当前版本标签。普通部署仍从本项目源码构建：
+仓库保留 [Dockerfile](Dockerfile) 供自行构建，不提供官方预构建镜像，也不再维护 Docker 内测或镜像发布工作流。推荐使用 Release 安装包；如需自行构建：
 
 ```bash
 docker build --build-arg APP_VERSION=local -t xmall:local .
@@ -249,43 +249,15 @@ go test -race ./internal/...
 
 ## 构建与发布
 
+本版变更、升级注意事项和维护者发行步骤见 [发行与升级说明](doc/发行与升级.md)。
+
 [GitHub Actions 发布工作流](.github/workflows/release.yml) 和 [GoReleaser 配置](.goreleaser.yaml) 是本项目发行流程的依据：
 
 1. 手动运行 `goreleaser` 工作流，执行输入检查、安装脚本检查、后端与前端测试，生成快照附件，不创建正式 Release。
 2. 对通过验证的提交推送独立 `v*` tag，生成包含 Linux / Windows / macOS、amd64 / arm64 产物和校验和的草稿 Release。
 3. 核对目标系统安装与启动、版本信息、源码及许可证后，手动公开草稿。
 
-安装包工作流使用 `GITHUB_TOKEN`，需要 `contents: write` 权限。Docker 由独立、默认关闭的工作流负责，失败不会重建或删除安装包；安装包发布成功也不等于镜像已可用。发行物应对应明确 tag / commit，并提供完整对应源码、构建材料和许可文件；运行密钥和业务数据不属于发行材料。
-
-### Docker 私有内测（维护者）
-
-在 Actions 中手动运行 `docker-internal`，默认选择 `validate`：
-
-- 构建 Linux `amd64` / `arm64` 镜像，在 amd64 上检查启动、`/health`、商城和自定义后台路径，并用同一 SQLite 数据卷重建容器检查再次启动。
-- 不登录 GHCR、不上传镜像或镜像归档；临时产物仅留在运行器，结束后清理。公开仓库的 Actions 日志仍公开，不要将运行配置或生产凭据作为输入。
-- 不改版本号、Git 标签、Release 附件或 `latest`；`release.yml` 安装包流程保持独立。
-
-`private` / `bootstrap` 模式只允许从本仓库 `main` 手动运行。`private` 要求已存在且关联本仓库的私有 `ghcr.io/xmancodeing/xmall-internal-private` 包；检查直接查询指定包，不依赖个人账号的私有包列表接口。`bootstrap` 查询目标返回 404 时，仅允许尝试推送无应用内容的空 marker（GHCR 新包默认私有）；404 也可能表示包不可见，并非不存在或私有的证明。marker 推送后必须成功查询并确认实际可见性为 private、关联仓库正确，才允许构建和上传应用。任何其他查询错误、无权限或可见性不符均停止，不自动改可见性。
-
-旧 `xmall-internal` 包已确认是 public，不再用作私有内测目标，保留不动。新目标为 `xmall-internal-private`；包名含 private 不代表实际私有，仍以 API 检查结果为准。
-
-应用使用唯一 `internal-<commit>-<run>-<attempt>` 标签，先测试本地 OCI 归档，再上传同一归档。上传后检查双架构 manifest、匿名访问被拒绝，认证按 digest 拉取并测试 amd64 与 QEMU arm64。使用工作流 `GITHUB_TOKEN`，不需要个人 Token 写入仓库；marker 不可运行，部署使用验证通过的应用 digest。
-
-### Docker 随 Release 发布（默认关闭）
-
-[Docker 正式发布工作流](.github/workflows/docker-release.yml) 在公开发布 Release 时触发，但只有维护者明确配置以下 **GitHub repository variables** 后才会执行（不是应用配置或 `.env`）：
-
-- `DOCKER_RELEASE_ENABLED=true`：开启镜像发布；不设置或设为 `false` 则跳过。
-- `DOCKER_RELEASE_PACKAGE=xmall`：当前 GitHub owner 下已存在的 GHCR 包名，仅填写包名。私有试运行可指定已配置的 `xmall-internal-private`。
-- `DOCKER_RELEASE_VISIBILITY=private`：期望的实际包可见性。公开发行前经确认改为 `public`，并单独在 GHCR 设置包的实际可见性；工作流绝不自动改可见性。
-
-目标包须已关联本仓库并授予本仓库 Actions 写权限。首次建包仍需单独完成；查不到包、权限不足、可见性不符、来源不是本仓库或版本标签已存在时均停止。不要把含内测版本的包直接公开，正式镜像建议使用独立的 `xmall` 包。
-
-流程固定到 Release tag 对应的 commit，构建 Linux `amd64/arm64`，从同一份 OCI 归档加载 amd64 镜像完成启动测试，通过后才上传该归档的双架构镜像。只写 `vX.Y.Z` 等固定版本标签，**不写 `latest`，不覆盖已存在的镜像版本**；预发布使用自己的版本标签。SemVer 含 `+` 时，镜像标签将其替换为 `_`，程序内版本仍保留原 tag。
-
-镜像上传失败可在默认分支手动运行 `docker-release`，输入已有公开 Release 的 tag 补发；不能输入任意分支、草稿或不存在的版本。若上次已完成上传但后置检查失败，先核对镜像 digest 和可见性，不盲目删标签重跑。公开草稿应由维护者操作；若以后改成机器人自动发布 Release，须注意 `GITHUB_TOKEN` 创建的事件通常不会触发另一工作流，应显式安排 dispatch。
-
-当前仅完成发布门禁单测及工作流静态检查；此前 `docker-internal` 验证的是双架构构建和 amd64 API 模式启动。**首次 GHCR 推送/拉取、正式 OCI 归档上传链路、ARM64 运行和 Redis/worker 完整部署仍需实测**，不能把这些准备代码视为发布链路已全部跑通。正式发行前应先完成私有试运行，再启用公开包。
+安装包工作流使用 `GITHUB_TOKEN`，需要 `contents: write` 权限。本项目不提供官方 Docker 镜像，不再维护 GHCR 发布或内测工作流；发行使用上述安装包流程。原有 `Dockerfile` 仅保留供自行构建，不代表提供镜像发布服务。发行物应对应明确 tag / commit，并提供完整对应源码、构建材料和许可文件；运行密钥和业务数据不属于发行材料。
 
 ## 致谢与许可证
 

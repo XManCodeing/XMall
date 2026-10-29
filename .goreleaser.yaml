@@ -54,6 +54,7 @@ archives:
     files:
       - ./config.yml.example
       - ./README.md
+      - ./doc/发行与升级.md
       - ./LICENSE
       - ./scripts/xmall-manager.sh
     name_template: >-
