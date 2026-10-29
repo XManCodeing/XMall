@@ -28,7 +28,11 @@ async function gate({ github, context, mode, allowCreate = false, expected }) {
   }
   if (pkg.visibility !== 'private' || pkg.name !== PACKAGE || pkg.package_type !== 'container' ||
       !pkg.id || pkg.repository?.id !== repo.id || pkg.repository?.full_name !== REPOSITORY) {
-    throw new Error('Internal package must be private and linked to this repository');
+    throw new Error(`Internal package must be private and linked to this repository: ${JSON.stringify({
+      id: pkg.id, name: pkg.name, packageType: pkg.package_type, visibility: pkg.visibility,
+      repositoryId: pkg.repository?.id, repositoryName: pkg.repository?.full_name,
+      expectedRepositoryId: repo.id,
+    })}`);
   }
   if (expected && expected !== String(pkg.id)) throw new Error('Package identity changed');
   return { image: `ghcr.io/${owner.toLowerCase()}/${PACKAGE}`, bootstrapMarker: false, packageId: String(pkg.id) };
