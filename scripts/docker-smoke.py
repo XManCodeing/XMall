@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Smoke-test a local image with disposable config/data; never read runtime config or .env files."""
 
+import http.client
 import json
 from pathlib import Path
 import secrets
@@ -32,7 +33,9 @@ def wait_http(container, path, expected):
                 body = response.read().decode()
                 if response.status == 200 and expected.lower() in body.lower():
                     return
-        except (urllib.error.URLError, TimeoutError):
+        except (urllib.error.URLError, OSError, http.client.HTTPException):
+            # Docker may accept/reset connections before the application binds.
+            # Retry only until the readiness deadline; an exited container fails above.
             pass
         time.sleep(1)
     raise RuntimeError(f"Timed out checking {path}")
@@ -67,6 +70,10 @@ def main(image):
                 wait_http(container, "/health", "")
                 wait_http(container, "/", "<html")
                 wait_http(container, "/smoke-admin/", "<html")
+                if attempt == 0:
+                    docker("exec", container, "touch", "/app/db/.smoke-persistence")
+                else:
+                    docker("exec", container, "test", "-f", "/app/db/.smoke-persistence")
                 docker("exec", container, "test", "-s", "/app/db/xmall.db")
                 docker("exec", container, "test", "-s", "/app/LICENSE")
                 docker("stop", "--time", "20", container)
