@@ -265,7 +265,7 @@ go test -race ./internal/...
 - 不登录 GHCR、不上传镜像或镜像归档；临时产物仅留在运行器，结束后清理。公开仓库的 Actions 日志仍公开，不要将运行配置或生产凭据作为输入。
 - 不改版本号、Git 标签、Release 附件或 `latest`；`release.yml` 安装包流程保持独立。
 
-`private` / `bootstrap` 模式只允许从本仓库 `main` 手动运行。`private` 要求已存在且关联本仓库的私有 `ghcr.io/xmancodeing/xmall-internal` 包；`bootstrap` 用于首次建立：先成功查询完整私有包列表并核实目标不存在，再仅推送无应用内容的空 marker（GHCR 新包默认私有），随后确认实际可见性为 private、关联仓库正确，才允许上传应用。无法确认、无权限或可见性不符均停止，不自动改可见性。
+`private` / `bootstrap` 模式只允许从本仓库 `main` 手动运行。`private` 要求已存在且关联本仓库的私有 `ghcr.io/xmancodeing/xmall-internal` 包；检查直接查询指定包，不依赖个人账号的私有包列表接口。`bootstrap` 查询目标返回 404 时，仅允许尝试推送无应用内容的空 marker（GHCR 新包默认私有）；404 也可能表示包不可见，并非不存在或私有的证明。marker 推送后必须成功查询并确认实际可见性为 private、关联仓库正确，才允许构建和上传应用。任何其他查询错误、无权限或可见性不符均停止，不自动改可见性。
 
 应用使用唯一 `internal-<commit>-<run>-<attempt>` 标签，先测试本地 OCI 归档，再上传同一归档。上传后检查双架构 manifest、匿名访问被拒绝，认证按 digest 拉取并测试 amd64 与 QEMU arm64。使用工作流 `GITHUB_TOKEN`，不需要个人 Token 写入仓库；marker 不可运行，部署使用验证通过的应用 digest。
 

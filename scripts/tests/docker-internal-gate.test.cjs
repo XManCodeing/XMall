@@ -14,7 +14,7 @@ function fixture() {
     context: { repo: { owner: 'XManCodeing', repo: 'XMall' }, eventName: 'workflow_dispatch', ref: 'refs/heads/main' },
     github: {
       rest: { repos: { get: async () => ({ data: repo }) } },
-      paginate: async (route, params) => { calls.push({ kind: 'list', route, params }); return [pkg]; },
+      paginate: async () => { throw new Error('Account-wide package listing must not be used'); },
       request: async (route, params) => { calls.push({ kind: 'detail', route, params }); return { data: pkg }; },
     },
   };
@@ -22,24 +22,23 @@ function fixture() {
 }
 
 function absent(f, status = 404) {
-  f.github.paginate = async () => { f.calls.push({ kind: 'list' }); return []; };
   f.github.request = async () => { f.calls.push({ kind: 'detail' }); throw Object.assign(new Error(`HTTP ${status}`), { status }); };
 }
 
-test('existing package must be listed private and linked, even in bootstrap', async () => {
+test('existing package must be private and linked without account-wide listing', async () => {
   for (const mode of ['private', 'bootstrap']) {
     const f = fixture(); f.mode = mode;
-    assert.deepEqual(await gate(f), { image: 'ghcr.io/xmancodeing/xmall-internal', missing: false, packageId: '7' });
-    assert.deepEqual(f.calls.map((c) => c.kind), ['list', 'detail']);
-    assert.equal(f.calls[0].route, 'GET /users/{owner}/packages');
-    assert.deepEqual(f.calls[0].params, { owner: 'XManCodeing', package_type: 'container', visibility: 'private', per_page: 100 });
+    assert.deepEqual(await gate(f), { image: 'ghcr.io/xmancodeing/xmall-internal', bootstrapMarker: false, packageId: '7' });
+    assert.deepEqual(f.calls.map((c) => c.kind), ['detail']);
+    assert.equal(f.calls[0].route, 'GET /users/{owner}/packages/container/{package_name}');
+    assert.deepEqual(f.calls[0].params, { owner: 'XManCodeing', package_name: 'xmall-internal' });
   }
 });
 
-test('explicit initial bootstrap alone permits 404 after completed private pagination', async () => {
+test('explicit initial bootstrap alone permits an empty marker after detail 404', async () => {
   const f = fixture(); absent(f);
-  assert.deepEqual(await gate(f), { image: 'ghcr.io/xmancodeing/xmall-internal', missing: true });
-  assert.deepEqual(f.calls.map((c) => c.kind), ['list', 'detail']);
+  assert.deepEqual(await gate(f), { image: 'ghcr.io/xmancodeing/xmall-internal', bootstrapMarker: true });
+  assert.deepEqual(f.calls.map((c) => c.kind), ['detail']);
   f.mode = 'private';
   await assert.rejects(gate(f), /404/);
   f.mode = 'bootstrap'; f.allowCreate = false;
@@ -48,15 +47,7 @@ test('explicit initial bootstrap alone permits 404 after completed private pagin
   await assert.rejects(gate(f), /404/);
 });
 
-for (const status of [401, 403, 404, 429, 500]) {
-  test(`private list HTTP ${status} fails before detail or marker authorization`, async () => {
-    const f = fixture();
-    f.github.paginate = async () => { throw Object.assign(new Error(`HTTP ${status}`), { status }); };
-    await assert.rejects(gate(f), new RegExp(`HTTP ${status}`));
-    assert.equal(f.calls.length, 0);
-  });
-}
-for (const status of [401, 403, 429, 500, undefined]) {
+for (const status of [400, 401, 403, 429, 500, undefined]) {
   test(`detail ${status} never authorizes bootstrap`, async () => {
     const f = fixture(); absent(f, status);
     if (status === undefined) f.github.request = async () => { throw new Error('network failure'); };
@@ -64,15 +55,18 @@ for (const status of [401, 403, 429, 500, undefined]) {
   });
 }
 
-test('a failure on a later list page still fails closed', async () => {
-  const f = fixture();
-  f.github.paginate = async () => {
-    // Octokit rejects rather than returning the partial first-page result.
-    await Promise.resolve([f.pkg]);
-    throw Object.assign(new Error('page 2 forbidden'), { status: 403 });
-  };
-  await assert.rejects(gate(f), /page 2 forbidden/);
-  assert.equal(f.calls.length, 0);
+test('marker authorization is never application authorization', async () => {
+  const f = fixture(); absent(f);
+  assert.equal((await gate(f)).bootstrapMarker, true);
+  // The confirmation step does not opt in to another bootstrap, even on 404.
+  delete f.allowCreate;
+  await assert.rejects(gate(f), /404/);
+  f.github.request = async () => ({ data: f.pkg });
+  assert.equal((await gate(f)).packageId, '7');
+  for (const visibility of ['public', 'internal', undefined]) {
+    f.pkg.visibility = visibility;
+    await assert.rejects(gate(f), /must be private/);
+  }
 });
 
 const invalid = {
@@ -91,13 +85,7 @@ const invalid = {
   'wrong package': (f) => { f.pkg.name = 'xmall'; },
   'wrong package type': (f) => { f.pkg.package_type = 'npm'; },
   'missing package id': (f) => { delete f.pkg.id; },
-  'not listed': (f) => { f.github.paginate = async () => []; },
-  'list identity mismatch': (f) => { f.github.paginate = async () => [{ ...f.pkg, id: 8 }]; },
-  'malformed list': (f) => { f.github.paginate = async () => ({}); },
   'changed identity': (f) => { f.expected = '8'; },
-  'listed package returns 404': (f) => {
-    f.github.request = async () => { throw Object.assign(new Error('HTTP 404'), { status: 404 }); };
-  },
 };
 for (const [name, mutate] of Object.entries(invalid)) {
   test(`fails closed: ${name}`, async () => {
@@ -106,7 +94,7 @@ for (const [name, mutate] of Object.entries(invalid)) {
   });
 }
 
-test('organization owner uses organization list and detail routes', async () => {
+test('organization owner uses organization detail route', async () => {
   const f = fixture(); f.repo.owner.type = 'Organization';
   await gate(f);
   assert.ok(f.calls.every((call) => call.route.startsWith('GET /orgs/')));
@@ -120,7 +108,9 @@ test('workflow isolates validate and gates marker and exact-archive application 
   assert.doesNotMatch(validate, /login|push: true|packages: write|secrets\.GITHUB_TOKEN|docker:\/\//);
   assert.match(publish, /github.ref == 'refs\/heads\/main' && github.repository == 'XManCodeing\/XMall'/);
   assert.match(publish, /packages: write/);
-  assert.match(publish, /if: steps.preflight.outputs.missing == 'true'/);
+  assert.match(publish, /if: steps.preflight.outputs.bootstrapMarker == 'true'/);
+  assert.equal((publish.match(/allowCreate: true/g) || []).length, 1);
+  assert.match(publish, /mode: process.env.MODE, expected: process.env.EXPECTED/);
   assert.match(workflow, /DOCKER_BUILD_RECORD_UPLOAD: 'false'/);
   assert.match(workflow, /DOCKER_BUILD_SUMMARY: 'false'/);
   assert.doesNotMatch(workflow, /upload-artifact|cache-to:|push: true|:latest|docker\/login-action/);
