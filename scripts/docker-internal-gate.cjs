@@ -1,7 +1,7 @@
 'use strict';
 
 const REPOSITORY = 'XManCodeing/XMall';
-const PACKAGE = 'xmall-internal';
+const PACKAGE = 'xmall-internal-private';
 
 async function gate({ github, context, mode, allowCreate = false, expected }) {
   if (!['private', 'bootstrap'].includes(mode) || context.eventName !== 'workflow_dispatch' ||

@@ -265,7 +265,9 @@ go test -race ./internal/...
 - 不登录 GHCR、不上传镜像或镜像归档；临时产物仅留在运行器，结束后清理。公开仓库的 Actions 日志仍公开，不要将运行配置或生产凭据作为输入。
 - 不改版本号、Git 标签、Release 附件或 `latest`；`release.yml` 安装包流程保持独立。
 
-`private` / `bootstrap` 模式只允许从本仓库 `main` 手动运行。`private` 要求已存在且关联本仓库的私有 `ghcr.io/xmancodeing/xmall-internal` 包；检查直接查询指定包，不依赖个人账号的私有包列表接口。`bootstrap` 查询目标返回 404 时，仅允许尝试推送无应用内容的空 marker（GHCR 新包默认私有）；404 也可能表示包不可见，并非不存在或私有的证明。marker 推送后必须成功查询并确认实际可见性为 private、关联仓库正确，才允许构建和上传应用。任何其他查询错误、无权限或可见性不符均停止，不自动改可见性。
+`private` / `bootstrap` 模式只允许从本仓库 `main` 手动运行。`private` 要求已存在且关联本仓库的私有 `ghcr.io/xmancodeing/xmall-internal-private` 包；检查直接查询指定包，不依赖个人账号的私有包列表接口。`bootstrap` 查询目标返回 404 时，仅允许尝试推送无应用内容的空 marker（GHCR 新包默认私有）；404 也可能表示包不可见，并非不存在或私有的证明。marker 推送后必须成功查询并确认实际可见性为 private、关联仓库正确，才允许构建和上传应用。任何其他查询错误、无权限或可见性不符均停止，不自动改可见性。
+
+旧 `xmall-internal` 包已确认是 public，不再用作私有内测目标，保留不动。新目标为 `xmall-internal-private`；包名含 private 不代表实际私有，仍以 API 检查结果为准。
 
 应用使用唯一 `internal-<commit>-<run>-<attempt>` 标签，先测试本地 OCI 归档，再上传同一归档。上传后检查双架构 manifest、匿名访问被拒绝，认证按 digest 拉取并测试 amd64 与 QEMU arm64。使用工作流 `GITHUB_TOKEN`，不需要个人 Token 写入仓库；marker 不可运行，部署使用验证通过的应用 digest。
 
@@ -274,7 +276,7 @@ go test -race ./internal/...
 [Docker 正式发布工作流](.github/workflows/docker-release.yml) 在公开发布 Release 时触发，但只有维护者明确配置以下 **GitHub repository variables** 后才会执行（不是应用配置或 `.env`）：
 
 - `DOCKER_RELEASE_ENABLED=true`：开启镜像发布；不设置或设为 `false` 则跳过。
-- `DOCKER_RELEASE_PACKAGE=xmall`：当前 GitHub owner 下已存在的 GHCR 包名，仅填写包名。私有试运行可指定已配置的 `xmall-internal`。
+- `DOCKER_RELEASE_PACKAGE=xmall`：当前 GitHub owner 下已存在的 GHCR 包名，仅填写包名。私有试运行可指定已配置的 `xmall-internal-private`。
 - `DOCKER_RELEASE_VISIBILITY=private`：期望的实际包可见性。公开发行前经确认改为 `public`，并单独在 GHCR 设置包的实际可见性；工作流绝不自动改可见性。
 
 目标包须已关联本仓库并授予本仓库 Actions 写权限。首次建包仍需单独完成；查不到包、权限不足、可见性不符、来源不是本仓库或版本标签已存在时均停止。不要把含内测版本的包直接公开，正式镜像建议使用独立的 `xmall` 包。

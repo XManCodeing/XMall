@@ -7,7 +7,7 @@ const { gate } = require('../docker-internal-gate.cjs');
 
 function fixture() {
   const repo = { id: 42, full_name: 'XManCodeing/XMall', fork: false, owner: { type: 'User' } };
-  const pkg = { id: 7, name: 'xmall-internal', package_type: 'container', visibility: 'private', repository: repo };
+  const pkg = { id: 7, name: 'xmall-internal-private', package_type: 'container', visibility: 'private', repository: repo };
   const calls = [];
   const f = {
     repo, pkg, calls, mode: 'bootstrap', allowCreate: true,
@@ -28,16 +28,16 @@ function absent(f, status = 404) {
 test('existing package must be private and linked without account-wide listing', async () => {
   for (const mode of ['private', 'bootstrap']) {
     const f = fixture(); f.mode = mode;
-    assert.deepEqual(await gate(f), { image: 'ghcr.io/xmancodeing/xmall-internal', bootstrapMarker: false, packageId: '7' });
+    assert.deepEqual(await gate(f), { image: 'ghcr.io/xmancodeing/xmall-internal-private', bootstrapMarker: false, packageId: '7' });
     assert.deepEqual(f.calls.map((c) => c.kind), ['detail']);
     assert.equal(f.calls[0].route, 'GET /users/{owner}/packages/container/{package_name}');
-    assert.deepEqual(f.calls[0].params, { owner: 'XManCodeing', package_name: 'xmall-internal' });
+    assert.deepEqual(f.calls[0].params, { owner: 'XManCodeing', package_name: 'xmall-internal-private' });
   }
 });
 
 test('explicit initial bootstrap alone permits an empty marker after detail 404', async () => {
   const f = fixture(); absent(f);
-  assert.deepEqual(await gate(f), { image: 'ghcr.io/xmancodeing/xmall-internal', bootstrapMarker: true });
+  assert.deepEqual(await gate(f), { image: 'ghcr.io/xmancodeing/xmall-internal-private', bootstrapMarker: true });
   assert.deepEqual(f.calls.map((c) => c.kind), ['detail']);
   f.mode = 'private';
   await assert.rejects(gate(f), /404/);
@@ -82,6 +82,7 @@ const invalid = {
   'unlinked': (f) => { delete f.pkg.repository; },
   'wrong linked repo': (f) => { f.pkg.repository = { id: 43, full_name: 'XManCodeing/XMall' }; },
   'wrong linked name': (f) => { f.pkg.repository = { id: 42, full_name: 'other/repo' }; },
+  'retired public package name': (f) => { f.pkg.name = 'xmall-internal'; },
   'wrong package': (f) => { f.pkg.name = 'xmall'; },
   'wrong package type': (f) => { f.pkg.package_type = 'npm'; },
   'missing package id': (f) => { delete f.pkg.id; },

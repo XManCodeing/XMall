@@ -62,14 +62,14 @@ class RegistryTests(unittest.TestCase):
                 authfile.write_text('{"auths":{"ghcr.io":{}}}')
                 with patch.object(registry.subprocess, "check_output", side_effect=output), patch.object(registry.subprocess, "run", side_effect=run):
                     if denial == "403 Forbidden":
-                        registry.main("ghcr.io/xmancodeing/xmall-internal", "internal-test", str(authfile), "test.tar")
+                        registry.main("ghcr.io/xmancodeing/xmall-internal-private", "internal-test", str(authfile), "test.tar")
                         pulls = [args for args, _ in calls if args[:2] == ["docker", "pull"]]
                         self.assertEqual([args[3] for args in pulls], ["linux/amd64", "linux/arm64"])
                         self.assertTrue(all("@sha256:" in args[4] for args in pulls))
                         self.assertEqual(len([args for args, _ in calls if args[0] == registry.sys.executable]), 2)
                     else:
                         with self.assertRaises(RuntimeError):
-                            registry.main("ghcr.io/xmancodeing/xmall-internal", "internal-test", str(authfile), "test.tar")
+                            registry.main("ghcr.io/xmancodeing/xmall-internal-private", "internal-test", str(authfile), "test.tar")
                         self.assertEqual(len(calls), 1)
 
     def test_registry_workflow_uses_isolated_auth_digest_and_both_runtime_arches(self):
