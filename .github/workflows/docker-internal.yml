@@ -1,0 +1,138 @@
+name: docker-internal
+
+# Deliberately no tag/release trigger during the private pilot.
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'validate: build only; private: push to an existing verified private GHCR package'
+        type: choice
+        default: validate
+        options:
+          - validate
+          - private
+
+permissions:
+  contents: read
+
+concurrency:
+  group: docker-internal-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    outputs:
+      revision: ${{ steps.source.outputs.revision }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Resolve immutable source
+        id: source
+        run: echo "revision=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+      - name: Check public build inputs
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y python3-yaml
+          python3 scripts/check-release-inputs.py
+      - uses: docker/setup-qemu-action@v3
+      - uses: docker/setup-buildx-action@v3
+      - name: Build both Linux architectures without publishing
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64
+          push: false
+          outputs: type=oci,dest=${{ runner.temp }}/xmall-internal.oci.tar
+          build-args: |
+            APP_VERSION=internal-${{ steps.source.outputs.revision }}
+            VCS_REF=${{ steps.source.outputs.revision }}
+            SOURCE_URL=https://github.com/${{ github.repository }}
+          cache-to: type=local,dest=${{ runner.temp }}/xmall-build-cache,mode=max
+        env:
+          # Public repository artifacts must not become a pilot image download channel.
+          DOCKER_BUILD_RECORD_UPLOAD: 'false'
+      - name: Load smoke-test image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: linux/amd64
+          load: true
+          tags: xmall-smoke:internal
+          build-args: |
+            APP_VERSION=internal-${{ steps.source.outputs.revision }}
+            VCS_REF=${{ steps.source.outputs.revision }}
+            SOURCE_URL=https://github.com/${{ github.repository }}
+          cache-from: type=local,src=${{ runner.temp }}/xmall-build-cache
+        env:
+          DOCKER_BUILD_RECORD_UPLOAD: 'false'
+      - name: Verify startup, embedded SPAs and database persistence
+        run: python3 scripts/docker-smoke.py xmall-smoke:internal
+      - name: Remove local image archive
+        if: always()
+        run: rm -f "$RUNNER_TEMP/xmall-internal.oci.tar"
+
+  private-push:
+    if: inputs.mode == 'private' && github.ref == 'refs/heads/main'
+    needs: validate
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.validate.outputs.revision }}
+          persist-credentials: false
+      - name: Require an existing private package
+        id: package
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const owner = context.repo.owner;
+            const name = `${context.repo.repo.toLowerCase()}-internal`;
+            const { data: repo } = await github.rest.repos.get(context.repo);
+            const prefix = repo.owner.type === 'Organization' ? 'orgs' : 'users';
+            // 404/403 is NOT evidence that creating a package will be private.
+            // Fail closed; never change package visibility automatically.
+            const { data: pkg } = await github.request(`GET /${prefix}/{owner}/packages/container/{package_name}`, {
+              owner, package_name: name
+            });
+            if (pkg.visibility !== 'private') {
+              throw new Error('Pilot push requires a verified private GHCR package. No image was pushed.');
+            }
+            core.setOutput('image', `ghcr.io/${owner.toLowerCase()}/${name}`);
+      - uses: docker/setup-qemu-action@v3
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Push private pilot image only
+        id: push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.package.outputs.image }}:internal-${{ needs.validate.outputs.revision }}-${{ github.run_id }}-${{ github.run_attempt }}
+          build-args: |
+            APP_VERSION=internal-${{ needs.validate.outputs.revision }}
+            VCS_REF=${{ needs.validate.outputs.revision }}
+            SOURCE_URL=https://github.com/${{ github.repository }}
+        env:
+          DOCKER_BUILD_RECORD_UPLOAD: 'false'
+      - name: Recheck private visibility
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { data: repo } = await github.rest.repos.get(context.repo);
+            const prefix = repo.owner.type === 'Organization' ? 'orgs' : 'users';
+            const { data: pkg } = await github.request(`GET /${prefix}/{owner}/packages/container/{package_name}`, {
+              owner: context.repo.owner, package_name: `${context.repo.repo.toLowerCase()}-internal`
+            });
+            if (pkg.visibility !== 'private') throw new Error('Package visibility changed during push; stop pilot distribution and investigate.');

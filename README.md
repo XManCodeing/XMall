@@ -119,7 +119,7 @@ sudo xmall-manager admin-reset-2fa
 
 ### 方式三：自行构建 Docker 镜像
 
-仓库提供 [Dockerfile](Dockerfile)，当前发布工作流不自动推送公共镜像。从本项目源码构建：
+仓库提供 [Dockerfile](Dockerfile)。现有安装包发行流程不变；新增的 [Docker 内测工作流](.github/workflows/docker-internal.yml) 仅手动运行，暂不发布公共镜像，也不绑定当前版本标签。普通部署仍从本项目源码构建：
 
 ```bash
 docker build --build-arg APP_VERSION=local -t xmall:local .
@@ -253,6 +253,18 @@ go test -race ./internal/...
 3. 核对目标系统安装与启动、版本信息、源码及许可证后，手动公开草稿。
 
 工作流使用 `GITHUB_TOKEN`，需要 `contents: write` 权限。当前不自动发布 Docker 镜像。发行物应对应明确 tag / commit，并提供完整对应源码、构建材料和许可文件；运行密钥和业务数据不属于发行材料。
+
+### Docker 私有内测（维护者）
+
+在 Actions 中手动运行 `docker-internal`，默认选择 `validate`：
+
+- 构建 Linux `amd64` / `arm64` 镜像，在 amd64 上检查启动、`/health`、商城和自定义后台路径，并用同一 SQLite 数据卷重建容器检查再次启动。
+- 不登录 GHCR、不上传镜像或镜像归档；临时产物仅留在运行器，结束后清理。公开仓库的 Actions 日志仍公开，不要将运行配置或生产凭据作为输入。
+- 不改版本号、Git 标签、Release 附件或 `latest`；`release.yml` 安装包流程保持独立。
+
+`private` 模式只允许从 `main` 运行，验证通过后向 `ghcr.io/<owner>/xmall-internal` 推送唯一的 `internal-<commit>-<run>-<attempt>` 标签。必须事先存在该 **private** GHCR 包，并授予本仓库 Actions 访问权限；不存在、无权限或可见性不为 private 时直接停止，不自动创建包、不自动改可见性。使用工作流的 `GITHUB_TOKEN`，无需把个人 Token 写入仓库。此入口用于已有私有包的后续推送；首次建包及私有访问权限需单独确认，不能把构建验证成功当作已验证推送。
+
+当前未启用 `release.published` 触发，也不生成正式版本或 `latest` 镜像标签。内测通过并确认公开发布后，再接入正式 Release 发布事件，并固定到该 Release 标签对应的提交构建。
 
 ## 致谢与许可证
 
