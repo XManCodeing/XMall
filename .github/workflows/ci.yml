@@ -108,6 +108,16 @@ jobs:
           go-version-file: go.mod
           cache: true
 
+      - name: Setup Node.js for Docker release gate tests
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24.11.1'
+
+      - name: Test Docker release guards (no registry access)
+        run: |
+          node --test scripts/tests/docker-release-gate.test.cjs scripts/tests/docker-internal-gate.test.cjs
+          python3 -m unittest discover -s scripts/tests -p 'docker_internal_registry_test.py'
+
       - name: Check .goreleaser.yaml
         uses: goreleaser/goreleaser-action@v6
         with:

@@ -28,7 +28,8 @@ XMall 是面向数字商品销售的全栈商城，包含 Go 后端、用户商�
 ### 内置 Telegram Bot
 
 - 将 Bot 运行、购物、支付和交付接入商城后端，不必另行运行外置购物机器人。
-- 增加实例管理、运行状态、菜单配置、群发及逐条投递状态查询。
+- 后台统一为「机器人实例管理」；旧「连接状态」和「Bot 客户端」地址跳转至该页面。
+- 旧 Bot 客户端管理页面及 `/api/v1/admin/channel-clients` 系列管理接口已移除，不再提供客户端创建、编辑、启停、密钥重置或删除入口；保留历史身份、接管和外部业务兼容链路，不删除存量数据表。
 - 通过分布式租约、续租和取消链路控制多实例执行；发送结果不确定时保留待核对状态，避免盲目重发。
 - 区分确定未提交网关与结果未知的支付失败，支持支付二维码原始内容及明确标注的二维码图片。
 - 增加旧 Bot 显式导入与接管流程，持久保存历史 Bot 身份；清空 Token、更换 Bot 或软删除渠道不能绕过接管检查。
@@ -76,7 +77,7 @@ chmod 600 config.yml
 
 从 [XMall Releases](https://github.com/XManCodeing/XMall/releases) 下载与系统、CPU 架构匹配的 `xmall_*` 安装包，并核对发布页提供的校验和。Linux / macOS 使用 `.tar.gz`，Windows 使用 `.zip`。请选择已公开的 XMall 发行物，不使用旧品牌附件代替。
 
-解压至独立目录，按上文配置 `config.yml` 后，在该目录启动：
+解压至独立目录，按上文配置 `config.yml` 后，在该目录启动（默认 `all` 模式要求启用队列并提供 Redis；无队列时使用 `./xmall -mode api`）：
 
 ```bash
 ./xmall
@@ -137,7 +138,7 @@ docker run -d --name xmall --restart unless-stopped \
   xmall:local ./xmall -mode api
 ```
 
-此示例供宿主机反向代理访问，不直接公开应用端口。Redis 和外部数据库需另行提供，容器内的 `127.0.0.1` 不指向宿主机。容器升级使用新镜像重建，保留数据卷，不使用容器内二进制自更新。
+此示例供宿主机反向代理访问，不直接公开应用端口，使用 `api` 模式且不运行后台 worker。**需要内置 Telegram Bot 或异步任务时**，先配置可达的 Redis 和 `queue.enabled: true`，再将最后一行改为 `xmall:local`，使用默认 `all` 模式；仅运行上述 API 示例不能代替完整 Bot 部署。Redis 和外部数据库需另行提供，容器内的 `127.0.0.1` 不指向宿主机。容器升级使用新镜像重建，保留数据卷，不使用容器内二进制自更新。
 
 ## Telegram 启用与旧版迁移
 
@@ -149,7 +150,9 @@ docker run -d --name xmall --restart unless-stopped \
 2. 停止旧 worker 和外部 polling，备份数据库与 Redis，再启动新版并执行显式导入、凭据撤销及接管。
 3. 核对未完成交易与通知后再恢复业务。新版 worker 未装配旧通知兼容路由，消费旧任务会归档；不能用删除队列或直接后台重启替代排空。
 
-v5 迁移保留旧渠道的历史身份。空、非法或无法解密的历史会进入 `unresolved` 隔离，不会因填写新 Token 自动放行。管理员需先禁用渠道、核实完整历史，再通过渠道更新接口提交 `history_bot_ids`、最新 `history_revision` 和 `confirm_complete_history: true`；不得混入普通配置字段。无法确认历史就保持隔离。软删除的未知历史目前没有管理界面或现成 CLI，需专项运维处理。
+v5 迁移保留旧渠道的历史身份。空、非法或无法解密的历史会进入 `unresolved` 隔离，不会因填写新 Token 自动放行。**当前源码已移除旧渠道管理接口，不能再通过该接口禁用渠道或提交历史修复。**升级前若存在未完成的历史修复，应在具备旧管理能力的版本中，经备份和核实后完成；已经升级且存在未知历史的部署需专项运维处理，保持隔离，不直接改表绕过归属检查。已具备完整历史的显式导入、预检和接管接口继续保留。
+
+本轮下线不撤销已有外部客户端凭据，也不删除历史数据；它关闭的是管理入口，不代表强制停用所有外置机器人。内置实例与外置 Bot 的切换仍须执行上述接管流程。内置角色的旧管理权限会在启动时同步清理，自定义角色可能保留无对应接口的旧策略。
 
 支付二维码默认按原始内容本地编码，不探测普通支付 URL。返回图片地址的网关需在渠道配置 JSON 声明 `"telegram_qr_code_kind": "image"`，或返回 `qrcode_type: "image"`；响应中的明确类型优先。图片获取失败仅回退到独立收银台链接，不把图片地址当成支付码。
 
@@ -252,7 +255,7 @@ go test -race ./internal/...
 2. 对通过验证的提交推送独立 `v*` tag，生成包含 Linux / Windows / macOS、amd64 / arm64 产物和校验和的草稿 Release。
 3. 核对目标系统安装与启动、版本信息、源码及许可证后，手动公开草稿。
 
-工作流使用 `GITHUB_TOKEN`，需要 `contents: write` 权限。当前不自动发布 Docker 镜像。发行物应对应明确 tag / commit，并提供完整对应源码、构建材料和许可文件；运行密钥和业务数据不属于发行材料。
+安装包工作流使用 `GITHUB_TOKEN`，需要 `contents: write` 权限。Docker 由独立、默认关闭的工作流负责，失败不会重建或删除安装包；安装包发布成功也不等于镜像已可用。发行物应对应明确 tag / commit，并提供完整对应源码、构建材料和许可文件；运行密钥和业务数据不属于发行材料。
 
 ### Docker 私有内测（维护者）
 
@@ -262,9 +265,25 @@ go test -race ./internal/...
 - 不登录 GHCR、不上传镜像或镜像归档；临时产物仅留在运行器，结束后清理。公开仓库的 Actions 日志仍公开，不要将运行配置或生产凭据作为输入。
 - 不改版本号、Git 标签、Release 附件或 `latest`；`release.yml` 安装包流程保持独立。
 
-`private` 模式只允许从 `main` 运行，验证通过后向 `ghcr.io/<owner>/xmall-internal` 推送唯一的 `internal-<commit>-<run>-<attempt>` 标签。必须事先存在该 **private** GHCR 包，并授予本仓库 Actions 访问权限；不存在、无权限或可见性不为 private 时直接停止，不自动创建包、不自动改可见性。使用工作流的 `GITHUB_TOKEN`，无需把个人 Token 写入仓库。此入口用于已有私有包的后续推送；首次建包及私有访问权限需单独确认，不能把构建验证成功当作已验证推送。
+`private` / `bootstrap` 模式只允许从本仓库 `main` 手动运行。`private` 要求已存在且关联本仓库的私有 `ghcr.io/xmancodeing/xmall-internal` 包；`bootstrap` 用于首次建立：先成功查询完整私有包列表并核实目标不存在，再仅推送无应用内容的空 marker（GHCR 新包默认私有），随后确认实际可见性为 private、关联仓库正确，才允许上传应用。无法确认、无权限或可见性不符均停止，不自动改可见性。
 
-当前未启用 `release.published` 触发，也不生成正式版本或 `latest` 镜像标签。内测通过并确认公开发布后，再接入正式 Release 发布事件，并固定到该 Release 标签对应的提交构建。
+应用使用唯一 `internal-<commit>-<run>-<attempt>` 标签，先测试本地 OCI 归档，再上传同一归档。上传后检查双架构 manifest、匿名访问被拒绝，认证按 digest 拉取并测试 amd64 与 QEMU arm64。使用工作流 `GITHUB_TOKEN`，不需要个人 Token 写入仓库；marker 不可运行，部署使用验证通过的应用 digest。
+
+### Docker 随 Release 发布（默认关闭）
+
+[Docker 正式发布工作流](.github/workflows/docker-release.yml) 在公开发布 Release 时触发，但只有维护者明确配置以下 **GitHub repository variables** 后才会执行（不是应用配置或 `.env`）：
+
+- `DOCKER_RELEASE_ENABLED=true`：开启镜像发布；不设置或设为 `false` 则跳过。
+- `DOCKER_RELEASE_PACKAGE=xmall`：当前 GitHub owner 下已存在的 GHCR 包名，仅填写包名。私有试运行可指定已配置的 `xmall-internal`。
+- `DOCKER_RELEASE_VISIBILITY=private`：期望的实际包可见性。公开发行前经确认改为 `public`，并单独在 GHCR 设置包的实际可见性；工作流绝不自动改可见性。
+
+目标包须已关联本仓库并授予本仓库 Actions 写权限。首次建包仍需单独完成；查不到包、权限不足、可见性不符、来源不是本仓库或版本标签已存在时均停止。不要把含内测版本的包直接公开，正式镜像建议使用独立的 `xmall` 包。
+
+流程固定到 Release tag 对应的 commit，构建 Linux `amd64/arm64`，从同一份 OCI 归档加载 amd64 镜像完成启动测试，通过后才上传该归档的双架构镜像。只写 `vX.Y.Z` 等固定版本标签，**不写 `latest`，不覆盖已存在的镜像版本**；预发布使用自己的版本标签。SemVer 含 `+` 时，镜像标签将其替换为 `_`，程序内版本仍保留原 tag。
+
+镜像上传失败可在默认分支手动运行 `docker-release`，输入已有公开 Release 的 tag 补发；不能输入任意分支、草稿或不存在的版本。若上次已完成上传但后置检查失败，先核对镜像 digest 和可见性，不盲目删标签重跑。公开草稿应由维护者操作；若以后改成机器人自动发布 Release，须注意 `GITHUB_TOKEN` 创建的事件通常不会触发另一工作流，应显式安排 dispatch。
+
+当前仅完成发布门禁单测及工作流静态检查；此前 `docker-internal` 验证的是双架构构建和 amd64 API 模式启动。**首次 GHCR 推送/拉取、正式 OCI 归档上传链路、ARM64 运行和 Redis/worker 完整部署仍需实测**，不能把这些准备代码视为发布链路已全部跑通。正式发行前应先完成私有试运行，再启用公开包。
 
 ## 致谢与许可证
 
