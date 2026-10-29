@@ -615,15 +615,6 @@ export const adminAPI = {
   updateApiCredentialStatus: (id: number, data: { is_active: boolean }) => api.put(`/admin/api-credentials/${id}/status`, data),
   deleteApiCredential: (id: number) => api.delete(`/admin/api-credentials/${id}`),
 
-  // Channel Clients (Bot Clients)
-  getChannelClients: () => api.get('/admin/channel-clients'),
-  createChannelClient: (data: { name: string; channel_type: string; description?: string; bot_token?: string; callback_url?: string }) => api.post('/admin/channel-clients', data),
-  getChannelClient: (id: number) => api.get(`/admin/channel-clients/${id}`),
-  updateChannelClient: (id: number, data: { name?: string; description?: string; bot_token?: string; callback_url?: string }) => api.put(`/admin/channel-clients/${id}`, data),
-  updateChannelClientStatus: (id: number, data: { status: number }) => api.put(`/admin/channel-clients/${id}/status`, data),
-  resetChannelClientSecret: (id: number) => api.post(`/admin/channel-clients/${id}/reset-secret`),
-  deleteChannelClient: (id: number) => api.delete(`/admin/channel-clients/${id}`),
-
   // Telegram Bot Settings
   getTelegramBotSettings: () => api.get('/admin/settings/telegram-bot'),
   updateTelegramBotSettingsSection: (section: string, expectedVersion: number, data: unknown) =>

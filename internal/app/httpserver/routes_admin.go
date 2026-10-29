@@ -14,7 +14,6 @@ import (
 	categoryhttp "github.com/XManCodeing/XMall/internal/modules/catalog/category/transport/http"
 	mappinghttp "github.com/XManCodeing/XMall/internal/modules/catalog/mapping/transport/http"
 	producthttp "github.com/XManCodeing/XMall/internal/modules/catalog/product/transport/http"
-	channelclienthttp "github.com/XManCodeing/XMall/internal/modules/channelclient/transport/http"
 	contenttransport "github.com/XManCodeing/XMall/internal/modules/content/transport/http"
 	coupontransport "github.com/XManCodeing/XMall/internal/modules/coupon/transport/http"
 	dashboardtransport "github.com/XManCodeing/XMall/internal/modules/dashboard/transport/http"
@@ -187,9 +186,6 @@ func registerAdminRoutes(
 
 	// 对账管理
 	reconciliationtransport.RegisterAdminRoutes(authorized, reconciliationtransport.NewAdminHandler(c.ReconciliationService))
-
-	// 渠道客户端管理
-	channelclienthttp.RegisterAdminRoutes(authorized, channelclienthttp.NewAdminHandler(c.ChannelClientService))
 
 	// Telegram Bot 群发（含逐收件人投递分页与显式安全重试）
 	broadcasthttp.RegisterAdminRoutes(authorized, broadcasthttp.NewAdminHandler(c.TelegramBroadcastService))

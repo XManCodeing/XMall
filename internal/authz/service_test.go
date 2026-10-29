@@ -195,6 +195,32 @@ func TestBootstrapBuiltinRoles(t *testing.T) {
 	}
 }
 
+func TestBootstrapBuiltinRolesRemovesRetiredChannelClientPolicies(t *testing.T) {
+	svc := setupAuthzServiceTest(t)
+	for _, policy := range []Policy{
+		{Object: "/admin/channel-clients", Action: "*"},
+		{Object: "/admin/channel-clients/:id", Action: "*"},
+		{Object: "/admin/channel-clients/:id/status", Action: "PUT"},
+		{Object: "/admin/channel-clients/:id/reset-secret", Action: "POST"},
+	} {
+		if _, err := svc.enforcer.AddPolicy("role:system_admin", policy.Object, policy.Action); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := svc.BootstrapBuiltinRoles(); err != nil {
+		t.Fatal(err)
+	}
+	policies, err := svc.enforcer.GetFilteredPolicy(0, "role:system_admin")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, policy := range policies {
+		if len(policy) > 1 && strings.HasPrefix(policy[1], "/admin/channel-clients") {
+			t.Errorf("bootstrap retained retired builtin policy: %v", policy)
+		}
+	}
+}
+
 func TestBootstrapBuiltinRolesRemovesStaleImmutableWildcard(t *testing.T) {
 	svc := setupAuthzServiceTest(t)
 	if _, err := svc.EnsureRole("readonly_auditor"); err != nil {

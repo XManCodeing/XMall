@@ -43,7 +43,6 @@ import {
   ClipboardCheck,
   Lock,
   Bot,
-  Wifi,
   Send,
   Crown,
   Bell,
@@ -472,18 +471,6 @@ const navGroups = computed<NavGroup[]>(() => {
           to: '/telegram-bot/menu',
           icon: ListOrdered,
           permission: 'GET:/admin/settings/telegram-bot',
-        },
-        {
-          label: t('admin.navItems.telegramBotStatus'),
-          to: '/telegram-bot/status',
-          icon: Wifi,
-          permission: 'GET:/admin/telegram-bot/instances',
-        },
-        {
-          label: t('admin.navItems.telegramBotChannelClients'),
-          to: '/telegram-bot/channel-clients',
-          icon: KeyRound,
-          permission: 'GET:/admin/channel-clients',
         },
         {
           label: t('admin.navItems.telegramBotBroadcasts'),

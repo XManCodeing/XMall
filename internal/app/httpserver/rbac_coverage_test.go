@@ -17,13 +17,21 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/XManCodeing/XMall/internal/app/container"
 	"github.com/XManCodeing/XMall/internal/app/httpserver/middleware"
 	"github.com/XManCodeing/XMall/internal/authz"
+	"github.com/XManCodeing/XMall/internal/config"
 	affiliatetransport "github.com/XManCodeing/XMall/internal/modules/affiliate/transport/http"
+	categorystore "github.com/XManCodeing/XMall/internal/modules/catalog/category/infrastructure/gormstore"
+	downstreamstore "github.com/XManCodeing/XMall/internal/modules/downstreamcallback/infrastructure/gormstore"
 	admindomain "github.com/XManCodeing/XMall/internal/modules/identity/admin/domain"
+	userstore "github.com/XManCodeing/XMall/internal/modules/identity/user/infrastructure/gormstore"
+	paymentstore "github.com/XManCodeing/XMall/internal/modules/payment/infrastructure/gormstore"
 	paymenttransport "github.com/XManCodeing/XMall/internal/modules/payment/transport/http"
 	reconciliationtransport "github.com/XManCodeing/XMall/internal/modules/reconciliation/transport/http"
 	resellertransport "github.com/XManCodeing/XMall/internal/modules/reseller/transport/http/admin"
+	siteconnectionstore "github.com/XManCodeing/XMall/internal/modules/siteconnection/infrastructure/gormstore"
+	runtimeapp "github.com/XManCodeing/XMall/internal/modules/telegram/runtime/application"
 	wallettransport "github.com/XManCodeing/XMall/internal/modules/wallet/transport/http"
 	"github.com/XManCodeing/XMall/internal/platform/http/response"
 	"github.com/gin-gonic/gin"
@@ -94,6 +102,66 @@ func TestAllAdminRoutesCoveredByBuiltinRoles(t *testing.T) {
 		}
 		t.Fatalf("the following admin routes are not covered by any builtin role seed in authz.BuiltinRoleSeeds() — add them to the appropriate role in api/internal/authz/bootstrap.go:\n%s",
 			strings.Join(lines, "\n"))
+	}
+}
+
+// The production router (not a synthetic route list) is the permission catalog's
+// source of truth. No database, Redis, config file or Telegram call is needed to
+// register handlers; requests to retained business handlers are not executed.
+func TestChannelClientAdminRoutesAndPermissionsRemoved(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	router := SetupRouter(&config.Config{}, &container.Container{
+		TelegramBotManager:     &runtimeapp.Manager{},
+		PaymentStore:           &paymentstore.Store{},
+		PaymentChannelStore:    &paymentstore.ChannelStore{},
+		CategoryRepo:           categorystore.NewCategoryStore(nil),
+		UserStore:              userstore.New(nil),
+		SiteConnectionRepo:     siteconnectionstore.New(nil),
+		DownstreamOrderRefRepo: &downstreamstore.Store{},
+	})
+	for _, route := range router.Routes() {
+		if strings.HasPrefix(route.Path, "/api/v1/admin/channel-clients") {
+			t.Errorf("retired channel client route registered: %s %s", route.Method, route.Path)
+		}
+	}
+	catalog := buildAdminPermissionCatalog(router)
+	if len(catalog) == 0 {
+		t.Fatal("production permission catalog is empty")
+	}
+	for _, item := range catalog {
+		if strings.HasPrefix(item.Object, "/admin/channel-clients") || item.Module == "channel-clients" {
+			t.Errorf("retired channel client permission remains in catalog: %+v", item)
+		}
+	}
+	for _, seed := range authz.BuiltinRoleSeeds() {
+		for _, policy := range seed.Policies {
+			if strings.HasPrefix(policy.Object, "/admin/channel-clients") {
+				t.Errorf("retired channel client policy remains: %s %+v", seed.Role, policy)
+			}
+		}
+	}
+
+	// Retirement must not remove instance management, historical cutover,
+	// broadcasts or the external channel bot API.
+	for _, expected := range []adminRoute{
+		{http.MethodGet, "/api/v1/admin/telegram-bot/instances"},
+		{http.MethodPost, "/api/v1/admin/telegram/cutover/import"},
+		{http.MethodPost, "/api/v1/admin/telegram/cutover/preflight"},
+		{http.MethodPost, "/api/v1/admin/telegram/cutover/apply"},
+		{http.MethodGet, "/api/v1/admin/telegram-bot/broadcasts"},
+		{http.MethodGet, "/api/v1/channel/telegram/config"},
+		{http.MethodPost, "/api/v1/channel/telegram/heartbeat"},
+	} {
+		found := false
+		for _, route := range router.Routes() {
+			if route.Method == expected.method && route.Path == expected.object {
+				found = true
+				break
+			}
+		}
+		if !found {
+			t.Errorf("retained route missing: %s %s", expected.method, expected.object)
+		}
 	}
 }
 

@@ -49,6 +49,61 @@ function target(name: string) {
   }
 }
 
+describe('Telegram instance navigation', () => {
+  it('has one management page and redirects the former status entry', () => {
+    const children = registered.routes.flatMap((item) => item.children || [])
+    const management = children.find((item) => item.name === 'telegram-bot')
+    expect(management?.meta.permission).toBe('GET:/admin/telegram-bot/instances')
+    const status = children.find((item) => item.name === 'telegram-bot-status')
+    expect(status?.redirect).toEqual({ name: 'telegram-bot' })
+    expect(status?.component).toBeUndefined()
+    const clients = children.find((item) => item.name === 'telegram-bot-channel-clients')
+    expect(clients?.redirect).toEqual({ name: 'telegram-bot' })
+    expect(clients?.component).toBeUndefined()
+  })
+
+  it.each(['/telegram-bot/status', '/telegram-bot/channel-clients'])(
+    'redirects %s through the instance permission guard',
+    async (path) => {
+      const { createRouter, createMemoryHistory } = await vi.importActual<typeof import('vue-router')>('vue-router')
+      const children = registered.routes.flatMap((item) => item.children || [])
+      const router = createRouter({
+        history: createMemoryHistory('/admin/'),
+        routes: [
+          ...children.filter((item) => ['telegram-bot', 'telegram-bot-status', 'telegram-bot-channel-clients'].includes(item.name)).map((item) => ({
+            ...item,
+            path: `/${item.path}`,
+            ...(item.redirect ? {} : { component: { render: () => null } }),
+            meta: { requiresAuth: true, ...item.meta },
+          })),
+          { path: '/forbidden', component: { render: () => null } },
+          { path: '/login', component: { render: () => null } },
+        ],
+      })
+      router.beforeEach(registered.guard)
+      auth.token = 'test-token'
+      auth.permissionsLoaded = true
+      auth.hasPermission.mockReturnValue(true)
+      try {
+        await router.push(`${path}?from=bookmark#instances`)
+        expect(router.currentRoute.value.path).toBe('/telegram-bot')
+        expect(router.currentRoute.value.query).toEqual({ from: 'bookmark' })
+        expect(router.currentRoute.value.hash).toBe('#instances')
+        auth.hasPermission.mockReturnValue(false)
+        await router.push(path)
+        expect(router.currentRoute.value.path).toBe('/forbidden')
+        expect(auth.hasPermission).toHaveBeenLastCalledWith('GET:/admin/telegram-bot/instances')
+        auth.token = ''
+        await router.push(path)
+        expect(router.currentRoute.value.path).toBe('/login')
+      } finally {
+        auth.token = 'test-token'
+        auth.hasPermission.mockReturnValue(true)
+      }
+    },
+  )
+})
+
 describe('admin finance navigation', () => {
   beforeEach(() => {
     vi.clearAllMocks()

@@ -348,14 +348,12 @@ const routes = [
       {
         path: 'telegram-bot/status',
         name: 'telegram-bot-status',
-        component: () => import('@/views/admin/TelegramBotStatus.vue'),
-        meta: { permission: 'GET:/admin/telegram-bot/instances' },
+        redirect: { name: 'telegram-bot' },
       },
       {
         path: 'telegram-bot/channel-clients',
         name: 'telegram-bot-channel-clients',
-        component: () => import('@/views/admin/TelegramBotChannelClients.vue'),
-        meta: { permission: 'GET:/admin/channel-clients' },
+        redirect: { name: 'telegram-bot' },
       },
       {
         path: 'telegram-bot/broadcasts',
