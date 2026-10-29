@@ -82,8 +82,18 @@ def main(image):
                     raise RuntimeError(f"Unclean shutdown: exit {exit_code}")
                 docker("rm", container)
                 print(f"Smoke pass {attempt + 1}: health, user/admin SPA, persistent SQLite and clean shutdown")
+    except Exception:
+        # Only disposable smoke-test logs; redact every generated credential
+        # before emitting diagnostics to this public repository's Actions log.
+        result = subprocess.run(["docker", "logs", container], capture_output=True, text=True)
+        logs = result.stdout + result.stderr
+        if "config" in locals():
+            for section, key in [("app", "secret_key"), ("jwt", "secret"), ("user_jwt", "secret"), ("bootstrap", "default_admin_password")]:
+                logs = logs.replace(config[section][key], "[REDACTED]")
+        print(logs[-16000:], file=sys.stderr)
+        raise
     finally:
-        # Do not dump application logs: startup logs can contain generated credentials.
+        # Never inspect production configuration or containers.
         subprocess.run(["docker", "rm", "-f", container], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         subprocess.run(["docker", "volume", "rm", "-f", volume], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
