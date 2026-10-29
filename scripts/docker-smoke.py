@@ -66,7 +66,7 @@ def main(image):
             for attempt in range(2):
                 docker("run", "-d", "--name", container, "-p", "127.0.0.1::8080",
                        "--mount", f"type=bind,src={path},dst=/app/config.yml,readonly",
-                       "--mount", f"type=volume,src={volume},dst=/app/db", image)
+                       "--mount", f"type=volume,src={volume},dst=/app/db", image, "./xmall", "-mode", "api")
                 wait_http(container, "/health", "")
                 wait_http(container, "/", "<html")
                 wait_http(container, "/smoke-admin/", "<html")

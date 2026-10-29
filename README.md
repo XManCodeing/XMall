@@ -61,7 +61,7 @@ chmod 600 config.yml
 
 - `app.secret_key`、`jwt.secret`、`user_jwt.secret`：分别运行一次 `openssl rand -hex 32`，填入三个不同随机值。已有部署不要随意更换 `app.secret_key`，否则可能无法解密存量数据。
 - `bootstrap.default_admin_username`、`bootstrap.default_admin_password`：首次初始化的管理员账号与强密码。
-- `server.host`、`server.port`：模板默认 `127.0.0.1:8080`；容器内应将监听地址改为 `0.0.0.0`。
+- `server.host`、`server.port`：模板默认 `127.0.0.1:8080`；容器内应将监听地址改为 `0.0.0.0`。队列关闭时使用 `./xmall -mode api`；默认 `all` 模式需要启用队列并提供 Redis。
 - `database`：数据库类型、连接信息及连接池；SQLite 保持单连接。
 - `web.admin_path`：后台路径，默认 `/admin`。
 - `server.trusted_proxies`、`cors.allowed_origins`：按实际代理与访问域名设置。
@@ -134,7 +134,7 @@ docker run -d --name xmall --restart unless-stopped \
   --mount type=volume,src=xmall-db,dst=/app/db \
   --mount type=volume,src=xmall-uploads,dst=/app/uploads \
   --mount type=volume,src=xmall-logs,dst=/app/logs \
-  xmall:local
+  xmall:local ./xmall -mode api
 ```
 
 此示例供宿主机反向代理访问，不直接公开应用端口。Redis 和外部数据库需另行提供，容器内的 `127.0.0.1` 不指向宿主机。容器升级使用新镜像重建，保留数据卷，不使用容器内二进制自更新。
