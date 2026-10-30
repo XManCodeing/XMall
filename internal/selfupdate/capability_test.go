@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
+	"strings"
 	"testing"
 
 	"github.com/XManCodeing/XMall/internal/version"
@@ -234,13 +235,70 @@ func TestParseSystemdRestartConfig(t *testing.T) {
 	if !ok || cfg.MainPID != 123 || cfg.Restart != "always" || !cfg.SuccessExitStatus[70] || !cfg.RestartPreventExitStatus[75] {
 		t.Fatalf("unexpected config: %+v, valid=%v", cfg, ok)
 	}
+	zero, ok := parseSystemdRestartConfig("MainPID=0\nRestart=no\nType=forking\nLoadState=loaded\nActiveState=active")
+	if !ok || zero.MainPID != 0 || zero.Type != "forking" || zero.UntrackedPanel {
+		t.Fatalf("explicit zero must parse without granting a panel exception: %+v, %v", zero, ok)
+	}
 	for _, input := range []string{
-		"Restart=no", "MainPID=0\nRestart=no", "MainPID=-1\nRestart=no",
+		"Restart=no", "MainPID=-1\nRestart=no",
 		"MainPID=invalid\nRestart=no", "MainPID=123", "",
 	} {
 		if _, ok := parseSystemdRestartConfig(input); ok {
 			t.Errorf("accepted incomplete ownership: %q", input)
 		}
+	}
+}
+
+func TestUntrackedAaPanelRestart(t *testing.T) {
+	const panelOutput = "Type=forking\nLoadState=loaded\nActiveState=active\nRestart=no\nRemainAfterExit=no\nRestartPreventExitStatus=\nSuccessExitStatus=\nMainPID=0\n"
+	for _, tc := range []struct {
+		name      string
+		service   systemdService
+		output    string
+		queryErr  error
+		execErr   error
+		want      RestartMethod
+		reason    string
+		preflight bool
+	}{
+		{"aaPanel detached project", systemdService{name: "btpanel.service"}, panelOutput, nil, nil, RestartExec, "", true},
+		{"exec preflight fails", systemdService{name: "btpanel.service"}, panelOutput, nil, errors.New("invalid executable"), RestartNone, "exec_preflight_failed", true},
+		{"arbitrary service", systemdService{name: "xmall.service"}, panelOutput, nil, nil, RestartNone, "systemd_policy_unknown", false},
+		{"same name user service", systemdService{name: "btpanel.service", user: true, uid: 1000}, panelOutput, nil, nil, RestartNone, "systemd_policy_unknown", false},
+		{"query failure", systemdService{name: "btpanel.service"}, panelOutput, errors.New("bus unavailable"), nil, RestartNone, "systemd_policy_unknown", false},
+		{"missing main pid", systemdService{name: "btpanel.service"}, strings.ReplaceAll(panelOutput, "MainPID=0\n", ""), nil, nil, RestartNone, "systemd_policy_unknown", false},
+		{"inactive panel", systemdService{name: "btpanel.service"}, strings.ReplaceAll(panelOutput, "ActiveState=active", "ActiveState=inactive"), nil, nil, RestartNone, "systemd_policy_unknown", false},
+		{"unloaded panel", systemdService{name: "btpanel.service"}, strings.ReplaceAll(panelOutput, "LoadState=loaded", "LoadState=not-found"), nil, nil, RestartNone, "systemd_policy_unknown", false},
+		{"nonforking panel", systemdService{name: "btpanel.service"}, strings.ReplaceAll(panelOutput, "Type=forking", "Type=simple"), nil, nil, RestartNone, "systemd_policy_unknown", false},
+		{"missing type", systemdService{name: "btpanel.service"}, strings.ReplaceAll(panelOutput, "Type=forking\n", ""), nil, nil, RestartNone, "systemd_policy_unknown", false},
+		{"direct service restriction preserved", systemdService{name: "btpanel.service"}, strings.ReplaceAll(panelOutput, "MainPID=0", "MainPID=2596"), nil, nil, RestartNone, "systemd_policy_disabled", false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			c := Capability{Supervisor: SupervisorSystemd, ExecPath: "/www/wwwroot/dujiao/xmall"}
+			called := false
+			configureRestart(&c, "linux", 2596, func() (unitRestartConfig, bool) {
+				return querySystemdRestartConfig(tc.service, 1000, func(args []string) ([]byte, error) {
+					for _, property := range []string{"MainPID", "Type", "LoadState", "ActiveState", "Restart"} {
+						if !slices.Contains(args, "--property="+property) {
+							t.Fatalf("missing property %s: %v", property, args)
+						}
+					}
+					return []byte(tc.output), tc.queryErr
+				})
+			}, func(path string) error {
+				called = true
+				if path != c.ExecPath {
+					t.Fatalf("wrong exec path: %s", path)
+				}
+				return tc.execErr
+			})
+			if c.RestartMethod != tc.want || c.RestartBlockReason != tc.reason || c.CanRestart != (tc.want != RestartNone) || called != tc.preflight {
+				t.Fatalf("unexpected capability: %+v; preflight=%v", c, called)
+			}
+			if tc.preflight && (c.Supervisor != SupervisorNone || c.RestartPolicy != "") {
+				t.Fatalf("inherited panel policy leaked: %+v", c)
+			}
+		})
 	}
 }
 

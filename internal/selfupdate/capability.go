@@ -164,9 +164,10 @@ func configureRestart(c *Capability, goos string, pid int, systemd func() (unitR
 	if c.Supervisor == SupervisorSystemd {
 		cfg, ok := systemd()
 		// Environment and cgroup membership also belong to panel-launched children.
-		// Only a positive, queried MainPID can distinguish them safely. Unknown
-		// ownership must not bypass a real service's restart restrictions.
-		if !ok || cfg.MainPID <= 0 || pid <= 0 {
+		// An active aaPanel forking unit can explicitly report MainPID=0: it does
+		// not track a main process. Only this verified case may use exec without
+		// a positive MainPID; unknown ownership remains blocked.
+		if !ok || pid <= 0 || cfg.MainPID < 0 || (cfg.MainPID == 0 && !cfg.UntrackedPanel) {
 			c.RestartBlockReason = "systemd_policy_unknown"
 			return
 		}
@@ -316,6 +317,11 @@ func systemdServiceFromCgroup(data string) systemdService {
 type unitRestartConfig struct {
 	// MainPID distinguishes the service itself from inherited panel children.
 	MainPID int
+	// UntrackedPanel is set only after querying the known system panel unit.
+	UntrackedPanel bool
+	Type           string
+	LoadState      string
+	ActiveState    string
 	// Restart unit 的 Restart= 取值
 	Restart string
 	// SuccessExitStatus 声明为「成功」的额外退出码集合
@@ -344,7 +350,7 @@ func querySystemdRestartConfig(service systemdService, uid int, query func([]str
 	if service.name == "" || (service.user && service.uid != uid) {
 		return unitRestartConfig{}, false
 	}
-	args := []string{"show", "--property=MainPID", "--property=Restart", "--property=SuccessExitStatus", "--property=RestartPreventExitStatus"}
+	args := []string{"show", "--property=MainPID", "--property=Type", "--property=LoadState", "--property=ActiveState", "--property=Restart", "--property=SuccessExitStatus", "--property=RestartPreventExitStatus"}
 	if service.user {
 		args = append(args, "--user")
 	} else {
@@ -356,7 +362,17 @@ func querySystemdRestartConfig(service systemdService, uid int, query func([]str
 		// Do not fall back to the system manager when the user bus is unavailable.
 		return unitRestartConfig{}, false
 	}
-	return parseSystemdRestartConfig(string(out))
+	cfg, ok := parseSystemdRestartConfig(string(out))
+	if !ok {
+		return unitRestartConfig{}, false
+	}
+	// aaPanel starts detached Go projects inside its system service cgroup,
+	// sometimes without tracking any MainPID. Do not generalize this exception
+	// to arbitrary units or a same-named user service.
+	cfg.UntrackedPanel = !service.user && service.name == "btpanel.service" &&
+		cfg.MainPID == 0 && cfg.Type == "forking" &&
+		cfg.LoadState == "loaded" && cfg.ActiveState == "active"
+	return cfg, true
 }
 
 func parseSystemdRestartConfig(out string) (unitRestartConfig, bool) {
@@ -364,6 +380,7 @@ func parseSystemdRestartConfig(out string) (unitRestartConfig, bool) {
 		SuccessExitStatus:        map[int]bool{},
 		RestartPreventExitStatus: map[int]bool{},
 	}
+	mainPIDSeen := false
 	for _, line := range strings.Split(out, "\n") {
 		key, value, ok := strings.Cut(strings.TrimSpace(line), "=")
 		if !ok {
@@ -372,10 +389,17 @@ func parseSystemdRestartConfig(out string) (unitRestartConfig, bool) {
 		switch key {
 		case "MainPID":
 			pid, err := strconv.Atoi(strings.TrimSpace(value))
-			if err != nil || pid <= 0 {
+			if err != nil || pid < 0 {
 				return unitRestartConfig{}, false
 			}
 			cfg.MainPID = pid
+			mainPIDSeen = true
+		case "Type":
+			cfg.Type = strings.TrimSpace(value)
+		case "LoadState":
+			cfg.LoadState = strings.TrimSpace(value)
+		case "ActiveState":
+			cfg.ActiveState = strings.TrimSpace(value)
 		case "Restart":
 			cfg.Restart = strings.TrimSpace(value)
 		case "SuccessExitStatus":
@@ -384,8 +408,9 @@ func parseSystemdRestartConfig(out string) (unitRestartConfig, bool) {
 			cfg.RestartPreventExitStatus = parseExitStatusSet(value)
 		}
 	}
-	if cfg.Restart == "" || cfg.MainPID <= 0 {
-		// 属性拿不到值说明查询结果不可信，不能当成「systemd 返回了默认值」
+	if cfg.Restart == "" || !mainPIDSeen {
+		// Missing MainPID is not the same as an explicitly reported zero.
+		// configureRestart still rejects zero unless this is a verified panel.
 		return unitRestartConfig{}, false
 	}
 	return cfg, true
