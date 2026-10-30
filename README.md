@@ -97,18 +97,9 @@ Windows 使用 `xmall.exe`。首次启动会执行必要的数据库迁移；默
 
 **发行包已经内嵌商城和管理后台，只需运行一个 `xmall` 程序。** 无需自行安装 Go、Node.js、PHP 或运行 Vue 开发服务器；若 aaPanel 的 Go 项目功能提示安装插件依赖，按面板要求处理。以下以 Linux、同机 Nginx、运行目录 `/opt/xmall` 为例，路径与端口请按实际调整。
 
-**部署关系图：一个程序，同时提供商城、后台和 API。** 下图使用 Markdown 内嵌 Mermaid，GitHub 可直接显示，无需下载图片；不支持 Mermaid 的阅读器可按后面的文字步骤操作。
+部署后，访客通过域名访问 aaPanel 的 Nginx，由 Nginx 转发到 `127.0.0.1:8080`；XMall 一个进程提供商城、后台与 API，Go 项目负责进程管理。
 
-```mermaid
-flowchart TD
-    visitor["用户浏览器"] -->|"HTTPS · 443"| nginx["aaPanel 网站 / Nginx<br/>域名与证书、反向代理"]
-    nginx -->|"HTTP · 127.0.0.1:8080"| app["XMall 单一进程<br/>商城 + 管理后台 + API + worker"]
-    panel["aaPanel Go 项目<br/>启动、停止、守护"] -.->|"管理进程"| app
-    app --> db["SQLite / MySQL / PostgreSQL"]
-    app --> redis["Redis 任务队列<br/>Bot 与异步任务必需"]
-    app --> files["持久数据<br/>db / uploads / logs"]
-    app -->|"出站访问"| telegram["Telegram Bot API"]
-```
+下面使用 **aaPanel 8.0.4 英文界面的真实截图**，配合中文字段说明。截图中的路径和项目名为教程示例，未提交创建；服务器标识已脱敏。不同版本的入口名称可能略有区别，点击图片可查看大图。
 
 > **先跑通本机，再配置域名。** 面板的管理端口不是商城端口；Nginx 代理目标是 XMall 的 `8080`，不是 aaPanel 登录地址。
 
@@ -134,25 +125,19 @@ Redis、数据库和应用端口无需对公网开放；外部访问统一经过
 
 #### 3. 在 aaPanel 添加 Go 项目
 
-进入 **Website（网站）→ Go Project（Go 项目）→ Add Project（添加项目）**。以下按实际「Add Project」弹窗的字段整理，是填写示意而非截图；不同版本的入口译名可能略有区别。
+**先找入口：** 点击左侧 **Website（网站）**，切换顶部 **Go Project（Go 项目）**，再点击绿色 **Add Project（添加项目）**。
 
-```mermaid
-flowchart TD
-    entry["网站 → Go 项目 → Add Project"] --> executable["① Executable File · 可执行文件<br/>/opt/xmall/xmall"]
-    executable --> name["② Project Name · 项目名称<br/>xmall"]
-    name --> port["③ Project Port · 项目端口<br/>8080 · 不勾选 Release port"]
-    port --> command["④ Execution Command · 执行命令<br/>/opt/xmall/xmall"]
-    command --> env["⑤ Environment Variables · 环境变量<br/>None · 使用 config.yml"]
-    env --> user["⑥ Run User · 运行用户<br/>www 或已授权的专用用户"]
-    user --> startup["⑦ Startup · 启动选项<br/>启用开机启动，确认守护设置"]
-    startup --> domain["⑧ Domain name · 域名<br/>可先留空，本机检查通过后绑定"]
-    domain --> confirm["Confirm · 确认创建<br/>查看进程状态与日志"]
-```
+![aaPanel 网站页面：Go Project 标签与 Add Project 按钮](doc/aapanel-go-entry.png)
 
-填写时注意：
+**再填表单：** 下图为真实的「Add Project」弹窗，已填入 `/opt/xmall` 部署示例。先核对运行目录、配置文件和权限，再点击 **Confirm（确认）**；不要照抄成其他目录的路径。
 
-- **Executable File**：选择已解压的 `xmall` 二进制，不选压缩包、源码目录或 `config.yml`。文件必须可执行。
-- **Project Port**：与 `server.port` 一致。`Release port` 表示放行端口，不是发布版本；同机 Nginx 代理时不勾选，无需公开 `8080`。
+<img src="doc/aapanel-go-project.png" alt="aaPanel 添加 Go 项目：XMall 可执行文件、项目名称、8080 端口和执行命令填写示例" width="700" />
+
+按截图从上往下填写：
+
+- **Executable File（可执行文件）**：填写 `/opt/xmall/xmall`，选择已解压的 `xmall` 二进制，不选压缩包、源码目录或 `config.yml`。文件必须可执行。
+- **Project Name（项目名称）**：填写 `xmall`，方便以后在项目列表中查找、停止和启动。
+- **Project Port（项目端口）**：填写 `8080`，与 `server.port` 一致。`Release port` 表示放行端口，不是发布版本；同机 Nginx 代理时不勾选，无需公开 `8080`。
 - **Execution Command**：完整部署运行 `/opt/xmall/xmall`，不要加 `&` / `nohup`。若面板已自动生成命令，核对后使用，不重复填写两遍可执行文件。只有明确不运行 worker 时才追加 `-mode api`；该模式不能单独运行内置 Bot。
 - **Environment Variables**：本例选择 `None`，通过运行目录的 `config.yml` 配置；不需要额外的环境变量文件。
 - **Run User**：当前面板默认 `www`，也可选择有权限的非 root 专用用户。配置文件设为 `600` 时，属主必须与运行用户匹配；程序目录及数据目录也必须允许该用户访问。
@@ -187,16 +172,14 @@ curl -fsS http://127.0.0.1:8080/health
 
 **升级只换程序，不重新建站，也不重新生成密钥。**
 
-```mermaid
-flowchart TD
-    prepare["阅读新版本说明<br/>下载并校验安装包"] --> stop["进入维护窗口<br/>暂停相关写入并在面板停止进程"]
-    stop --> backup["一致性备份<br/>数据库、配置、上传文件、队列及旧程序"]
-    backup --> replace["新程序上传为 xmall.new<br/>保留旧程序，再替换 xmall"]
-    replace --> restart["核对属主与权限<br/>在原 Go 项目启动"]
-    restart --> check{"日志与健康检查通过？"}
-    check -->|"是"| verify["验收商城、后台、支付与 Bot<br/>恢复业务"]
-    check -->|"否"| hold["保持维护状态，检查错误<br/>回滚前核对数据库兼容性"]
-```
+按这个顺序操作：
+
+1. 下载新版本并核对校验和。
+2. 进入维护窗口，暂停业务写入，在 aaPanel 原 Go 项目中停止进程。
+3. 一致性备份数据库、配置、上传文件、必要的队列状态和旧程序。
+4. 上传新程序为 `xmall.new`，按下面命令保留旧程序并替换。
+5. 核对属主与权限，在原 Go 项目中启动，检查日志及 `/health`。
+6. 验收商城、后台、支付与 Bot 后恢复业务；失败时保持维护状态，先查错误，回滚前核对数据库兼容性。
 
 升级前备份数据库、`config.yml`、上传文件、旧二进制及必要的 Redis 队列状态。SQLite 使用一致性备份，或停净写入后连同 WAL 状态正确处理；不要只复制运行中的 `.db`。将校验过的新程序上传为 `/opt/xmall/xmall.new`，**先在 aaPanel 停止进程**，再在运行目录替换：
 
