@@ -53,6 +53,38 @@
 .orbit-footer-links { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 20px; }
 .orbit-footer-links a { display: inline-flex; align-items: center; min-height: 44px; overflow-wrap: anywhere; }
 .orbit-footer a:hover { color: var(--ui-accent); }
+.orbit-support-dock {
+  position: fixed;
+  right: env(safe-area-inset-right, 0px);
+  bottom: max(28dvh, calc(var(--orbit-bottom-offset) + 96px));
+  z-index: 40;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 10px;
+}
+.orbit-support-bubble {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  min-width: 56px;
+  min-height: 56px;
+  max-width: 112px;
+  padding: 10px 12px;
+  border-radius: 28px 0 0 28px;
+  background: var(--orbit-support-bg);
+  color: var(--orbit-support-text);
+  box-shadow: var(--ui-shadow-2);
+  font-size: 11px;
+  line-height: 1.3;
+  text-align: center;
+}
+.orbit-telegram-support:hover { background: var(--orbit-support-hover); }
+.orbit-support-bubble:focus-visible { outline-offset: -3px; }
+.orbit-whatsapp-support { background: var(--orbit-whatsapp-bg); color: var(--orbit-whatsapp-text); }
+.orbit-whatsapp-support:hover { background: var(--orbit-whatsapp-hover); }
 .orbit-tabbar { display: none; }
 .orbit-menu { inset: 0; margin: auto; width: min(440px, calc(100% - 40px)); max-height: 80dvh; padding: 20px; overflow-y: auto; overscroll-behavior: contain; border: 1px solid var(--ui-border); border-radius: 20px; color: var(--ui-text-primary); background: var(--ui-bg-page); box-shadow: var(--ui-shadow-3); }
 .orbit-menu::backdrop { background: color-mix(in srgb, var(--ui-text-primary) 25%, transparent); backdrop-filter: blur(6px); }
@@ -64,6 +96,35 @@
 .orbit-menu-group :is(a,button) + :is(a,button) { border-top: 1px solid var(--ui-border); }
 .orbit-menu-group :is(a,button):hover { background: var(--ui-bg-soft); }
 @media (max-width: 767px) {
+  .orbit-support-dock { gap: 4px; }
+  .orbit-support-bubble {
+    position: relative;
+    isolation: isolate;
+    width: 44px;
+    min-width: 44px;
+    min-height: 44px;
+    height: 44px;
+    padding: 0 6px 0 0;
+    align-items: flex-end;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+  }
+  .orbit-support-bubble:hover { background: transparent; }
+  .orbit-support-bubble::before {
+    content: '';
+    position: absolute;
+    z-index: -1;
+    inset: 2px 0 2px auto;
+    width: 32px;
+    border-radius: 20px 0 0 20px;
+    background: var(--orbit-support-bg);
+  }
+  .orbit-whatsapp-support::before { background: var(--orbit-whatsapp-bg); }
+  .orbit-support-bubble > svg { width: 20px; height: 20px; }
+  .orbit-support-bubble > span { display: none; }
+  .orbit-support-bubble:active::before { background: var(--orbit-support-hover); }
+  .orbit-whatsapp-support:active::before { background: var(--orbit-whatsapp-hover); }
   .orbit-scope { padding-bottom: var(--orbit-tab-height); }
   .orbit-header-inner { position: relative; min-height: 56px; padding-inline: 16px; gap: 10px; }
   .orbit-header-actions .orbit-search-button { position: absolute; left: 16px; top: 6px; }

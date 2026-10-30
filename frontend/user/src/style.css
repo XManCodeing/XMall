@@ -247,6 +247,12 @@
     --ui-shadow-3: 0 32px 120px rgba(23, 32, 46, 0.18);
     --orbit-image-brightness: 1;
     --orbit-detail-image-brightness: 1;
+    --orbit-whatsapp-bg: #128c4e;
+    --orbit-whatsapp-hover: #0d733f;
+    --orbit-whatsapp-text: #ffffff;
+    --orbit-support-bg: #0071e3;
+    --orbit-support-hover: #0067d2;
+    --orbit-support-text: #ffffff;
     --orbit-action-bg: #292c33;
     --orbit-action-hover: #11141b;
     --orbit-action-text: #ffffff;
@@ -275,6 +281,12 @@
     --ui-shadow-3: 0 32px 120px rgba(0, 0, 0, 0.5);
     --orbit-image-brightness: .78;
     --orbit-detail-image-brightness: .88;
+    --orbit-whatsapp-bg: #25d366;
+    --orbit-whatsapp-hover: #4be084;
+    --orbit-whatsapp-text: #10251a;
+    --orbit-support-bg: #0a84ff;
+    --orbit-support-hover: #409cff;
+    --orbit-support-text: #ffffff;
     --orbit-action-bg: #e5e8ef;
     --orbit-action-hover: #ffffff;
     --orbit-action-text: #20242c;

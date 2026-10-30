@@ -214,17 +214,17 @@ func TestPanelQuantityBurstAndStaleConfirmation(t *testing.T) {
 		t.Fatal("older update replayed")
 	}
 }
-func TestPanelCleanupStampEpochAndEscaping(t *testing.T) {
+func TestCommandPreservedPanelStampEpochAndEscaping(t *testing.T) {
 	s, m, b := setup()
 	s.d.Identity = &generationIdentity{backend: b, generation: "g:7"}
 	s.d.Content = htmlContent{}
 	u := update(1, "/start")
 	u.MessageID = 42
 	out := run(t, s, u)
-	if len(out) != 2 || out[0].Purpose != "cleanup" || out[0].Operation != "delete" || out[0].TargetMessageID != 42 || out[0].IdentityStamp != "g:7" || out[0].OwnerUserID != 7 {
+	if len(out) != 1 || out[0].Purpose != "panel" || out[0].IdentityStamp != "g:7" || out[0].OwnerUserID != 7 {
 		t.Fatal(out)
 	}
-	panel := out[1]
+	panel := out[0]
 	if panel.ParseMode != "HTML" || !panel.ReplacePanel || !strings.Contains(panel.Text, "&lt;Welcome&gt;") {
 		t.Fatal(panel)
 	}
@@ -232,6 +232,41 @@ func TestPanelCleanupStampEpochAndEscaping(t *testing.T) {
 	run(t, s, update(2, "/start"))
 	if savedState(t, s, m).PanelEpoch == first.PanelEpoch {
 		t.Fatal("start reused physical panel epoch")
+	}
+}
+
+func TestCommandsNeverScheduleUserMessageDeletion(t *testing.T) {
+	for _, command := range []string{"/start", "/start referral", "/start@shopbot", "  /start@shopbot referral  ", "/help", "/language", "/back", "/cancel"} {
+		t.Run(command, func(t *testing.T) {
+			s, _, _ := setup()
+			for id := int64(1); id <= 2; id++ {
+				u := update(id, command)
+				u.MessageID = 40 + id
+				out := run(t, s, u)
+				if len(out) != 1 || out[0].Purpose != "panel" {
+					t.Fatalf("command must produce only one panel, not user cleanup: %+v", out)
+				}
+				replayed := run(t, s, u)
+				if len(replayed) != 1 || replayed[0].Purpose != "panel" || replayed[0].PanelEpoch != out[0].PanelEpoch || replayed[0].PanelRevision != out[0].PanelRevision {
+					t.Fatal("command replay changed the panel or added cleanup")
+				}
+			}
+		})
+	}
+}
+
+func TestTransientInputsStillScheduleCleanup(t *testing.T) {
+	for _, input := range []string{"2", "buyer@example.com", "123456"} {
+		t.Run(input, func(t *testing.T) {
+			s, _, b := setup()
+			s.d.Identity = &generationIdentity{backend: b, generation: "g:7"}
+			u := update(1, input)
+			u.MessageID = 42
+			out := run(t, s, u)
+			if len(out) != 2 || out[0].Purpose != "cleanup" || out[0].Operation != "delete" || out[0].TargetMessageID != 42 || out[0].IdentityStamp != "g:7" || out[0].OwnerUserID != 7 {
+				t.Fatalf("transient input cleanup missing or unauthorized: %+v", out)
+			}
+		})
 	}
 }
 

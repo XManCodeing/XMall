@@ -81,7 +81,11 @@ onMounted(() => {
           </div>
           <div class="space-y-2">
             <Label>{{ t('telegramBot.settings.supportUrl') }}</Label>
-            <Input v-model="form.basic.support_url" :placeholder="t('telegramBot.settings.supportUrlPlaceholder')" />
+            <Input v-model="form.basic.support_url" :placeholder="t('telegramBot.settings.supportUrlPlaceholder')" aria-describedby="bot-support-hint" />
+            <p id="bot-support-hint" class="space-y-1 text-xs text-muted-foreground">
+              <code class="block w-fit max-w-full break-all">{{ t('telegramBot.settings.supportUrlPlaceholder') }}</code>
+              <span class="block">{{ t('telegramBot.settings.supportUrlHint') }}</span>
+            </p>
           </div>
         </div>
       </CardContent>

@@ -7,7 +7,7 @@ import { usePageSeo } from './usePageSeo'
  * 关于页共享逻辑（classic + vault 双模板共用）。
  * 完整保留原 views/About.vue 的行为，仅抽离为 composable。
  */
-export function useAbout() {
+export function useAbout(options: { hideTelegram?: () => boolean; hideWhatsapp?: () => boolean } = {}) {
   const { t, locale } = useI18n()
   const appStore = useAppStore()
 
@@ -17,7 +17,15 @@ export function useAbout() {
   })
 
   const aboutConfig = computed(() => appStore.config?.about || null)
-  const contactConfig = computed(() => appStore.config?.contact || null)
+  const contactConfig = computed(() => {
+    const contact = appStore.config?.contact || null
+    if (!contact) return null
+    return {
+      ...contact,
+      telegram: options.hideTelegram?.() ? '' : contact.telegram,
+      whatsapp: options.hideWhatsapp?.() ? '' : contact.whatsapp,
+    }
+  })
 
   const resolveLocalizedText = (raw: unknown): string => {
     if (!raw || typeof raw !== 'object') {

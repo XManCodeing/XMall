@@ -84,10 +84,11 @@ import { Check, Mail, Headphones } from 'lucide-vue-next'
 import { Card } from '@/components/ui/card'
 import { useAbout } from '../composables/useAbout'
 
+const props = defineProps<{ hideTelegram?: boolean; hideWhatsapp?: boolean }>()
 const { t } = useI18n()
 
 const {
   contactConfig, heroTitle, heroSubtitle, introductionText, servicesTitle, contactTitle, contactText,
   serviceItems, hasIntroduction, hasServices, hasContactLinks, hasContact,
-} = useAbout()
+} = useAbout({ hideTelegram: () => props.hideTelegram === true, hideWhatsapp: () => props.hideWhatsapp === true })
 </script>

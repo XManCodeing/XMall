@@ -244,7 +244,9 @@ func (s *Service) Handle(ctx context.Context, botID uint, u rt.Update) ([]rt.Mes
 		v.homeButton()
 	}
 	rt.AnswerCallback(ctx, "")
-	if u.CallbackData == "" && u.MessageID > 0 {
+	// Keep user commands as conversation anchors; only transient text inputs
+	// (quantity, email, verification code, etc.) are eligible for cleanup.
+	if u.CallbackData == "" && u.MessageID > 0 && !strings.HasPrefix(strings.TrimSpace(u.Text), "/") {
 		v.messages = append([]rt.Message{{Purpose: "cleanup", Operation: "delete", TargetMessageID: u.MessageID, ChatID: u.ChatID}}, v.messages...)
 	}
 	st.LastUpdate = u.ID

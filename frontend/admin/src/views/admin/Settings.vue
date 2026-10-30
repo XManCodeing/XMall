@@ -1043,11 +1043,19 @@ onMounted(() => {
         <div class="grid grid-cols-1 gap-6 p-6 md:grid-cols-2">
           <div class="space-y-2">
             <label class="text-xs font-medium text-muted-foreground">{{ t('admin.settings.contact.telegram') }}</label>
-            <Input v-model="form.contact.telegram" :placeholder="t('admin.settings.contact.telegramPlaceholder')" />
+            <Input v-model="form.contact.telegram" :placeholder="t('admin.settings.contact.telegramPlaceholder')" aria-describedby="site-telegram-hint" />
+            <p id="site-telegram-hint" class="space-y-1 text-xs text-muted-foreground">
+              <code class="block w-fit max-w-full break-all">{{ t('admin.settings.contact.telegramPlaceholder') }}</code>
+              <span class="block">{{ t('admin.settings.contact.telegramHint') }}</span>
+            </p>
           </div>
           <div class="space-y-2">
             <label class="text-xs font-medium text-muted-foreground">{{ t('admin.settings.contact.whatsapp') }}</label>
-            <Input v-model="form.contact.whatsapp" :placeholder="t('admin.settings.contact.whatsappPlaceholder')" />
+            <Input v-model="form.contact.whatsapp" :placeholder="t('admin.settings.contact.whatsappPlaceholder')" aria-describedby="site-whatsapp-hint" />
+            <p id="site-whatsapp-hint" class="space-y-1 text-xs text-muted-foreground">
+              <code class="block w-fit max-w-full break-all">{{ t('admin.settings.contact.whatsappPlaceholder') }}</code>
+              <span class="block">{{ t('admin.settings.contact.whatsappHint') }}</span>
+            </p>
           </div>
         </div>
       </div>

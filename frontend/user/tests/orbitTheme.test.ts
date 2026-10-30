@@ -4,6 +4,43 @@ import test from 'node:test'
 
 const source = (path: string) => readFileSync(new URL(`../src/${path}`, import.meta.url), 'utf8')
 
+test('Orbit support uses site contact, stays clear of bottom controls, and is hidden on About and with the keyboard', () => {
+  const layout = source('templates/orbit/layout/OrbitLayout.vue')
+  assert.match(layout, /config\?\.contact\?\.telegram\?\.trim\(\)/)
+  assert.ok(layout.includes("(telegramSupportUrl || whatsappSupportUrl) && route.name !== 'about' && !keyboardOpen"))
+  assert.match(layout, /config\?\.contact\?\.whatsapp\?\.trim\(\)/)
+  assert.match(layout, /url.hostname === 'wa.me'/)
+  assert.match(layout, /orbit-support-dock/)
+  assert.match(layout, /orbit-support-bubble orbit-whatsapp-support/)
+  assert.match(layout, /\['t.me', 'telegram.me'\]\.includes\(url.hostname\)/)
+  const css = source('templates/orbit/styles/orbit.css')
+  assert.match(css, /bottom: max\(28dvh, calc\(var\(--orbit-bottom-offset\) \+ 96px\)\)/)
+  assert.match(css, /background: var\(--orbit-support-bg\)/)
+  const tokens = source('style.css')
+  for (const token of ['--orbit-support-bg', '--orbit-support-hover', '--orbit-support-text', '--orbit-whatsapp-bg', '--orbit-whatsapp-hover', '--orbit-whatsapp-text']) {
+    assert.equal(tokens.split(`${token}:`).length - 1, 2)
+  }
+  assert.match(source('templates/orbit/About.vue'), /<ClassicAbout hide-telegram/)
+  assert.match(source('views/About.vue'), /hideTelegram: \(\) => props.hideTelegram === true/)
+  assert.match(source('composables/useAbout.ts'), /telegram: options.hideTelegram\?\.\(\) \? '' : contact.telegram/)
+  assert.match(source('composables/useAbout.ts'), /whatsapp: options.hideWhatsapp\?\.\(\) \? '' : contact.whatsapp/)
+  assert.match(source('templates/orbit/About.vue'), /hide-telegram hide-whatsapp/)
+})
+
+test('Orbit mobile support docks compact icons without reducing the touch target', () => {
+  const css = source('templates/orbit/styles/orbit.css')
+  const mobile = css.slice(css.indexOf('@media (max-width: 767px) {'), css.indexOf('/* Mobile purchase'))
+  assert.match(mobile, /\.orbit-support-dock \{ gap: 4px; \}/)
+  assert.match(mobile, /min-width: 44px/)
+  assert.match(mobile, /min-height: 44px/)
+  assert.match(mobile, /width: 32px/)
+  assert.match(mobile, /\.orbit-support-bubble > span \{ display: none; \}/)
+  assert.match(mobile, /\.orbit-whatsapp-support::before \{ background: var\(--orbit-whatsapp-bg\); \}/)
+  const desktop = css.slice(0, css.indexOf('@media (max-width: 767px) {'))
+  assert.match(desktop, /min-width: 56px/)
+  assert.doesNotMatch(desktop, /\.orbit-support-bubble > span/)
+})
+
 test('Orbit header omits desktop branding while preserving centered navigation and mobile titles', () => {
   const layout = source('templates/orbit/layout/OrbitLayout.vue')
   assert.doesNotMatch(layout, /orbit-desktop-brand|BrandMark|brandLogo/)

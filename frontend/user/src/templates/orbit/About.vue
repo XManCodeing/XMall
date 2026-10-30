@@ -4,6 +4,6 @@ import ClassicAbout from '@/views/About.vue'
 
 <template>
   <div class="orbit-page orbit-page--about orbit-classic-adapter orbit-editorial">
-    <ClassicAbout />
+    <ClassicAbout hide-telegram hide-whatsapp />
   </div>
 </template>
