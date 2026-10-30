@@ -172,7 +172,12 @@ func TestUpdateProfileUploadsAnimatedAvatar(t *testing.T) {
 	}
 	store := &profileStore{row: d.Instance{ID: 2, TokenCipher: cipher, ProfileVersion: 1}}
 	api := &profileAPI{}
-	manager := NewManagerWithUploadRoot(store, api, "secret", root)
+	manager := NewManagerWithMediaReader(store, api, "secret", func(ref string, maxBytes int64) ([]byte, error) {
+		if ref != "/uploads/telegram/a.mp4" || maxBytes != maxProfileMediaBytes {
+			t.Fatalf("unexpected media read: %q %d", ref, maxBytes)
+		}
+		return os.ReadFile(filepath.Join(root, "telegram", "a.mp4"))
+	})
 	if _, err := manager.UpdateProfile(context.Background(), 2, 1, BotProfileInput{CoverURL: "/uploads/telegram/a.mp4"}); err != nil {
 		t.Fatal(err)
 	}

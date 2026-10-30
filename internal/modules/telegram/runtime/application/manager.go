@@ -15,15 +15,16 @@ type Manager struct {
 	Store      c.Store
 	API        c.API
 	key        []byte
-	uploadRoot string
+	readUpload func(string, int64) ([]byte, error)
 }
 
 func NewManager(store c.Store, api c.API, secret string) *Manager {
-	return NewManagerWithUploadRoot(store, api, secret, "")
+	return NewManagerWithMediaReader(store, api, secret, nil)
 }
 
-func NewManagerWithUploadRoot(store c.Store, api c.API, secret, uploadRoot string) *Manager {
-	manager := &Manager{Store: store, API: api, key: crypto.DeriveKey(secret), uploadRoot: strings.TrimSpace(uploadRoot)}
+// NewManagerWithMediaReader injects the bounded upload reader from infrastructure.
+func NewManagerWithMediaReader(store c.Store, api c.API, secret string, readUpload func(string, int64) ([]byte, error)) *Manager {
+	manager := &Manager{Store: store, API: api, key: crypto.DeriveKey(secret), readUpload: readUpload}
 	if guarded, ok := store.(interface {
 		SetCredentialOpener(func(string) (string, error))
 	}); ok {

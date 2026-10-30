@@ -32,5 +32,7 @@ func NewManager(store runtimecontract.Store, secret string) *runtimeapp.Manager 
 // NewManagerWithMedia shares the upload root supplied by the composition root.
 func NewManagerWithMedia(store runtimecontract.Store, secret, uploadRoot string) *runtimeapp.Manager {
 	cache, _ := store.(productmedia.Cache)
-	return runtimeapp.NewManagerWithUploadRoot(store, productmedia.New(runtimeapi.Adapter{}, uploadRoot, cache), secret, uploadRoot)
+	return runtimeapp.NewManagerWithMediaReader(store, productmedia.New(runtimeapi.Adapter{}, uploadRoot, cache), secret, func(ref string, maxBytes int64) ([]byte, error) {
+		return productmedia.ReadUploadFile(uploadRoot, ref, maxBytes)
+	})
 }

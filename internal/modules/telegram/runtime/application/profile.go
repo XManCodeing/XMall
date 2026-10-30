@@ -17,7 +17,6 @@ import (
 
 	c "github.com/XManCodeing/XMall/internal/modules/telegram/runtime/contract"
 	d "github.com/XManCodeing/XMall/internal/modules/telegram/runtime/domain"
-	"github.com/XManCodeing/XMall/internal/modules/telegram/runtime/infrastructure/productmedia"
 )
 
 // BotProfileView is the admin DTO for one instance's Telegram identity.
@@ -170,10 +169,10 @@ type profileMedia struct {
 }
 
 func (m *Manager) readProfileMedia(ref string) (profileMedia, error) {
-	if strings.TrimSpace(m.uploadRoot) == "" {
-		return profileMedia{}, errors.New("upload root unavailable")
+	if m.readUpload == nil {
+		return profileMedia{}, errors.New("upload reader unavailable")
 	}
-	data, err := productmedia.ReadUploadFile(m.uploadRoot, ref, maxProfileMediaBytes)
+	data, err := m.readUpload(ref, maxProfileMediaBytes)
 	if err != nil {
 		return profileMedia{}, errors.New("cover image unavailable")
 	}
