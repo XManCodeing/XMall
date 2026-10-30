@@ -50,6 +50,7 @@ func TestPendingQueryOnlyToastsAndPreservesButtons(t *testing.T) {
 	}
 	click(t, s, 8, out, "🏠 首页")
 }
+
 type tabbedCatalog struct{ displayCatalog }
 
 func (tabbedCatalog) Categories(context.Context, c.Actor) ([]c.Category, error) {
