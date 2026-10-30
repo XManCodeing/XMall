@@ -73,6 +73,8 @@ chmod 600 config.yml
 
 ## 部署方式
 
+已有 aaPanel 的 VPS 建议使用下方「方式二」，复用面板的 Nginx 和进程管理，不必再运行安装管理脚本。
+
 ### 方式一：发行包部署
 
 从 [XMall Releases](https://github.com/XManCodeing/XMall/releases) 下载与系统、CPU 架构匹配的 `xmall_*` 安装包，并核对发布页提供的校验和。Linux / macOS 使用 `.tar.gz`，Windows 使用 `.zip`。请选择已公开的 XMall 发行物，不使用旧品牌附件代替。
@@ -91,7 +93,132 @@ Windows 使用 `xmall.exe`。首次启动会执行必要的数据库迁移；默
 
 生产环境应使用 systemd 或其他进程管理器保持运行，并通过反向代理提供 HTTPS。固定程序工作目录和运行身份，持久保存 `config.yml`、`db/`、`uploads/`；日志默认位于 `logs/`。
 
-### 方式二：Linux 安装管理脚本
+### 方式二：aaPanel 部署（已有面板推荐）
+
+**发行包已经内嵌商城和管理后台，只需运行一个 `xmall` 程序。** 无需自行安装 Go、Node.js、PHP 或运行 Vue 开发服务器；若 aaPanel 的 Go 项目功能提示安装插件依赖，按面板要求处理。以下以 Linux、同机 Nginx、运行目录 `/opt/xmall` 为例，路径与端口请按实际调整。
+
+**部署关系图：一个程序，同时提供商城、后台和 API。** 下图使用 Markdown 内嵌 Mermaid，GitHub 可直接显示，无需下载图片；不支持 Mermaid 的阅读器可按后面的文字步骤操作。
+
+```mermaid
+flowchart TD
+    visitor["用户浏览器"] -->|"HTTPS · 443"| nginx["aaPanel 网站 / Nginx<br/>域名与证书、反向代理"]
+    nginx -->|"HTTP · 127.0.0.1:8080"| app["XMall 单一进程<br/>商城 + 管理后台 + API + worker"]
+    panel["aaPanel Go 项目<br/>启动、停止、守护"] -.->|"管理进程"| app
+    app --> db["SQLite / MySQL / PostgreSQL"]
+    app --> redis["Redis 任务队列<br/>Bot 与异步任务必需"]
+    app --> files["持久数据<br/>db / uploads / logs"]
+    app -->|"出站访问"| telegram["Telegram Bot API"]
+```
+
+> **先跑通本机，再配置域名。** 面板的管理端口不是商城端口；Nginx 代理目标是 XMall 的 `8080`，不是 aaPanel 登录地址。
+
+#### 1. 下载并准备运行目录
+
+1. 在 aaPanel 软件商店准备 Nginx；使用内置 Telegram Bot 和异步任务时，还需安装并启动 Redis。SQLite 无需单独安装数据库服务；MySQL / PostgreSQL 用户需提前创建数据库和专用账号。
+2. 在 VPS 执行 `uname -m` 确认架构：`x86_64` 选择 `Linux_x86_64.tar.gz`，`aarch64` / `arm64` 选择 `Linux_arm64.tar.gz`。
+3. 从 [最新正式发行版](https://github.com/XManCodeing/XMall/releases/latest) 下载对应安装包和 checksums 文件，使用 `sha256sum 安装包名` 与校验文件中的对应值完整比对。
+4. 在独立临时目录解压，再通过面板文件管理器将程序、配置示例等文件放入 `/opt/xmall`。**不要把整个程序目录作为 Nginx 静态网站根目录**，避免配置、数据库、日志被公开访问。
+5. 仅首次部署、没有现有配置时复制 `config.yml.example` 为 `config.yml`，按上文「配置文件」填写密钥、管理员账号和数据库连接。
+
+Linux 程序权限设置为 `755`、运行配置设为 `600`。让实际运行用户拥有并可读配置、可写数据目录；不要通过 `chmod 777` 解决权限问题。相对路径 `db/`、`uploads/`、`logs/` 均以工作目录为基准，运行后不要随意更改工作目录。
+
+#### 2. 配置端口、Redis 和队列
+
+- 同机 Nginx 代理时，保留 `server.host: "127.0.0.1"`、`server.port: "8080"`；端口被占用时更换端口，并同步修改代理目标。
+- 本机 Nginx 直连应用时，将 `server.trusted_proxies` 设置为 `["127.0.0.1", "::1"]`。如前面还有 CDN 或其他代理，按实际可信代理链配置，不直接信任所有来源。
+- **完整商城 / Bot 部署**：设置 `queue.enabled: true`，正确填写 `queue.host`、`queue.port`、`queue.password`、`queue.db`。模板中的队列默认关闭，未配置就用默认模式启动会报 `queue disabled`。
+- `redis` 是独立的缓存等功能配置，`queue` 是任务队列配置；启用 `redis.enabled` 不能代替启用队列。需要缓存时，另行填写 `redis` 下的连接参数。同一 Redis 服务可以使用不同 DB，已有站点不要随意更换 DB 或 key 前缀。
+- 设置实际商城域名、支付回调地址及允许的跨域来源；`web.admin_path` 默认为 `/admin`，可按需修改。
+
+Redis、数据库和应用端口无需对公网开放；外部访问统一经过 Nginx 的 HTTPS 入口。
+
+#### 3. 在 aaPanel 添加 Go 项目
+
+进入 **Website（网站）→ Go Project（Go 项目）→ Add Project（添加项目）**。以下按实际「Add Project」弹窗的字段整理，是填写示意而非截图；不同版本的入口译名可能略有区别。
+
+```mermaid
+flowchart TD
+    entry["网站 → Go 项目 → Add Project"] --> executable["① Executable File · 可执行文件<br/>/opt/xmall/xmall"]
+    executable --> name["② Project Name · 项目名称<br/>xmall"]
+    name --> port["③ Project Port · 项目端口<br/>8080 · 不勾选 Release port"]
+    port --> command["④ Execution Command · 执行命令<br/>/opt/xmall/xmall"]
+    command --> env["⑤ Environment Variables · 环境变量<br/>None · 使用 config.yml"]
+    env --> user["⑥ Run User · 运行用户<br/>www 或已授权的专用用户"]
+    user --> startup["⑦ Startup · 启动选项<br/>启用开机启动，确认守护设置"]
+    startup --> domain["⑧ Domain name · 域名<br/>可先留空，本机检查通过后绑定"]
+    domain --> confirm["Confirm · 确认创建<br/>查看进程状态与日志"]
+```
+
+填写时注意：
+
+- **Executable File**：选择已解压的 `xmall` 二进制，不选压缩包、源码目录或 `config.yml`。文件必须可执行。
+- **Project Port**：与 `server.port` 一致。`Release port` 表示放行端口，不是发布版本；同机 Nginx 代理时不勾选，无需公开 `8080`。
+- **Execution Command**：完整部署运行 `/opt/xmall/xmall`，不要加 `&` / `nohup`。若面板已自动生成命令，核对后使用，不重复填写两遍可执行文件。只有明确不运行 worker 时才追加 `-mode api`；该模式不能单独运行内置 Bot。
+- **Environment Variables**：本例选择 `None`，通过运行目录的 `config.yml` 配置；不需要额外的环境变量文件。
+- **Run User**：当前面板默认 `www`，也可选择有权限的非 root 专用用户。配置文件设为 `600` 时，属主必须与运行用户匹配；程序目录及数据目录也必须允许该用户访问。
+- **Startup / 守护**：启用所需的开机启动选项。当前弹窗提示内置守护默认每 `120` 秒检查一次，并不等于故障后立即恢复；实际行为以面板版本及项目设置为准。
+- **Domain name**：可以先留空；填写时每行一个域名，例如 `shop.example.com`，不是 `https://shop.example.com/`。创建时已经绑定域名的，后续复用该站点配置 HTTPS，不再创建同域名的重复站点。
+
+> **工作目录必须核对。** 当前 Go 项目新增弹窗没有独立的工作目录输入框，不要假定选择了可执行文件就一定正确。将 `config.yml` 与程序放在 `/opt/xmall`，创建后核对项目生成的启动配置或实际进程工作目录必须为 `/opt/xmall`。若当前面板无法保证，改用可显式设置工作目录的 Supervisor 托管，命令保持 `/opt/xmall/xmall`，工作目录填写 `/opt/xmall`，进程数为 `1`。两种方式只选一种。
+
+**不要让 aaPanel 和另一套 systemd 服务同时启动它。** 如果曾在终端手动启动，请先停止临时进程再交给面板托管。已有 aaPanel 环境不要再执行下方安装管理脚本来「接管」，避免重复配置服务、Redis 或 Nginx。
+
+启动后先查看面板项目日志和 `/opt/xmall/logs/`，再在 VPS 检查：
+
+```bash
+curl -fsS http://127.0.0.1:8080/health
+```
+
+首次启动需要执行数据库迁移；本机健康检查未通过前，先处理配置、端口、目录权限或数据库连接错误，不要靠反复改 Nginx 排查。
+
+#### 4. 配置域名与 HTTPS 反向代理
+
+复用 Go 项目已绑定的域名站点；若前一步留空，则在 aaPanel 添加或绑定商城域名。申请证书并开启 HTTPS，给根路径 `/` 配置反向代理：
+
+- **代理目标**：`http://127.0.0.1:8080`（以实际应用端口为准）。
+- **保留原始路径和域名**：商城、后台、`/api/`、`/uploads/` 都交给同一个 Go 服务，不单独映射前端目录。
+- **传递请求信息**：保留 `Host`、客户端 IP 和 `X-Forwarded-Proto`，使应用正确识别域名与 HTTPS。
+- **关闭代理缓存**：尤其登录、订单、支付及后台接口；移除会截获请求的 PHP / SPA 伪静态规则或默认静态文件匹配。
+- **上传限制**：Nginx 的请求体大小限制应与应用实际上传限制匹配；收到 `413` 时检查面板的上传大小设置。
+
+使用面板生成的代理配置时，检查对应规则即可，不要重复添加两个 `location /`。域名解析到 VPS，防火墙放行 `80/443`。完成后分别打开 `https://你的域名/`、实际后台路径和 `/health`；后台自定义路径由 `web.admin_path` 决定，不需要额外的 admin 静态站点。
+
+#### 5. 升级与常见问题
+
+**升级只换程序，不重新建站，也不重新生成密钥。**
+
+```mermaid
+flowchart TD
+    prepare["阅读新版本说明<br/>下载并校验安装包"] --> stop["进入维护窗口<br/>暂停相关写入并在面板停止进程"]
+    stop --> backup["一致性备份<br/>数据库、配置、上传文件、队列及旧程序"]
+    backup --> replace["新程序上传为 xmall.new<br/>保留旧程序，再替换 xmall"]
+    replace --> restart["核对属主与权限<br/>在原 Go 项目启动"]
+    restart --> check{"日志与健康检查通过？"}
+    check -->|"是"| verify["验收商城、后台、支付与 Bot<br/>恢复业务"]
+    check -->|"否"| hold["保持维护状态，检查错误<br/>回滚前核对数据库兼容性"]
+```
+
+升级前备份数据库、`config.yml`、上传文件、旧二进制及必要的 Redis 队列状态。SQLite 使用一致性备份，或停净写入后连同 WAL 状态正确处理；不要只复制运行中的 `.db`。将校验过的新程序上传为 `/opt/xmall/xmall.new`，**先在 aaPanel 停止进程**，再在运行目录替换：
+
+```bash
+cd /opt/xmall
+# 确认进程已停止，且 xmall.new 来自已校验的新发行包
+chmod 755 xmall.new
+mv xmall "xmall.bak-$(date +%Y%m%d-%H%M%S)"
+mv xmall.new xmall
+```
+
+检查新程序的属主和权限与原进程用户匹配，再从 aaPanel 启动。始终保留原 `config.yml`、`db/`、`uploads/` 和 `app.secret_key`；**不要把新安装包直接解压覆盖运行目录**。后台更新功能即使已替换二进制，也应确认重启结果；不能自动重启时在面板手动重启。
+
+- **502**：先检查进程是否运行、本机 `/health` 是否可达，再核对代理端口。
+- **`queue disabled` / Redis 连接失败**：检查队列开关、Redis 地址和密码；不要为了消除报错就把 Bot 部署改成 `-mode api`。
+- **`address already in use`**：检查终端残留进程、重复托管或其他服务占用，不要再启动第二份程序。
+- **看起来像空商城 / 图片丢失**：核对工作目录、数据库 DSN、上传目录和运行权限；不要重新初始化或清空数据库。
+- **升级后仍显示旧版本**：确认面板的可执行文件路径和进程确实已重启。
+
+最后验收商城、后台登录、订单、支付回调和 Bot。回滚前先确认数据库迁移兼容性，恢复旧二进制不等于恢复数据库；详细注意事项见 [发行与升级说明](doc/发行与升级.md)。
+
+### 方式三：Linux 安装管理脚本
 
 适用于 **Ubuntu 22.04+ / Debian 12+、systemd、amd64 / arm64** 的新部署。脚本配置 XMall、独立 Redis、Nginx、SQLite 和 HTTPS；不接管已有手动安装。开始前确认域名解析及 80 / 443 端口可用。
 
@@ -118,7 +245,7 @@ sudo xmall-manager admin-reset-2fa
 
 应用目录为 `/opt/xmall`，安装状态位于 `/etc/xmall`，卸载备份位于 `/var/backups/xmall`。重新执行安装流程时仍需显式传入 `XMALL_UPDATE_REPOSITORY`。
 
-### 方式三：自行构建 Docker 镜像
+### 方式四：自行构建 Docker 镜像
 
 仓库保留 [Dockerfile](Dockerfile) 供自行构建，不提供官方预构建镜像，也不再维护 Docker 内测或镜像发布工作流。推荐使用 Release 安装包；如需自行构建：
 
