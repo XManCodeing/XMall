@@ -14,7 +14,7 @@ import TableSkeleton from '@/components/TableSkeleton.vue'
 import { useListRefresh, type ListFetchOptions } from '@/composables/useListRefresh'
 import { formatDate, getLocalizedText } from '@/utils/format'
 import { getImageUrl } from '@/utils/image'
-import { notifyError, notifySuccess } from '@/utils/notify'
+import { notifyErrorOnce, notifySuccess } from '@/utils/notify'
 import { confirmAction } from '@/utils/confirm'
 
 const isImagePath = (val: string) => !!val && val.includes('/')
@@ -158,7 +158,7 @@ const handleSubmit = async () => {
     closeModal()
     fetchLevels()
   } catch (err: any) {
-    error.value = err.message || t('admin.memberLevels.saveFailed')
+    notifyErrorOnce(err, t('admin.memberLevels.saveFailed'))
   } finally {
     submitting.value = false
   }
@@ -176,7 +176,7 @@ const handleDelete = async (level: AdminMemberLevel) => {
     await adminAPI.deleteMemberLevel(level.id)
     fetchLevels()
   } catch (err: any) {
-    notifyError(err.message || t('admin.memberLevels.deleteFailed'))
+    notifyErrorOnce(err, t('admin.memberLevels.deleteFailed'))
   }
 }
 
@@ -193,7 +193,7 @@ const handleBackfill = async () => {
     const affected = response.data.data?.affected ?? 0
     notifySuccess(t('admin.memberLevels.backfillSuccess', { count: affected }))
   } catch (err: any) {
-    notifyError(err.message || t('admin.memberLevels.backfillFailed'))
+    notifyErrorOnce(err, t('admin.memberLevels.backfillFailed'))
   } finally {
     backfilling.value = false
   }
@@ -275,7 +275,7 @@ onMounted(() => {
                 <span class="break-words">{{ getLocalizedText(level.name) }}</span>
                 <span
                   v-if="level.is_default"
-                  class="inline-flex rounded-full border border-blue-200 bg-blue-50 px-2 py-0.5 text-[10px] text-blue-700"
+                  class="inline-flex shrink-0 whitespace-nowrap rounded-full border border-blue-200 bg-blue-50 px-2 py-0.5 text-[10px] text-blue-700"
                 >
                   {{ t('admin.memberLevels.default') }}
                 </span>
@@ -298,7 +298,7 @@ onMounted(() => {
             </TableCell>
             <TableCell class="min-w-[90px] px-6 py-4">
               <span
-                class="inline-flex rounded-full border px-2.5 py-1 text-xs"
+                class="inline-flex shrink-0 whitespace-nowrap rounded-full border px-2.5 py-1 text-xs"
                 :class="level.is_active
                   ? 'text-emerald-700 border-emerald-200 bg-emerald-50'
                   : 'text-muted-foreground border-border bg-muted/30'"

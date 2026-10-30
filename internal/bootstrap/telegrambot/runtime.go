@@ -6,6 +6,7 @@ import (
 	runtimeapp "github.com/XManCodeing/XMall/internal/modules/telegram/runtime/application"
 	runtimecontract "github.com/XManCodeing/XMall/internal/modules/telegram/runtime/contract"
 	runtimeapi "github.com/XManCodeing/XMall/internal/modules/telegram/runtime/infrastructure/botapi"
+	"github.com/XManCodeing/XMall/internal/modules/telegram/runtime/infrastructure/productmedia"
 	"github.com/redis/go-redis/v9"
 	"strings"
 	"time"
@@ -26,4 +27,10 @@ func NewLeaseClient(cfg config.QueueConfig) *redis.Client {
 }
 func NewManager(store runtimecontract.Store, secret string) *runtimeapp.Manager {
 	return runtimeapp.NewManager(store, runtimeapi.Adapter{}, secret)
+}
+
+// NewManagerWithMedia shares the upload root supplied by the composition root.
+func NewManagerWithMedia(store runtimecontract.Store, secret, uploadRoot string) *runtimeapp.Manager {
+	cache, _ := store.(productmedia.Cache)
+	return runtimeapp.NewManagerWithUploadRoot(store, productmedia.New(runtimeapi.Adapter{}, uploadRoot, cache), secret, uploadRoot)
 }

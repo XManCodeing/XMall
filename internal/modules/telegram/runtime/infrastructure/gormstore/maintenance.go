@@ -19,7 +19,7 @@ func (s *Store) Cleanup(ctx context.Context, botID uint) error {
 	}
 	// Failed/unknown deliveries remain inspectable for seven days before removing
 	// their encrypted body; status/reference metadata is retained for audit.
-	if err := db.Model(&d.Delivery{}).Where("bot_id = ? AND status IN ? AND updated_at < ? AND payload_cipher <> ?", botID, []string{"sent", "failed", "unknown"}, time.Now().Add(-7*24*time.Hour), "").Update("payload_cipher", "").Error; err != nil {
+	if err := db.Model(&d.Delivery{}).Where("bot_id = ? AND status IN ? AND updated_at < ? AND payload_cipher <> ?", botID, []string{"sent", "failed", "unknown", "superseded"}, time.Now().Add(-7*24*time.Hour), "").Update("payload_cipher", "").Error; err != nil {
 		return err
 	}
 	return db.Model(&d.Inbox{}).Where("bot_id = ? AND status = ? AND updated_at < ? AND payload_cipher <> ?", botID, "failed", time.Now().Add(-7*24*time.Hour), "").Update("payload_cipher", "").Error

@@ -27,7 +27,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { confirmAction } from '@/utils/confirm'
 import { formatDate, formatMoney, getLocalizedText } from '@/utils/format'
 import { getImageUrl } from '@/utils/image'
-import { notifyError, notifySuccess } from '@/utils/notify'
+import { notifyError, notifyErrorOnce, notifySuccess } from '@/utils/notify'
 import { getResellerProfileStatusKey } from '@/utils/resellerManagement'
 import { adminUrl } from '@/utils/adminBase'
 
@@ -79,7 +79,7 @@ const fetchDetail = async () => {
     syncSystemDomainForm()
   } catch (err: any) {
     detail.value = null
-    notifyError(err?.message || t('admin.resellerProfileDetail.loadFailed'))
+    notifyErrorOnce(err, err?.message || t('admin.resellerProfileDetail.loadFailed'))
   } finally {
     loading.value = false
   }
@@ -123,7 +123,7 @@ const submitEditProfile = async () => {
     notifySuccess(t('admin.resellerProfileDetail.saveSuccess'))
     await fetchDetail()
   } catch (err: any) {
-    notifyError(err?.message || t('admin.resellerProfiles.actions.updateFailed'))
+    notifyErrorOnce(err, err?.message || t('admin.resellerProfiles.actions.updateFailed'))
   } finally {
     saving.value = false
   }
@@ -142,7 +142,7 @@ const submitSystemDomain = async () => {
     notifySuccess(t('admin.resellerProfileDetail.systemDomain.saveSuccess'))
     await fetchDetail()
   } catch (err: any) {
-    notifyError(err?.message || t('admin.resellerProfileDetail.systemDomain.saveFailed'))
+    notifyErrorOnce(err, err?.message || t('admin.resellerProfileDetail.systemDomain.saveFailed'))
   } finally {
     savingSystemDomain.value = false
   }
@@ -158,7 +158,7 @@ const setPrimaryDomain = async (domain: AdminResellerDomain) => {
     notifySuccess(t('admin.resellerProfileDetail.setPrimarySuccess'))
     await fetchDetail()
   } catch (err: any) {
-    notifyError(err?.message || t('admin.resellerProfileDetail.setPrimaryFailed'))
+    notifyErrorOnce(err, err?.message || t('admin.resellerProfileDetail.setPrimaryFailed'))
   } finally {
     operatingDomainId.value = null
   }
@@ -245,10 +245,10 @@ onMounted(fetchDetail)
         <div class="rounded-xl border border-border bg-card p-4">
           <div class="text-xs text-muted-foreground">{{ t('admin.resellerProfileDetail.cards.profileStatus') }}</div>
           <div class="mt-3 flex flex-wrap items-center gap-2">
-            <span class="inline-flex rounded-full border px-2.5 py-1 text-xs" :class="statusClass(profile.status)">
+            <span class="inline-flex shrink-0 whitespace-nowrap rounded-full border px-2.5 py-1 text-xs" :class="statusClass(profile.status)">
               {{ statusLabel(profile.status) }}
             </span>
-            <span class="inline-flex rounded-full border px-2.5 py-1 text-xs" :class="settlementClass(profile.settlement_status)">
+            <span class="inline-flex shrink-0 whitespace-nowrap rounded-full border px-2.5 py-1 text-xs" :class="settlementClass(profile.settlement_status)">
               {{ settlementLabel(profile.settlement_status) }}
             </span>
           </div>
@@ -345,7 +345,7 @@ onMounted(fetchDetail)
                   </p>
                 </div>
                 <span
-                  class="inline-flex w-fit rounded-full border px-2.5 py-1 text-xs"
+                  class="inline-flex shrink-0 whitespace-nowrap w-fit rounded-full border px-2.5 py-1 text-xs"
                   :class="systemDomain ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : 'border-amber-200 bg-amber-50 text-amber-700'"
                 >
                   {{ systemDomain ? t('admin.resellerProfileDetail.systemDomain.assigned') : t('admin.resellerProfileDetail.systemDomain.unassigned') }}

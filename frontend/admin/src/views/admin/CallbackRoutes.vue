@@ -12,7 +12,7 @@ import {
   toCallbackRouteSaveValue,
   type CallbackRouteKey,
 } from '@/utils/callbackRoutes'
-import { notifyError, notifySuccess } from '@/utils/notify'
+import { notifyError, notifyErrorOnce, notifySuccess } from '@/utils/notify'
 
 const { t } = useI18n()
 
@@ -86,7 +86,7 @@ const save = async () => {
     } as any)
     notifySuccess(t('admin.settings.saved'))
   } catch (err: any) {
-    notifyError(err?.message || t('admin.settings.saveFailed'))
+    notifyErrorOnce(err, err?.message || t('admin.settings.saveFailed'))
   } finally {
     saving.value = false
   }

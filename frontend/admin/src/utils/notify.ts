@@ -68,6 +68,17 @@ export const notifyError = (message?: string) => {
   pushNotice(message, 'error')
 }
 
+// API failures already own their notification. Local failures use an explicit,
+// safe fallback supplied by the caller rather than exposing raw error messages.
+const notifiedErrors = new WeakSet<object>()
+export const notifyErrorOnce = (error: unknown, message?: string) => {
+  if (error !== null && typeof error === 'object') {
+    if ((error as { __notified?: boolean }).__notified || notifiedErrors.has(error)) return
+    notifiedErrors.add(error)
+  }
+  notifyError(message)
+}
+
 export const notifySuccess = (message?: string) => {
   pushNotice(message, 'success', 'admin.common.operationSuccess')
 }

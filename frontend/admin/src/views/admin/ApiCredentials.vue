@@ -15,7 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { confirmAction } from '@/utils/confirm'
-import { notifyError, notifySuccess } from '@/utils/notify'
+import { notifyErrorOnce, notifySuccess } from '@/utils/notify'
 import { adminUrl } from '@/utils/adminBase'
 
 const { t } = useI18n()
@@ -65,7 +65,7 @@ const fetchCredentials = async (page = 1, options: ListFetchOptions = {}) => {
       pagination.total_page = pg.total_page
     }
   } catch (e: any) {
-    notifyError(e?.response?.data?.message || e.message)
+    notifyErrorOnce(e, e?.response?.data?.message || e?.message || t('common.api.requestFailed'))
   } finally {
     if (!options.preserveRows) loading.value = false
   }
@@ -100,7 +100,7 @@ const handleApprove = async (id: number) => {
     notifySuccess(t('apiCredentials.approve.success'))
     fetchCredentials(pagination.page)
   } catch (e: any) {
-    notifyError(e?.response?.data?.message || e.message)
+    notifyErrorOnce(e, e?.response?.data?.message || e?.message || t('common.api.requestFailed'))
   }
 }
 
@@ -118,7 +118,7 @@ const handleReject = async () => {
     showReject.value = false
     fetchCredentials(pagination.page)
   } catch (e: any) {
-    notifyError(e?.response?.data?.message || e.message)
+    notifyErrorOnce(e, e?.response?.data?.message || e?.message || t('common.api.requestFailed'))
   }
 }
 
@@ -133,7 +133,7 @@ const handleToggle = async (cred: AdminApiCredential) => {
     notifySuccess(t('apiCredentials.toggle.success'))
     fetchCredentials(pagination.page)
   } catch (e: any) {
-    notifyError(e?.response?.data?.message || e.message)
+    notifyErrorOnce(e, e?.response?.data?.message || e?.message || t('common.api.requestFailed'))
   }
 }
 
@@ -145,7 +145,7 @@ const handleDelete = async (id: number) => {
     notifySuccess(t('apiCredentials.delete.success'))
     fetchCredentials(pagination.page)
   } catch (e: any) {
-    notifyError(e?.response?.data?.message || e.message)
+    notifyErrorOnce(e, e?.response?.data?.message || e?.message || t('common.api.requestFailed'))
   }
 }
 

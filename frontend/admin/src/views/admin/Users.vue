@@ -18,6 +18,7 @@ import TableSkeleton from '@/components/TableSkeleton.vue'
 import ListPagination from '@/components/ListPagination.vue'
 import { useListRefresh, type ListFetchOptions } from '@/composables/useListRefresh'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { notifyErrorOnce } from '@/utils/notify'
 import { confirmAction } from '@/utils/confirm'
 import { useFormValidation, rules } from '@/composables/useFormValidation'
 import { ArrowDown, ArrowUp, ChevronsUpDown } from 'lucide-vue-next'
@@ -68,7 +69,6 @@ const toggleSort = (column: SortColumn) => {
 
 const showModal = ref(false)
 const submitting = ref(false)
-const error = ref('')
 const editingId = ref<number | null>(null)
 const siteCurrency = ref('CNY')
 const form = reactive({
@@ -197,7 +197,7 @@ const batchUpdateStatus = async (status: string) => {
     })
     fetchUsers(pagination.value.page)
   } catch (err: any) {
-    error.value = err?.message || t('admin.users.errors.updateFailed')
+    notifyErrorOnce(err, t('admin.users.errors.updateFailed'))
   }
 }
 
@@ -223,7 +223,6 @@ const openEditModal = (user: AdminUser) => {
   form.email_verified = user.email_verified_at ? 'verified' : 'unverified'
   form.status = user.status || 'active'
   form.admin_note = (user.admin_note as string) || ''
-  error.value = ''
   clearErrors()
   showModal.value = true
 }
@@ -231,7 +230,6 @@ const openEditModal = (user: AdminUser) => {
 const closeModal = () => {
   showModal.value = false
   editingId.value = null
-  error.value = ''
   clearErrors()
 }
 
@@ -252,7 +250,7 @@ const handleSubmit = async () => {
     closeModal()
     fetchUsers(pagination.value.page)
   } catch (err: any) {
-    error.value = err?.message || t('admin.users.errors.updateFailed')
+    notifyErrorOnce(err, t('admin.users.errors.updateFailed'))
   } finally {
     submitting.value = false
   }
@@ -429,7 +427,7 @@ onMounted(() => {
             <TableCell class="min-w-[140px] px-6 py-4 text-foreground break-all">{{ user.email }}</TableCell>
             <TableCell class="min-w-[160px] px-6 py-4 text-muted-foreground break-words">{{ user.display_name || '-' }}</TableCell>
             <TableCell class="px-6 py-4 text-xs">
-              <span class="inline-flex rounded-full border px-2.5 py-1 text-xs" :class="statusClass(user.status)">
+              <span class="inline-flex shrink-0 whitespace-nowrap rounded-full border px-2.5 py-1 text-xs" :class="statusClass(user.status)">
                 {{ statusLabel(user.status) }}
               </span>
             </TableCell>
@@ -548,10 +546,6 @@ onMounted(() => {
               <label class="block text-xs font-medium text-muted-foreground mb-1.5">{{ t('admin.users.form.adminNote') }}</label>
               <Textarea v-model="form.admin_note" :placeholder="t('admin.users.form.adminNotePlaceholder')" rows="3" />
             </div>
-          </div>
-
-          <div v-if="error" class="rounded-lg border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
-            {{ error }}
           </div>
 
           <div class="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">

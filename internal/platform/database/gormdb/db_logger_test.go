@@ -462,6 +462,30 @@ func (recorder *gormLogRecorder) Printf(format string, args ...interface{}) {
 	_, _ = fmt.Fprintf(&recorder.Buffer, format, args...)
 }
 
+func TestGORMLoggerQuietPollingInAllModes(t *testing.T) {
+	for _, mode := range []string{"debug", "test", "release", ""} {
+		t.Run(mode, func(t *testing.T) {
+			recorder := &gormLogRecorder{}
+			l := newGORMLogger(mode, recorder)
+			query := func() (string, int64) { return "SELECT * FROM queue WHERE status = ?", 0 }
+			l.Trace(context.Background(), time.Now().Add(-300*time.Millisecond), query, nil)
+			l.Trace(context.Background(), time.Now(), query, gorm.ErrRecordNotFound)
+			if recorder.Len() != 0 {
+				t.Fatalf("routine polling should be quiet: %s", recorder.String())
+			}
+			l.Trace(context.Background(), time.Now().Add(-3*time.Second), query, nil)
+			if !strings.Contains(recorder.String(), "SLOW SQL") {
+				t.Fatal("slow queries must remain visible")
+			}
+			recorder.Reset()
+			l.Trace(context.Background(), time.Now(), query, errors.New("database unavailable"))
+			if !strings.Contains(recorder.String(), "database unavailable") {
+				t.Fatal("database errors must remain visible")
+			}
+		})
+	}
+}
+
 func TestReleaseGORMLoggerDoesNotExposeQueryParameters(t *testing.T) {
 	recorder := &gormLogRecorder{}
 	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{

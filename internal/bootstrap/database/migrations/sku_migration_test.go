@@ -24,23 +24,20 @@ import (
 	"time"
 
 	"github.com/XManCodeing/XMall/internal/constants"
-	"github.com/XManCodeing/XMall/internal/crypto"
 	cardsecretdomain "github.com/XManCodeing/XMall/internal/modules/cardsecret/domain"
 	cartdomain "github.com/XManCodeing/XMall/internal/modules/cart/domain"
+	productdomain "github.com/XManCodeing/XMall/internal/modules/catalog/product/domain"
 	channel "github.com/XManCodeing/XMall/internal/modules/channelclient/domain"
 	externalidentitydomain "github.com/XManCodeing/XMall/internal/modules/identity/externalidentity/domain"
 	userauthdomain "github.com/XManCodeing/XMall/internal/modules/identity/userauth/domain"
-	paymentdomain "github.com/XManCodeing/XMall/internal/modules/payment/domain"
-	broadcastdomain "github.com/XManCodeing/XMall/internal/modules/telegram/broadcast/domain"
-	deliverycontract "github.com/XManCodeing/XMall/internal/modules/telegram/delivery/contract"
-	runtimedomain "github.com/XManCodeing/XMall/internal/modules/telegram/runtime/domain"
-	runtimestore "github.com/XManCodeing/XMall/internal/modules/telegram/runtime/infrastructure/gormstore"
-
-	productdomain "github.com/XManCodeing/XMall/internal/modules/catalog/product/domain"
 	orderdomain "github.com/XManCodeing/XMall/internal/modules/order/domain"
+	paymentdomain "github.com/XManCodeing/XMall/internal/modules/payment/domain"
 	procurementdomain "github.com/XManCodeing/XMall/internal/modules/procurement/domain"
 	resellerdomain "github.com/XManCodeing/XMall/internal/modules/reseller/domain"
 	settingsstore "github.com/XManCodeing/XMall/internal/modules/settings/infrastructure/gormstore"
+	broadcastdomain "github.com/XManCodeing/XMall/internal/modules/telegram/broadcast/domain"
+	deliverycontract "github.com/XManCodeing/XMall/internal/modules/telegram/delivery/contract"
+	runtimedomain "github.com/XManCodeing/XMall/internal/modules/telegram/runtime/domain"
 	"github.com/XManCodeing/XMall/internal/platform/database/gormdb"
 	"github.com/XManCodeing/XMall/internal/shared/jsonmap"
 	"github.com/XManCodeing/XMall/internal/shared/money"
@@ -66,7 +63,69 @@ const preXMallScopedV1Fingerprint = "85555e2b375b75da42e9e25d8a68dcc8cae4f41e342
 // baseline for audit; database schema and schemaVersion remain unchanged.
 const preOwnerRenameScopedV1Fingerprint = "f5c4c4d544768db1ce8eb2768d082671c6476aca3ddf8635830ae2f751d3b281"
 
+func TestMediaCacheMigrationFromV7AndRepeat(t *testing.T) {
+	db := openVersionRunnerDB(t, filepath.Join(t.TempDir(), "media.sqlite"))
+	if err := db.Exec("CREATE TABLE schema_migrations (version BIGINT PRIMARY KEY, completed_at TIMESTAMP NOT NULL)").Error; err != nil {
+		t.Fatal(err)
+	}
+	if err := db.Exec("INSERT INTO schema_migrations (version,completed_at) VALUES (7,CURRENT_TIMESTAMP)").Error; err != nil {
+		t.Fatal(err)
+	}
+	for i := 0; i < 2; i++ {
+		if err := runSchemaMigrations(db, schemaVersion, func(*gorm.DB) error { t.Fatal("baseline must not run"); return nil }, schemaSteps...); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if !db.Migrator().HasTable(&runtimedomain.MediaCache{}) {
+		t.Fatal("cache table absent")
+	}
+	for _, bot := range []uint{1, 2} {
+		if err := db.Create(&runtimedomain.MediaCache{BotID: bot, PathHash: "path", ContentHash: "content", FileID: "file"}).Error; err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := db.Create(&runtimedomain.MediaCache{BotID: 1, PathHash: "path", ContentHash: "content", FileID: "other"}).Error; err == nil {
+		t.Fatal("duplicate cache key accepted")
+	}
+}
+
+func TestPanelMigrationFromV6PreservesSessionAndQueue(t *testing.T) {
+	db := openVersionRunnerDB(t, filepath.Join(t.TempDir(), "panel-v6.sqlite"))
+	if err := db.Exec(`CREATE TABLE telegram_bot_sessions (id integer PRIMARY KEY, bot_id integer NOT NULL, telegram_user_id integer NOT NULL, chat_id integer NOT NULL, version integer NOT NULL, state text, data_cipher text, expires_at datetime, created_at datetime, updated_at datetime)`).Error; err != nil {
+		t.Fatal(err)
+	}
+	if err := db.Exec(`INSERT INTO telegram_bot_sessions (id,bot_id,telegram_user_id,chat_id,version,state,data_cipher) VALUES (1,1,9,9,4,'product','synthetic-cipher')`).Error; err != nil {
+		t.Fatal(err)
+	}
+	if err := db.Exec(`CREATE TABLE schema_migrations (version BIGINT PRIMARY KEY, completed_at VARCHAR(40) NOT NULL)`).Error; err != nil {
+		t.Fatal(err)
+	}
+	if err := db.Exec(`INSERT INTO schema_migrations VALUES (6,'synthetic')`).Error; err != nil {
+		t.Fatal(err)
+	}
+	for attempt := 0; attempt < 2; attempt++ {
+		if err := runSchemaMigrations(db, schemaVersion, func(*gorm.DB) error { t.Fatal("baseline must not run"); return nil }, schemaSteps...); err != nil {
+			t.Fatal(err)
+		}
+	}
+	var session runtimedomain.Session
+	if err := db.First(&session, 1).Error; err != nil {
+		t.Fatal(err)
+	}
+	if session.Version != 4 || session.State != "product" || session.DataCipher != "synthetic-cipher" || session.PanelMessageID != 0 || session.PanelRevision != 0 {
+		t.Fatalf("%+v", session)
+	}
+	for _, column := range []string{"purpose", "operation", "panel_epoch", "panel_revision", "target_message_id", "previous_message_id", "message_kind"} {
+		if !db.Migrator().HasColumn(&runtimedomain.Delivery{}, column) {
+			t.Fatal(column)
+		}
+	}
+}
+
 var schemaFingerprints = map[int64]string{
+	9: "22881cd60a935140182a7e9377984210d93280c5ca69d9f4ed7fa6d28d5bdac3",
+	8: "f99f3860c45ec866cd471e776b231f79f31a6e79c8fcd70b768b147fd69212e2",
+	7: "0dc026aff0197e4c279c5343c2cb0572e99fbeccf6d86e95ac4178d519f55379",
 	1: "6aa3cd137e927bbeee42774a013fec690c0930f262434d2c686dc6464f7a6c26",
 	2: "3b601bf8773d9f82915578189f724ded072ff20a4803aaae6f7898af12f11600",
 	// Final unreleased v3 includes broadcast retry and procurement recipient store logic.
@@ -74,99 +133,124 @@ var schemaFingerprints = map[int64]string{
 	3: "da6480dffd796c57a13bc40d6b0f3f743b21a9a3d99216e0b37978ae4e42a5db",
 	4: "29e6bbdf957d8c52063fa619d7aff50ee3eaf6ac9b492632ac818dad16f5ad10",
 	5: "63934f8dc6a6b0ed97b9ca46269fcd4a08ea4eeaf8a13a2226c5bd73163a509f",
+	// v6 retires ownership from fresh schemas; upgrades retain existing data and
+	// obsolete columns/tables without creating or backfilling new snapshots.
+	6: "63c365beac07c1f5ba17da1b005467bea6118a33553f742e32fd9f649f1e84fd",
 }
 
-func TestV4OwnershipUpgradePreservesUnknownAndBackfillsSnapshot(t *testing.T) {
-	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{Logger: logger.Default.LogMode(logger.Silent)})
-	if err != nil {
-		t.Fatal(err)
-	}
-	pool, _ := db.DB()
-	pool.SetMaxOpenConns(1)
-	defer pool.Close()
-	key := crypto.DeriveKey("synthetic-migration-key")
-	cipher, _ := crypto.Encrypt(key, "123:old")
-	if err := runSchemaMigrations(db, 4, func(tx *gorm.DB) error {
-		if err := tx.AutoMigrate(&channel.Client{}); err != nil {
-			return err
-		}
-		if err := migrateTelegramRuntime(tx); err != nil {
-			return err
-		}
-		for index, token := range []string{cipher, "", "invalid-cipher"} {
-			if err := tx.Create(&channel.Client{Name: "upgrade", ChannelType: "telegram_bot", ChannelKey: fmt.Sprint(index), BotToken: token, ChannelSecret: "synthetic"}).Error; err != nil {
-				return err
+// Frozen v5 fixture: runtime no longer owns this historical table. Keep its
+// complete shape here so upgrades prove old snapshots survive without depending
+// on removed runtime domain types.
+type legacyBotOwnership struct {
+	LockVersion    uint64
+	AttestedAt     *time.Time
+	RepairRevision uint64
+	ID             uint   `gorm:"primaryKey"`
+	ChannelID      uint   `gorm:"uniqueIndex:idx_bot_ownership"`
+	TelegramID     int64  `gorm:"uniqueIndex:idx_bot_ownership"`
+	State          string `gorm:"size:24"`
+	SnapshotCipher string `gorm:"type:text"`
+}
+
+func (legacyBotOwnership) TableName() string { return "telegram_bot_ownership" }
+
+func TestOwnershipRetirementPreservesDeployedV1ThroughV5(t *testing.T) {
+	for _, version := range []int64{1, 2, 3, 4, 5} {
+		t.Run(fmt.Sprintf("v%d", version), func(t *testing.T) {
+			db := openVersionRunnerDB(t, filepath.Join(t.TempDir(), "retired.sqlite"))
+			client := channel.Client{Name: "legacy", ChannelType: "telegram_bot", ChannelKey: "legacy", BotToken: "synthetic-cipher", ChannelSecret: "synthetic-secret"}
+			bot := runtimedomain.Instance{TelegramID: 123, TokenCipher: "synthetic", Mode: "internal", Enabled: true}
+			history := legacyBotOwnership{ID: 2, ChannelID: 1, State: "unresolved", SnapshotCipher: "historical-cipher", RepairRevision: 7, LockVersion: 9}
+			if err := runSchemaMigrations(db, version, func(tx *gorm.DB) error {
+				if err := tx.AutoMigrate(&channel.Client{}); err != nil {
+					return err
+				}
+				if err := migrateTelegramRuntime(tx); err != nil {
+					return err
+				}
+				if err := tx.Create(&client).Error; err != nil {
+					return err
+				}
+				if version < 5 {
+					if err := tx.Migrator().DropColumn(&channel.Client{}, "revision"); err != nil {
+						return err
+					}
+				}
+				if err := tx.Create(&bot).Error; err != nil {
+					return err
+				}
+				// Deployed schemas may retain linkage columns removed from runtime.
+				if !tx.Migrator().HasColumn(&bot, "channel_client_id") {
+					if err := tx.Exec("ALTER TABLE telegram_bot_instances ADD COLUMN channel_client_id INTEGER").Error; err != nil {
+						return err
+					}
+				}
+				if !tx.Migrator().HasColumn(&bot, "cutover_completed") {
+					if err := tx.Exec("ALTER TABLE telegram_bot_instances ADD COLUMN cutover_completed NUMERIC").Error; err != nil {
+						return err
+					}
+				}
+				if err := tx.Exec("UPDATE telegram_bot_instances SET channel_client_id = ?, cutover_completed = ? WHERE id = ?", client.ID, true, bot.ID).Error; err != nil {
+					return err
+				}
+				if version == 5 {
+					if err := tx.AutoMigrate(&legacyBotOwnership{}); err != nil {
+						return err
+					}
+					return tx.Create(&history).Error
+				}
+				return nil
+			}, schemaSteps[:version-1]...); err != nil {
+				t.Fatal(err)
 			}
-		}
-		return nil
-	}, schemaSteps[:3]...); err != nil {
-		t.Fatal(err)
-	}
-	if err := runSchemaMigrations(db, schemaVersion, func(*gorm.DB) error { return errors.New("unexpected baseline") }, schemaSteps...); err != nil {
-		t.Fatal(err)
-	}
-	// A concurrent/post-upgrade credential change cannot erase the snapshot.
-	if err := db.Table("channel_clients").Where("id = 1").Update("bot_token", "").Error; err != nil {
-		t.Fatal(err)
-	}
-	if err := db.Transaction(func(tx *gorm.DB) error {
-		if err := runtimestore.OwnershipLock(tx); err != nil {
-			return err
-		}
-		return runtimestore.OwnershipBackfill(tx, func(s string) (string, error) { return crypto.Decrypt(key, s) })
-	}); err != nil {
-		t.Fatal(err)
-	}
-	var owned int64
-	db.Model(&runtimedomain.BotOwnership{}).Where("channel_id = 1 AND telegram_id = 123").Count(&owned)
-	if owned != 1 {
-		t.Fatal("lost upgrade identity")
-	}
-	var unknown int64
-	db.Model(&runtimedomain.BotOwnership{}).Where("state = ?", "unresolved").Count(&unknown)
-	if unknown != 2 {
-		t.Fatal("unknown historical ownership silently resolved")
-	}
-	if err := migrateTelegramOwnership(db); err != nil {
-		t.Fatal(err)
-	}
-	db.Model(&runtimedomain.BotOwnership{}).Where("state = ?", "unresolved").Count(&unknown)
-	if unknown != 2 {
-		t.Fatal("migration retry rewrote history")
-	}
-}
-
-func TestV3UpgradeRequiresExplicitCutoverProof(t *testing.T) {
-	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
-	if err != nil {
-		t.Fatal(err)
-	}
-	pool, _ := db.DB()
-	pool.SetMaxOpenConns(1)
-	defer pool.Close()
-	if err := runSchemaMigrations(db, 3, func(tx *gorm.DB) error {
-		if err := migrateTelegramRuntime(tx); err != nil {
-			return err
-		}
-		if err := tx.Create(&runtimedomain.Instance{TelegramID: 123, TokenCipher: "synthetic", Mode: "internal", Enabled: true}).Error; err != nil {
-			return err
-		}
-		return tx.Migrator().DropColumn(&runtimedomain.Instance{}, "cutover_completed")
-	}, schemaSteps[:2]...); err != nil {
-		t.Fatal(err)
-	}
-	if err := runSchemaMigrations(db, schemaVersion, func(*gorm.DB) error { t.Fatal("unexpected baseline"); return nil }, schemaSteps...); err != nil {
-		t.Fatal(err)
-	}
-	if !db.Migrator().HasColumn(&runtimedomain.Instance{}, "cutover_completed") {
-		t.Fatal("missing ownership proof column")
-	}
-	var row runtimedomain.Instance
-	if err := db.First(&row).Error; err != nil {
-		t.Fatal(err)
-	}
-	if row.CutoverCompleted || row.TelegramID != 123 {
-		t.Fatal("upgrade fabricated cutover proof")
+			baseline := func(*gorm.DB) error { return errors.New("unexpected baseline") }
+			for attempt := 0; attempt < 2; attempt++ {
+				if err := runSchemaMigrations(db, schemaVersion, baseline, schemaSteps...); err != nil {
+					t.Fatal(err)
+				}
+			}
+			var preserved channel.Client
+			if err := db.First(&preserved, client.ID).Error; err != nil {
+				t.Fatal(err)
+			}
+			if preserved.Revision != 1 {
+				t.Fatalf("channel CAS revision was not upgraded: %d", preserved.Revision)
+			}
+			if preserved.BotToken != client.BotToken || preserved.ChannelSecret != client.ChannelSecret || preserved.ChannelKey != client.ChannelKey {
+				t.Fatal("upgrade changed legacy channel credentials")
+			}
+			var preservedBot runtimedomain.Instance
+			if err := db.First(&preservedBot, bot.ID).Error; err != nil || preservedBot.TelegramID != bot.TelegramID || preservedBot.TokenCipher != bot.TokenCipher || !preservedBot.Enabled {
+				t.Fatalf("upgrade changed bot record: %+v, %v", preservedBot, err)
+			}
+			var linkage struct {
+				ChannelClientID  uint
+				CutoverCompleted bool
+			}
+			if err := db.Table("telegram_bot_instances").Select("channel_client_id", "cutover_completed").Where("id = ?", bot.ID).Scan(&linkage).Error; err != nil || linkage.ChannelClientID != client.ID || !linkage.CutoverCompleted {
+				t.Fatalf("upgrade destroyed historical linkage: %+v, %v", linkage, err)
+			}
+			if version == 5 {
+				var rows []legacyBotOwnership
+				if err := db.Find(&rows).Error; err != nil || len(rows) != 1 || rows[0] != history {
+					t.Fatalf("upgrade rewrote ownership history: %+v, %v", rows, err)
+				}
+			} else if db.Migrator().HasTable(&legacyBotOwnership{}) {
+				t.Fatal("upgrade manufactured retired ownership snapshots")
+			}
+			var versions []int64
+			if err := db.Raw("SELECT version FROM schema_migrations ORDER BY version").Scan(&versions).Error; err != nil {
+				t.Fatal(err)
+			}
+			if len(versions) != int(schemaVersion-version+1) {
+				t.Fatalf("wrong ledger: %v", versions)
+			}
+			for i, got := range versions {
+				if got != version+int64(i) {
+					t.Fatalf("noncontiguous ledger: %v", versions)
+				}
+			}
+		})
 	}
 }
 
@@ -246,6 +330,14 @@ func TestTelegramUpgradeFromV1AndV2(t *testing.T) {
 			}
 			if err := runSchemaMigrations(db, schemaVersion, baseline, schemaSteps...); err != nil {
 				t.Fatal(err)
+			}
+			if db.Migrator().HasTable(&legacyBotOwnership{}) {
+				t.Fatal("upgrade manufactured retired ownership table")
+			}
+			for _, column := range []string{"channel_client_id", "cutover_completed"} {
+				if db.Migrator().HasColumn(&runtimedomain.Instance{}, column) {
+					t.Fatalf("upgrade manufactured retired linkage column %s", column)
+				}
 			}
 			for _, model := range []interface{}{
 				&runtimedomain.Instance{}, &runtimedomain.Contact{}, &runtimedomain.Inbox{}, &runtimedomain.Session{}, &runtimedomain.Delivery{},
@@ -965,6 +1057,17 @@ func TestVersionRunnerUsesLockedDBWithoutReplacingGlobal(t *testing.T) {
 	originalPool := db.Statement.ConnPool
 	if err := runSchemaMigrations(db, schemaVersion, migrateSchema, schemaSteps...); err != nil {
 		t.Fatal(err)
+	}
+	if db.Migrator().HasTable(&legacyBotOwnership{}) {
+		t.Fatal("fresh baseline created retired ownership table")
+	}
+	for _, column := range []string{"channel_client_id", "cutover_completed"} {
+		if db.Migrator().HasColumn(&runtimedomain.Instance{}, column) {
+			t.Fatalf("fresh baseline created retired linkage column %s", column)
+		}
+	}
+	if !db.Migrator().HasTable(&channel.Client{}) {
+		t.Fatal("fresh baseline removed supported channel clients")
 	}
 	if gormdb.DB != nil || db.Logger != originalLogger || db.Statement.ConnPool != originalPool {
 		t.Fatal("runner changed business DB/logger/connection pool")

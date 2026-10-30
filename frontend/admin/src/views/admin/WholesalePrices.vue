@@ -16,7 +16,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { getLocalizedText, formatMoney } from '@/utils/format'
 import { getFirstImageUrl } from '@/utils/image'
-import { notifyError, notifySuccess } from '@/utils/notify'
+import { notifyErrorOnce, notifySuccess } from '@/utils/notify'
 import { confirmAction } from '@/utils/confirm'
 import {
   buildWholesaleSkuPriceReferences,
@@ -301,7 +301,7 @@ const saveWholesalePrices = async () => {
     closeModal()
     await fetchProducts()
   } catch (err: any) {
-    notifyError(err?.message || t('admin.wholesalePrices.errors.saveFailed'))
+    notifyErrorOnce(err, err?.message || t('admin.wholesalePrices.errors.saveFailed'))
   } finally {
     submitting.value = false
   }
@@ -319,7 +319,7 @@ const clearWholesalePrices = async (product: AdminProduct) => {
     notifySuccess(t('admin.wholesalePrices.saveSuccess'))
     await fetchProducts()
   } catch (err: any) {
-    notifyError(err?.message || t('admin.wholesalePrices.errors.clearFailed'))
+    notifyErrorOnce(err, err?.message || t('admin.wholesalePrices.errors.clearFailed'))
   }
 }
 
@@ -416,10 +416,10 @@ onMounted(async () => {
             </TableCell>
             <TableCell class="px-6 py-4">
               <span
-                class="inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs"
+                class="inline-flex shrink-0 whitespace-nowrap items-center gap-1 rounded-full border px-2.5 py-1 text-xs"
                 :class="hasWholesalePrices(product) ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : 'border-border bg-muted/30 text-muted-foreground'"
               >
-                <BadgePercent class="h-3.5 w-3.5" />
+                <BadgePercent class="h-3.5 w-3.5 shrink-0" />
                 {{ hasWholesalePrices(product) ? t('admin.wholesalePrices.status.enabled') : t('admin.wholesalePrices.status.disabled') }}
               </span>
             </TableCell>

@@ -17,7 +17,7 @@ import { useListRefresh, type ListFetchOptions } from '@/composables/useListRefr
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { confirmAction } from '@/utils/confirm'
 import PaymentChannelModal from './components/PaymentChannelModal.vue'
-import { notifyError, notifySuccess } from '@/utils/notify'
+import { notifyErrorOnce, notifySuccess } from '@/utils/notify'
 
 const loading = ref(true)
 const { refreshing, refreshList } = useListRefresh()
@@ -65,7 +65,7 @@ const saveFeeConfig = async () => {
     } as any)
     notifySuccess(t('admin.settings.saved'))
   } catch (error: any) {
-    notifyError(error?.message || t('admin.settings.saveFailed'))
+    notifyErrorOnce(error, error?.message || t('admin.settings.saveFailed'))
   } finally {
     feeConfigSaving.value = false
   }
@@ -329,7 +329,7 @@ watch(
               <SelectItem value="dujiaopay">
                 <span class="flex w-full items-center justify-between gap-2">
                   <span>{{ t('admin.paymentChannels.providerTypes.dujiaopay') }}</span>
-                  <span class="shrink-0 rounded border border-emerald-500/30 bg-emerald-500/10 px-1.5 py-0.5 text-[10px] font-semibold leading-none text-emerald-600 dark:text-emerald-400">
+                  <span class="shrink-0 whitespace-nowrap rounded border border-emerald-500/30 bg-emerald-500/10 px-1.5 py-0.5 text-[10px] font-semibold leading-none text-emerald-600 dark:text-emerald-400">
                     {{ t('admin.paymentChannels.providerOfficialCertified') }}
                   </span>
                 </span>
@@ -413,7 +413,7 @@ watch(
             <TableCell class="min-w-[140px] px-6 py-4 text-xs text-muted-foreground">{{ interactionModeLabel(channel.interaction_mode) }}</TableCell>
             <TableCell class="min-w-[120px] px-6 py-4 text-xs text-muted-foreground">{{ formatFeeRate(channel) }}</TableCell>
             <TableCell class="min-w-[120px] px-6 py-4">
-              <span class="inline-flex rounded-full border px-2.5 py-1 text-xs" :class="channel.is_active ? 'text-emerald-700 border-emerald-200 bg-emerald-50' : 'text-muted-foreground border-border bg-muted/30'">
+              <span class="inline-flex shrink-0 whitespace-nowrap rounded-full border px-2.5 py-1 text-xs" :class="channel.is_active ? 'text-emerald-700 border-emerald-200 bg-emerald-50' : 'text-muted-foreground border-border bg-muted/30'">
                 {{ channel.is_active ? t('admin.common.enabled') : t('admin.common.disabled') }}
               </span>
             </TableCell>

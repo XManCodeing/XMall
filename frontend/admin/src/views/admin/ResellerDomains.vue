@@ -23,7 +23,7 @@ import ListPagination from '@/components/ListPagination.vue'
 import { useListRefresh, type ListFetchOptions } from '@/composables/useListRefresh'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { confirmAction } from '@/utils/confirm'
-import { notifyError, notifySuccess } from '@/utils/notify'
+import { notifyErrorOnce, notifySuccess } from '@/utils/notify'
 import { formatDate, toRFC3339 } from '@/utils/format'
 import { getResellerDomainActionState } from '@/utils/resellerManagement'
 import { adminUrl } from '@/utils/adminBase'
@@ -145,7 +145,7 @@ const approveDomain = async (row: AdminResellerDomain) => {
     notifySuccess(t('admin.resellerDomains.actions.approveSuccess'))
     await fetchRows(pagination.value.page, { preserveRows: true })
   } catch (err: any) {
-    notifyError(err?.message || t('admin.resellerDomains.actions.approveFailed'))
+    notifyErrorOnce(err, err?.message || t('admin.resellerDomains.actions.approveFailed'))
   } finally {
     operatingId.value = null
   }
@@ -160,7 +160,7 @@ const disableDomain = async (row: AdminResellerDomain) => {
     notifySuccess(t('admin.resellerDomains.actions.disableSuccess'))
     await fetchRows(pagination.value.page, { preserveRows: true })
   } catch (err: any) {
-    notifyError(err?.message || t('admin.resellerDomains.actions.disableFailed'))
+    notifyErrorOnce(err, err?.message || t('admin.resellerDomains.actions.disableFailed'))
   } finally {
     operatingId.value = null
   }
@@ -288,12 +288,12 @@ onMounted(() => {
             <TableCell class="min-w-[220px] px-6 py-4 font-mono text-xs break-all">{{ item.domain }}</TableCell>
             <TableCell class="px-6 py-4 text-xs text-foreground">{{ typeLabel(item.type) }}</TableCell>
             <TableCell class="px-6 py-4 text-xs">
-              <span class="inline-flex rounded-full border px-2.5 py-1 text-xs" :class="verificationClass(item.verification_status)">
+              <span class="inline-flex shrink-0 whitespace-nowrap rounded-full border px-2.5 py-1 text-xs" :class="verificationClass(item.verification_status)">
                 {{ verificationLabel(item.verification_status) }}
               </span>
             </TableCell>
             <TableCell class="px-6 py-4 text-xs">
-              <span class="inline-flex rounded-full border px-2.5 py-1 text-xs" :class="statusClass(item.status)">
+              <span class="inline-flex shrink-0 whitespace-nowrap rounded-full border px-2.5 py-1 text-xs" :class="statusClass(item.status)">
                 {{ statusLabel(item.status) }}
               </span>
             </TableCell>

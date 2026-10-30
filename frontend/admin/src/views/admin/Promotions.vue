@@ -15,7 +15,7 @@ import ListPagination from '@/components/ListPagination.vue'
 import { useListRefresh, type ListFetchOptions } from '@/composables/useListRefresh'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { formatDate, getLocalizedText } from '@/utils/format'
-import { notifyError } from '@/utils/notify'
+import { notifyErrorOnce } from '@/utils/notify'
 import { confirmAction } from '@/utils/confirm'
 import { useFormValidation, rules } from '@/composables/useFormValidation'
 
@@ -377,9 +377,7 @@ const handleSubmit = async () => {
     closeModal()
     fetchPromotions(1)
   } catch (err: any) {
-    error.value =
-      err.message ||
-      (isEditing.value ? t('admin.promotions.errors.updateFailed') : t('admin.promotions.errors.createFailed'))
+    notifyErrorOnce(err, isEditing.value ? t('admin.promotions.errors.updateFailed') : t('admin.promotions.errors.createFailed'))
   } finally {
     submitting.value = false
   }
@@ -392,8 +390,7 @@ const handleDelete = async (promo: AdminPromotion) => {
     await adminAPI.deletePromotion(promo.id)
     fetchPromotions(pagination.value.page)
   } catch (err: any) {
-    const message = err.message || t('admin.promotions.errors.deleteFailed')
-    notifyError(message)
+    notifyErrorOnce(err, t('admin.promotions.errors.deleteFailed'))
   }
 }
 
@@ -545,7 +542,7 @@ watch(
             </TableCell>
             <TableCell class="min-w-[90px] px-6 py-4">
               <span
-                class="inline-flex rounded-full border px-2.5 py-1 text-xs"
+                class="inline-flex shrink-0 whitespace-nowrap rounded-full border px-2.5 py-1 text-xs"
                 :class="promo.is_active ? 'text-emerald-700 border-emerald-200 bg-emerald-50' : 'text-muted-foreground border-border bg-muted/30'"
               >
                 {{ promo.is_active ? t('admin.common.enabled') : t('admin.common.disabled') }}

@@ -422,6 +422,24 @@ func (s *OrderService) GetAnyOrderByGuestOrderNoForTenant(tenant resellercontrac
 	return order, nil
 }
 
+// ListEffectivePendingOrdersByUser uses one timestamp for filtering/counting and
+// avoids the legacy query's lazy writes on read. Only unexpired parent orders
+// belonging to this user are returned by the repository.
+func (s *OrderService) ListEffectivePendingOrdersByUser(filter ordercontract.ListFilter) ([]orderdomain.Order, int64, error) {
+	if filter.UserID == 0 {
+		return nil, 0, ErrOrderFetchFailed
+	}
+	now := time.Now()
+	filter.Status = constants.OrderStatusPendingPayment
+	filter.EffectivePendingAt = &now
+	orders, total, err := s.orderStore.ListByUser(filter)
+	if err != nil {
+		return nil, 0, ErrOrderFetchFailed
+	}
+	FillOrdersItemsFromChildren(orders)
+	return orders, total, nil
+}
+
 // ListOrdersByUser 获取订单列表
 func (s *OrderService) ListOrdersByUser(filter ordercontract.ListFilter) ([]orderdomain.Order, int64, error) {
 	if filter.UserID == 0 {

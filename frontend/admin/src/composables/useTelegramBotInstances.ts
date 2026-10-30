@@ -2,6 +2,7 @@ import { computed, getCurrentScope, onScopeDispose, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { adminAPI } from '@/api/admin'
 import { useAdminAuthStore } from '@/stores/auth'
+import { notifyErrorOnce, notifyInfo, notifySuccess } from '@/utils/notify'
 
 export interface BotInstance {
   id: number
@@ -29,27 +30,39 @@ export function botState(instance: BotInstance, now = Date.now()) {
   return instance.state || 'unknown'
 }
 
+export function botStateVariant(instance: BotInstance, now = Date.now()) {
+  const state = botState(instance, now)
+  if (state === 'running') return 'success'
+  if (state === 'stopped' || state === 'error' || state === 'stale') return 'destructive'
+  return 'secondary'
+}
+
 export function useTelegramBotInstances() {
   const { t } = useI18n()
   const auth = useAdminAuthStore()
   const instances = ref<BotInstance[]>([])
   const loading = ref(false)
   const busy = ref(false)
-  const error = ref('')
+  const testingId = ref<number | null>(null)
   const refreshError = ref('')
-  const notice = ref('')
   const now = ref(Date.now())
   const canList = computed(() => auth.hasPermission('GET:/admin/telegram-bot/instances'))
   const canCreate = computed(() => auth.hasPermission('POST:/admin/telegram-bot/instances'))
   const can = (method: string, id: number, suffix = '') => auth.hasPermission(`${method}:/admin/telegram-bot/instances/${id}${suffix}`)
-  const fail = (err: any) => { error.value = t(err?.response?.status === 409 ? 'telegramBot.instances.conflict' : 'telegramBot.instances.failed') }
+  const fail = (err: unknown) => {
+    const status = (err as { response?: { status?: number } } | null)?.response?.status
+    notifyErrorOnce(err, t(status === 409 ? 'telegramBot.instances.conflict' : 'telegramBot.instances.failed'))
+  }
   let disposed = false
+  let hasLoaded = false
   let pending: Promise<void> | undefined
   let timer: ReturnType<typeof setInterval> | undefined
   const refresh = (): Promise<void> => {
     if (disposed || !canList.value) return Promise.resolve()
     if (pending) return pending
-    loading.value = true
+    // Only the first snapshot needs a loading state. Subsequent requests keep
+    // the table and its actions stable, including when the snapshot is empty.
+    loading.value = !hasLoaded
     pending = (async () => {
       let failed = false
       try {
@@ -65,7 +78,10 @@ export function useTelegramBotInstances() {
             } catch { failed = true }
           }
         }))
-        if (!disposed) instances.value = items
+        if (!disposed) {
+          instances.value = items
+          hasLoaded = true
+        }
       } catch { failed = true } finally {
         if (!disposed) {
           refreshError.value = failed ? t('telegramBot.instances.failed') : ''
@@ -77,22 +93,25 @@ export function useTelegramBotInstances() {
     })()
     return pending
   }
+  const poll = () => {
+    if (disposed || (typeof document !== 'undefined' && document.hidden)) return
+    now.value = Date.now()
+    if (!busy.value) void refresh()
+  }
   const startPolling = () => {
     if (disposed || timer !== undefined) return
-    void refresh()
-    timer = setInterval(() => {
-      now.value = Date.now()
-      if (!busy.value) void refresh()
-    }, 10000)
+    poll()
+    timer = setInterval(poll, 10000)
+    if (typeof document !== 'undefined') document.addEventListener('visibilitychange', poll)
   }
   if (getCurrentScope()) onScopeDispose(() => {
     disposed = true
     if (timer !== undefined) clearInterval(timer)
+    if (typeof document !== 'undefined') document.removeEventListener('visibilitychange', poll)
   })
   const run = async (action: () => Promise<unknown>) => {
     if (disposed || busy.value) return false
     busy.value = true
-    error.value = ''; notice.value = ''
     try {
       // Drain an existing poll before mutating; refresh after the mutation must
       // not accidentally reuse a pre-mutation request.
@@ -100,7 +119,7 @@ export function useTelegramBotInstances() {
       if (disposed) return false
       await action()
       if (disposed) return false
-      notice.value = t('telegramBot.instances.success')
+      notifySuccess(t('telegramBot.instances.success'))
       await refresh()
       return !disposed
     } catch (err) { if (!disposed) fail(err); return false } finally { if (!disposed) busy.value = false }
@@ -113,9 +132,36 @@ export function useTelegramBotInstances() {
     if (!can('PATCH', item.id)) return Promise.resolve(false)
     return run(() => adminAPI.patchTelegramBotInstance(item.id, { expected_version: item.version, ...data }))
   }
-  const test = (item: BotInstance) => {
-    if (!can('POST', item.id, '/test')) return Promise.resolve(false)
-    return run(() => adminAPI.testTelegramBotInstance(item.id))
+  const test = async (item: BotInstance) => {
+    if (disposed || busy.value || !can('POST', item.id, '/test')) return false
+    busy.value = true
+    testingId.value = item.id
+    const bot = item.username ? `@${item.username}` : String(item.telegram_id)
+    try {
+      const res = await adminAPI.testTelegramBotInstance(item.id)
+      if (disposed) return false
+      const result = res.data?.data
+      if (result?.ok !== true || typeof result.webhook_present !== 'boolean' || result.telegram_id !== item.telegram_id) {
+        throw new Error('Invalid connection test result')
+      }
+      const name = result.username ? `@${result.username}` : bot
+      const message = t('telegramBot.instances.testSuccess', { bot: name })
+      if (result.webhook_present) {
+        notifyInfo(`${message} ${t('telegramBot.instances.testWebhook')}`)
+      } else {
+        notifySuccess(message)
+      }
+      return true
+    } catch (err) {
+      if (!disposed) {
+        // The API does not expose a reliable failure category. Do not guess a
+        // token/network cause or repeat raw upstream errors containing secrets.
+        notifyErrorOnce(err, t('telegramBot.instances.testFailed', { bot }))
+      }
+      return false
+    } finally {
+      if (!disposed) { busy.value = false; testingId.value = null }
+    }
   }
-  return { instances, loading, busy, error, refreshError, notice, now, canList, canCreate, can, refresh, startPolling, create, patch, test }
+  return { instances, loading, busy, testingId, refreshError, now, canList, canCreate, can, refresh, startPolling, create, patch, test }
 }

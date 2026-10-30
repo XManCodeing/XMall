@@ -14,7 +14,7 @@ import TableSkeleton from '@/components/TableSkeleton.vue'
 import MediaPicker from '@/components/admin/MediaPicker.vue'
 import { getLocalizedText } from '@/utils/format'
 import { getImageUrl } from '@/utils/image'
-import { notifyError, notifySuccess } from '@/utils/notify'
+import { notifyErrorOnce, notifySuccess } from '@/utils/notify'
 import { confirmAction } from '@/utils/confirm'
 import { buildAdminCategoryPath, createAdminCategoryMap, flattenAdminCategories } from '@/utils/category'
 import { useFormValidation, rules } from '@/composables/useFormValidation'
@@ -148,7 +148,7 @@ const handleSubmit = async () => {
     closeModal()
     fetchCategories()
   } catch (err: any) {
-    notifyError(t('admin.categories.errors.operationFailed', { message: err?.message || '' }))
+    notifyErrorOnce(err, t('admin.categories.errors.operationFailed', { message: err?.message || '' }))
   } finally {
     submitting.value = false
   }
@@ -162,7 +162,7 @@ const toggleActive = async (category: AdminCategory) => {
     notifySuccess(newStatus ? t('admin.categories.status.activatedTip') : t('admin.categories.status.deactivatedTip'))
   } catch (err: any) {
     category.is_active = !newStatus
-    notifyError(t('admin.categories.errors.toggleFailed', { message: err?.message || '' }))
+    notifyErrorOnce(err, t('admin.categories.errors.toggleFailed', { message: err?.message || '' }))
   }
 }
 
@@ -173,7 +173,7 @@ const handleDelete = async (category: AdminCategory) => {
     await adminAPI.deleteCategory(category.id)
     fetchCategories()
   } catch (err: any) {
-    notifyError(t('admin.categories.errors.deleteFailed', { message: err?.message || '' }))
+    notifyErrorOnce(err, t('admin.categories.errors.deleteFailed', { message: err?.message || '' }))
   }
 }
 
@@ -247,7 +247,7 @@ watch(
               <div class="space-y-1" :class="item.depth > 0 ? 'pl-6' : ''">
                 <div class="flex items-start gap-2">
                   <span
-                    class="inline-flex shrink-0 rounded-full border px-2 py-0.5 text-[11px]"
+                    class="inline-flex shrink-0 whitespace-nowrap rounded-full border px-2 py-0.5 text-[11px]"
                     :class="item.depth > 0 ? 'border-sky-200 bg-sky-50 text-sky-700' : 'border-border bg-muted/30 text-muted-foreground'"
                   >
                     {{ getCategoryLevelText(item.category) }}
@@ -263,7 +263,7 @@ watch(
             <TableCell class="px-6 py-4 font-mono text-muted-foreground">{{ item.category.sort_order }}</TableCell>
             <TableCell class="px-6 py-4">
               <span
-                class="inline-flex cursor-pointer rounded-full border px-2.5 py-1 text-xs transition-colors"
+                class="inline-flex shrink-0 whitespace-nowrap cursor-pointer rounded-full border px-2.5 py-1 text-xs transition-colors"
                 :class="item.category.is_active ? 'text-emerald-700 border-emerald-200 bg-emerald-50 hover:bg-emerald-100' : 'text-muted-foreground border-border bg-muted/30 hover:bg-muted/50'"
                 :title="item.category.is_active ? t('admin.categories.status.clickToDeactivate') : t('admin.categories.status.clickToActivate')"
                 @click="toggleActive(item.category)"

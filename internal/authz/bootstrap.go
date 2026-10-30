@@ -1,6 +1,9 @@
 package authz
 
-import "fmt"
+import (
+	"fmt"
+	"strings"
+)
 
 // RoleSeed 预置角色定义
 type RoleSeed struct {
@@ -245,15 +248,14 @@ func BuiltinRoleSeeds() []RoleSeed {
 				{Object: "/admin/settings/affiliate", Action: "*"},
 				{Object: "/admin/settings/telegram-bot", Action: "*"},
 				{Object: "/admin/settings/telegram-bot/:section", Action: "PATCH"},
-				{Object: "/admin/telegram/cutover/import", Action: "POST"},
-				{Object: "/admin/telegram/cutover/preflight", Action: "POST"},
-				{Object: "/admin/telegram/cutover/apply", Action: "POST"},
 				{Object: "/admin/telegram-bot/instances", Action: "GET"},
 				{Object: "/admin/telegram-bot/instances", Action: "POST"},
 				{Object: "/admin/telegram-bot/instances/:id", Action: "PATCH"},
 				{Object: "/admin/telegram-bot/instances/:id/test", Action: "POST"},
 				{Object: "/admin/telegram-bot/instances/:id/status", Action: "GET"},
 				{Object: "/admin/telegram-bot/instances/:id/deliveries", Action: "GET"},
+				{Object: "/admin/telegram-bot/instances/:id/profile", Action: "GET"},
+				{Object: "/admin/telegram-bot/instances/:id/profile", Action: "PUT"},
 				{Object: "/admin/settings/telegram-bot/runtime-status", Action: "GET"},
 				// 权限管理（仅 system_admin 可操作）
 				{Object: "/admin/authz/me", Action: "GET"},
@@ -297,6 +299,25 @@ func (s *Service) BootstrapBuiltinRoles() error {
 	}
 
 	changed := false
+	// Remove retired endpoint grants from custom roles as well as built-ins.
+	policies, err := s.enforcer.GetPolicy()
+	if err != nil {
+		return fmt.Errorf("list retired endpoint policies failed: %w", err)
+	}
+	for _, policy := range policies {
+		if len(policy) < 3 {
+			continue
+		}
+		object := NormalizeObject(policy[1])
+		if object != "/admin/telegram/cutover" && !strings.HasPrefix(object, "/admin/telegram/cutover/") {
+			continue
+		}
+		removed, err := s.enforcer.RemovePolicy(policy)
+		if err != nil {
+			return fmt.Errorf("remove retired endpoint policy failed: %w", err)
+		}
+		changed = changed || removed
+	}
 	for _, seed := range BuiltinRoleSeeds() {
 		role, err := NormalizeRole(seed.Role)
 		if err != nil {

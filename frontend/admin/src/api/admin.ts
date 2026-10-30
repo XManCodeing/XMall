@@ -625,6 +625,9 @@ export const adminAPI = {
   testTelegramBotInstance: (id: number) => api.post(`/admin/telegram-bot/instances/${id}/test`),
   getTelegramBotInstanceStatus: (id: number) => api.get(`/admin/telegram-bot/instances/${id}/status`),
   getTelegramBotInstanceDeliveries: (id: number, params?: Record<string, unknown>) => api.get(`/admin/telegram-bot/instances/${id}/deliveries`, { params }),
+  getTelegramBotInstanceProfile: (id: number) => api.get(`/admin/telegram-bot/instances/${id}/profile`),
+  updateTelegramBotInstanceProfile: (id: number, data: { expected_version: number; display_name: string; description: Record<string, string>; cover_url: string }) =>
+    api.put(`/admin/telegram-bot/instances/${id}/profile`, data),
   getTelegramBotRuntimeStatus: () => api.get('/admin/settings/telegram-bot/runtime-status'),
   getTelegramBroadcasts: (params?: Record<string, unknown>) =>
     api.get('/admin/telegram-bot/broadcasts', { params }),
@@ -643,6 +646,7 @@ export const adminAPI = {
     attachment_url?: string
     attachment_name?: string
     message_html: string
+    buttons?: Array<Array<{ text: string; url: string }>>
   }) => api.post('/admin/telegram-bot/broadcasts', data),
   deleteTelegramBroadcast: (id: number) => api.delete(`/admin/telegram-bot/broadcasts/${id}`),
   getTelegramBroadcastUsers: (params?: Record<string, unknown>) =>

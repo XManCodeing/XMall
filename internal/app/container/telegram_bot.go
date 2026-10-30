@@ -10,6 +10,7 @@ import (
 	runtimeapp "github.com/XManCodeing/XMall/internal/modules/telegram/runtime/application"
 	runtimeapi "github.com/XManCodeing/XMall/internal/modules/telegram/runtime/infrastructure/botapi"
 	runtimestore "github.com/XManCodeing/XMall/internal/modules/telegram/runtime/infrastructure/gormstore"
+	uploadlocal "github.com/XManCodeing/XMall/internal/modules/upload/infrastructure/localstore"
 	"github.com/XManCodeing/XMall/internal/platform/database/gormdb"
 	"time"
 )
@@ -18,7 +19,7 @@ import (
 func (c *Container) initTelegramBot() {
 	store := runtimestore.New(gormdb.DB)
 	c.TelegramBotStore = store
-	c.TelegramBotManager = telegrambootstrap.NewManager(store, c.Config.App.SecretKey)
+	c.TelegramBotManager = telegrambootstrap.NewManagerWithMedia(store, c.Config.App.SecretKey, uploadlocal.DefaultRoot)
 	shopDependencies := telegrambootstrap.ShopDependencies{
 		ContentSettings: c.SettingService,
 		Store:           store, Secret: c.Config.App.SecretKey, Auth: c.UserAuthService, Users: c.UserStore,
@@ -28,7 +29,7 @@ func (c *Container) initTelegramBot() {
 	}
 	shop := telegrambootstrap.NewShop(shopDependencies)
 	broadcastBridge := &telegrambroadcast.RuntimeBridge{
-		Store: store, Cipher: c.TelegramBotManager,
+		Store: store, Cipher: c.TelegramBotManager, UploadRoot: uploadlocal.DefaultRoot,
 		Users:    telegrambroadcast.NewUserDirectory(c.ExternalIdentityStore),
 		Identity: telegrambroadcast.ShopIdentity{Shop: shop},
 	}

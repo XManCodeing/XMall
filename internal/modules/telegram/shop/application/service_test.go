@@ -74,10 +74,10 @@ func (b *backend) Categories(context.Context, c.Actor) ([]c.Category, error) {
 	return []c.Category{{ID: 1, Name: "Category"}}, nil
 }
 func (b *backend) Products(context.Context, c.Actor, uint, int) ([]c.Product, bool, error) {
-	return []c.Product{{ID: 2, Title: "Product"}}, false, nil
+	return []c.Product{{ID: 2, Title: "Product", Available: true}}, false, nil
 }
 func (b *backend) Product(context.Context, c.Actor, uint) (*c.Product, error) {
-	return &c.Product{ID: 2, Title: "Product", Min: 1, Max: 10}, nil
+	return &c.Product{ID: 2, Title: "Product", Min: 1, Max: 100, Available: true}, nil
 }
 func (b *backend) Preview(context.Context, c.Actor, c.Selection) (*c.Quote, error) {
 	q := b.quote
@@ -129,12 +129,24 @@ func run(t *testing.T, s *Service, u rt.Update) []rt.Message {
 	}
 	return msgs
 }
+func buttonLabelMatch(text, label string) bool {
+	if text == label {
+		return true
+	}
+	if label == "ORDER · " && strings.HasPrefix(text, label) {
+		return true
+	}
+	if strings.Contains(label, "确认下单") && strings.Contains(text, "确认下单") && strings.Contains(text, " · ") {
+		return true
+	}
+	return false
+}
 func button(t *testing.T, msgs []rt.Message, label string) string {
 	t.Helper()
 	for _, m := range msgs {
 		for _, row := range m.Buttons {
 			for _, b := range row {
-				if b.Text == label {
+				if buttonLabelMatch(b.Text, label) {
 					return b.Data
 				}
 			}
@@ -150,10 +162,8 @@ func click(t *testing.T, s *Service, id int64, msgs []rt.Message, label string) 
 }
 func quoteFlow(t *testing.T, s *Service) []rt.Message {
 	m := run(t, s, update(1, "/start"))
-	m = click(t, s, 2, m, "商品目录")
-	m = click(t, s, 3, m, "Category")
-	m = click(t, s, 4, m, "Product")
-	return run(t, s, update(5, "2"))
+	m = click(t, s, 2, m, "🛍 逛商店")
+	return click(t, s, 5, m, "2")
 }
 
 type displayCatalog struct{ product c.Product }
@@ -171,11 +181,9 @@ func (d displayCatalog) Product(context.Context, c.Actor, uint) (*c.Product, err
 
 func TestCatalogDisplaysPublicPricesAndUsesPreviewForPayableAmount(t *testing.T) {
 	s, _, _ := setup()
-	s.d.Catalog = displayCatalog{product: c.Product{ID: 2, Title: "Product", Price: "25.00", Currency: "CNY", Stock: "库存: 6–20", Min: 1, Max: 10, SKUs: []c.SKU{{ID: 3, Name: "SKU", Price: "30.00", Stock: "库存: 6–20"}}}}
+	s.d.Catalog = displayCatalog{product: c.Product{ID: 2, Title: "Product", Available: true, Price: "25.00", Currency: "CNY", Stock: "库存: 6–20", Min: 1, Max: 10, SKUs: []c.SKU{{ID: 3, Name: "SKU", Available: true, Price: "30.00", Stock: "库存: 6–20"}}}}
 	msgs := run(t, s, update(1, "/start"))
-	msgs = click(t, s, 2, msgs, "商品目录")
-	msgs = click(t, s, 3, msgs, "Category")
-	msgs = click(t, s, 4, msgs, "Product · CNY 25.00 · 库存: 6–20")
+	msgs = click(t, s, 2, msgs, "🛍 逛商店")
 	joined := func(messages []rt.Message) string {
 		var parts []string
 		for _, message := range messages {
@@ -183,14 +191,10 @@ func TestCatalogDisplaysPublicPricesAndUsesPreviewForPayableAmount(t *testing.T)
 		}
 		return strings.Join(parts, "\n")
 	}
-	if !strings.Contains(joined(msgs), "公开价: CNY 25.00") || !strings.Contains(joined(msgs), "订单预览") {
-		t.Fatalf("missing price qualification: %+v", msgs)
+	if !strings.Contains(joined(msgs), "¥12.00") || !strings.Contains(joined(msgs), "SKU") || !strings.Contains(joined(msgs), "库存: 6–20") {
+		t.Fatalf("missing selected SKU or actual preview: %+v", msgs)
 	}
-	msgs = click(t, s, 5, msgs, "SKU · CNY 30.00 · 库存: 6–20")
-	if !strings.Contains(joined(msgs), "CNY 30.00") || !strings.Contains(joined(msgs), "库存: 6–20") {
-		t.Fatalf("missing SKU display: %+v", msgs)
-	}
-	msgs = run(t, s, update(6, "2"))
+	msgs = click(t, s, 6, msgs, "2")
 	if !strings.Contains(msgs[0].Text, "12.00") || strings.Contains(msgs[0].Text, "60.00") {
 		t.Fatalf("quote did not use preview amount: %+v", msgs)
 	}
@@ -219,7 +223,7 @@ func TestCheckoutReplayCASAndEncryptedSession(t *testing.T) {
 		t.Fatal("plaintext secret")
 	}
 	plain, e := crypto.Decrypt(s.key, row.DataCipher)
-	if e != nil || !strings.Contains(plain, "SECRET") {
+	if e != nil || !strings.Contains(plain, "ORDER") || strings.Contains(plain, "SECRET") {
 		t.Fatal("encrypted state missing")
 	}
 }
@@ -228,7 +232,7 @@ func TestQuoteChangeRefusesCreation(t *testing.T) {
 	msgs := quoteFlow(t, s)
 	b.quote.Amount = "13.00"
 	out := click(t, s, 6, msgs, "确认下单")
-	if b.creates != 0 || !strings.Contains(out[0].Text, "报价已变化") {
+	if b.creates != 0 || !strings.Contains(out[0].Text, "价格刚刚更新") {
 		t.Fatal("changed quote accepted")
 	}
 	click(t, s, 7, out, "确认下单")
@@ -248,9 +252,9 @@ func TestPrivateOnlyAndCallbackOwnership(t *testing.T) {
 	u = update(3, "")
 	u.UserID = 22
 	u.ChatID = 22
-	u.CallbackData = button(t, msgs, "商品目录")
+	u.CallbackData = button(t, msgs, "🛍 逛商店")
 	out := run(t, s, u)
-	if !strings.Contains(out[0].Text, "过期") {
+	if len(out) == 0 || out[0].Purpose != "panel" || strings.Contains(out[0].Text, "Product") {
 		t.Fatal("cross-user callback accepted")
 	}
 }
@@ -259,14 +263,14 @@ func TestStaleAndExpiredCallbacks(t *testing.T) {
 	old := run(t, s, update(1, "/start"))
 	run(t, s, update(2, "/start"))
 	u := update(3, "")
-	u.CallbackData = button(t, old, "商品目录")
+	u.CallbackData = button(t, old, "🛍 逛商店")
 	out := run(t, s, u)
-	if !strings.Contains(out[0].Text, "过期") {
+	if len(out) == 0 || out[0].Purpose != "panel" || strings.Contains(out[0].Text, "Product") {
 		t.Fatal("stale callback accepted")
 	}
 	s.now = func() time.Time { return time.Now().Add(time.Hour) }
 	out = run(t, s, u)
-	if !strings.Contains(out[0].Text, "过期") {
+	if len(out) == 0 || out[0].Purpose != "panel" || strings.Contains(out[0].Text, "Product") {
 		t.Fatal("expired callback accepted")
 	}
 }
@@ -274,16 +278,17 @@ func TestHistoryReadOnlyAndRevocation(t *testing.T) {
 	s, _, b := setup()
 	b.history = []uint{3}
 	msgs := run(t, s, update(1, "/start"))
-	msgs = click(t, s, 2, msgs, "绑定前历史订单（只读）")
-	msgs = click(t, s, 3, msgs, "#3")
-	msgs = click(t, s, 4, msgs, "ORDER · ")
+	msgs = click(t, s, 2, msgs, "👤 账户余额")
+	msgs = click(t, s, 3, msgs, "绑定前历史订单（只读）")
+	msgs = click(t, s, 4, msgs, "#3")
+	msgs = click(t, s, 5, msgs, "ORDER · ")
 	for _, m := range msgs {
 		if m.OwnerUserID != 3 {
 			t.Fatalf("history reply owner = %d", m.OwnerUserID)
 		}
 		for _, r := range m.Buttons {
 			for _, btn := range r {
-				if btn.Text == "选择支付渠道" {
+				if btn.Text == "去支付" || btn.Text == "取消订单" {
 					t.Fatal("history mutation exposed")
 				}
 			}
@@ -293,15 +298,15 @@ func TestHistoryReadOnlyAndRevocation(t *testing.T) {
 		t.Fatal(e)
 	}
 	b.history = nil
-	replay := update(4, "")
+	replay := update(5, "")
 	if _, err := s.Handle(context.Background(), 1, replay); !errors.Is(err, c.ErrDenied) {
 		t.Fatal("cached history leaked after revocation")
 	}
 	if e := s.AuthorizeDelivery(context.Background(), 1, 11, 3); !errors.Is(e, c.ErrDenied) {
 		t.Fatal("revoked history authorized")
 	}
-	u := update(5, "")
-	u.CallbackData = button(t, msgs, "查询订单 / 支付结果")
+	u := update(6, "")
+	u.CallbackData = button(t, msgs, "刷新订单")
 	run(t, s, u)
 	if b.details != 1 {
 		t.Fatal("revoked history queried")
@@ -321,15 +326,16 @@ func TestHistoricalWalletRemainsReadOnlyAndRevocable(t *testing.T) {
 	b.history = []uint{3}
 	s.d.Accounts = historyBackend{b}
 	msgs := run(t, s, update(1, "/start"))
-	msgs = click(t, s, 2, msgs, "绑定前历史订单（只读）")
-	msgs = click(t, s, 3, msgs, "#3")
-	msgs = click(t, s, 4, msgs, "原账号余额（只读，不合并）")
+	msgs = click(t, s, 2, msgs, "👤 账户余额")
+	msgs = click(t, s, 3, msgs, "绑定前历史订单（只读）")
+	msgs = click(t, s, 4, msgs, "#3")
+	msgs = click(t, s, 5, msgs, "原账号余额（只读，不合并）")
 	for _, m := range msgs {
 		if m.OwnerUserID != 3 {
 			t.Fatal("historical wallet reply lacks owner fence")
 		}
 	}
-	msgs = click(t, s, 5, msgs, "原账号余额退款记录（只读）")
+	msgs = click(t, s, 6, msgs, "原账号余额退款记录（只读）")
 	found := false
 	for _, m := range msgs {
 		if strings.Contains(m.Text, "refund-order") {
@@ -360,7 +366,7 @@ func TestPaymentMessageIncludesOrderAndDeadline(t *testing.T) {
 		if !strings.Contains(v.messages[0].Text, p.OrderNumber) {
 			t.Fatal("missing order number")
 		}
-		if !paid && !strings.Contains(v.messages[0].Text, deadline.Format(time.RFC3339)) {
+		if !paid && !strings.Contains(v.messages[0].Text, deadline.In(time.Local).Format("01-02 15:04")) {
 			t.Fatal("missing deadline")
 		}
 		p.Paid = false

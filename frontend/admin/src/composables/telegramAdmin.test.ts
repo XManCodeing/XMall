@@ -1,12 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const mocks = vi.hoisted(() => ({
-  allowed: true,
+  allowed: true, error: vi.fn(),
   getSettings: vi.fn(), patchSettings: vi.fn(), list: vi.fn(), status: vi.fn(), create: vi.fn(), patch: vi.fn(),
 }))
 vi.mock('vue-i18n', () => ({ useI18n: () => ({ t: (key: string) => key }) }))
 vi.mock('@/stores/auth', () => ({ useAdminAuthStore: () => ({ hasPermission: () => mocks.allowed }) }))
-vi.mock('@/utils/notify', () => ({ notifyError: vi.fn(), notifySuccess: vi.fn() }))
+vi.mock('@/utils/notify', () => ({ notifyError: vi.fn(), notifyErrorOnce: mocks.error, notifySuccess: vi.fn(), notifyInfo: vi.fn() }))
 vi.mock('@/api/admin', () => ({ adminAPI: {
   getTelegramBotSettings: mocks.getSettings,
   updateTelegramBotSettingsSection: mocks.patchSettings,
@@ -47,7 +47,9 @@ describe('Telegram section CAS', () => {
     await state.saveConfig()
     expect(state.form.value.basic.display_name).toBe('Unsaved draft')
     expect(state.loaded.value).toBe(false)
-    expect(state.error.value).toBe('telegramBot.instances.conflict')
+    expect(state.needsReload.value).toBe(true)
+    expect(state.loadError.value).toBe('')
+    expect(mocks.error).toHaveBeenCalledWith({ response: { status: 409 } }, 'telegramBot.instances.conflict')
     expect(mocks.patchSettings).toHaveBeenCalledTimes(1)
   })
   it('does not erase drafts or leave save enabled when reload fails', async () => {

@@ -75,6 +75,10 @@ func TestInternalMenuValidationPreservesLegacyExternalActions(t *testing.T) {
 		}
 		current = next
 	}
+	dup := `{"items":[{"key":"shop","action":{"type":"builtin","value":"shop"}},{"key":"shop2","action":{"type":"builtin","value":"shop"}}]}`
+	if _, err := service.PatchTelegramBotConfigSection("menu", current.ConfigVersion, json.RawMessage(dup)); !errors.Is(err, settingsapp.ErrTelegramBotMenuDuplicate) {
+		t.Fatalf("duplicate builtin accepted: %v", err)
+	}
 }
 
 func TestTelegramBotSectionsCAS(t *testing.T) {

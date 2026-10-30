@@ -23,10 +23,12 @@ const {
   menuActionTypes,
   getMenuItemError,
   menuValidationError,
+  isBuiltinMenuItem,
   moveMenuItem,
   removeMenuItem,
   saveConfig,
-  canSave, error, loaded,
+  canSave, loadError, needsReload, loaded,
+  menuDroppedUnsupported,
   saving,
 } = useTelegramBotSettings(['menu'])
 
@@ -37,7 +39,9 @@ onMounted(() => {
 
 <template>
   <div class="space-y-6">
-    <p v-if="error" role="alert" class="text-sm text-destructive">{{ error }} <Button variant="link" @click="fetchConfig">{{ t('telegramBot.instances.reload') }}</Button></p>
+    <p v-if="loadError" role="alert" class="text-sm text-destructive">{{ loadError }}</p>
+    <p v-if="menuDroppedUnsupported" class="text-sm text-muted-foreground">{{ t('telegramBot.settings.menuDroppedUnsupported') }}</p>
+    <p v-if="menuValidationError" role="alert" class="text-sm text-destructive">{{ menuValidationError }}</p>
     <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
       <div>
         <h2 class="text-2xl font-bold tracking-tight">{{ t('telegramBot.settings.menuTitle') }}</h2>
@@ -57,6 +61,7 @@ onMounted(() => {
             </button>
           </div>
         </div>
+        <Button v-if="needsReload || loadError" variant="outline" :disabled="loading || saving" @click="fetchConfig">{{ t('telegramBot.instances.reload') }}</Button>
         <Button class="w-full sm:w-auto" :disabled="saving || loading || !loaded || !canSave || !!menuValidationError" @click="saveConfig">
           <Loader2 v-if="saving" class="mr-2 h-4 w-4 animate-spin" />
           <Save v-else class="mr-2 h-4 w-4" />
@@ -122,7 +127,14 @@ onMounted(() => {
                 <ArrowDown class="mr-1 h-4 w-4" />
                 {{ t('telegramBot.settings.menuMoveDown') }}
               </Button>
-              <Button class="w-full sm:w-auto" type="button" size="sm" variant="ghost" @click="removeMenuItem(index)">
+              <Button
+                v-if="!isBuiltinMenuItem(item)"
+                class="w-full sm:w-auto"
+                type="button"
+                size="sm"
+                variant="ghost"
+                @click="removeMenuItem(index)"
+              >
                 <Trash2 class="mr-1 h-4 w-4 text-destructive" />
                 {{ t('admin.common.delete') }}
               </Button>

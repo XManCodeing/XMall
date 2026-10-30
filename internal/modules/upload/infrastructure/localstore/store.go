@@ -9,6 +9,9 @@ import (
 	"github.com/XManCodeing/XMall/internal/modules/upload/contract"
 )
 
+// DefaultRoot is shared by upload persistence and Telegram product media reads.
+const DefaultRoot = "uploads"
+
 // Store 将上传文件写入本地 uploads 目录。
 type Store struct {
 	root string

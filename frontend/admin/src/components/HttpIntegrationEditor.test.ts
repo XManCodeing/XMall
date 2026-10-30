@@ -9,7 +9,13 @@ vi.mock('@/api/httpIntegration', async importOriginal => {
   return { ...actual, httpIntegrationAPI: { getConfig: vi.fn(), saveConfig: vi.fn(), parseCurl: vi.fn(), mapResponse: vi.fn(), test: vi.fn() } }
 })
 vi.mock('@/utils/confirm', () => ({ confirmAction: vi.fn().mockResolvedValue(true) }))
-vi.mock('@/utils/notify', () => ({ notifySuccess: vi.fn(), notifyError: vi.fn() }))
+vi.mock('@/utils/notify', () => {
+  const notifyError = vi.fn()
+  return { notifySuccess: vi.fn(), notifyError, notifyErrorOnce: vi.fn((error: { __notified?: boolean } | null, message: string) => {
+    if (!error?.__notified) notifyError(message)
+  }) }
+})
+import { notifyError, notifyErrorOnce } from '@/utils/notify'
 import { httpIntegrationAPI } from '@/api/httpIntegration'
 import { confirmAction } from '@/utils/confirm'
 import HttpIntegrationEditor from './HttpIntegrationEditor.vue'
@@ -125,6 +131,49 @@ describe('HTTP integration editor', () => {
     const update = vi.mocked(httpIntegrationAPI.saveConfig).mock.calls[0]![1]
     expect(update.config.endpoints.ping).toMatchObject({ method: 'POST', path: '/api/products', encoding: 'json', query: { kind: 'all' }, body: {}, json_body: typed, success: config.endpoints.ping!.success })
     expect(update.config.endpoints.ping!.json_body).toStrictEqual(typed)
+  })
+  it.each([false, true])('keeps save failures toast-only (already notified: %s)', async notified => {
+    vi.mocked(httpIntegrationAPI.getConfig).mockResolvedValue({ config, configured: true, revision: 1, ready: true, validation_errors: [] })
+    const error = Object.assign(new Error('private API failure'), { __notified: notified })
+    vi.mocked(httpIntegrationAPI.saveConfig).mockRejectedValueOnce(error)
+    await mount()
+    await input(root.querySelector('input[placeholder="/api/products"]')!, '/changed')
+    button('Save configuration').click()
+    await flush()
+    expect(notifyErrorOnce).toHaveBeenCalledWith(error, httpIntegrationMessages['en-US'].failed)
+    expect(notifyError).toHaveBeenCalledTimes(notified ? 0 : 1)
+    expect(root.textContent).not.toContain('private API failure')
+    expect(root.querySelector('[role="alert"]')).toBeNull()
+  })
+  it('preserves local endpoint validation inline without a toast', async () => {
+    vi.mocked(httpIntegrationAPI.getConfig).mockResolvedValue({ config, configured: true, revision: 1, ready: true, validation_errors: [] })
+    await mount()
+    await input(root.querySelector('input[placeholder="/api/products"]')!, 'https://bad.example')
+    button('Save configuration').click()
+    await flush()
+    expect(root.querySelector('[role="alert"]')?.textContent).toBe(httpIntegrationMessages['en-US'].invalidPath)
+    expect(notifyErrorOnce).not.toHaveBeenCalled()
+    expect(httpIntegrationAPI.saveConfig).not.toHaveBeenCalled()
+  })
+  it.each(['parseCurl', 'mapResponse'] as const)('keeps %s transport failures out of the result panel', async action => {
+    vi.mocked(httpIntegrationAPI.getConfig).mockResolvedValue({ config, configured: true, revision: 1, ready: true, validation_errors: [] })
+    const error = Object.assign(new Error('already shown'), { __notified: true })
+    vi.mocked(httpIntegrationAPI[action]).mockRejectedValueOnce(error)
+    await mount()
+    if (action === 'parseCurl') {
+      await input(root.querySelector('textarea[aria-label="Import cURL"]')!, 'curl https://upstream.example/ping')
+      const confirm = Array.from(root.querySelectorAll('label')).find(label => label.textContent?.includes('cURL domain matches'))!.querySelector('[role="checkbox"]') as HTMLButtonElement
+      confirm.click()
+      await flush()
+      button('Parse and import').click()
+    } else {
+      await input(root.querySelector('textarea[aria-label="Response sample"]')!, '{}')
+      button('Map offline').click()
+    }
+    await flush()
+    expect(notifyErrorOnce).toHaveBeenCalledWith(error, httpIntegrationMessages['en-US'].failed)
+    expect(notifyError).not.toHaveBeenCalled()
+    expect(root.querySelector('[role="alert"]')).toBeNull()
   })
   it('shows a retry state after load failure rather than allowing saves', async () => {
     vi.mocked(httpIntegrationAPI.getConfig).mockRejectedValue(new Error('offline'))

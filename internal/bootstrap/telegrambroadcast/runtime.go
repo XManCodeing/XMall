@@ -5,13 +5,20 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net/url"
+	"path"
 	"strconv"
+	"strings"
 	"time"
+	"unicode/utf16"
+	"unicode/utf8"
 
 	broadcastapp "github.com/XManCodeing/XMall/internal/modules/telegram/broadcast/application"
 	broadcastdomain "github.com/XManCodeing/XMall/internal/modules/telegram/broadcast/domain"
 	runtimecontract "github.com/XManCodeing/XMall/internal/modules/telegram/runtime/contract"
 	runtimedomain "github.com/XManCodeing/XMall/internal/modules/telegram/runtime/domain"
+	"github.com/XManCodeing/XMall/internal/modules/telegram/runtime/infrastructure/productmedia"
+	"github.com/XManCodeing/XMall/internal/shared/jsonmap"
 )
 
 type Cipher interface {
@@ -43,10 +50,11 @@ func (s ShopIdentity) IdentityStamp(ctx context.Context, bot uint, tg int64, use
 }
 
 type RuntimeBridge struct {
-	Store    runtimecontract.Store
-	Cipher   Cipher
-	Users    broadcastapp.UserDirectory
-	Identity IdentityResolver
+	Store      runtimecontract.Store
+	Cipher     Cipher
+	Users      broadcastapp.UserDirectory
+	Identity   IdentityResolver
+	UploadRoot string
 }
 type recipient struct {
 	UserID             uint
@@ -111,17 +119,103 @@ func (b *RuntimeBridge) ListTelegramUsers(q broadcastapp.UserQuery) ([]broadcast
 	}
 	return result, total, nil
 }
+func broadcastFiltersActive(filters jsonmap.JSON) bool {
+	for _, value := range filters {
+		switch typed := value.(type) {
+		case nil:
+		case string:
+			if strings.TrimSpace(typed) != "" {
+				return true
+			}
+		default:
+			return true
+		}
+	}
+	return false
+}
+
+const (
+	maxBroadcastButtonRows = 5
+	maxBroadcastButtonsRow = 3
+	maxBroadcastButtonText = 64
+)
+
+// normalizeBroadcastButtons keeps URL-only rows. Empty rows are dropped; invalid
+// schemes or oversized keyboards fail the whole prepare step.
+func normalizeBroadcastButtons(rows [][]broadcastapp.Button) ([][]runtimecontract.Button, bool) {
+	if len(rows) == 0 {
+		return nil, true
+	}
+	if len(rows) > maxBroadcastButtonRows {
+		return nil, false
+	}
+	out := make([][]runtimecontract.Button, 0, len(rows))
+	for _, row := range rows {
+		if len(row) == 0 {
+			continue
+		}
+		if len(row) > maxBroadcastButtonsRow {
+			return nil, false
+		}
+		next := make([]runtimecontract.Button, 0, len(row))
+		for _, item := range row {
+			text := strings.TrimSpace(item.Text)
+			rawURL := strings.TrimSpace(item.URL)
+			if text == "" || rawURL == "" || utf8.RuneCountInString(text) > maxBroadcastButtonText {
+				return nil, false
+			}
+			parsed, err := url.Parse(rawURL)
+			if err != nil || parsed.Host == "" || (parsed.Scheme != "https" && parsed.Scheme != "http") {
+				return nil, false
+			}
+			next = append(next, runtimecontract.Button{Text: text, URL: rawURL})
+		}
+		out = append(out, next)
+	}
+	return out, true
+}
+
 func (b *RuntimeBridge) Prepare(ctx context.Context, input broadcastapp.CreateInput) (string, int, error) {
-	// Unsupported filters must never silently broaden an audience to all users.
-	if len(input.Filters) != 0 {
+	// "all" must never silently broaden from search filters. "specific" uses
+	// checked UserIDs only; candidate search filters are ignored at delivery time.
+	if input.RecipientType != "specific" && broadcastFiltersActive(input.Filters) {
 		return "", 0, broadcastapp.ErrInvalid
 	}
 	if b.Cipher == nil || b.Identity == nil {
 		return "", 0, broadcastapp.ErrInvalid
 	}
-	// Runtime currently supports text/photos, not arbitrary file/HTML payloads.
-	if input.AttachmentURL != "" || input.AttachmentName != "" {
+	text := strings.TrimSpace(input.MessageHTML)
+	if text == "" || len(utf16.Encode([]rune(text))) > 4096 {
 		return "", 0, broadcastapp.ErrInvalid
+	}
+	message := runtimecontract.Message{Text: text, ParseMode: "HTML", Purpose: "broadcast"}
+	buttons, ok := normalizeBroadcastButtons(input.Buttons)
+	if !ok {
+		return "", 0, broadcastapp.ErrInvalid
+	}
+	message.Buttons = buttons
+	attachmentURL := strings.TrimSpace(input.AttachmentURL)
+	attachmentName := strings.TrimSpace(input.AttachmentName)
+	if attachmentURL != "" || attachmentName != "" {
+		if attachmentURL == "" || !strings.HasPrefix(attachmentURL, "/uploads/") {
+			return "", 0, broadcastapp.ErrInvalid
+		}
+		if attachmentName != "" {
+			ext := strings.ToLower(path.Ext(attachmentName))
+			if ext != ".png" && ext != ".jpg" && ext != ".jpeg" && ext != ".webp" {
+				return "", 0, broadcastapp.ErrInvalid
+			}
+		}
+		data, name, err := productmedia.ReadUploadPhoto(b.UploadRoot, attachmentURL)
+		if err != nil {
+			return "", 0, broadcastapp.ErrInvalid
+		}
+		if len(utf16.Encode([]rune(text))) > 1024 {
+			return "", 0, broadcastapp.ErrInvalid
+		}
+		message.Photo = data
+		message.MediaName = name
+		message.PhotoURL = attachmentURL
 	}
 	q := broadcastapp.UserQuery{BotID: input.BotID}
 	if input.RecipientType == "specific" {
@@ -131,7 +225,7 @@ func (b *RuntimeBridge) Prepare(ctx context.Context, input broadcastapp.CreateIn
 	if err != nil {
 		return "", 0, err
 	}
-	snap := snapshot{Message: runtimecontract.Message{Text: input.MessageHTML}}
+	snap := snapshot{Message: message}
 	seen := map[int64]bool{}
 	for _, item := range items {
 		id, err := strconv.ParseInt(item.TelegramUserID, 10, 64)

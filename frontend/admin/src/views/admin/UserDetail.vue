@@ -13,6 +13,7 @@ import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import ListPagination from '@/components/ListPagination.vue'
 import type { AcceptableValue } from 'reka-ui'
+import { notifyErrorOnce, notifySuccess } from '@/utils/notify'
 import { copyText } from '@/utils/clipboard'
 import { confirmAction } from '@/utils/confirm'
 import {
@@ -76,8 +77,8 @@ const walletPagination = ref({ page: 1, page_size: 20, total: 0, total_page: 1 }
 
 const pageSizeOptions = [10, 20, 50, 100]
 const walletSubmitting = ref(false)
-const walletError = ref('')
-const walletSuccess = ref('')
+const walletLoadError = ref('')
+const walletValidationError = ref('')
 const walletAdjustForm = reactive({
   operation: 'add',
   amount: '',
@@ -210,14 +211,14 @@ const fetchWalletTransactions = async (page = 1) => {
 }
 
 const loadWalletData = async (page = walletPagination.value.page) => {
-  walletError.value = ''
+  walletLoadError.value = ''
   try {
     await Promise.all([
       fetchWalletAccount(),
       fetchWalletTransactions(page),
     ])
   } catch (err: any) {
-    walletError.value = err?.message || t('admin.userDetail.wallet.errors.loadFailed')
+    walletLoadError.value = err?.message || t('admin.userDetail.wallet.errors.loadFailed')
   }
 }
 
@@ -234,11 +235,21 @@ const changeOrdersPageSize = (size: number) => {
 
 const handleCopyOrderNo = async (orderNo?: string) => {
   if (!orderNo) return
-  try { await copyText(orderNo) } catch {}
+  try {
+    await copyText(orderNo)
+    notifySuccess(t('admin.common.copied'))
+  } catch (err) {
+    notifyErrorOnce(err, t('admin.common.copyFailed'))
+  }
 }
 
 const handleCopyRechargeNo = async (rechargeNo: string) => {
-  try { await copyText(rechargeNo) } catch {}
+  try {
+    await copyText(rechargeNo)
+    notifySuccess(t('admin.common.copied'))
+  } catch (err) {
+    notifyErrorOnce(err, t('admin.common.copyFailed'))
+  }
 }
 
 const changePaymentsPage = (page: number) => {
@@ -283,8 +294,7 @@ const changeTab = (tab: 'orders' | 'payments' | 'coupons' | 'wallet') => {
   } else if (tab === 'coupons') {
     fetchCoupons(couponsPagination.value.page)
   } else {
-    walletError.value = ''
-    walletSuccess.value = ''
+    walletValidationError.value = ''
     void loadWalletData(walletPagination.value.page)
   }
 }
@@ -329,17 +339,16 @@ const walletBalanceDisplay = computed(() => formatMoney(walletAccount.value?.bal
 
 const submitWalletAdjust = async () => {
   if (!Number.isFinite(userId.value) || userId.value <= 0) return
-  walletError.value = ''
-  walletSuccess.value = ''
+  walletValidationError.value = ''
   const amount = walletAdjustForm.amount.trim()
   const value = Number(amount)
   if (!amount || Number.isNaN(value) || value <= 0) {
-    walletError.value = t('admin.userDetail.wallet.errors.invalidAmount')
+    walletValidationError.value = t('admin.userDetail.wallet.errors.invalidAmount')
     return
   }
   const remark = walletAdjustForm.remark.trim()
   if (!remark) {
-    walletError.value = t('admin.userDetail.wallet.errors.remarkRequired')
+    walletValidationError.value = t('admin.userDetail.wallet.errors.remarkRequired')
     return
   }
   walletSubmitting.value = true
@@ -352,13 +361,16 @@ const submitWalletAdjust = async () => {
     walletAccount.value = response.data.data?.account || walletAccount.value
     walletAdjustForm.amount = ''
     walletAdjustForm.remark = ''
+    walletLoadError.value = ''
     await Promise.all([
       fetchUser(),
       fetchWalletTransactions(1),
-    ])
-    walletSuccess.value = t('admin.userDetail.wallet.adjustSuccess')
+    ]).catch((err: unknown) => {
+      walletLoadError.value = (err as Error)?.message || t('admin.userDetail.wallet.errors.loadFailed')
+    })
+    notifySuccess(t('admin.userDetail.wallet.adjustSuccess'))
   } catch (err: any) {
-    walletError.value = err?.message || t('admin.userDetail.wallet.errors.adjustFailed')
+    notifyErrorOnce(err, t('admin.userDetail.wallet.errors.adjustFailed'))
   } finally {
     walletSubmitting.value = false
   }
@@ -396,29 +408,21 @@ const oauthIdentities = computed(() => {
   return Array.isArray(list) ? list : []
 })
 const oauthUnbindingId = ref<number | null>(null)
-const oauthError = ref('')
-const oauthSuccess = ref('')
-
 const twofaEnabled = computed(() => Boolean(user.value?.totp_enabled_at))
 const twofaEnabledAt = computed(() => (user.value?.totp_enabled_at as string | undefined) || '')
 const twofaResetting = ref(false)
-const twofaError = ref('')
-const twofaSuccess = ref('')
-
 const handleResetUser2FA = async () => {
   if (!Number.isFinite(userId.value) || userId.value <= 0) return
   if (!twofaEnabled.value) return
   const email = user.value?.email || `#${userId.value}`
   if (!confirm(t('admin.userDetail.twofa.confirmReset', { email }))) return
-  twofaError.value = ''
-  twofaSuccess.value = ''
   twofaResetting.value = true
   try {
     await adminAPI.resetUser2FA(userId.value)
-    twofaSuccess.value = t('admin.userDetail.twofa.resetSuccess')
+    notifySuccess(t('admin.userDetail.twofa.resetSuccess'))
     await fetchUser()
   } catch (err: any) {
-    twofaError.value = err?.message || t('admin.userDetail.twofa.resetFailed')
+    notifyErrorOnce(err, t('admin.userDetail.twofa.resetFailed'))
   } finally {
     twofaResetting.value = false
   }
@@ -438,8 +442,6 @@ const handleUnbindOAuthIdentity = async (identity: AdminUserOAuthIdentity) => {
     variant: 'destructive',
   })
   if (!confirmed) return
-  oauthError.value = ''
-  oauthSuccess.value = ''
   oauthUnbindingId.value = identity.id
   try {
     if (isGoogle) {
@@ -448,13 +450,11 @@ const handleUnbindOAuthIdentity = async (identity: AdminUserOAuthIdentity) => {
       await adminAPI.unbindUserTelegram(userId.value)
     }
     await fetchUser()
-    oauthSuccess.value = t(
+    notifySuccess(t(
       isGoogle ? 'admin.userDetail.oauth.unbindGoogleSuccess' : 'admin.userDetail.oauth.unbindTelegramSuccess',
-    )
+    ))
   } catch (err: any) {
-    oauthError.value =
-      err?.message ||
-      t(isGoogle ? 'admin.userDetail.oauth.unbindGoogleFailed' : 'admin.userDetail.oauth.unbindTelegramFailed')
+    notifyErrorOnce(err, t(isGoogle ? 'admin.userDetail.oauth.unbindGoogleFailed' : 'admin.userDetail.oauth.unbindTelegramFailed'))
   } finally {
     oauthUnbindingId.value = null
   }
@@ -519,8 +519,8 @@ watch(
           <div class="text-xs text-muted-foreground">{{ t('admin.userDetail.fields.email') }}</div>
           <div class="flex flex-wrap items-center gap-2 text-sm text-foreground">
             <span class="break-all">{{ user?.email || '-' }}</span>
-            <span class="inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs" :class="emailVerificationClass">
-              <component :is="emailVerificationIcon" class="h-3.5 w-3.5" />
+            <span class="inline-flex shrink-0 whitespace-nowrap items-center gap-1 rounded-full border px-2 py-0.5 text-xs" :class="emailVerificationClass">
+              <component :is="emailVerificationIcon" class="h-3.5 w-3.5 shrink-0" />
               {{ emailVerificationLabel }}
             </span>
           </div>
@@ -536,7 +536,7 @@ watch(
         <CardContent class="p-3">
           <div class="text-xs text-muted-foreground">{{ t('admin.userDetail.fields.status') }}</div>
           <div class="text-sm text-foreground">
-            <span class="inline-flex rounded-full border px-2.5 py-1 text-xs" :class="statusClass(user?.status)">
+            <span class="inline-flex shrink-0 whitespace-nowrap rounded-full border px-2.5 py-1 text-xs" :class="statusClass(user?.status)">
               {{ statusLabel(user?.status) }}
             </span>
           </div>
@@ -586,7 +586,7 @@ watch(
                   :value="String(level.id)"
                 >
                   {{ level.icon }} {{ getLocalizedText(level.name) }}
-                  <span v-if="level.is_default" class="text-muted-foreground">({{ t('admin.memberLevels.default') }})</span>
+                  <span v-if="level.is_default" class="shrink-0 whitespace-nowrap text-muted-foreground">({{ t('admin.memberLevels.default') }})</span>
                 </SelectItem>
               </SelectContent>
             </Select>
@@ -604,7 +604,7 @@ watch(
           <div class="flex flex-wrap items-center gap-3">
             <div class="text-xs text-muted-foreground">{{ t('admin.userDetail.fields.twofa') }}</div>
             <span
-              class="inline-flex rounded-full border px-2.5 py-1 text-xs"
+              class="inline-flex shrink-0 whitespace-nowrap rounded-full border px-2.5 py-1 text-xs"
               :class="twofaEnabled ? 'theme-badge-success' : 'theme-badge-warning'"
             >
               {{ twofaEnabled ? t('admin.userDetail.twofa.enabled') : t('admin.userDetail.twofa.disabled') }}
@@ -623,8 +623,6 @@ watch(
             </Button>
           </div>
           <div class="text-xs text-muted-foreground">{{ t('admin.userDetail.twofa.hint') }}</div>
-          <div v-if="twofaError" class="text-xs text-destructive">{{ twofaError }}</div>
-          <div v-if="twofaSuccess" class="text-xs text-emerald-600">{{ twofaSuccess }}</div>
         </CardContent>
       </Card>
     </div>
@@ -635,8 +633,6 @@ watch(
           <div class="text-xs text-muted-foreground">{{ t('admin.userDetail.oauth.title') }}</div>
           <div class="text-sm text-muted-foreground">{{ t('admin.userDetail.oauth.subtitle') }}</div>
         </div>
-        <div v-if="oauthError" class="text-xs text-destructive">{{ oauthError }}</div>
-        <div v-if="oauthSuccess" class="text-xs text-emerald-600">{{ oauthSuccess }}</div>
         <div v-if="oauthIdentities.length === 0" class="text-sm text-muted-foreground">
           {{ t('admin.userDetail.oauth.empty') }}
         </div>
@@ -756,7 +752,7 @@ watch(
               </div>
             </TableCell>
             <TableCell class="px-6 py-4 text-xs">
-              <span class="inline-flex rounded-full border px-2.5 py-1 text-xs" :class="orderStatusClass(order.status)">
+              <span class="inline-flex shrink-0 whitespace-nowrap rounded-full border px-2.5 py-1 text-xs" :class="orderStatusClass(order.status)">
                 {{ orderStatusLabel(order.status) }}
               </span>
             </TableCell>
@@ -839,7 +835,7 @@ watch(
               </div>
             </TableCell>
             <TableCell class="px-6 py-4 text-xs">
-              <span class="inline-flex rounded-full border px-2.5 py-1 text-xs" :class="paymentStatusClass(payment.status)">
+              <span class="inline-flex shrink-0 whitespace-nowrap rounded-full border px-2.5 py-1 text-xs" :class="paymentStatusClass(payment.status)">
                 {{ paymentStatusLabel(payment.status) }}
               </span>
             </TableCell>
@@ -960,11 +956,11 @@ watch(
             </Button>
           </div>
         </form>
-        <div v-if="walletError" class="mt-3 rounded-lg border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
-          {{ walletError }}
+        <div v-if="walletValidationError" class="mt-3 rounded-lg border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
+          {{ walletValidationError }}
         </div>
-        <div v-if="walletSuccess" class="mt-3 rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-700">
-          {{ walletSuccess }}
+        <div v-if="walletLoadError" class="mt-3 rounded-lg border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
+          {{ walletLoadError }}
         </div>
       </div>
 
@@ -994,7 +990,7 @@ watch(
               </TableCell>
               <TableCell class="px-6 py-4 text-xs text-foreground">{{ walletTypeLabel(item.type) }}</TableCell>
               <TableCell class="px-6 py-4 text-xs">
-                <span class="inline-flex rounded-full border px-2.5 py-1 text-xs" :class="walletDirectionClass(item.direction)">
+                <span class="inline-flex shrink-0 whitespace-nowrap rounded-full border px-2.5 py-1 text-xs" :class="walletDirectionClass(item.direction)">
                   {{ walletDirectionLabel(item.direction) }}
                 </span>
               </TableCell>

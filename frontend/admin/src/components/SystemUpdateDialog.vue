@@ -16,7 +16,7 @@ import { Button } from '@/components/ui/button'
 import { adminAPI } from '@/api/admin'
 import { renderReleaseNotes } from '@/utils/releaseNotes'
 import { confirmAction } from '@/utils/confirm'
-import { notifyError, notifySuccess } from '@/utils/notify'
+import { notifyError, notifyErrorOnce, notifySuccess } from '@/utils/notify'
 
 const props = defineProps<{ open: boolean }>()
 const emit = defineEmits<{ 'update:open': [value: boolean] }>()
@@ -98,8 +98,6 @@ const updateState = ref<UpdateState | null>(null)
 const starting = ref(false)
 const restarting = ref(false)
 const rollingBack = ref(false)
-const copied = ref(false)
-
 // 串行轮询；代次令牌让关闭面板/卸载后返回的请求失效。
 let pollTimer: ReturnType<typeof setTimeout> | null = null
 let restartTimer: ReturnType<typeof setTimeout> | null = null
@@ -307,7 +305,7 @@ async function handleStartUpdate() {
     applyUpdateState((res.data?.data as UpdateState) || null)
     startPolling()
   } catch (err: any) {
-    if (isActive(id)) notifyError(extractErrorMessage(err) || t('admin.systemUpdate.failed'))
+    if (isActive(id)) notifyErrorOnce(err, t('admin.systemUpdate.failed'))
   } finally {
     if (isActive(id)) starting.value = false
   }
@@ -333,7 +331,7 @@ async function handleRestart() {
   } catch (err: any) {
     if (!isActive(id)) return
     restarting.value = false
-    notifyError(extractErrorMessage(err) || t('admin.systemUpdate.restartFailed'))
+    notifyErrorOnce(err, t('admin.systemUpdate.restartFailed'))
   }
 }
 
@@ -410,7 +408,7 @@ async function handleRollback() {
     notifySuccess(t('admin.systemUpdate.rollbackSucceeded'))
     void loadCapability()
   } catch (err: any) {
-    if (isActive(id)) notifyError(extractErrorMessage(err) || t('admin.systemUpdate.rollbackFailed'))
+    if (isActive(id)) notifyErrorOnce(err, t('admin.systemUpdate.rollbackFailed'))
   } finally {
     if (isActive(id)) rollingBack.value = false
   }
@@ -419,12 +417,9 @@ async function handleRollback() {
 async function copyDockerCommand() {
   try {
     await navigator.clipboard.writeText(dockerUpgradeCommand)
-    copied.value = true
-    setTimeout(() => {
-      copied.value = false
-    }, 2000)
-  } catch {
-    notifyError(t('admin.systemUpdate.copyFailed'))
+    notifySuccess(t('admin.systemUpdate.copySucceeded'))
+  } catch (err) {
+    notifyErrorOnce(err, t('admin.systemUpdate.copyFailed'))
   }
 }
 
@@ -437,7 +432,6 @@ watch(
     restarting.value = false
     rollingBack.value = false
     if (open) {
-      copied.value = false
       void loadCheck()
       void loadCapability()
     }
@@ -570,8 +564,7 @@ onBeforeUnmount(() => {
                   {{ dockerUpgradeCommand }}
                 </code>
                 <Button size="icon-sm" variant="outline" :title="t('admin.systemUpdate.copy')" @click="copyDockerCommand">
-                  <CheckCircle2 v-if="copied" class="h-3.5 w-3.5 text-emerald-500" />
-                  <Copy v-else class="h-3.5 w-3.5" />
+                  <Copy class="h-3.5 w-3.5" />
                 </Button>
               </div>
             </template>

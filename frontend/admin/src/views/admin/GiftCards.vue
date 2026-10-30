@@ -22,6 +22,7 @@ import { useListRefresh, type ListFetchOptions } from '@/composables/useListRefr
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { formatDate } from '@/utils/format'
 import { confirmAction } from '@/utils/confirm'
+import { notifyErrorOnce, notifySuccess } from '@/utils/notify'
 
 interface RedeemedUser {
   id?: number
@@ -57,8 +58,8 @@ const filters = reactive({
 const selectedCardIDs = ref<number[]>([])
 const batchStatusTarget = ref<'active' | 'disabled'>('disabled')
 const batchActionLoading = ref(false)
-const batchActionError = ref('')
-const batchActionSuccess = ref('')
+const selectionValidationError = ref('')
+const generationResult = ref<{ count: number; batchNo: string } | null>(null)
 
 const showGenerateModal = ref(false)
 const generateSubmitting = ref(false)
@@ -149,11 +150,6 @@ const expiresAtText = (card: GiftCardWithRelations) => {
   return formatDate(card.expires_at) || t('admin.giftCards.neverExpire')
 }
 
-const clearBatchMessages = () => {
-  batchActionError.value = ''
-  batchActionSuccess.value = ''
-}
-
 const normalizeSelectedIDs = () => {
   return Array.from(
     new Set(
@@ -190,7 +186,7 @@ const onRowSelectChange = (rawID: number | string, v: boolean | 'indeterminate')
 
 const fetchGiftCards = async (page = 1, options: ListFetchOptions = {}) => {
   if (!options.preserveRows) loading.value = true
-  clearBatchMessages()
+  selectionValidationError.value = ''
   try {
     const params: Record<string, unknown> = {
       page,
@@ -240,10 +236,10 @@ const changePageSize = (size: number) => {
 }
 
 const applyBatchStatus = async () => {
-  clearBatchMessages()
+  selectionValidationError.value = ''
   const ids = normalizeSelectedIDs()
   if (!ids.length) {
-    batchActionError.value = t('admin.giftCards.errors.selectRequired')
+    selectionValidationError.value = t('admin.giftCards.errors.selectRequired')
     return
   }
 
@@ -263,20 +259,24 @@ const applyBatchStatus = async () => {
   try {
     const response = await adminAPI.batchUpdateGiftCardStatus(payload)
     const affected = Number(response?.data?.data?.affected || 0)
-    batchActionSuccess.value = t('admin.giftCards.alerts.statusUpdated', { count: affected })
+    notifySuccess(t('admin.giftCards.alerts.statusUpdated', { count: affected }))
+  } catch (error: unknown) {
+    notifyErrorOnce(error, t('admin.giftCards.errors.batchStatusFailed'))
+    batchActionLoading.value = false
+    return
+  }
+  try {
     await fetchGiftCards(pagination.value.page)
-  } catch (err: any) {
-    batchActionError.value = err?.message || t('admin.giftCards.errors.batchStatusFailed')
   } finally {
     batchActionLoading.value = false
   }
 }
 
 const exportSelected = async (format: 'txt' | 'csv') => {
-  clearBatchMessages()
+  selectionValidationError.value = ''
   const ids = normalizeSelectedIDs()
   if (!ids.length) {
-    batchActionError.value = t('admin.giftCards.errors.selectRequired')
+    selectionValidationError.value = t('admin.giftCards.errors.selectRequired')
     return
   }
 
@@ -298,9 +298,9 @@ const exportSelected = async (format: 'txt' | 'csv') => {
     link.click()
     link.remove()
     URL.revokeObjectURL(url)
-    batchActionSuccess.value = t('admin.giftCards.alerts.exported', { count: ids.length, format: format.toUpperCase() })
-  } catch (err: any) {
-    batchActionError.value = err?.message || t('admin.giftCards.errors.exportFailed')
+    notifySuccess(t('admin.giftCards.alerts.exported', { count: ids.length, format: format.toUpperCase() }))
+  } catch (error: unknown) {
+    notifyErrorOnce(error, t('admin.giftCards.errors.exportFailed'))
   } finally {
     batchActionLoading.value = false
   }
@@ -352,13 +352,16 @@ const submitGenerate = async () => {
     })
     const created = Number(response?.data?.data?.created || 0)
     const batchNo = String(response?.data?.data?.batch?.batch_no || '').trim()
-    batchActionSuccess.value = batchNo
-      ? t('admin.giftCards.alerts.generatedDetail', { count: created, batchNo })
-      : t('admin.giftCards.alerts.generated', { count: created })
+    generationResult.value = { count: created, batchNo }
+    notifySuccess(t('admin.giftCards.alerts.generated', { count: created }))
     closeGenerateModal()
+  } catch (error: unknown) {
+    notifyErrorOnce(error, t('admin.giftCards.errors.generateFailed'))
+    generateSubmitting.value = false
+    return
+  }
+  try {
     await fetchGiftCards(1)
-  } catch (err: any) {
-    generateError.value = err?.message || t('admin.giftCards.errors.generateFailed')
   } finally {
     generateSubmitting.value = false
   }
@@ -412,11 +415,15 @@ const submitEdit = async () => {
     }
 
     await adminAPI.updateGiftCard(Number(editingCard.value.id), payload)
-    batchActionSuccess.value = t('admin.giftCards.alerts.updated')
+    notifySuccess(t('admin.giftCards.alerts.updated'))
     closeEditModal()
+  } catch (error: unknown) {
+    notifyErrorOnce(error, t('admin.giftCards.errors.updateFailed'))
+    editSubmitting.value = false
+    return
+  }
+  try {
     await fetchGiftCards(pagination.value.page)
-  } catch (err: any) {
-    editError.value = err?.message || t('admin.giftCards.errors.updateFailed')
   } finally {
     editSubmitting.value = false
   }
@@ -431,14 +438,15 @@ const handleDelete = async (card: GiftCardWithRelations) => {
   if (!confirmed) return
   try {
     await adminAPI.deleteGiftCard(Number(card.id))
-    batchActionSuccess.value = t('admin.giftCards.alerts.deleted')
-    const targetPage = cards.value.length === 1 && pagination.value.page > 1
-      ? pagination.value.page - 1
-      : pagination.value.page
-    await fetchGiftCards(targetPage)
-  } catch (err: any) {
-    batchActionError.value = err?.message || t('admin.giftCards.errors.deleteFailed')
+    notifySuccess(t('admin.giftCards.alerts.deleted'))
+  } catch (error: unknown) {
+    notifyErrorOnce(error, t('admin.giftCards.errors.deleteFailed'))
+    return
   }
+  const targetPage = cards.value.length === 1 && pagination.value.page > 1
+    ? pagination.value.page - 1
+    : pagination.value.page
+  await fetchGiftCards(targetPage)
 }
 
 onMounted(() => {
@@ -516,13 +524,21 @@ onMounted(() => {
           </Button>
         </div>
       </div>
-      <div v-if="batchActionError" class="rounded-lg border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
-        {{ batchActionError }}
-      </div>
-      <div v-if="batchActionSuccess" class="rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-700">
-        {{ batchActionSuccess }}
+      <div v-if="selectionValidationError" class="rounded-lg border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
+        {{ selectionValidationError }}
       </div>
     </div>
+
+    <dl v-if="generationResult" class="flex flex-wrap gap-x-6 gap-y-2 text-sm" data-testid="generation-result">
+      <div class="flex gap-2">
+        <dt class="text-muted-foreground">{{ t('admin.giftCards.table.batchNo') }}</dt>
+        <dd class="font-mono">{{ generationResult.batchNo || '-' }}</dd>
+      </div>
+      <div class="flex gap-2">
+        <dt class="text-muted-foreground">{{ t('admin.giftCards.form.quantity') }}</dt>
+        <dd>{{ generationResult.count }}</dd>
+      </div>
+    </dl>
 
     <div class="rounded-xl border border-border bg-card overflow-x-auto">
       <Table class="min-w-[1060px]">
@@ -565,7 +581,7 @@ onMounted(() => {
             <TableCell class="min-w-[160px] px-4 py-3 font-mono text-xs text-foreground break-all">{{ card.code || '-' }}</TableCell>
             <TableCell class="min-w-[80px] px-4 py-3 font-mono text-xs text-foreground">{{ formatMoney(card.amount, card.currency) }}</TableCell>
             <TableCell class="min-w-[90px] px-4 py-3">
-              <span class="inline-flex rounded-full border px-2.5 py-1 text-xs" :class="statusClass(card)">
+              <span class="inline-flex shrink-0 whitespace-nowrap rounded-full border px-2.5 py-1 text-xs" :class="statusClass(card)">
                 {{ statusLabel(card) }}
               </span>
             </TableCell>

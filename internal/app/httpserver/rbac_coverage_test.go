@@ -120,7 +120,7 @@ func TestChannelClientAdminRoutesAndPermissionsRemoved(t *testing.T) {
 		DownstreamOrderRefRepo: &downstreamstore.Store{},
 	})
 	for _, route := range router.Routes() {
-		if strings.HasPrefix(route.Path, "/api/v1/admin/channel-clients") {
+		if strings.HasPrefix(route.Path, "/api/v1/admin/channel-clients") || strings.HasPrefix(route.Path, "/api/v1/admin/telegram/cutover") {
 			t.Errorf("retired channel client route registered: %s %s", route.Method, route.Path)
 		}
 	}
@@ -129,25 +129,22 @@ func TestChannelClientAdminRoutesAndPermissionsRemoved(t *testing.T) {
 		t.Fatal("production permission catalog is empty")
 	}
 	for _, item := range catalog {
-		if strings.HasPrefix(item.Object, "/admin/channel-clients") || item.Module == "channel-clients" {
+		if strings.HasPrefix(item.Object, "/admin/channel-clients") || strings.HasPrefix(item.Object, "/admin/telegram/cutover") || item.Module == "channel-clients" {
 			t.Errorf("retired channel client permission remains in catalog: %+v", item)
 		}
 	}
 	for _, seed := range authz.BuiltinRoleSeeds() {
 		for _, policy := range seed.Policies {
-			if strings.HasPrefix(policy.Object, "/admin/channel-clients") {
+			if strings.HasPrefix(policy.Object, "/admin/channel-clients") || strings.HasPrefix(policy.Object, "/admin/telegram/cutover") {
 				t.Errorf("retired channel client policy remains: %s %+v", seed.Role, policy)
 			}
 		}
 	}
 
-	// Retirement must not remove instance management, historical cutover,
+	// Retirement must not remove native instance management,
 	// broadcasts or the external channel bot API.
 	for _, expected := range []adminRoute{
 		{http.MethodGet, "/api/v1/admin/telegram-bot/instances"},
-		{http.MethodPost, "/api/v1/admin/telegram/cutover/import"},
-		{http.MethodPost, "/api/v1/admin/telegram/cutover/preflight"},
-		{http.MethodPost, "/api/v1/admin/telegram/cutover/apply"},
 		{http.MethodGet, "/api/v1/admin/telegram-bot/broadcasts"},
 		{http.MethodGet, "/api/v1/channel/telegram/config"},
 		{http.MethodPost, "/api/v1/channel/telegram/heartbeat"},

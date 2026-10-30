@@ -1,47 +1,57 @@
 package telegramhttp
 
 import (
-	"context"
-	"github.com/gin-gonic/gin"
+	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
+
+	settingsmessaging "github.com/XManCodeing/XMall/internal/modules/settings/schema/messaging"
+	"github.com/gin-gonic/gin"
 )
 
-type guardFake struct {
-	allowed bool
-	id      uint
+type channelSettingsFake struct {
+	status settingsmessaging.TelegramBotRuntimeStatusSetting
 }
 
-func (g *guardFake) LegacyAllowed(_ context.Context, id uint) (bool, error) {
-	g.id = id
-	return g.allowed, nil
+func (s *channelSettingsFake) GetTelegramBotConfig() (settingsmessaging.TelegramBotConfigSetting, error) {
+	return settingsmessaging.TelegramBotConfigSetting{}, nil
 }
-func TestMigratedConfigAndHeartbeatAreFencedBeforeCredentials(t *testing.T) {
+func (s *channelSettingsFake) GetTelegramBotRuntimeStatus() (settingsmessaging.TelegramBotRuntimeStatusSetting, error) {
+	return s.status, nil
+}
+func (s *channelSettingsFake) UpdateTelegramBotRuntimeStatus(status settingsmessaging.TelegramBotRuntimeStatusSetting) error {
+	s.status = status
+	return nil
+}
+
+type channelTokensFake struct{ id uint }
+
+func (s *channelTokensFake) DecryptBotTokenByClientID(id uint) (string, error) {
+	s.id = id
+	return "123:test-only", nil
+}
+
+func TestChannelConfigAndHeartbeatWithoutCutoverDependency(t *testing.T) {
 	gin.SetMode(gin.TestMode)
-	for _, heartbeat := range []bool{false, true} {
-		recorder := httptest.NewRecorder()
-		c, _ := gin.CreateTestContext(recorder)
-		c.Request = httptest.NewRequest("POST", "/", nil)
-		c.Set("channel_client_id", uint(7))
-		guard := &guardFake{}
-		h := &ChannelBotHandler{Guard: guard}
-		// nil settings/tokens deliberately panic if authorization does not run first.
-		if heartbeat {
-			h.ReportHeartbeat(c)
-		} else {
-			h.GetBotConfig(c)
-		}
-		if recorder.Code != 409 || guard.id != 7 {
-			t.Fatal(recorder.Code, guard.id)
-		}
+	settings := &channelSettingsFake{}
+	tokens := &channelTokensFake{}
+	h := NewChannelBotHandler(settings, tokens)
+	r := gin.New()
+	// Production routes populate this only after signature authentication.
+	r.Use(func(c *gin.Context) { c.Set("channel_client_id", uint(7)) })
+	r.GET("/config", h.GetBotConfig)
+	r.POST("/heartbeat", h.ReportHeartbeat)
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, httptest.NewRequest(http.MethodGet, "/config", nil))
+	if w.Code != http.StatusOK || tokens.id != 7 {
+		t.Fatal(w.Code, tokens.id, w.Body.String())
 	}
-}
-func TestUnrelatedChannelRemainsAllowed(t *testing.T) {
-	c, _ := gin.CreateTestContext(httptest.NewRecorder())
-	c.Request = httptest.NewRequest("GET", "/", nil)
-	c.Set("channel_client_id", uint(8))
-	h := &ChannelBotHandler{Guard: &guardFake{allowed: true}}
-	if !h.allowLegacy(c) {
-		t.Fatal("generic channel blocked")
+	w = httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPost, "/heartbeat", strings.NewReader(`{"bot_version":"test"}`))
+	req.Header.Set("Content-Type", "application/json")
+	r.ServeHTTP(w, req)
+	if w.Code != http.StatusOK || !settings.status.Connected || settings.status.BotVersion != "test" || settings.status.LastSeenAt == "" {
+		t.Fatal(w.Code, settings.status, w.Body.String())
 	}
 }

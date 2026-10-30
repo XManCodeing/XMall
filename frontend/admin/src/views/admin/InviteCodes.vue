@@ -17,7 +17,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { formatDate } from '@/utils/format'
 import { confirmAction } from '@/utils/confirm'
 import { copyText } from '@/utils/clipboard'
-import { notifyError, notifySuccess } from '@/utils/notify'
+import { notifyError, notifyErrorOnce, notifySuccess } from '@/utils/notify'
 import { userStatusClass, userStatusLabel } from '@/utils/status'
 
 interface InviteCodeUser {
@@ -181,7 +181,7 @@ const submitGenerate = async () => {
     showResultModal.value = true
     await fetchCodes(1)
   } catch (err: any) {
-    generateError.value = err?.message || t('admin.inviteCodes.errors.generateFailed')
+    notifyErrorOnce(err, t('admin.inviteCodes.errors.generateFailed'))
   } finally {
     generateSubmitting.value = false
   }
@@ -216,7 +216,7 @@ const submitEdit = async () => {
     showEditModal.value = false
     await fetchCodes(pagination.value.page)
   } catch (err: any) {
-    editError.value = err?.message || t('admin.inviteCodes.errors.updateFailed')
+    notifyErrorOnce(err, t('admin.inviteCodes.errors.updateFailed'))
   } finally {
     editSubmitting.value = false
   }
@@ -362,7 +362,7 @@ onMounted(() => {
             </TableCell>
             <TableCell class="px-4 py-3 font-mono text-xs text-foreground">{{ usageText(item) }}</TableCell>
             <TableCell class="px-4 py-3">
-              <span class="inline-flex rounded-full border px-2.5 py-1 text-xs" :class="statusClass(item)">
+              <span class="inline-flex shrink-0 whitespace-nowrap rounded-full border px-2.5 py-1 text-xs" :class="statusClass(item)">
                 {{ t(`admin.inviteCodes.status.${statusKey(item)}`) }}
               </span>
             </TableCell>
@@ -528,7 +528,7 @@ onMounted(() => {
                 <TableCell class="px-4 py-3 text-xs text-foreground break-all">{{ user.email || '-' }}</TableCell>
                 <TableCell class="px-4 py-3 text-xs text-foreground break-words">{{ user.display_name || '-' }}</TableCell>
                 <TableCell class="px-4 py-3">
-                  <span class="inline-flex rounded-full border px-2.5 py-1 text-xs" :class="userStatusClass(user.status)">
+                  <span class="inline-flex shrink-0 whitespace-nowrap rounded-full border px-2.5 py-1 text-xs" :class="userStatusClass(user.status)">
                     {{ userStatusLabel(t, user.status) }}
                   </span>
                 </TableCell>

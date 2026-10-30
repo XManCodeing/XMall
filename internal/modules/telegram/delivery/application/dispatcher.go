@@ -62,6 +62,13 @@ func (d *Dispatcher) Reconcile(ctx context.Context, botID uint) error {
 				}
 			}
 		}
+		if err == nil {
+			if followup, ok := d.Renderer.(interface {
+				AfterEnqueue(context.Context, events.Event) error
+			}); ok {
+				err = followup.AfterEnqueue(operationCtx, event)
+			}
+		}
 		cancel()
 		if err != nil {
 			_ = d.Store.Retry(event.ID, owner, time.Now(), time.Now().Add(time.Minute))

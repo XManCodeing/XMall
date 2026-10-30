@@ -4,7 +4,8 @@ import { useI18n } from 'vue-i18n'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Dialog, DialogScrollContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { notifySuccess } from '@/utils/notify'
+import { notifyErrorOnce, notifySuccess } from '@/utils/notify'
+import { copyText } from '@/utils/clipboard'
 
 const props = defineProps<{ open: boolean; codes: string[] }>()
 const emit = defineEmits<{ (e: 'update:open', value: boolean): void }>()
@@ -19,8 +20,12 @@ const close = () => {
 }
 
 const copyAll = async () => {
-  await navigator.clipboard.writeText(props.codes.join('\n'))
-  notifySuccess(t('admin.twofa.recovery.copied'))
+  try {
+    await copyText(props.codes.join('\n'))
+    notifySuccess(t('admin.twofa.recovery.copied'))
+  } catch (err) {
+    notifyErrorOnce(err, t('admin.common.copyFailed'))
+  }
 }
 
 const downloadTxt = () => {

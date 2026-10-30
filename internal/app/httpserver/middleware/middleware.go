@@ -124,19 +124,27 @@ func LoggerMiddleware(logger *zap.Logger) gin.HandlerFunc {
 		start := time.Now()
 		c.Next()
 
+		elapsed := time.Since(start)
 		log := sugar.With(
 			"request_id", getRequestID(c),
 			"method", c.Request.Method,
 			"path", c.Request.URL.Path,
 			"status", c.Writer.Status(),
-			"latency_ms", time.Since(start).Milliseconds(),
+			"latency_ms", elapsed.Milliseconds(),
 			"client_ip", c.ClientIP(),
 		)
 		if len(c.Errors) > 0 {
 			log.Errorw("request", "errors", c.Errors.String())
 			return
 		}
-		log.Infow("request")
+		switch {
+		case c.Writer.Status() >= http.StatusInternalServerError:
+			log.Errorw("request")
+		case c.Writer.Status() >= http.StatusBadRequest || elapsed >= 2*time.Second:
+			log.Warnw("request")
+		default:
+			log.Debugw("request")
+		}
 	}
 }
 

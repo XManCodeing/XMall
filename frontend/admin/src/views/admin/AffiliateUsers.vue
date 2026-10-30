@@ -16,7 +16,7 @@ import { useListRefresh, type ListFetchOptions } from '@/composables/useListRefr
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { formatDate } from '@/utils/format'
 import { confirmAction } from '@/utils/confirm'
-import { notifyError, notifySuccess } from '@/utils/notify'
+import { notifyErrorOnce, notifySuccess } from '@/utils/notify'
 import { adminUrl } from '@/utils/adminBase'
 
 const { t } = useI18n()
@@ -177,7 +177,8 @@ const toggleProfileStatus = async (row: Record<string, unknown>) => {
     )
     await reloadCurrentPage()
   } catch (err: any) {
-    notifyError(
+    notifyErrorOnce(
+      err,
       err?.message
       || (isActive
         ? t('admin.affiliatesUsers.actions.disableFailed')
@@ -209,7 +210,8 @@ const batchUpdateStatus = async (status: string) => {
     selectedIds.value = []
     await reloadCurrentPage()
   } catch (err: any) {
-    notifyError(
+    notifyErrorOnce(
+      err,
       err?.message
       || (isEnable
         ? t('admin.affiliatesUsers.batch.enableFailed')
@@ -341,7 +343,7 @@ onMounted(() => {
             <TableCell class="px-6 py-4 font-mono text-xs text-foreground">{{ pickStatAmount(item?.stats, 'AvailableCommission', 'available_commission') }}</TableCell>
             <TableCell class="px-6 py-4 font-mono text-xs text-foreground">{{ pickStatAmount(item?.stats, 'WithdrawnCommission', 'withdrawn_commission') }}</TableCell>
             <TableCell class="min-w-[90px] px-6 py-4 text-xs">
-              <span class="inline-flex rounded-full border px-2.5 py-1 text-xs" :class="statusClass(item?.profile?.status || item?.status)">
+              <span class="inline-flex shrink-0 whitespace-nowrap rounded-full border px-2.5 py-1 text-xs" :class="statusClass(item?.profile?.status || item?.status)">
                 {{ statusLabel(item?.profile?.status || item?.status) }}
               </span>
             </TableCell>

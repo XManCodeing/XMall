@@ -192,10 +192,9 @@ func normalizeMySQLDSN(dsn string) (string, error) {
 	return cfg.FormatDSN(), nil
 }
 
-func newGORMLogger(mode string, writer gormlogger.Writer) gormlogger.Interface {
-	if !strings.EqualFold(strings.TrimSpace(mode), "release") {
-		return gormlogger.Default.LogMode(gormlogger.Info)
-	}
+func newGORMLogger(_ string, writer gormlogger.Writer) gormlogger.Interface {
+	// Background workers poll continuously in every server mode. Keep routine
+	// queries quiet; explicit db.Debug() remains available for SQL diagnostics.
 	if writer == nil {
 		writer = log.New(os.Stdout, "\r\n", log.LstdFlags)
 	}

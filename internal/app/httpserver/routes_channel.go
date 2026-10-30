@@ -3,7 +3,6 @@ package httpserver
 import (
 	"github.com/XManCodeing/XMall/internal/app/container"
 	"github.com/XManCodeing/XMall/internal/app/httpserver/middleware"
-	telegrambootstrap "github.com/XManCodeing/XMall/internal/bootstrap/telegrambroadcast"
 	affiliatetransport "github.com/XManCodeing/XMall/internal/modules/affiliate/transport/http"
 	channeltransport "github.com/XManCodeing/XMall/internal/modules/channelapi/transport/http"
 	giftcardtransport "github.com/XManCodeing/XMall/internal/modules/giftcard/transport/http"
@@ -31,9 +30,6 @@ func registerChannelRoutes(
 	channelAPI := apiV1.Group("/channel")
 	channelAPI.Use(middleware.RateLimitMiddleware(redisClient, channelAPIRule, middleware.KeyByIPAndHeader("Dujiao-Next-Channel-Key")))
 	channelAPI.Use(middleware.ChannelAPIAuthMiddleware(c))
-	guard := telegrambootstrap.NewCutover(c.TelegramBotManager)
-	channelAPI.Use(middleware.LegacyChannelGuardMiddleware(guard))
-	channelTelegramBotHandler.Guard = guard
 	{
 		telegramtransport.RegisterChannelBotRoutes(channelAPI, channelTelegramBotHandler)
 		channeltransport.RegisterRoutes(channelAPI, channelHandler)

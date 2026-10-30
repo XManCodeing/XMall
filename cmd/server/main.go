@@ -147,6 +147,10 @@ func main() {
 		stdLog.Printf("警告: 初始化默认管理员失败: %v", err)
 	}
 
+	// Route registration is diagnostic detail, not a startup log per endpoint.
+	gin.DebugPrintRouteFunc = func(method, path, handler string, handlers int) {
+		logger.Debugw("http_route", "method", method, "path", path, "handler", handler, "handlers", handlers)
+	}
 	// 设置 Gin 模式
 	if cfg.Server.Mode == "release" {
 		gin.SetMode(gin.ReleaseMode)

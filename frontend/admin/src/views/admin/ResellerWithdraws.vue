@@ -22,7 +22,7 @@ import { useListRefresh, type ListFetchOptions } from '@/composables/useListRefr
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
 import { confirmAction } from '@/utils/confirm'
-import { notifyError, notifySuccess } from '@/utils/notify'
+import { notifyErrorOnce, notifySuccess } from '@/utils/notify'
 import { formatDate, toRFC3339 } from '@/utils/format'
 import { adminUrl } from '@/utils/adminBase'
 
@@ -147,7 +147,7 @@ const rejectWithdraw = async () => {
     notifySuccess(t('admin.resellerWithdraws.actions.rejectSuccess'))
     await fetchRows(pagination.value.page)
   } catch (err: any) {
-    notifyError(err?.message || t('admin.resellerWithdraws.actions.rejectFailed'))
+    notifyErrorOnce(err, err?.message || t('admin.resellerWithdraws.actions.rejectFailed'))
   } finally {
     operating.value = false
   }
@@ -162,7 +162,7 @@ const payWithdraw = async (row: AdminResellerWithdraw) => {
     notifySuccess(t('admin.resellerWithdraws.actions.paySuccess'))
     await fetchRows(pagination.value.page)
   } catch (err: any) {
-    notifyError(err?.message || t('admin.resellerWithdraws.actions.payFailed'))
+    notifyErrorOnce(err, err?.message || t('admin.resellerWithdraws.actions.payFailed'))
   } finally {
     operating.value = false
   }
@@ -268,7 +268,7 @@ onMounted(() => {
               <TableCell class="min-w-[100px] px-6 py-4 text-xs text-foreground break-words">{{ item.channel || '-' }}</TableCell>
               <TableCell class="min-w-[180px] px-6 py-4 text-xs text-muted-foreground break-all">{{ item.account || '-' }}</TableCell>
               <TableCell class="min-w-[100px] px-6 py-4 text-xs">
-                <span class="inline-flex rounded-full border px-2.5 py-1 text-xs" :class="statusClass(item.status)">
+                <span class="inline-flex shrink-0 whitespace-nowrap rounded-full border px-2.5 py-1 text-xs" :class="statusClass(item.status)">
                   {{ statusLabel(item.status) }}
                 </span>
               </TableCell>

@@ -2,6 +2,7 @@
 import { onMounted, reactive, ref, watch, computed } from 'vue'
 import { useDebounceFn } from '@vueuse/core'
 import { useRoute } from 'vue-router'
+import { notifyErrorOnce, notifySuccess } from '@/utils/notify'
 import { useI18n } from 'vue-i18n'
 import { Copy } from 'lucide-vue-next'
 import { adminAPI } from '@/api/admin'
@@ -48,8 +49,6 @@ const detailLoading = ref(false)
 const detailError = ref('')
 const detailPayment = ref<AdminPayment | null>(null)
 const exporting = ref(false)
-const exportError = ref('')
-
 // 动态获取的筛选选项：channelType 按 providerType 联动
 const rawChannels = ref<Array<{ provider_type: string; channel_type: string }>>([])
 const availableProviderTypes = ref<Array<{ value: string; label: string }>>([])
@@ -157,7 +156,6 @@ const userDetailLink = (userId: number) => adminUrl(`/users/${userId}`)
 const channelLink = (channelId: number) => adminUrl(`/payment-channels?channel_id=${channelId}`)
 
 const handleExport = async () => {
-  exportError.value = ''
   exporting.value = true
   try {
     const response = await adminAPI.exportPayments({
@@ -181,7 +179,7 @@ const handleExport = async () => {
     link.remove()
     URL.revokeObjectURL(url)
   } catch (error) {
-    exportError.value = t('admin.payments.exportFailed')
+    notifyErrorOnce(error, t('admin.payments.exportFailed'))
   } finally {
     exporting.value = false
   }
@@ -270,7 +268,12 @@ const paymentChannelTypeLabel = (payment: AdminPayment) => {
 
 const handleCopyOrderNo = async (orderNo?: string) => {
   if (!orderNo) return
-  try { await copyText(orderNo) } catch {}
+  try {
+    await copyText(orderNo)
+    notifySuccess(t('admin.common.copied'))
+  } catch (err) {
+    notifyErrorOnce(err, t('admin.common.copyFailed'))
+  }
 }
 
 const interactionModeLabel = (value?: string) => {
@@ -444,10 +447,6 @@ watch(
       </div>
     </div>
 
-    <div v-if="exportError" class="rounded-lg border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
-      {{ exportError }}
-    </div>
-
     <div class="rounded-xl border border-border bg-card overflow-x-auto">
       <Table class="min-w-[900px]">
         <TableHeader class="border-b border-border bg-muted/40 text-xs uppercase text-muted-foreground">
@@ -513,7 +512,7 @@ watch(
               </div>
             </TableCell>
             <TableCell class="px-6 py-4 text-xs">
-              <span class="inline-flex rounded-full border px-2.5 py-1 text-xs" :class="statusClass(payment.status)">
+              <span class="inline-flex shrink-0 whitespace-nowrap rounded-full border px-2.5 py-1 text-xs" :class="statusClass(payment.status)">
                 {{ statusLabel(payment.status) }}
               </span>
             </TableCell>

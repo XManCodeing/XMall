@@ -1,7 +1,6 @@
 package telegramhttp
 
 import (
-	"context"
 	"net/http"
 	"time"
 
@@ -26,12 +25,7 @@ type ChannelBotTokenProvider interface {
 }
 
 // ChannelBotHandler 处理渠道 Telegram Bot 配置与心跳。
-type LegacyGuard interface {
-	LegacyAllowed(context.Context, uint) (bool, error)
-}
-
 type ChannelBotHandler struct {
-	Guard    LegacyGuard
 	settings BotSettings
 	tokens   ChannelBotTokenProvider
 }
@@ -46,19 +40,6 @@ func NewChannelBotHandler(settingsSvc BotSettings, tokens ChannelBotTokenProvide
 	return &ChannelBotHandler{settings: settingsSvc, tokens: tokens}
 }
 
-func (h *ChannelBotHandler) allowLegacy(c *gin.Context) bool {
-	raw, exists := c.Get("channel_client_id")
-	id, ok := raw.(uint)
-	if exists && ok && id != 0 && h.Guard != nil {
-		allowed, err := h.Guard.LegacyAllowed(c.Request.Context(), id)
-		if err == nil && allowed {
-			return true
-		}
-	}
-	channelresponse.Error(c, http.StatusConflict, response.CodeBadRequest, "channel_unavailable", "error.bad_request", nil)
-	return false
-}
-
 type reportHeartbeatRequest struct {
 	BotVersion    string   `json:"bot_version"`
 	WebhookStatus string   `json:"webhook_status"`
@@ -67,9 +48,6 @@ type reportHeartbeatRequest struct {
 
 // GetBotConfig GET /api/v1/channel/telegram/config
 func (h *ChannelBotHandler) GetBotConfig(c *gin.Context) {
-	if !h.allowLegacy(c) {
-		return
-	}
 	config, err := h.settings.GetTelegramBotConfig()
 	if err != nil {
 		channelresponse.Error(c, http.StatusInternalServerError, response.CodeInternal, "internal_error", "error.internal_error", err)
@@ -99,9 +77,6 @@ func (h *ChannelBotHandler) GetBotConfig(c *gin.Context) {
 
 // ReportHeartbeat POST /api/v1/channel/telegram/heartbeat
 func (h *ChannelBotHandler) ReportHeartbeat(c *gin.Context) {
-	if !h.allowLegacy(c) {
-		return
-	}
 	var req reportHeartbeatRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		channelresponse.BindError(c, err)

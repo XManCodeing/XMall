@@ -11,9 +11,9 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Textarea } from '@/components/ui/textarea'
-import { notifyError, notifySuccess } from '@/utils/notify'
+import { notifyError, notifyErrorOnce, notifySuccess } from '@/utils/notify'
 import { formatDate, toRFC3339 } from '@/utils/format'
-import { Loader2, Search, Send, Trash2, Users, ImageIcon } from 'lucide-vue-next'
+import { Loader2, Plus, Search, Send, Trash2, Users, ImageIcon } from 'lucide-vue-next'
 import MediaPicker from '@/components/admin/MediaPicker.vue'
 import { useAdminAuthStore } from '@/stores/auth'
 import { useTelegramBotInstances } from '@/composables/useTelegramBotInstances'
@@ -25,7 +25,7 @@ const router = useRouter()
 const auth = useAdminAuthStore()
 const canCreate = computed(() => auth.hasPermission('POST:/admin/telegram-bot/broadcasts'))
 const canListUsers = computed(() => auth.hasPermission('GET:/admin/telegram-bot/users'))
-const { instances, refresh, loading: loadingBots, error: botError, canList } = useTelegramBotInstances()
+const { instances, refresh, loading: loadingBots, refreshError: botError, canList } = useTelegramBotInstances()
 const botID = ref('')
 const availableBots = computed(() => instances.value.filter(item => item.mode === 'internal' && item.enabled && item.token_set))
 let userRequest = 0
@@ -34,12 +34,52 @@ const submitting = ref(false)
 const uploading = ref(false)
 const loadingUsers = ref(false)
 
+type BroadcastButton = { text: string; url: string }
+
 const form = reactive({
   title: '',
   recipient_type: 'all',
   attachment_url: '',
   attachment_name: '',
   message_html: '',
+  buttons: [] as BroadcastButton[],
+})
+
+const addButton = () => {
+  if (form.buttons.length >= 5) return
+  form.buttons.push({ text: '', url: '' })
+}
+
+const removeButton = (index: number) => {
+  form.buttons.splice(index, 1)
+}
+
+const normalizedButtons = computed(() =>
+  form.buttons
+    .map(item => ({ text: item.text.trim(), url: item.url.trim() }))
+    .filter(item => item.text || item.url),
+)
+
+const buttonsInvalid = computed(() =>
+  normalizedButtons.value.some(item => !item.text || !/^https?:\/\//i.test(item.url)),
+)
+
+const canSubmit = computed(() =>
+  canCreate.value
+  && !submitting.value
+  && !uploading.value
+  && availableBots.value.some(item => item.id === Number(botID.value))
+  && !(form.recipient_type === 'specific' && !canListUsers.value)
+  && !buttonsInvalid.value,
+)
+
+const submitBlockedReason = computed(() => {
+  if (!canCreate.value || !canList.value) return t('telegramBot.instances.forbidden')
+  if (!availableBots.value.length) return t('telegramBot.instances.empty')
+  if (!botID.value) return t('telegramBot.broadcasts.botRequired')
+  if (form.recipient_type === 'specific' && !canListUsers.value) return t('telegramBot.instances.forbidden')
+  if (buttonsInvalid.value) return t('telegramBot.broadcasts.buttonsInvalid')
+  return ''
 })
 
 const filters = reactive({
@@ -62,8 +102,6 @@ const pagination = ref({
 
 const allPageSelected = computed(() => users.value.length > 0 && users.value.every((item) => selectedUserIds.value.includes(item.user_id)))
 const selectedCount = computed(() => selectedUserIds.value.length)
-const shouldNotifyLocally = (error: unknown) => !(error as { __notified?: boolean } | undefined)?.__notified
-
 const fetchUsers = async (page = 1) => {
   if (form.recipient_type !== 'specific' || !botID.value || !canListUsers.value) return
   const request = ++userRequest
@@ -86,9 +124,7 @@ const fetchUsers = async (page = 1) => {
   } catch (error) {
     if (request !== userRequest) return
     users.value = []
-    if (shouldNotifyLocally(error)) {
-      notifyError(t('telegramBot.broadcasts.userLoadFailed'))
-    }
+    notifyErrorOnce(error, t('telegramBot.broadcasts.userLoadFailed'))
   } finally {
     if (request === userRequest) loadingUsers.value = false
   }
@@ -128,12 +164,18 @@ const toggleUser = (userID: number, v: boolean | 'indeterminate') => {
 const mediaPickerRef = ref<InstanceType<typeof MediaPicker> | null>(null)
 const mediaPickerValue = ref('')
 
+const isBroadcastImage = (name: string) => /\.(png|jpe?g|webp)$/i.test(name)
+
 const handleMediaSelected = (value: string | string[]) => {
   const path = Array.isArray(value) ? value[0] : value
   if (path) {
-    form.attachment_url = path
-    // 从路径中提取文件名
     const filename = path.split('/').pop() || ''
+    if (!isBroadcastImage(filename)) {
+      notifyError(t('telegramBot.broadcasts.attachmentImageOnly'))
+      mediaPickerValue.value = ''
+      return
+    }
+    form.attachment_url = path
     form.attachment_name = filename
   }
   mediaPickerValue.value = ''
@@ -147,6 +189,10 @@ const clearAttachment = () => {
 const handleAttachmentChange = async (files: FileList | null) => {
   const file = files?.[0]
   if (!file) return
+  if (!isBroadcastImage(file.name) && !String(file.type || '').startsWith('image/')) {
+    notifyError(t('telegramBot.broadcasts.attachmentImageOnly'))
+    return
+  }
 
   uploading.value = true
   try {
@@ -154,21 +200,23 @@ const handleAttachmentChange = async (files: FileList | null) => {
     formData.append('file', file)
     const res = await adminAPI.upload(formData, 'telegram')
     const data = (res.data?.data || {}) as Record<string, unknown>
+    const name = String(data.filename || file.name || '')
+    if (!isBroadcastImage(name)) {
+      notifyError(t('telegramBot.broadcasts.attachmentImageOnly'))
+      return
+    }
     form.attachment_url = String(data.url || '')
-    form.attachment_name = String(data.filename || file.name || '')
+    form.attachment_name = name
     notifySuccess(t('telegramBot.broadcasts.uploadSuccess'))
   } catch (error) {
-    if (shouldNotifyLocally(error)) {
-      notifyError(t('telegramBot.broadcasts.uploadFailed'))
-    }
+    notifyErrorOnce(error, t('telegramBot.broadcasts.uploadFailed'))
   } finally {
     uploading.value = false
   }
 }
 
 const handleSubmit = async () => {
-  if (submitting.value || uploading.value || !canCreate.value || !availableBots.value.some(item => item.id === Number(botID.value))) return
-  if (form.recipient_type === 'specific' && !canListUsers.value) return
+  if (!canSubmit.value) return
   if (!form.title.trim() || !form.message_html.trim()) {
     notifyError(t('telegramBot.broadcasts.formInvalid'))
     return
@@ -185,26 +233,18 @@ const handleSubmit = async () => {
       title: form.title.trim(),
       recipient_type: form.recipient_type,
       user_ids: form.recipient_type === 'specific' ? selectedUserIds.value : [],
-      filters: form.recipient_type === 'specific'
-        ? {
-            keyword: filters.keyword,
-            display_name: filters.display_name,
-            telegram_username: filters.telegram_username,
-            telegram_user_id: filters.telegram_user_id,
-            created_from: toRFC3339(filters.created_from),
-            created_to: toRFC3339(filters.created_to),
-          }
-        : {},
+      filters: {},
       attachment_url: form.attachment_url || undefined,
       attachment_name: form.attachment_name || undefined,
       message_html: form.message_html.trim(),
+      buttons: normalizedButtons.value.length
+        ? normalizedButtons.value.map(item => [item])
+        : undefined,
     })
     notifySuccess(t('telegramBot.broadcasts.createSuccess'))
     router.push('/telegram-bot/broadcasts')
   } catch (error) {
-    if (shouldNotifyLocally(error)) {
-      notifyError(t('telegramBot.broadcasts.createFailed'))
-    }
+    notifyErrorOnce(error, t('telegramBot.broadcasts.createFailed'))
   } finally {
     submitting.value = false
   }
@@ -227,6 +267,11 @@ watch(botID, () => {
   pagination.value = { page: 1, page_size: 10, total: 0, total_page: 1 }
   fetchUsers(1)
 })
+
+watch(availableBots, (bots) => {
+  if (botID.value) return
+  if (bots.length === 1) botID.value = String(bots[0]!.id)
+}, { immediate: true })
 
 onMounted(() => {
   refresh()
@@ -326,6 +371,30 @@ onMounted(() => {
           <Label>{{ t('telegramBot.broadcasts.fieldMessageHtml') }}</Label>
           <Textarea v-model="form.message_html" :placeholder="t('telegramBot.broadcasts.fieldMessageHtmlPlaceholder')" rows="8" />
           <p class="text-xs text-muted-foreground">{{ t('telegramBot.broadcasts.htmlHint') }}</p>
+        </div>
+
+        <div class="space-y-3">
+          <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <Label>{{ t('telegramBot.broadcasts.fieldButtons') }}</Label>
+              <p class="text-xs text-muted-foreground">{{ t('telegramBot.broadcasts.buttonsHint') }}</p>
+            </div>
+            <Button type="button" size="sm" variant="outline" class="w-full sm:w-auto" :disabled="form.buttons.length >= 5" @click="addButton">
+              <Plus class="mr-1 h-4 w-4" />
+              {{ t('telegramBot.broadcasts.addButton') }}
+            </Button>
+          </div>
+          <div v-if="form.buttons.length === 0" class="rounded-lg border border-dashed border-border p-4 text-sm text-muted-foreground">
+            {{ t('telegramBot.broadcasts.buttonsEmpty') }}
+          </div>
+          <div v-for="(button, index) in form.buttons" :key="index" class="grid gap-2 rounded-lg border border-border p-3 md:grid-cols-[1fr_1.4fr_auto]">
+            <Input v-model="button.text" :placeholder="t('telegramBot.broadcasts.buttonTextPlaceholder')" />
+            <Input v-model="button.url" :placeholder="t('telegramBot.broadcasts.buttonUrlPlaceholder')" />
+            <Button type="button" variant="ghost" size="sm" @click="removeButton(index)">
+              <Trash2 class="h-4 w-4 text-destructive" />
+            </Button>
+          </div>
+          <p v-if="buttonsInvalid" role="alert" class="text-xs text-destructive">{{ t('telegramBot.broadcasts.buttonsInvalid') }}</p>
         </div>
       </CardContent>
     </Card>
@@ -427,8 +496,9 @@ onMounted(() => {
       </CardContent>
     </Card>
 
-    <div class="flex justify-end">
-      <Button class="w-full sm:w-auto" :disabled="submitting || uploading || !canCreate || !availableBots.some(item => item.id === Number(botID)) || (form.recipient_type === 'specific' && !canListUsers)" @click="handleSubmit">
+    <div class="flex flex-col items-stretch gap-2 sm:items-end">
+      <p v-if="submitBlockedReason" class="text-sm text-muted-foreground">{{ submitBlockedReason }}</p>
+      <Button class="w-full sm:w-auto" :disabled="!canSubmit" @click="handleSubmit">
         <Send class="h-4 w-4 mr-2" />
         {{ submitting ? t('admin.common.loading') : t('telegramBot.broadcasts.submit') }}
       </Button>

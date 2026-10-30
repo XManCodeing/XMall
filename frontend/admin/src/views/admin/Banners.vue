@@ -17,7 +17,7 @@ import ListPagination from '@/components/ListPagination.vue'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import MediaPicker from '@/components/admin/MediaPicker.vue'
 import { getImageUrl } from '@/utils/image'
-import { notifyError } from '@/utils/notify'
+import { notifyErrorOnce } from '@/utils/notify'
 import { confirmAction } from '@/utils/confirm'
 import { useFormValidation, rules } from '@/composables/useFormValidation'
 
@@ -258,7 +258,7 @@ const handleSubmit = async () => {
     closeModal()
     fetchBanners(1)
   } catch (err: any) {
-    notifyError(t('admin.banners.errors.operationFailed', { message: err?.message || '' }))
+    notifyErrorOnce(err, t('admin.banners.errors.operationFailed', { message: err?.message || '' }))
   } finally {
     submitting.value = false
   }
@@ -275,7 +275,7 @@ const handleDelete = async (banner: AdminBanner) => {
     await adminAPI.deleteBanner(banner.id)
     fetchBanners(pagination.page)
   } catch (err: any) {
-    notifyError(t('admin.banners.errors.deleteFailed', { message: err?.message || '' }))
+    notifyErrorOnce(err, t('admin.banners.errors.deleteFailed', { message: err?.message || '' }))
   }
 }
 
@@ -286,7 +286,7 @@ const openEditById = async (rawId: unknown) => {
     const res = await adminAPI.getBanner(id)
     openEditModal(res.data.data)
   } catch (err: any) {
-    notifyError(t('admin.banners.errors.operationFailed', { message: err?.message || '' }))
+    notifyErrorOnce(err, t('admin.banners.errors.operationFailed', { message: err?.message || '' }))
   }
 }
 
@@ -376,7 +376,7 @@ watch(
             <TableCell class="min-w-[90px] px-6 py-4 text-xs text-muted-foreground break-words">{{ getLinkTypeLabel(banner.link_type) }}</TableCell>
             <TableCell class="px-6 py-4 text-xs text-muted-foreground">{{ banner.sort_order || 0 }}</TableCell>
             <TableCell class="min-w-[90px] px-6 py-4">
-              <span class="inline-flex rounded-full border px-2.5 py-1 text-xs" :class="banner.is_active ? 'text-emerald-700 border-emerald-200 bg-emerald-50' : 'text-muted-foreground border-border bg-muted/30'">
+              <span class="inline-flex shrink-0 whitespace-nowrap rounded-full border px-2.5 py-1 text-xs" :class="banner.is_active ? 'text-emerald-700 border-emerald-200 bg-emerald-50' : 'text-muted-foreground border-border bg-muted/30'">
                 {{ banner.is_active ? t('admin.common.enabled') : t('admin.common.disabled') }}
               </span>
             </TableCell>

@@ -275,7 +275,7 @@ onMounted(() => {
                 <span v-else>-</span>
               </div>
               <div v-if="item.payment_status" class="mt-1">
-                <span class="inline-flex rounded-full border px-2.5 py-1 text-xs" :class="statusClass(item.payment_status)">
+                <span class="inline-flex shrink-0 whitespace-nowrap rounded-full border px-2.5 py-1 text-xs" :class="statusClass(item.payment_status)">
                   {{ statusLabel(item.payment_status) }}
                 </span>
               </div>
@@ -292,7 +292,7 @@ onMounted(() => {
               </div>
             </TableCell>
             <TableCell class="min-w-[90px] px-6 py-4 text-xs">
-              <span class="inline-flex rounded-full border px-2.5 py-1 text-xs" :class="statusClass(item.status)">
+              <span class="inline-flex shrink-0 whitespace-nowrap rounded-full border px-2.5 py-1 text-xs" :class="statusClass(item.status)">
                 {{ statusLabel(item.status) }}
               </span>
             </TableCell>

@@ -19,7 +19,7 @@ import TableSkeleton from '@/components/TableSkeleton.vue'
 import ListPagination from '@/components/ListPagination.vue'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { notifyError } from '@/utils/notify'
+import { notifyErrorOnce } from '@/utils/notify'
 import { confirmAction } from '@/utils/confirm'
 import { useFormValidation, rules } from '@/composables/useFormValidation'
 
@@ -308,7 +308,7 @@ const handleSubmit = async () => {
     closeModal()
     fetchPosts()
   } catch (err) {
-    notifyError(t('admin.posts.errors.operationFailed', { message: (err as Error).message || '' }))
+    notifyErrorOnce(err, t('admin.posts.errors.operationFailed', { message: (err as Error).message || '' }))
   } finally {
     submitting.value = false
   }
@@ -321,7 +321,7 @@ const handleDelete = async (post: AdminPost) => {
     await adminAPI.deletePost(post.id)
     fetchPosts()
   } catch (err) {
-    notifyError(t('admin.posts.errors.deleteFailed', { message: (err as Error).message || '' }))
+    notifyErrorOnce(err, t('admin.posts.errors.deleteFailed', { message: (err as Error).message || '' }))
   }
 }
 
@@ -332,7 +332,7 @@ const openEditById = async (rawId: unknown) => {
     const res = await adminAPI.getPost(id)
     openEditModal(res.data.data)
   } catch (err) {
-    notifyError(t('admin.posts.errors.operationFailed', { message: (err as Error).message || '' }))
+    notifyErrorOnce(err, t('admin.posts.errors.operationFailed', { message: (err as Error).message || '' }))
   }
 }
 
@@ -425,7 +425,7 @@ watch(
             <TableCell class="min-w-[220px] px-6 py-4 font-mono text-muted-foreground break-all">{{ post.slug }}</TableCell>
             <TableCell class="min-w-[120px] px-6 py-4">
               <span
-                class="inline-flex rounded-full border px-2.5 py-1 text-xs"
+                class="inline-flex shrink-0 whitespace-nowrap rounded-full border px-2.5 py-1 text-xs"
                 :class="post.is_published ? 'text-emerald-700 border-emerald-200 bg-emerald-50' : 'text-amber-700 border-amber-200 bg-amber-50'"
               >
                 {{ post.is_published ? t('admin.posts.status.published') : t('admin.posts.status.draft') }}

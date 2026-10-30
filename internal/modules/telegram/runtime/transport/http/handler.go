@@ -4,6 +4,7 @@ import (
 	"errors"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/XManCodeing/XMall/internal/i18n"
 	app "github.com/XManCodeing/XMall/internal/modules/telegram/runtime/application"
@@ -21,6 +22,10 @@ func fail(ctx *gin.Context, err error) {
 	key := "error.bad_request"
 	if errors.Is(err, c.ErrConflict) {
 		status = http.StatusConflict
+		key = "error.telegram_bot_conflict"
+	}
+	if errors.Is(err, c.ErrDuplicate) {
+		key = "error.telegram_bot_duplicate"
 	}
 	if errors.Is(err, c.ErrNotFound) {
 		status = http.StatusNotFound
@@ -43,16 +48,10 @@ func (h *Handler) List(ctx *gin.Context) {
 }
 func (h *Handler) Create(ctx *gin.Context) {
 	var input struct {
-		Token           string `json:"token"`
-		ChannelClientID *uint  `json:"channel_client_id"`
+		Token string `json:"token"`
 	}
 	if err := ctx.ShouldBindJSON(&input); err != nil {
 		ginutil.RespondBindError(ctx, err)
-		return
-	}
-	// Legacy migration must verify the exact source; creating an instance cannot attach it implicitly.
-	if input.ChannelClientID != nil {
-		fail(ctx, errors.New("explicit cutover required"))
 		return
 	}
 	value, err := h.manager.Create(ctx.Request.Context(), input.Token)
@@ -129,4 +128,59 @@ func (h *Handler) Deliveries(ctx *gin.Context) {
 		return
 	}
 	response.Success(ctx, gin.H{"items": values, "total": total, "page": page, "page_size": size})
+}
+
+func (h *Handler) GetProfile(ctx *gin.Context) {
+	id, parseErr := ginutil.ParseParamUint(ctx, "id")
+	if parseErr != nil {
+		fail(ctx, parseErr)
+		return
+	}
+	value, err := h.manager.GetProfile(ctx.Request.Context(), id)
+	if err != nil {
+		fail(ctx, err)
+		return
+	}
+	response.Success(ctx, value)
+}
+
+func (h *Handler) UpdateProfile(ctx *gin.Context) {
+	id, parseErr := ginutil.ParseParamUint(ctx, "id")
+	if parseErr != nil {
+		fail(ctx, parseErr)
+		return
+	}
+	var input struct {
+		ExpectedVersion uint64 `json:"expected_version"`
+		app.BotProfileInput
+	}
+	if err := ctx.ShouldBindJSON(&input); err != nil {
+		ginutil.RespondBindError(ctx, err)
+		return
+	}
+	value, err := h.manager.UpdateProfile(ctx.Request.Context(), id, input.ExpectedVersion, input.BotProfileInput)
+	if err != nil {
+		if errors.Is(err, c.ErrConflict) {
+			fail(ctx, err)
+			return
+		}
+		if value.InstanceID != 0 {
+			ctx.AbortWithStatusJSON(http.StatusBadGateway, gin.H{"code": http.StatusBadGateway, "message": i18n.T(i18n.ResolveLocale(ctx), "error.telegram_bot_profile_sync"), "data": value})
+			return
+		}
+		key := "error.bad_request"
+		switch {
+		case strings.Contains(err.Error(), "profile video"):
+			key = "error.telegram_bot_profile_video"
+		case strings.Contains(err.Error(), "cover image"), strings.Contains(err.Error(), "upload root"), strings.Contains(err.Error(), "cover must"):
+			key = "error.telegram_bot_profile_cover"
+		case strings.Contains(err.Error(), "credential"), strings.Contains(err.Error(), "profile sync unavailable"), strings.Contains(err.Error(), "profile sync failed"), strings.Contains(err.Error(), "profile persist failed"):
+			key = "error.telegram_bot_profile_sync"
+		case strings.Contains(err.Error(), "display name"), strings.Contains(err.Error(), "description exceeds"):
+			key = "error.bad_request"
+		}
+		ctx.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"code": http.StatusBadRequest, "message": i18n.T(i18n.ResolveLocale(ctx), key)})
+		return
+	}
+	response.Success(ctx, value)
 }

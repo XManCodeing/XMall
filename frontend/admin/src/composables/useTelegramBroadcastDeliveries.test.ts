@@ -3,7 +3,13 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { AdminTelegramBroadcastDelivery } from '@/api/types'
 import { useTelegramBroadcastDeliveries } from './useTelegramBroadcastDeliveries'
 
-const mocks = vi.hoisted(() => ({ list: vi.fn(), retry: vi.fn(), read: true, write: true }))
+const mocks = vi.hoisted(() => ({ list: vi.fn(), retry: vi.fn(), success: vi.fn(), error: vi.fn(), read: true, write: true }))
+vi.mock('@/utils/notify', () => ({
+  notifySuccess: mocks.success,
+  notifyErrorOnce: (error: { __notified?: boolean } | undefined, message: string) => {
+    if (!error?.__notified) mocks.error(message)
+  },
+}))
 vi.mock('vue-i18n', () => ({ useI18n: () => ({ t: (key: string) => key }) }))
 vi.mock('@/stores/auth', () => ({ useAdminAuthStore: () => ({ hasPermission: (key: string) => key.startsWith('GET:') ? mocks.read : mocks.write }) }))
 vi.mock('@/api/admin', () => ({ adminAPI: { getTelegramBroadcastDeliveries: mocks.list, retryTelegramBroadcastDelivery: mocks.retry } }))
@@ -70,7 +76,8 @@ describe('broadcast recipient deliveries', () => {
     await model.retry(item)
     expect(await first).toBe(true)
     expect(mocks.retry).toHaveBeenCalledExactlyOnceWith(1, 7)
-    expect(model.notice.value).toBe('telegramBot.instances.retryAccepted')
+    expect(mocks.success).toHaveBeenCalledExactlyOnceWith('telegramBot.instances.retryAccepted')
+    expect(model).not.toHaveProperty('notice')
     expect(model.items.value[0]?.status).toBe('pending')
   })
   it('fails closed after ambiguous retry failure until explicit reload', async () => {
@@ -79,14 +86,28 @@ describe('broadcast recipient deliveries', () => {
     const item = model.items.value[0]!
     await model.retry(item); await model.retry(item)
     expect(mocks.retry).toHaveBeenCalledTimes(1)
-    expect(model.error.value).toBe('telegramBot.instances.retryFailed')
+    expect(model.error.value).toBe('')
+    expect(mocks.error).toHaveBeenCalledExactlyOnceWith('telegramBot.instances.retryFailed')
     expect(model.canRetry(item)).toBe(false)
   })
   it('does not treat an unaccepted response as successful', async () => {
     mocks.retry.mockResolvedValue({ data: { data: {} } })
     const { model } = setup(); await nextTick()
     expect(await model.retry(model.items.value[0]!)).toBe(false)
-    expect(model.notice.value).toBe('')
+    expect(mocks.success).not.toHaveBeenCalled()
+    expect(mocks.error).toHaveBeenCalledExactlyOnceWith('telegramBot.instances.retryFailed')
+  })
+  it.each([false, true])('reports retry failure only by toast and preserves retry safety: %s', async notified => {
+    mocks.retry.mockRejectedValueOnce({ __notified: notified, message: 'secret upstream details' })
+    const { model } = setup(); await nextTick()
+    const item = model.items.value[0]!
+    await model.retry(item)
+    expect(model.error.value).toBe('')
+    expect(model.canRetry(item)).toBe(false)
+    expect(mocks.error).toHaveBeenCalledTimes(notified ? 0 : 1)
+    if (!notified) expect(mocks.error).toHaveBeenCalledWith('telegramBot.instances.retryFailed')
+    await model.fetchPage()
+    expect(model.canRetry(model.items.value[0]!)).toBe(true)
   })
   it('clears records on load failure and permits explicit reload', async () => {
     mocks.list.mockRejectedValueOnce(new Error('offline'))

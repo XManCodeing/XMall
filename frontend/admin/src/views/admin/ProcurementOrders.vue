@@ -14,7 +14,7 @@ import { Input } from '@/components/ui/input'
 import { Dialog, DialogScrollContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { confirmAction } from '@/utils/confirm'
-import { notifyError, notifySuccess } from '@/utils/notify'
+import { notifyErrorOnce, notifySuccess } from '@/utils/notify'
 
 interface LocalOrderItem {
   title: Record<string, string>
@@ -247,7 +247,7 @@ const handleVerify = async (order: ProcurementOrderWithRelations) => {
     if (showDetail.value && detailOrder.value?.id === order.id) await openDetail(order)
     notifySuccess(t('httpIntegration.verifyComplete'))
   } catch (cause: any) {
-    notifyError(cause?.response?.data?.message || cause?.message)
+    notifyErrorOnce(cause, cause?.response?.data?.message || cause?.message || t('httpIntegration.failed'))
   } finally { verifyingId.value = null }
 }
 const handleRetry = async (order: ProcurementOrderWithRelations) => {
@@ -266,7 +266,7 @@ const handleRetry = async (order: ProcurementOrderWithRelations) => {
       openDetail(order)
     }
   } catch (err: any) {
-    notifyError(err?.response?.data?.message || err?.message)
+    notifyErrorOnce(err, err?.response?.data?.message || err?.message || t('common.api.requestFailed'))
   } finally {
     retryingId.value = null
   }
@@ -289,7 +289,7 @@ const handleCancel = async (order: ProcurementOrderWithRelations) => {
       openDetail(order)
     }
   } catch (err: any) {
-    notifyError(err?.response?.data?.message || err?.message)
+    notifyErrorOnce(err, err?.response?.data?.message || err?.message || t('common.api.requestFailed'))
   } finally {
     cancelingId.value = null
   }
@@ -580,7 +580,7 @@ onMounted(() => {
                 <div class="flex flex-wrap items-center gap-2">
                   <span class="break-words text-sm font-semibold text-foreground">{{ getOrderTitle(order) }}</span>
                   <span
-                    class="inline-flex rounded-full border px-2 py-0.5 text-[11px] font-medium"
+                    class="inline-flex shrink-0 whitespace-nowrap rounded-full border px-2 py-0.5 text-[11px] font-medium"
                     :class="statusBadgeClass(order.status)"
                   >
                     {{ procurementStatus(order.status) }}

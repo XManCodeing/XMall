@@ -31,7 +31,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { useListRefresh, type ListFetchOptions } from '@/composables/useListRefresh'
 import { confirmAction } from '@/utils/confirm'
 import { formatDate, getLocalizedText } from '@/utils/format'
-import { notifyError, notifySuccess } from '@/utils/notify'
+import { notifyErrorOnce, notifySuccess } from '@/utils/notify'
 import {
   buildResellerProductSettingStatusClass,
   getAdminResellerProductSettingOwnerLabel,
@@ -236,7 +236,7 @@ const fetchRows = async (page = 1, options: ListFetchOptions = {}) => {
     pagination.value = response.data.pagination || pagination.value
   } catch (err: any) {
     if (!options.preserveRows) rows.value = []
-    notifyError(err?.message || t('admin.resellerProductSettings.actions.loadFailed'))
+    notifyErrorOnce(err, err?.message || t('admin.resellerProductSettings.actions.loadFailed'))
   } finally {
     if (!options.preserveRows) loading.value = false
   }
@@ -308,7 +308,7 @@ const openEditor = async (row: AdminResellerProductSetting) => {
     applyDetailToEditor(response.data.data as AdminResellerProductSettingDetail)
     showEditor.value = true
   } catch (err: any) {
-    notifyError(err?.message || t('admin.resellerProductSettings.actions.loadFailed'))
+    notifyErrorOnce(err, err?.message || t('admin.resellerProductSettings.actions.loadFailed'))
   } finally {
     operatingId.value = null
   }
@@ -333,7 +333,7 @@ const saveSettings = async () => {
     notifySuccess(t('admin.resellerProductSettings.actions.saveSuccess'))
     await fetchRows(pagination.value.page, { preserveRows: true })
   } catch (err: any) {
-    notifyError(err?.message || t('admin.resellerProductSettings.actions.saveFailed'))
+    notifyErrorOnce(err, err?.message || t('admin.resellerProductSettings.actions.saveFailed'))
   } finally {
     saving.value = false
   }
@@ -354,7 +354,7 @@ const resetSetting = async (row: AdminResellerProductSetting) => {
       await reloadEditor()
     }
   } catch (err: any) {
-    notifyError(err?.message || t('admin.resellerProductSettings.actions.resetFailed'))
+    notifyErrorOnce(err, err?.message || t('admin.resellerProductSettings.actions.resetFailed'))
   } finally {
     operatingId.value = null
   }
@@ -472,7 +472,7 @@ onMounted(() => {
                 {{ item.sku_id || 0 }}
               </TableCell>
               <TableCell class="px-6 py-4">
-                <span class="inline-flex rounded-full border px-2.5 py-1 text-xs font-semibold" :class="buildResellerProductSettingStatusClass(item.is_listed)">
+                <span class="inline-flex shrink-0 whitespace-nowrap rounded-full border px-2.5 py-1 text-xs font-semibold" :class="buildResellerProductSettingStatusClass(item.is_listed)">
                   {{ item.is_listed ? t('admin.resellerProductSettings.status.listed') : t('admin.resellerProductSettings.status.hidden') }}
                 </span>
               </TableCell>

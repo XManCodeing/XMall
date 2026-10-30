@@ -9,8 +9,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/XManCodeing/XMall/internal/crypto"
-	channel "github.com/XManCodeing/XMall/internal/modules/channelclient/domain"
 	app "github.com/XManCodeing/XMall/internal/modules/telegram/runtime/application"
 
 	c "github.com/XManCodeing/XMall/internal/modules/telegram/runtime/contract"
@@ -34,10 +32,9 @@ func setup(t *testing.T) (*Store, *gorm.DB, context.Context, *d.Instance) {
 	t.Cleanup(func() { pool.Close() })
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	t.Cleanup(cancel)
-	if err := db.WithContext(ctx).AutoMigrate(&d.BotOwnership{}, &channel.Client{}, &d.Instance{}, &d.Contact{}, &d.Inbox{}, &d.Session{}, &d.Delivery{}); err != nil {
+	if err := db.WithContext(ctx).AutoMigrate(&d.Instance{}, &d.Contact{}, &d.Inbox{}, &d.Session{}, &d.Delivery{}); err != nil {
 		t.Fatal(err)
 	}
-	must(t, db.Create(&d.BotOwnership{ID: 1, State: "lock"}).Error)
 	s := New(db)
 	bot := &d.Instance{TelegramID: 123, TokenCipher: "cipher", Enabled: true, Mode: "internal"}
 	must(t, s.Create(ctx, bot))
@@ -56,168 +53,116 @@ func wantErr(t *testing.T, err, want error) {
 	}
 }
 
-type ownershipAPI struct {
+type identityAPI struct {
 	c.API
-	id            int64
-	beforeWebhook func()
+	id int64
 }
 
-func (a ownershipAPI) Identity(context.Context, string) (c.BotIdentity, error) {
+func (a identityAPI) Identity(context.Context, string) (c.BotIdentity, error) {
 	return c.BotIdentity{ID: a.id}, nil
 }
-func (a ownershipAPI) Webhook(context.Context, string) (string, error) {
-	if a.beforeWebhook != nil {
-		a.beforeWebhook()
-	}
-	return "", nil
-}
+func (a identityAPI) Webhook(context.Context, string) (string, error) { return "", nil }
 
-func TestLegacyOwnershipBlocksOrdinaryPathsAndAllowsExplicitCutover(t *testing.T) {
-	s, db, ctx, bot := setup(t)
-	manager := app.NewManager(s, ownershipAPI{id: 123}, "ownership-test-key")
-	cipher, err := manager.Seal("123:obsolete-token")
-	must(t, err)
-	source := channel.Client{Name: "legacy", ChannelKey: "test-channel", ChannelType: "telegram_bot", ChannelSecret: "unused", BotToken: cipher}
-	must(t, db.Create(&source).Error)
-	must(t, db.Create(&d.BotOwnership{ChannelID: source.ID, State: "unresolved", SnapshotCipher: source.BotToken}).Error)
-	// A formerly created and enabled ordinary instance must not restart.
-	_, err = s.BeginGeneration(ctx, bot.ID, bot.Version)
-	wantErr(t, err, c.ErrConflict)
-	must(t, db.Model(bot).Updates(map[string]interface{}{"enabled": false, "token_cipher": cipher}).Error)
-	on := true
-	wantErr(t, manager.Configure(ctx, bot.ID, bot.Version, &on, nil), c.ErrConflict)
-	wrongCipher, err := manager.Seal("999:different-bot")
-	must(t, err)
-	wantErr(t, s.Configure(ctx, bot.ID, bot.Version, map[string]interface{}{"token_cipher": wrongCipher}), c.ErrConflict)
-	wantErr(t, s.Heartbeat(ctx, bot.ID, bot.Generation, "running", "", bot.Version), c.ErrConflict)
-	rotated := "123:rotated-token"
-	wantErr(t, manager.Configure(ctx, bot.ID, bot.Version, &on, &rotated), c.ErrConflict)
-	for _, fields := range []map[string]interface{}{{"enabled": 1}, {"enabled": "true"}, {"mode": "internal"}, {"channel_client_id": source.ID}, {"telegram_id": int64(456)}, {"cutover_completed": true}} {
-		if s.Configure(ctx, bot.ID, bot.Version, fields) == nil {
-			t.Fatal("ownership metadata was mutable")
-		}
-	}
-	// Even disabled/deleted channels still reserve their bot's identity.
-	must(t, db.Model(&source).Updates(map[string]interface{}{"status": 0, "deleted_at": time.Now()}).Error)
-	if _, err := manager.Create(ctx, rotated); err == nil {
-		t.Fatal("ordinary create bypassed cutover")
-	}
-	must(t, db.Model(&source).Update("deleted_at", nil).Error)
-	input := &d.Instance{TelegramID: 123, ChannelClientID: &source.ID, TokenCipher: cipher, Version: 1}
-	if _, err := s.ImportLegacy(ctx, input, "stale-source"); err == nil {
-		t.Fatal("concurrent source replacement accepted")
-	}
-	imported, err := s.ImportLegacy(ctx, input, cipher)
-	must(t, err)
-	if imported.ID != bot.ID || imported.Mode != "external" || imported.Enabled || imported.Generation == bot.Generation {
-		t.Fatal("existing instance not fenced")
-	}
-	repeated, err := s.ImportLegacy(ctx, input, cipher)
-	must(t, err)
-	if repeated.Version != imported.Version {
-		t.Fatal("idempotent import changed version")
-	}
-	wantErr(t, s.Configure(ctx, bot.ID, imported.Version, map[string]interface{}{"enabled": true}), c.ErrConflict)
-	must(t, s.SwitchCutover(ctx, bot.ID, imported.Version, "cutover_pending"))
-	wantErr(t, s.Configure(ctx, bot.ID, imported.Version+1, map[string]interface{}{"token_cipher": cipher}), c.ErrConflict)
-	must(t, s.SwitchCutover(ctx, bot.ID, imported.Version+1, "internal"))
-	must(t, manager.Configure(ctx, bot.ID, imported.Version+2, &on, &rotated))
-	_, err = s.BeginGeneration(ctx, bot.ID, imported.Version+3)
-	must(t, err)
-}
-
-func TestOwnershipRechecksAfterNetworkAndConcurrentImport(t *testing.T) {
-	s, db, ctx, bot := setup(t)
-	manager := app.NewManager(s, ownershipAPI{id: 123}, "ownership-test-key")
-	cipher, err := manager.Seal("123:old-token")
-	must(t, err)
-	must(t, db.Model(bot).Updates(map[string]interface{}{"enabled": false, "token_cipher": cipher}).Error)
-	source := channel.Client{Name: "late", ChannelKey: "late-key", ChannelType: "telegram_bot", ChannelSecret: "unused", BotToken: cipher}
-	manager.API = ownershipAPI{id: 123, beforeWebhook: func() {
-		must(t, db.Create(&source).Error)
-		must(t, db.Create(&d.BotOwnership{ChannelID: source.ID, State: "unresolved", SnapshotCipher: source.BotToken}).Error)
-	}}
-	on := true
-	wantErr(t, manager.Configure(ctx, bot.ID, 1, &on, nil), c.ErrConflict)
-	manager.API = ownershipAPI{id: 123}
-	var wg sync.WaitGroup
-	for range 8 {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			if _, err := manager.Create(ctx, "123:new-token"); err == nil {
-				t.Error("concurrent create succeeded")
+func TestNativeInstanceIgnoresLegacyTablesAndHistory(t *testing.T) {
+	for _, state := range []string{"legacy", "unresolved", "pending", "internal"} {
+		t.Run(state, func(t *testing.T) {
+			s, db, ctx, _ := setup(t)
+			// Deliberately no ownership lock row. Unreadable historical credentials
+			// and even multiple former owners cannot reserve a native identity.
+			must(t, db.Exec("CREATE TABLE channel_clients (id INTEGER PRIMARY KEY, bot_token TEXT, deleted_at DATETIME)").Error)
+			must(t, db.Exec("INSERT INTO channel_clients VALUES (1, 'unreadable', NULL)").Error)
+			must(t, db.Exec("CREATE TABLE telegram_bot_ownership (id INTEGER PRIMARY KEY, channel_id INTEGER, telegram_id INTEGER, state TEXT, snapshot_cipher TEXT, lock_version INTEGER)").Error)
+			must(t, db.Exec("INSERT INTO telegram_bot_ownership VALUES (2, 1, 456, ?, 'unreadable', 0), (3, 2, 456, ?, 'unreadable', 0)", state, state).Error)
+			manager := app.NewManager(s, identityAPI{id: 456}, "native-test-key")
+			bot, err := manager.Create(ctx, "456:new-token")
+			must(t, err)
+			on := true
+			rotated := "456:rotated-token"
+			must(t, manager.Configure(ctx, bot.ID, bot.Version, &on, &rotated))
+			generation, err := s.BeginGeneration(ctx, bot.ID, bot.Version+1)
+			must(t, err)
+			must(t, s.Heartbeat(ctx, bot.ID, generation.Generation, "running", "", generation.Version))
+			_, err = manager.Create(ctx, "456:another-token")
+			wantErr(t, err, c.ErrDuplicate)
+			wantErr(t, err, c.ErrConflict)
+			var unchanged int64
+			must(t, db.Table("telegram_bot_ownership").Where("state = ? AND snapshot_cipher = ? AND lock_version = 0", state, "unreadable").Count(&unchanged).Error)
+			if unchanged != 2 {
+				t.Fatal("native lifecycle mutated legacy history")
 			}
-			if err := manager.Configure(ctx, bot.ID, 1, &on, nil); err == nil {
-				t.Error("concurrent enable succeeded")
-			}
-		}()
-	}
-	_, err = s.ImportLegacy(ctx, &d.Instance{TelegramID: 123, ChannelClientID: &source.ID, TokenCipher: cipher}, cipher)
-	must(t, err)
-	wg.Wait()
-	row, err := s.Get(ctx, bot.ID)
-	must(t, err)
-	if row.Mode != "external" || row.Enabled || row.ChannelClientID == nil {
-		t.Fatal("concurrent ordinary operation escaped import")
+		})
 	}
 }
 
-func TestCutoverAndOrdinaryEnableShareVersionFence(t *testing.T) {
-	s, db, ctx, bot := setup(t)
-	manager := app.NewManager(s, ownershipAPI{id: 123}, "ownership-test-key")
-	cipher, err := manager.Seal("123:old")
-	must(t, err)
-	source := channel.Client{Name: "legacy", ChannelKey: "race-cutover", ChannelType: "telegram_bot", ChannelSecret: "unused", BotToken: cipher}
-	must(t, db.Create(&source).Error)
-	must(t, db.Create(&d.BotOwnership{ChannelID: source.ID, State: "unresolved", SnapshotCipher: source.BotToken}).Error)
-	row, err := s.ImportLegacy(ctx, &d.Instance{TelegramID: 123, ChannelClientID: &source.ID, TokenCipher: cipher}, cipher)
-	must(t, err)
-	must(t, s.SwitchCutover(ctx, bot.ID, row.Version, "cutover_pending"))
-	version := row.Version + 1
+func TestConcurrentNativeCreationPreservesTelegramIdentity(t *testing.T) {
+	s, db, ctx, _ := setup(t)
+	manager := app.NewManager(s, identityAPI{id: 456}, "native-test-key")
 	start := make(chan struct{})
+	results := make(chan error, 8)
 	var wg sync.WaitGroup
 	for range 8 {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
 			<-start
-			if err := s.Configure(ctx, bot.ID, version, map[string]interface{}{"enabled": true}); err == nil {
-				t.Error("enable raced through pending cutover")
-			}
-			if err := s.Configure(ctx, bot.ID, version, map[string]interface{}{"token_cipher": cipher}); err == nil {
-				t.Error("rotation raced through pending cutover")
-			}
+			_, err := manager.Create(ctx, "456:new-token")
+			results <- err
 		}()
 	}
 	close(start)
-	must(t, s.SwitchCutover(ctx, bot.ID, version, "internal"))
 	wg.Wait()
-	row, err = s.Get(ctx, bot.ID)
-	must(t, err)
-	if row.Enabled || !row.CutoverCompleted || row.Version != version+1 {
-		t.Fatal("unsafe cutover race outcome")
+	close(results)
+	succeeded := 0
+	for err := range results {
+		if err == nil {
+			succeeded++
+		} else {
+			wantErr(t, err, c.ErrDuplicate)
+			wantErr(t, err, c.ErrConflict)
+		}
+	}
+	if succeeded != 1 {
+		t.Fatalf("successful creates = %d, want 1", succeeded)
+	}
+	var count int64
+	must(t, db.Model(&d.Instance{}).Where("telegram_id = ?", 456).Count(&count).Error)
+	if count != 1 {
+		t.Fatalf("native instances = %d, want 1", count)
 	}
 }
 
-func TestOwnershipFailsClosedAndUsesIdentityNotCredentialEquality(t *testing.T) {
-	s, db, ctx, _ := setup(t)
-	manager := app.NewManager(s, ownershipAPI{id: 456}, "ownership-test-key")
-	cipher, err := crypto.Encrypt(crypto.DeriveKey("ownership-test-key"), "456:revoked")
+func TestNativeConfigurationProtectsIdentityAndVersion(t *testing.T) {
+	s, _, ctx, bot := setup(t)
+	manager := app.NewManager(s, identityAPI{id: 123}, "native-test-key")
+	token := "123:valid-token"
+	must(t, manager.Configure(ctx, bot.ID, bot.Version, nil, &token))
+	wrongCipher, err := manager.Seal("999:different-bot")
 	must(t, err)
-	source := channel.Client{Name: "legacy", ChannelKey: "identity-key", ChannelType: "telegram_bot", ChannelSecret: "unused", BotToken: cipher}
-	must(t, db.Create(&source).Error)
-	must(t, db.Create(&d.BotOwnership{ChannelID: source.ID, State: "unresolved", SnapshotCipher: source.BotToken}).Error)
-	if _, err := manager.Create(ctx, "456:replacement"); err == nil {
-		t.Fatal("rotated token evaded identity ownership")
+	wantErr(t, s.Configure(ctx, bot.ID, bot.Version+1, map[string]interface{}{"token_cipher": wrongCipher}), c.ErrConflict)
+	for _, fields := range []map[string]interface{}{{"enabled": 1}, {"enabled": "true"}, {"mode": "internal"}, {"telegram_id": int64(456)}} {
+		if s.Configure(ctx, bot.ID, bot.Version+1, fields) == nil {
+			t.Fatal("invalid configuration accepted")
+		}
 	}
-	manager.API = ownershipAPI{id: 789}
-	if _, err := manager.Create(ctx, "789:new-bot"); err != nil {
-		t.Fatal("unrelated bot blocked", err)
+	start := make(chan struct{})
+	results := make(chan error, 8)
+	for range 8 {
+		go func() {
+			<-start
+			results <- s.Configure(ctx, bot.ID, bot.Version+1, map[string]interface{}{"enabled": true})
+		}()
 	}
-	must(t, db.Model(&d.BotOwnership{}).Where("channel_id = ? AND telegram_id = 0", source.ID).Updates(map[string]interface{}{"state": "unresolved", "snapshot_cipher": "unreadable-test-cipher"}).Error)
-	if _, err := manager.Create(ctx, "999:unknown"); err == nil {
-		t.Fatal("unreadable ownership accepted")
+	close(start)
+	succeeded := 0
+	for range 8 {
+		if err := <-results; err == nil {
+			succeeded++
+		} else {
+			wantErr(t, err, c.ErrConflict)
+		}
+	}
+	if succeeded != 1 {
+		t.Fatalf("successful configuration writes = %d, want 1", succeeded)
 	}
 }
 

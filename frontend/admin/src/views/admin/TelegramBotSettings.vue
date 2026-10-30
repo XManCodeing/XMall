@@ -17,11 +17,12 @@ const {
   currentLang,
   fetchConfig,
   form,
+  instances,
   languages,
   loading,
   saveConfig,
-  canSave, error, loaded,
-  saving,
+  canSave, canListInstances, loadError, needsReload, loaded, profileLoaded, profileSyncError,
+  saving, selectedInstanceId, selectInstance,
 } = useTelegramBotSettings()
 
 onMounted(() => {
@@ -31,7 +32,7 @@ onMounted(() => {
 
 <template>
   <div class="space-y-6">
-    <p v-if="error" role="alert" class="text-sm text-destructive">{{ error }} <Button variant="link" @click="fetchConfig">{{ t('telegramBot.instances.reload') }}</Button></p>
+    <p v-if="loadError" role="alert" class="text-sm text-destructive">{{ loadError }}</p>
     <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
       <div>
         <h2 class="text-2xl font-bold tracking-tight">{{ t('telegramBot.settings.title') }}</h2>
@@ -49,6 +50,7 @@ onMounted(() => {
             {{ lang.name }}
           </button>
         </div>
+        <Button v-if="needsReload || loadError" variant="outline" :disabled="loading || saving" @click="fetchConfig">{{ t('telegramBot.instances.reload') }}</Button>
         <Button class="w-full sm:w-auto" :disabled="saving || loading || !loaded || !canSave" @click="saveConfig">
           <Loader2 v-if="saving" class="mr-2 h-4 w-4 animate-spin" />
           <Save v-else class="mr-2 h-4 w-4" />
@@ -77,6 +79,10 @@ onMounted(() => {
               </SelectContent>
             </Select>
           </div>
+          <div class="space-y-2">
+            <Label>{{ t('telegramBot.settings.supportUrl') }}</Label>
+            <Input v-model="form.basic.support_url" :placeholder="t('telegramBot.settings.supportUrlPlaceholder')" />
+          </div>
         </div>
       </CardContent>
     </Card>
@@ -93,21 +99,43 @@ onMounted(() => {
       </CardHeader>
       <CardContent class="space-y-4">
         <div class="space-y-2">
-          <Label>{{ t('telegramBot.settings.displayName') }}</Label>
-          <Input v-model="form.basic.display_name" :placeholder="t('telegramBot.settings.displayNamePlaceholder')" />
+          <Label>{{ t('telegramBot.instances.bot') }}</Label>
+          <Select
+            :model-value="selectedInstanceId"
+            :disabled="loading || saving || !canListInstances || !instances.length"
+            @update:model-value="(value) => selectInstance(String(value ?? ''))"
+          >
+            <SelectTrigger>
+              <SelectValue :placeholder="t('telegramBot.settings.selectInstance')" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem v-for="item in instances" :key="item.id" :value="String(item.id)">
+                {{ item.username ? `@${item.username}` : item.telegram_id }}
+              </SelectItem>
+            </SelectContent>
+          </Select>
+          <p v-if="!loading && canListInstances && !instances.length" class="text-sm text-muted-foreground">{{ t('telegramBot.instances.empty') }}</p>
+          <p v-if="profileSyncError" class="text-sm text-destructive">{{ t('telegramBot.settings.profileSyncFailed') }}</p>
         </div>
-        <div class="space-y-2">
-          <Label>{{ t('telegramBot.settings.description') }}</Label>
-          <Textarea v-model="form.basic.description[currentLang]" :placeholder="t('telegramBot.settings.descriptionPlaceholder')" rows="2" />
-        </div>
-        <div class="space-y-2">
-          <Label>{{ t('telegramBot.settings.supportUrl') }}</Label>
-          <Input v-model="form.basic.support_url" :placeholder="t('telegramBot.settings.supportUrlPlaceholder')" />
-        </div>
-        <div class="space-y-2">
-          <Label>{{ t('telegramBot.settings.coverUrl') }}</Label>
-          <MediaPicker v-model="form.basic.cover_url" scene="telegram" />
-        </div>
+        <fieldset class="space-y-4 border-0 p-0" :disabled="!profileLoaded">
+          <div class="space-y-2">
+            <Label>{{ t('telegramBot.settings.displayName') }}</Label>
+            <Input v-model="form.basic.display_name" :placeholder="t('telegramBot.settings.displayNamePlaceholder')" />
+          </div>
+          <div class="space-y-2">
+            <Label>{{ t('telegramBot.settings.description') }}</Label>
+            <Textarea v-model="form.basic.description[currentLang]" :placeholder="t('telegramBot.settings.descriptionPlaceholder')" rows="2" />
+            <p class="text-xs text-muted-foreground">
+              {{ t('telegramBot.settings.descriptionPictureHint') }}
+              <a href="https://t.me/BotFather" target="_blank" rel="noopener noreferrer" class="text-primary underline underline-offset-4 hover:text-primary/80">{{ t('telegramBot.settings.openBotFather') }}</a>
+            </p>
+          </div>
+          <div class="space-y-2">
+            <Label>{{ t('telegramBot.settings.coverUrl') }}</Label>
+            <MediaPicker v-model="form.basic.cover_url" scene="telegram" accept="image/*,video/mp4" />
+            <p class="text-xs text-muted-foreground">{{ t('telegramBot.settings.avatarHint') }}</p>
+          </div>
+        </fieldset>
       </CardContent>
     </Card>
 

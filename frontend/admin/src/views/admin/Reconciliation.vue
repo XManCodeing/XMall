@@ -13,7 +13,7 @@ import ListPagination from '@/components/ListPagination.vue'
 import { useListRefresh, type ListFetchOptions } from '@/composables/useListRefresh'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
-import { notifyError, notifySuccess } from '@/utils/notify'
+import { notifyErrorOnce, notifySuccess } from '@/utils/notify'
 const { t } = useI18n()
 const loading = ref(true)
 const { refreshing, refreshList } = useListRefresh()
@@ -148,7 +148,7 @@ const handleNewJob = async () => {
     newJobForm.time_range_end = ''
     fetchJobs(1)
   } catch (err: any) {
-    notifyError(err?.response?.data?.message || err?.message)
+    notifyErrorOnce(err, err?.response?.data?.message || err?.message || t('common.api.requestFailed'))
   } finally {
     submitting.value = false
   }
@@ -212,7 +212,7 @@ const handleResolve = async () => {
       await loadDetailItems(detailItemsPage.value)
     }
   } catch (err: any) {
-    notifyError(err?.response?.data?.message || err?.message)
+    notifyErrorOnce(err, err?.response?.data?.message || err?.message || t('common.api.requestFailed'))
   } finally {
     resolving.value = false
   }
@@ -336,7 +336,7 @@ onMounted(() => {
             </TableCell>
             <TableCell class="min-w-[90px] px-6 py-4">
               <span
-                class="inline-flex rounded-full border px-2.5 py-1 text-xs"
+                class="inline-flex shrink-0 whitespace-nowrap rounded-full border px-2.5 py-1 text-xs"
                 :class="statusBadgeClass(job.status)"
               >
                 {{ t('reconciliation.status.' + job.status) }}
@@ -449,7 +449,7 @@ onMounted(() => {
             <div>
               <label class="mb-1 block text-xs font-medium text-muted-foreground">{{ t('reconciliation.columns.status') }}</label>
               <div>
-                <span class="inline-flex rounded-full border px-2.5 py-1 text-xs" :class="statusBadgeClass(detailJob.status)">
+                <span class="inline-flex shrink-0 whitespace-nowrap rounded-full border px-2.5 py-1 text-xs" :class="statusBadgeClass(detailJob.status)">
                   {{ t('reconciliation.status.' + detailJob.status) }}
                 </span>
               </div>
@@ -511,7 +511,7 @@ onMounted(() => {
                     <TableCell class="min-w-[80px] px-4 py-3 text-xs break-words">{{ reconciliationStatus(item.upstream_status) }}</TableCell>
                     <TableCell class="min-w-[80px] px-4 py-3">
                       <span
-                        class="inline-flex rounded-full border px-2 py-0.5 text-xs"
+                        class="inline-flex shrink-0 whitespace-nowrap rounded-full border px-2 py-0.5 text-xs"
                         :class="mismatchBadgeClass(item.mismatch_type as string)"
                       >
                         {{ t('reconciliation.mismatchType.' + item.mismatch_type) }}
@@ -519,7 +519,7 @@ onMounted(() => {
                     </TableCell>
                     <TableCell class="min-w-[90px] px-4 py-3">
                       <span
-                        class="inline-flex rounded-full border px-2 py-0.5 text-xs"
+                        class="inline-flex shrink-0 whitespace-nowrap rounded-full border px-2 py-0.5 text-xs"
                         :class="item.resolved ? 'text-primary border-primary/20 bg-primary/10' : 'text-muted-foreground border-border bg-muted/30'"
                       >
                         {{ item.resolved ? t('reconciliation.items.resolved') : t('reconciliation.items.unresolved') }}

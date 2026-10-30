@@ -10,10 +10,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import TableSkeleton from '@/components/TableSkeleton.vue'
 import { useListRefresh, type ListFetchOptions } from '@/composables/useListRefresh'
-import { notifyError } from '@/utils/notify'
+import { notifyErrorOnce } from '@/utils/notify'
 import { formatDate, toRFC3339 } from '@/utils/format'
 
-const { locale } = useI18n()
+const { locale, t } = useI18n()
 const { refreshing, refreshList } = useListRefresh()
 
 const messages = {
@@ -182,7 +182,7 @@ const fetchLogs = async (page = 1, options: ListFetchOptions = {}) => {
     pagination.value = response.data.pagination || pagination.value
   } catch (err: any) {
     if (!options.preserveRows) logs.value = []
-    notifyError(err?.message || 'Fetch audit logs failed')
+    notifyErrorOnce(err, err?.message || t('common.api.requestFailed'))
   } finally {
     if (!options.preserveRows) loading.value = false
   }

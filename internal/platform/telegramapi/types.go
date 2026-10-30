@@ -27,6 +27,8 @@ type Message struct {
 	Chat           Chat                  `json:"chat"`
 	Text           string                `json:"text,omitempty"`
 	Caption        string                `json:"caption,omitempty"`
+	Photo          []PhotoSize           `json:"photo,omitempty"`
+	Document       *Document             `json:"document,omitempty"`
 	Entities       []MessageEntity       `json:"entities,omitempty"`
 	ReplyToMessage *Message              `json:"reply_to_message,omitempty"`
 	ReplyMarkup    *InlineKeyboardMarkup `json:"reply_markup,omitempty"`
@@ -68,6 +70,7 @@ type InlineKeyboardButton struct {
 	Text         string `json:"text"`
 	URL          string `json:"url,omitempty"`
 	CallbackData string `json:"callback_data,omitempty"`
+	Style        string `json:"style,omitempty"`
 }
 
 type WebhookInfo struct {
@@ -102,7 +105,11 @@ type SendMessageRequest struct {
 
 type SendPhotoRequest struct {
 	ChatID              int64
-	PNG                 []byte
+	PNG                 []byte // Deprecated: use Data; retained for callers sending PNG.
+	Data                []byte
+	Filename            string
+	FileID              string
+	URL                 string
 	Caption             string
 	ParseMode           string
 	DisableNotification bool
@@ -119,6 +126,70 @@ type SendDocumentRequest struct {
 	DisableNotification bool
 	ProtectContent      bool
 	ReplyMarkup         *InlineKeyboardMarkup
+}
+
+// PhotoSize contains the reusable Telegram file identifier for one photo size.
+type PhotoSize struct {
+	FileID   string `json:"file_id"`
+	Width    int    `json:"width"`
+	Height   int    `json:"height"`
+	FileSize int64  `json:"file_size,omitempty"`
+}
+
+type Document struct {
+	FileID string `json:"file_id"`
+}
+
+// PhotoFileID selects the largest returned photo, rather than assuming array order.
+func (m Message) PhotoFileID() string {
+	var best PhotoSize
+	for _, p := range m.Photo {
+		if p.FileID != "" && (best.FileID == "" || int64(p.Width)*int64(p.Height) > int64(best.Width)*int64(best.Height) || (p.Width == best.Width && p.Height == best.Height && p.FileSize > best.FileSize)) {
+			best = p
+		}
+	}
+	return best.FileID
+}
+
+type EditMessageTextRequest struct {
+	ChatID      int64                 `json:"chat_id"`
+	MessageID   int64                 `json:"message_id"`
+	Text        string                `json:"text"`
+	ParseMode   string                `json:"parse_mode,omitempty"`
+	ReplyMarkup *InlineKeyboardMarkup `json:"reply_markup,omitempty"`
+}
+
+type EditMessageCaptionRequest struct {
+	ChatID      int64                 `json:"chat_id"`
+	MessageID   int64                 `json:"message_id"`
+	Caption     string                `json:"caption"`
+	ParseMode   string                `json:"parse_mode,omitempty"`
+	ReplyMarkup *InlineKeyboardMarkup `json:"reply_markup,omitempty"`
+}
+
+// EditMessageMediaRequest supports photo replacement, including text to photo.
+// URL is passed directly to Telegram; this client never fetches it.
+type EditMessageMediaRequest struct {
+	ChatID      int64
+	MessageID   int64
+	Data        []byte
+	Filename    string
+	FileID      string
+	URL         string
+	Caption     string
+	ParseMode   string
+	ReplyMarkup *InlineKeyboardMarkup
+}
+
+type EditMessageReplyMarkupRequest struct {
+	ChatID      int64                 `json:"chat_id"`
+	MessageID   int64                 `json:"message_id"`
+	ReplyMarkup *InlineKeyboardMarkup `json:"reply_markup"`
+}
+
+type DeleteMessageRequest struct {
+	ChatID    int64 `json:"chat_id"`
+	MessageID int64 `json:"message_id"`
 }
 
 type AnswerCallbackQueryRequest struct {

@@ -5,7 +5,6 @@ import (
 	"github.com/XManCodeing/XMall/internal/app/httpserver/middleware"
 	affiliatebootstrap "github.com/XManCodeing/XMall/internal/bootstrap/affiliate"
 	settingsbootstrap "github.com/XManCodeing/XMall/internal/bootstrap/settingshttp"
-	telegrambootstrap "github.com/XManCodeing/XMall/internal/bootstrap/telegrambroadcast"
 	"github.com/XManCodeing/XMall/internal/config"
 	affiliatetransport "github.com/XManCodeing/XMall/internal/modules/affiliate/transport/http"
 	apicredentialtransport "github.com/XManCodeing/XMall/internal/modules/apicredential/transport/http"
@@ -34,7 +33,6 @@ import (
 	settingstransport "github.com/XManCodeing/XMall/internal/modules/settings/transport/http"
 	siteconnectiontransport "github.com/XManCodeing/XMall/internal/modules/siteconnection/transport/http"
 	broadcasthttp "github.com/XManCodeing/XMall/internal/modules/telegram/broadcast/transport/http"
-	cutoverhttp "github.com/XManCodeing/XMall/internal/modules/telegram/cutover/transport/http"
 	runtimehttp "github.com/XManCodeing/XMall/internal/modules/telegram/runtime/transport/http"
 	uploadtransport "github.com/XManCodeing/XMall/internal/modules/upload/transport/http"
 	wallettransport "github.com/XManCodeing/XMall/internal/modules/wallet/transport/http"
@@ -111,7 +109,6 @@ func registerAdminRoutes(
 	settingstransport.RegisterAdminOrderEmailTemplateRoutes(authorized, settingstransport.NewOrderEmailTemplateHandler(c.SettingService))
 	settingstransport.RegisterAdminAffiliateRoutes(authorized, settingstransport.NewAffiliateHandler(c.SettingService))
 	settingstransport.RegisterAdminTelegramBotRoutes(authorized, settingstransport.NewTelegramBotHandler(c.SettingService))
-	cutoverhttp.RegisterRoutes(authorized, &cutoverhttp.Handler{Service: telegrambootstrap.NewManagedCutover(c.TelegramBotManager, c.ChannelClientService, c.OrderStore, c.TelegramBotLeaseClient)})
 	if c.TelegramBotManager != nil {
 		runtimehttp.RegisterRoutes(authorized, runtimehttp.New(c.TelegramBotManager))
 	}

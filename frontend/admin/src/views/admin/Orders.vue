@@ -3,6 +3,7 @@ import { onMounted, reactive, ref, watch } from 'vue'
 import { useDebounceFn } from '@vueuse/core'
 import { useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
+import { notifyErrorOnce, notifySuccess } from '@/utils/notify'
 import { adminAPI } from '@/api/admin'
 import type { AdminOrder, AdminOrderItem } from '@/api/types'
 import IdCell from '@/components/IdCell.vue'
@@ -48,7 +49,12 @@ const filters = reactive({
 })
 
 const handleCopyOrderNo = async (orderNo: string) => {
-  try { await copyText(orderNo) } catch {}
+  try {
+    await copyText(orderNo)
+    notifySuccess(t('admin.common.copied'))
+  } catch (err) {
+    notifyErrorOnce(err, t('admin.common.copyFailed'))
+  }
 }
 const statusEdits = reactive<Record<number, string>>({})
 const showDetail = ref(false)
@@ -414,7 +420,7 @@ watch(
             <TableCell class="px-4 py-3 text-xs text-muted-foreground hidden xl:table-cell">{{ order.client_ip || '-' }}</TableCell>
             <TableCell class="px-4 py-3 font-mono text-xs text-foreground">{{ formatMoney(order.total_amount, order.currency) }}</TableCell>
             <TableCell class="px-4 py-3">
-              <span class="inline-flex rounded-full border px-2 py-0.5 text-xs" :class="statusClass(order.status)">
+              <span class="inline-flex shrink-0 whitespace-nowrap rounded-full border px-2 py-0.5 text-xs" :class="statusClass(order.status)">
                 {{ statusLabel(order.status) }}
               </span>
             </TableCell>

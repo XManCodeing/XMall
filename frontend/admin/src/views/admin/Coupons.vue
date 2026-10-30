@@ -19,7 +19,7 @@ import { useListRefresh, type ListFetchOptions } from '@/composables/useListRefr
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { MultiSelect } from '@/components/ui/multi-select'
 import { formatDate, getLocalizedText } from '@/utils/format'
-import { notifyError } from '@/utils/notify'
+import { notifyErrorOnce } from '@/utils/notify'
 import { confirmAction } from '@/utils/confirm'
 import { useFormValidation, rules } from '@/composables/useFormValidation'
 
@@ -465,9 +465,7 @@ const handleSubmit = async () => {
     closeModal()
     fetchCoupons(1)
   } catch (err: any) {
-    error.value =
-      err.message ||
-      (isEditing.value ? t('admin.coupons.errors.updateFailed') : t('admin.coupons.errors.createFailed'))
+    notifyErrorOnce(err, isEditing.value ? t('admin.coupons.errors.updateFailed') : t('admin.coupons.errors.createFailed'))
   } finally {
     submitting.value = false
   }
@@ -480,8 +478,7 @@ const handleDelete = async (coupon: AdminCoupon) => {
     await adminAPI.deleteCoupon(coupon.id)
     fetchCoupons(pagination.value.page)
   } catch (err: any) {
-    const message = err.message || t('admin.coupons.errors.deleteFailed')
-    notifyError(message)
+    notifyErrorOnce(err, t('admin.coupons.errors.deleteFailed'))
   }
 }
 
@@ -684,7 +681,7 @@ watch(
             </TableCell>
             <TableCell class="min-w-[90px] px-6 py-4">
               <span
-                class="inline-flex rounded-full border px-2.5 py-1 text-xs"
+                class="inline-flex shrink-0 whitespace-nowrap rounded-full border px-2.5 py-1 text-xs"
                 :class="coupon.is_active ? 'text-emerald-700 border-emerald-200 bg-emerald-50' : 'text-muted-foreground border-border bg-muted/30'"
               >
                 {{ coupon.is_active ? t('admin.common.enabled') : t('admin.common.disabled') }}

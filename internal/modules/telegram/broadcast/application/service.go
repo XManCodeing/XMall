@@ -29,12 +29,20 @@ type UserItem struct {
 	BoundAt          time.Time `json:"bound_at"`
 	UserCreatedAt    time.Time `json:"user_created_at"`
 }
+
+// Button is a URL-only inline button for broadcast messages.
+type Button struct {
+	Text string `json:"text"`
+	URL  string `json:"url"`
+}
+
 type CreateInput struct {
 	BotID                                      uint
 	Title, RecipientType                       string
 	UserIDs                                    []uint
 	Filters                                    jsonmap.JSON
 	AttachmentURL, AttachmentName, MessageHTML string
+	Buttons                                    [][]Button
 }
 type UserDirectory interface {
 	ListTelegramUsers(UserQuery) ([]UserItem, int64, error)
@@ -102,7 +110,11 @@ func (s *Service) CreateBroadcast(ctx context.Context, input CreateInput) (*broa
 	if cipher == "" {
 		return nil, ErrInvalid
 	}
-	b := &broadcastdomain.Broadcast{BotID: input.BotID, DeliveryVersion: 1, PayloadCipher: cipher, Title: strings.TrimSpace(input.Title), RecipientType: input.RecipientType, RecipientCount: count, Status: "pending"}
+	b := &broadcastdomain.Broadcast{
+		BotID: input.BotID, DeliveryVersion: 1, PayloadCipher: cipher,
+		Title: strings.TrimSpace(input.Title), RecipientType: input.RecipientType, RecipientCount: count, Status: "pending",
+		MessageHTML: strings.TrimSpace(input.MessageHTML), AttachmentURL: strings.TrimSpace(input.AttachmentURL), AttachmentName: strings.TrimSpace(input.AttachmentName),
+	}
 	if err = s.store.Create(ctx, b); err != nil {
 		return nil, err
 	}

@@ -368,21 +368,29 @@ func (s *Service) updateTelegramBotConfig(cfg settingsmessaging.TelegramBotConfi
 	return cfg, nil
 }
 
+func normalizeBuiltinMenuItem(item settingsmessaging.TelegramBotMenuItem) settingsmessaging.TelegramBotMenuItem {
+	if item.Action.Type != "builtin" {
+		return item
+	}
+	if item.Action.Value == "" {
+		item.Action.Value = item.Key
+	}
+	aliases := map[string]string{"shop_home": "shop", "my_orders": "orders", "my_wallet": "wallet", "switch_language": "language", "contact_support": "help"}
+	if value, ok := aliases[item.Action.Value]; ok {
+		item.Action.Value = value
+	}
+	if value, ok := aliases[item.Key]; ok {
+		item.Key = value
+	}
+	return item
+}
+
 func supportedBotMenus(items []settingsmessaging.TelegramBotMenuItem) []settingsmessaging.TelegramBotMenuItem {
 	result := make([]settingsmessaging.TelegramBotMenuItem, 0, len(items))
 	seen := map[string]bool{}
 	for _, item := range items {
+		item = normalizeBuiltinMenuItem(item)
 		if item.Action.Type == "builtin" {
-			if item.Action.Value == "" {
-				item.Action.Value = item.Key
-			}
-			aliases := map[string]string{"shop_home": "shop", "my_orders": "orders", "my_wallet": "wallet", "switch_language": "language", "contact_support": "help"}
-			if value, ok := aliases[item.Action.Value]; ok {
-				item.Action.Value = value
-			}
-			if value, ok := aliases[item.Key]; ok {
-				item.Key = value
-			}
 			if seen[item.Action.Value] {
 				continue
 			}
@@ -393,9 +401,37 @@ func supportedBotMenus(items []settingsmessaging.TelegramBotMenuItem) []settings
 	return result
 }
 
+func validateUniqueBuiltinMenus(items []settingsmessaging.TelegramBotMenuItem) error {
+	seen := map[string]bool{}
+	for _, item := range items {
+		item = normalizeBuiltinMenuItem(item)
+		if item.Action.Type != "builtin" {
+			continue
+		}
+		if seen[item.Action.Value] {
+			return ErrTelegramBotMenuDuplicate
+		}
+		seen[item.Action.Value] = true
+	}
+	return nil
+}
+
 var ErrTelegramBotConfigConflict = errors.New("telegram bot configuration version conflict")
 var ErrTelegramBotSection = errors.New("invalid telegram bot configuration section")
 var ErrTelegramBotMenuUnsupported = errors.New("internal bot menus support only builtin (shop, orders, wallet, language, help) and url actions")
+var ErrTelegramBotMenuDuplicate = errors.New("duplicate builtin menu action")
+
+func localizedTextEmpty(values settingsmessaging.LocalizedText) bool {
+	if len(values) == 0 {
+		return true
+	}
+	for _, value := range values {
+		if strings.TrimSpace(value) != "" {
+			return false
+		}
+	}
+	return true
+}
 
 // PatchTelegramBotConfigSection merges only the selected section; CAS prevents stale writes.
 func (s *Service) PatchTelegramBotConfigSection(section string, expected int, raw json.RawMessage) (settingsmessaging.TelegramBotConfigSetting, error) {
@@ -413,6 +449,18 @@ func (s *Service) PatchTelegramBotConfigSection(section string, expected int, ra
 			DefaultLocale string                                   `json:"default_locale"`
 		}
 		if err = json.Unmarshal(raw, &data); err == nil {
+			// Internal bot display_name / description / cover moved to per-instance
+			// Telegram profile. Keep legacy values for channel serialization unless
+			// the admin payload still sends non-empty replacements.
+			if strings.TrimSpace(data.Basic.DisplayName) == "" {
+				data.Basic.DisplayName = current.Basic.DisplayName
+			}
+			if localizedTextEmpty(data.Basic.Description) {
+				data.Basic.Description = current.Basic.Description
+			}
+			if strings.TrimSpace(data.Basic.CoverURL) == "" {
+				data.Basic.CoverURL = current.Basic.CoverURL
+			}
 			current.Basic = data.Basic
 			current.DefaultLocale = data.DefaultLocale
 		}
@@ -435,6 +483,11 @@ func (s *Service) PatchTelegramBotConfigSection(section string, expected int, ra
 				}
 			default:
 				return current, ErrTelegramBotMenuUnsupported
+			}
+		}
+		if err == nil {
+			if e := validateUniqueBuiltinMenus(current.Menu.Items); e != nil {
+				return current, e
 			}
 		}
 	default:

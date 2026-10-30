@@ -8,7 +8,7 @@ import type { AdminTelegramBroadcast } from '@/api/types'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { formatDate } from '@/utils/format'
-import { notifyError } from '@/utils/notify'
+import { notifyErrorOnce } from '@/utils/notify'
 import { sanitizeBroadcastHtml } from '@/utils/broadcastHtml'
 import { ArrowLeft, Loader2, Paperclip } from 'lucide-vue-next'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
@@ -25,11 +25,45 @@ const loading = ref(false)
 const broadcast = ref<AdminTelegramBroadcast | null>(null)
 const messageHtml = computed(() => sanitizeBroadcastHtml(broadcast.value?.message_html || ''))
 const supportsDeliveries = computed(() => broadcast.value?.delivery_version === 1 && Boolean(broadcast.value?.bot_id))
+const fetchBroadcast = async (options: { silent?: boolean } = {}) => {
+  const silent = options.silent === true && broadcast.value !== null
+  const request = ++requestID
+  error.value = ''
+  if (!auth.hasPermission(`GET:/admin/telegram-bot/broadcasts/${broadcastId.value}`)) {
+    broadcast.value = null
+    error.value = t('telegramBot.instances.forbidden')
+    return
+  }
+  if (!silent) loading.value = true
+  try {
+    const res = await adminAPI.getTelegramBroadcast(broadcastId.value)
+    if (request === requestID) broadcast.value = res.data?.data || null
+  } catch (err) {
+    if (request === requestID) {
+      if (!silent) broadcast.value = null
+      error.value = t('telegramBot.broadcasts.detailLoadFailed')
+      notifyErrorOnce(err, error.value)
+    }
+  } finally {
+    if (request === requestID) loading.value = false
+  }
+}
+
+const refreshBroadcastOverview = async () => {
+  const request = ++requestID
+  try {
+    const res = await adminAPI.getTelegramBroadcast(broadcastId.value)
+    if (request === requestID && res.data?.data) broadcast.value = res.data.data
+  } catch {
+    // Delivery list already refreshed; overview can wait for manual reload.
+  }
+}
+
 const {
   items: deliveries, loading: deliveriesLoading, retrying, error: deliveryError,
-  notice: deliveryNotice, pagination: deliveryPagination, canList: canListDeliveries,
+  pagination: deliveryPagination, canList: canListDeliveries,
   canRetry, fetchPage: fetchDeliveries, retry,
-} = useTelegramBroadcastDeliveries(broadcastId, supportsDeliveries)
+} = useTelegramBroadcastDeliveries(broadcastId, supportsDeliveries, refreshBroadcastOverview)
 
 const formatRecipientType = (value: string) =>
   value === 'specific' ? t('telegramBot.broadcasts.recipientTypeSpecific') : t('telegramBot.broadcasts.recipientTypeAll')
@@ -51,29 +85,10 @@ const statusClass = (value: string) => {
   return 'text-muted-foreground'
 }
 
-const fetchBroadcast = async () => {
-  const request = ++requestID
+watch(broadcastId, () => {
   broadcast.value = null
-  error.value = ''
-  if (!auth.hasPermission(`GET:/admin/telegram-bot/broadcasts/${broadcastId.value}`)) {
-    error.value = t('telegramBot.instances.forbidden')
-    return
-  }
-  loading.value = true
-  try {
-    const res = await adminAPI.getTelegramBroadcast(broadcastId.value)
-    if (request === requestID) broadcast.value = res.data?.data || null
-  } catch {
-    if (request === requestID) {
-      error.value = t('telegramBot.broadcasts.detailLoadFailed')
-      notifyError(error.value)
-    }
-  } finally {
-    if (request === requestID) loading.value = false
-  }
-}
-
-watch(broadcastId, fetchBroadcast, { immediate: true })
+  void fetchBroadcast()
+}, { immediate: true })
 </script>
 
 <template>
@@ -92,12 +107,12 @@ watch(broadcastId, fetchBroadcast, { immediate: true })
     </div>
 
     <p v-if="error" role="alert" class="text-sm text-destructive">{{ error }}</p>
-    <Button variant="outline" :disabled="loading || retrying !== null" @click="fetchBroadcast">{{ t('telegramBot.instances.reload') }}</Button>
-    <div v-if="loading" class="flex justify-center py-20">
+    <Button variant="outline" :disabled="loading || retrying !== null" @click="fetchBroadcast({ silent: !!broadcast })">{{ t('telegramBot.instances.reload') }}</Button>
+    <div v-if="loading && !broadcast" class="flex justify-center py-20">
       <Loader2 class="h-6 w-6 animate-spin text-muted-foreground" />
     </div>
 
-    <template v-else-if="broadcast">
+    <template v-if="broadcast">
       <!-- Basic Info -->
       <Card>
         <CardHeader>
@@ -176,10 +191,9 @@ watch(broadcastId, fetchBroadcast, { immediate: true })
           <template v-else>
             <div class="flex items-center justify-between gap-3">
               <p class="text-sm text-muted-foreground">{{ t('telegramBot.instances.retryHint') }}</p>
-              <Button variant="outline" size="sm" :disabled="deliveriesLoading || retrying !== null" @click="fetchDeliveries()">{{ t('telegramBot.instances.reload') }}</Button>
+              <Button variant="outline" size="sm" :disabled="deliveriesLoading || retrying !== null" @click="fetchDeliveries(deliveryPagination.page, { silent: deliveries.length > 0 })">{{ t('telegramBot.instances.reload') }}</Button>
             </div>
             <p v-if="deliveryError" role="alert" class="text-sm text-destructive">{{ deliveryError }}</p>
-            <p v-if="deliveryNotice" role="status" class="text-sm text-muted-foreground">{{ deliveryNotice }}</p>
             <Table>
               <TableHeader><TableRow>
                 <TableHead>ID</TableHead>
@@ -192,9 +206,9 @@ watch(broadcastId, fetchBroadcast, { immediate: true })
                 <TableHead class="text-right">{{ t('telegramBot.instances.actions') }}</TableHead>
               </TableRow></TableHeader>
               <TableBody>
-                <TableRow v-if="deliveriesLoading"><TableCell :colspan="8" class="py-8 text-center"><Loader2 class="mx-auto h-5 w-5 animate-spin text-muted-foreground" /></TableCell></TableRow>
+                <TableRow v-if="deliveriesLoading && !deliveries.length"><TableCell :colspan="8" class="py-8 text-center"><Loader2 class="mx-auto h-5 w-5 animate-spin text-muted-foreground" /></TableCell></TableRow>
                 <TableRow v-else-if="!deliveries.length"><TableCell :colspan="8" class="py-8 text-center text-muted-foreground">{{ deliveryError || t('telegramBot.instances.empty') }}</TableCell></TableRow>
-                <TableRow v-for="item in deliveriesLoading ? [] : deliveries" :key="item.id">
+                <TableRow v-for="item in deliveries" :key="item.id">
                   <TableCell>{{ item.id }}</TableCell>
                   <TableCell><p>{{ item.user_id }}</p><p class="text-xs text-muted-foreground">Telegram: {{ item.telegram_user_id }}</p></TableCell>
                   <TableCell>{{ formatStatus(item.status) }}</TableCell>
@@ -207,9 +221,9 @@ watch(broadcastId, fetchBroadcast, { immediate: true })
               </TableBody>
             </Table>
             <div class="flex items-center justify-end gap-3">
-              <Button variant="outline" size="sm" :disabled="deliveriesLoading || retrying !== null || deliveryPagination.page <= 1" @click="fetchDeliveries(deliveryPagination.page - 1)">{{ t('telegramBot.instances.previous') }}</Button>
+              <Button variant="outline" size="sm" :disabled="deliveriesLoading || retrying !== null || deliveryPagination.page <= 1" @click="fetchDeliveries(deliveryPagination.page - 1, { silent: deliveries.length > 0 })">{{ t('telegramBot.instances.previous') }}</Button>
               <span class="text-sm text-muted-foreground">{{ t('telegramBot.broadcasts.pageSummary', { page: deliveryPagination.page, total: Math.max(1, deliveryPagination.total_page) }) }}</span>
-              <Button variant="outline" size="sm" :disabled="deliveriesLoading || retrying !== null || deliveryPagination.page >= deliveryPagination.total_page" @click="fetchDeliveries(deliveryPagination.page + 1)">{{ t('telegramBot.instances.next') }}</Button>
+              <Button variant="outline" size="sm" :disabled="deliveriesLoading || retrying !== null || deliveryPagination.page >= deliveryPagination.total_page" @click="fetchDeliveries(deliveryPagination.page + 1, { silent: deliveries.length > 0 })">{{ t('telegramBot.instances.next') }}</Button>
             </div>
           </template>
         </CardContent>

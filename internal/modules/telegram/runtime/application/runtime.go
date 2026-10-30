@@ -17,15 +17,17 @@ import (
 // Runtime is supervised for the entire application lifetime, including while disabled.
 // Every child is joined before Stop succeeds, which is required before Linux exec.
 type Runtime struct {
-	manager   *Manager
-	leases    c.Leaser
-	handler   c.Handler
-	mu        sync.Mutex
-	cancel    context.CancelFunc
-	done      chan struct{}
-	stopping  bool
-	Reconcile func(context.Context, uint) error
-	Recover   func(context.Context) error
+	manager    *Manager
+	leases     c.Leaser
+	handler    c.Handler
+	mu         sync.Mutex
+	cancel     context.CancelFunc
+	done       chan struct{}
+	stopping   bool
+	Reconcile  func(context.Context, uint) error
+	Recover    func(context.Context) error
+	callbackMu sync.Mutex
+	callbacks  map[string]*callbackAnswer
 }
 
 func NewRuntime(m *Manager, l c.Leaser, h c.Handler) *Runtime {
@@ -249,6 +251,11 @@ func (r *Runtime) runBot(parent context.Context, initial d.Instance) {
 				}
 				continue
 			}
+			for _, u := range updates {
+				if u.CallbackID != "" {
+					r.callbackResponder(ctx, token, u.CallbackID)
+				}
+			}
 			offset = next
 		} else if !wait(ctx, 100*time.Millisecond) {
 			return
@@ -293,7 +300,9 @@ func (r *Runtime) handleEntry(ctx context.Context, i *d.Instance, token string, 
 		return err
 	}
 	if update.CallbackID != "" {
-		_ = r.manager.API.Answer(ctx, token, update.CallbackID, "")
+		answer := r.callbackResponder(ctx, token, update.CallbackID)
+		ctx = c.WithCallbackResponder(ctx, answer)
+		defer answer("")
 	}
 	if !update.Private || update.UserID == 0 || update.ChatID != update.UserID {
 		return nil
@@ -324,6 +333,16 @@ func (r *Runtime) handleEntry(ctx context.Context, i *d.Instance, token string, 
 	for n, message := range messages {
 		// A handler cannot use a user update to redirect private replies to another chat.
 		message.ChatID = update.ChatID
+		if message.Purpose == "panel" {
+			message.TargetKind = update.MessageKind
+			// Only the actual private callback source can claim an unknown send.
+			if update.CallbackID == "" || message.TargetMessageID != update.MessageID {
+				message.TargetMessageID = 0
+			}
+		}
+		if message.Purpose == "cleanup" && (update.CallbackID != "" || message.TargetMessageID != update.MessageID || update.MessageID <= 0) {
+			continue
+		}
 		raw, err := json.Marshal(message)
 		if err != nil {
 			return err
@@ -336,7 +355,14 @@ func (r *Runtime) handleEntry(ctx context.Context, i *d.Instance, token string, 
 		if ownerID == 0 && contact != nil {
 			ownerID = contact.UserID
 		}
-		if err = r.manager.Store.Enqueue(ctx, &d.Delivery{BotID: i.ID, Key: fmt.Sprintf("update:%d:%d", update.ID, n), ChatID: update.ChatID, TelegramUserID: update.UserID, UserID: ownerID, PayloadCipher: cipher, Priority: 100, Status: "pending", AvailableAt: time.Now()}); err != nil {
+		priority := 100
+		if message.Purpose == "notice" || message.Purpose == "notification" || message.Purpose == "delivery" {
+			priority = 200
+		}
+		if message.Purpose == "cleanup" {
+			priority = 110
+		}
+		if err = r.manager.Store.Enqueue(ctx, &d.Delivery{BotID: i.ID, Key: fmt.Sprintf("update:%d:%d", update.ID, n), ChatID: update.ChatID, TelegramUserID: update.UserID, UserID: ownerID, PayloadCipher: cipher, Priority: priority, Purpose: message.Purpose, PanelEpoch: message.PanelEpoch, PanelRevision: message.PanelRevision, Operation: message.Operation, TargetMessageID: message.TargetMessageID, Status: "pending", AvailableAt: time.Now()}); err != nil {
 			return err
 		}
 	}
@@ -409,9 +435,57 @@ func (r *Runtime) deliver(ctx context.Context, i *d.Instance, token string, leas
 					_ = r.manager.Store.FinishDelivery(ctx, item.ID, claim, "failed", 0, "recipient binding changed", time.Now())
 					continue
 				}
-				sendCtx, cancel := context.WithTimeout(ctx, 20*time.Second)
-				messageID, err = r.manager.API.Send(sendCtx, token, message)
+				if message.Purpose == "panel" {
+					panel, ok := r.manager.Store.(c.PanelStore)
+					if !ok {
+						_ = r.manager.Store.FinishDelivery(ctx, item.ID, claim, "failed", 0, "message payload unavailable", time.Now())
+						continue
+					}
+					if prepErr := panel.PreparePanel(ctx, item, &message); prepErr != nil {
+						state := "retry"
+						if errors.Is(prepErr, c.ErrConflict) {
+							state = "superseded"
+						}
+						if errors.Is(prepErr, c.ErrStale) {
+							state = "unknown"
+						}
+						_ = r.manager.Store.FinishDelivery(ctx, item.ID, claim, state, 0, "", time.Now().Add(time.Second))
+						continue
+					}
+				}
+				timeout := 20 * time.Second
+				if message.Purpose == "cleanup" {
+					timeout = 2 * time.Second
+				}
+				sendCtx, cancel := context.WithTimeout(ctx, timeout)
+				var delivered c.DeliveryResult
+				if api, ok := r.manager.API.(c.ApplyingAPI); ok {
+					delivered, err = api.Apply(sendCtx, token, message)
+				} else if message.Operation == "" || message.Operation == "send" {
+					delivered.MessageID, err = r.manager.API.Send(sendCtx, token, message)
+				} else {
+					err = errors.New("operation unsupported")
+				}
+				messageID = delivered.MessageID
+				if delivered.MessageKind != "" {
+					item.MessageKind = delivered.MessageKind
+				}
 				cancel()
+				if semantic(err) == "not_modified" {
+					err = nil
+					messageID = message.TargetMessageID
+				}
+				if err == nil && messageID == 0 && message.Operation == "edit" {
+					messageID = message.TargetMessageID
+				}
+				if (semantic(err) == "target_missing" || semantic(err) == "media_transition") && message.Purpose == "panel" && message.Operation == "edit" && item.Attempts < 3 {
+					if replacer, ok := r.manager.Store.(interface {
+						ReplacePanel(context.Context, *d.Delivery) error
+					}); ok && replacer.ReplacePanel(ctx, item) == nil {
+						_ = r.manager.Store.FinishDelivery(ctx, item.ID, claim, "retry", 0, "", time.Now())
+						continue
+					}
+				}
 				nextChat[item.ChatID] = time.Now().Add(time.Second)
 				// Bound limiter state to active chats instead of retaining every
 				// broadcast recipient for the lifetime of the process.
@@ -423,18 +497,25 @@ func (r *Runtime) deliver(ctx context.Context, i *d.Instance, token string, leas
 				if err != nil {
 					status = "unknown"
 					detail = "delivery outcome unknown"
+					if message.Operation == "edit" || message.Operation == "delete" || message.Operation == "clear_buttons" || message.Operation == "markup" {
+						status = "retry"
+						available = time.Now().Add(time.Second)
+					}
 					var apiErr c.APIError
 					if errors.As(err, &apiErr) && !apiErr.Uncertain() {
 						status = "failed"
 						detail = "telegram rejected message"
-						if apiErr.StatusCode() == 429 || apiErr.StatusCode() >= 500 {
+						if apiErr.StatusCode() >= 500 {
+							status = "unknown"
+						}
+						if apiErr.StatusCode() == 429 || ((apiErr.StatusCode() >= 500 || semantic(err) == "retryable") && (message.Operation == "edit" || message.Operation == "delete" || message.Operation == "markup" || message.Operation == "clear_buttons")) {
 							status = "retry"
 							delay := apiErr.RetrySeconds()
 							if delay < 5 {
 								delay = 5
 							}
 							available = time.Now().Add(time.Duration(delay) * time.Second)
-							if apiErr.StatusCode() == 429 {
+							if apiErr.StatusCode() == 429 && message.Purpose != "cleanup" {
 								// Telegram flood limits can be Bot-wide; do not keep
 								// hammering other chats while this item waits.
 								nextBot = available
@@ -448,13 +529,41 @@ func (r *Runtime) deliver(ctx context.Context, i *d.Instance, token string, leas
 							}
 						}
 					}
-					if item.Attempts >= 8 && status == "retry" {
+					limit := 8
+					if message.Operation == "edit" || message.Operation == "delete" || message.Operation == "clear_buttons" || message.Operation == "markup" {
+						limit = 3
+					}
+					if message.Purpose == "cleanup" {
+						limit = 2
+					}
+					if item.Attempts >= limit && status == "retry" {
 						status = "failed"
 					}
 				}
 			}
 		}
-		_ = r.manager.Store.FinishDelivery(ctx, item.ID, claim, status, messageID, detail, available)
+		if item.Purpose == "panel" {
+			if panel, ok := r.manager.Store.(c.PanelStore); ok {
+				// Retry persistence, never the external send. Keep the known result
+				// alive through transient DB errors and shutdown cancellation.
+				finishCtx, finishCancel := context.WithTimeout(context.WithoutCancel(ctx), 10*time.Second)
+				for {
+					err = panel.FinishPanel(finishCtx, item, status, c.DeliveryResult{MessageID: messageID, MessageKind: item.MessageKind}, detail, available)
+					if err == nil || errors.Is(err, c.ErrStale) || !wait(finishCtx, 100*time.Millisecond) {
+						break
+					}
+				}
+				finishCancel()
+				if err == nil && status == "sent" && item.Operation == "send" && item.PreviousMessageID > 0 && item.PreviousMessageID != messageID {
+					r.enqueuePanelCleanup(ctx, item)
+				}
+			}
+		} else {
+			_ = r.manager.Store.FinishDelivery(ctx, item.ID, claim, status, messageID, detail, available)
+		}
+		if item.Purpose == "cleanup" && item.Operation == "delete" && item.PreviousMessageID > 0 && (status == "failed" || status == "unknown") {
+			r.enqueueClearButtons(ctx, item)
+		}
 		if status == "sent" {
 			if tracker, ok := r.manager.Store.(interface {
 				RecordSent(context.Context, uint, uint64) error

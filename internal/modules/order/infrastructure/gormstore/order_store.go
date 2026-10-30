@@ -595,6 +595,9 @@ func (r *Store) UpdateStatus(id uint, status string, updates map[string]interfac
 func (r *Store) ListByUser(filter ordercontract.ListFilter) ([]orderdomain.Order, int64, error) {
 	var orders []orderdomain.Order
 	query := r.db.Model(&orderdomain.Order{}).Where("orders.deleted_at IS NULL AND user_id = ? AND parent_id IS NULL", filter.UserID)
+	if filter.EffectivePendingAt != nil {
+		query = query.Where("status = ? AND (expires_at IS NULL OR expires_at > ?)", constants.OrderStatusPendingPayment, *filter.EffectivePendingAt)
+	}
 
 	if filter.Status != "" {
 		query = query.Where("status = ?", filter.Status)

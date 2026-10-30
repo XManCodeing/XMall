@@ -2,6 +2,7 @@
 import { ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { adminAPI } from '@/api/admin'
+import { notifyErrorOnce, notifySuccess } from '@/utils/notify'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Switch } from '@/components/ui/switch'
@@ -31,8 +32,6 @@ const batchForm = ref({
 })
 const batchSubmitting = ref(false)
 const batchError = ref('')
-const batchSuccess = ref('')
-
 // --- CSV import ---
 const importForm = ref({
   file: null as File | null,
@@ -42,20 +41,16 @@ const importForm = ref({
 })
 const importSubmitting = ref(false)
 const importError = ref('')
-const importSuccess = ref('')
-
 const resetBatchForm = () => {
   batchForm.value.secrets = ''
   batchForm.value.batch_no = ''
   batchForm.value.note = ''
   batchForm.value.deduplicate = true
   batchError.value = ''
-  batchSuccess.value = ''
 }
 
 const handleBatchCreate = async () => {
   batchError.value = ''
-  batchSuccess.value = ''
   if (!props.productId) {
     batchError.value = t('admin.cardSecrets.errors.productRequired')
     return
@@ -83,14 +78,15 @@ const handleBatchCreate = async () => {
       note: batchForm.value.note.trim(),
       deduplicate: batchForm.value.deduplicate,
     })
-    batchSuccess.value = t('admin.cardSecrets.success.batchCreated')
+    notifySuccess(t('admin.cardSecrets.success.batchCreated'))
     batchForm.value.secrets = ''
-    emit('success')
-  } catch (err: any) {
-    batchError.value = err.message || t('admin.cardSecrets.errors.batchFailed')
+  } catch (error: unknown) {
+    notifyErrorOnce(error, t('admin.cardSecrets.errors.batchFailed'))
+    return
   } finally {
     batchSubmitting.value = false
   }
+  emit('success')
 }
 
 const handleFileChange = (files: FileList | null) => {
@@ -107,12 +103,10 @@ const resetImportForm = () => {
   importForm.value.note = ''
   importForm.value.deduplicate = true
   importError.value = ''
-  importSuccess.value = ''
 }
 
 const handleImport = async () => {
   importError.value = ''
-  importSuccess.value = ''
   if (!props.productId) {
     importError.value = t('admin.cardSecrets.errors.productRequired')
     return
@@ -138,14 +132,15 @@ const handleImport = async () => {
     formData.append('deduplicate', String(importForm.value.deduplicate))
     formData.append('file', importForm.value.file)
     await adminAPI.importCardSecretCSV(formData)
-    importSuccess.value = t('admin.cardSecrets.success.imported')
+    notifySuccess(t('admin.cardSecrets.success.imported'))
     resetImportForm()
-    emit('success')
-  } catch (err: any) {
-    importError.value = err.message || t('admin.cardSecrets.errors.importFailed')
+  } catch (error: unknown) {
+    notifyErrorOnce(error, t('admin.cardSecrets.errors.importFailed'))
+    return
   } finally {
     importSubmitting.value = false
   }
+  emit('success')
 }
 </script>
 
@@ -180,9 +175,6 @@ const handleImport = async () => {
         </div>
         <div v-if="batchError" class="rounded-lg border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
           {{ batchError }}
-        </div>
-        <div v-if="batchSuccess" class="rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-700">
-          {{ batchSuccess }}
         </div>
         <div class="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
           <Button class="w-full sm:w-auto" type="button" variant="outline" @click="resetBatchForm">{{ t('admin.common.reset') }}</Button>
@@ -230,9 +222,6 @@ const handleImport = async () => {
         </div>
         <div v-if="importError" class="rounded-lg border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
           {{ importError }}
-        </div>
-        <div v-if="importSuccess" class="rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-700">
-          {{ importSuccess }}
         </div>
         <div class="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
           <Button class="w-full sm:w-auto" type="button" variant="outline" @click="resetImportForm">{{ t('admin.common.reset') }}</Button>

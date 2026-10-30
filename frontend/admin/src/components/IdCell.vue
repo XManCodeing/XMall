@@ -2,7 +2,7 @@
 import { Copy } from 'lucide-vue-next'
 import { useI18n } from 'vue-i18n'
 import { copyText } from '@/utils/clipboard'
-import { notifyError } from '@/utils/notify'
+import { notifyErrorOnce, notifySuccess } from '@/utils/notify'
 
 const props = defineProps<{
   value: number | string
@@ -13,8 +13,9 @@ const { t } = useI18n()
 const handleCopy = async () => {
   try {
     await copyText(String(props.value))
+    notifySuccess(t('admin.common.copied'))
   } catch (error) {
-    notifyError(t('admin.common.copyFailed'))
+    notifyErrorOnce(error, t('admin.common.copyFailed'))
   }
 }
 </script>

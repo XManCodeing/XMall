@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { notifyErrorOnce, notifySuccess } from '@/utils/notify'
 import { adminAPI } from '@/api/admin'
 import type { AdminOrderRefund } from '@/api/types'
 import IdCell from '@/components/IdCell.vue'
@@ -34,17 +35,12 @@ const detailError = ref('')
 const detailRefund = ref<AdminOrderRefund | null>(null)
 const paymentFeeRefunded = ref(false)
 const paymentFeeUpdating = ref(false)
-const paymentFeeUpdateError = ref('')
-const paymentFeeUpdateSuccess = ref('')
-
 const resetDetail = () => {
   detailLoading.value = false
   detailError.value = ''
   detailRefund.value = null
   paymentFeeRefunded.value = false
   paymentFeeUpdating.value = false
-  paymentFeeUpdateError.value = ''
-  paymentFeeUpdateSuccess.value = ''
 }
 
 const resolveOrderDetailLink = (refund: AdminOrderRefund | null) => {
@@ -63,7 +59,10 @@ const refundTypeLabel = (item: AdminOrderRefund | null) => {
 const handleCopyOrderNo = async (orderNo: string) => {
   try {
     await copyText(orderNo)
-  } catch {}
+    notifySuccess(t('admin.common.copied'))
+  } catch (err) {
+    notifyErrorOnce(err, t('admin.common.copyFailed'))
+  }
 }
 
 const fetchRefundDetail = async (refundId: number) => {
@@ -84,18 +83,16 @@ const fetchRefundDetail = async (refundId: number) => {
 const updatePaymentFeeRefunded = async () => {
   if (!detailRefund.value || detailRefund.value.type !== 'manual') return
   paymentFeeUpdating.value = true
-  paymentFeeUpdateError.value = ''
-  paymentFeeUpdateSuccess.value = ''
   try {
     const response = await adminAPI.updateOrderRefundPaymentFee(detailRefund.value.id, {
       payment_fee_refunded: paymentFeeRefunded.value,
     })
     detailRefund.value = response.data.data
     paymentFeeRefunded.value = Boolean(detailRefund.value?.payment_fee_refunded)
-    paymentFeeUpdateSuccess.value = t('admin.orderRefunds.paymentFeeUpdateSuccess')
+    notifySuccess(t('admin.orderRefunds.paymentFeeUpdateSuccess'))
     emit('updated')
   } catch (err: any) {
-    paymentFeeUpdateError.value = err?.message || t('admin.orderRefunds.paymentFeeUpdateFailed')
+    notifyErrorOnce(err, t('admin.orderRefunds.paymentFeeUpdateFailed'))
   } finally {
     paymentFeeUpdating.value = false
   }
@@ -223,12 +220,6 @@ watch(
                 >
                   {{ paymentFeeUpdating ? t('admin.orderRefunds.paymentFeeUpdating') : t('admin.orderRefunds.paymentFeeUpdate') }}
                 </Button>
-                <div v-if="paymentFeeUpdateError" class="rounded-lg border border-destructive/30 bg-destructive/10 p-2 text-xs text-destructive">
-                  {{ paymentFeeUpdateError }}
-                </div>
-                <div v-if="paymentFeeUpdateSuccess" class="rounded-lg border border-emerald-200 bg-emerald-50 p-2 text-xs text-emerald-700">
-                  {{ paymentFeeUpdateSuccess }}
-                </div>
               </CardContent>
             </Card>
           </div>

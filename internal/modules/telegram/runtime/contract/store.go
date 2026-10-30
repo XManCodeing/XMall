@@ -3,15 +3,25 @@ package contract
 import (
 	"context"
 	"errors"
+	"fmt"
 	d "github.com/XManCodeing/XMall/internal/modules/telegram/runtime/domain"
 	"time"
 )
 
 var (
-	ErrConflict = errors.New("telegram configuration conflict")
-	ErrNotFound = errors.New("telegram instance not found")
-	ErrStale    = errors.New("telegram runtime generation lost")
+	ErrConflict  = errors.New("telegram configuration conflict")
+	ErrDuplicate = fmt.Errorf("telegram bot instance already exists: %w", ErrConflict)
+	ErrNotFound  = errors.New("telegram instance not found")
+	ErrStale     = errors.New("telegram runtime generation lost")
 )
+
+// PanelStore is optional: older notification stores and test doubles need not
+// implement panel lifecycle. PreparePanel persists the exact operation before HTTP;
+// FinishPanel atomically records its result and the reusable physical target.
+type PanelStore interface {
+	PreparePanel(context.Context, *d.Delivery, *Message) error
+	FinishPanel(context.Context, *d.Delivery, string, DeliveryResult, string, time.Time) error
+}
 
 // Store never exposes a database handle to the runtime.
 type Store interface {
@@ -19,6 +29,8 @@ type Store interface {
 	Get(context.Context, uint) (*d.Instance, error)
 	Create(context.Context, *d.Instance) error
 	Configure(context.Context, uint, uint64, map[string]interface{}) error
+	// SaveProfile persists Telegram Bot profile fields with an independent CAS version.
+	SaveProfile(context.Context, uint, uint64, map[string]interface{}) error
 	BeginGeneration(context.Context, uint, uint64) (*d.Instance, error)
 	Heartbeat(context.Context, uint, uint64, string, string, uint64) error
 	Accept(context.Context, uint, uint64, []d.Inbox, int64) error

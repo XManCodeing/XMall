@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import HttpKeyValueRows from '@/components/HttpKeyValueRows.vue'
 import { HTTP_OPERATIONS, httpIntegrationAPI, isReadOnlyOperation, type ConfigResponse, type Config, type HttpOperation, type Result } from '@/api/httpIntegration'
 import { emptyField, endpointDraft, makeDrafts, mergeRequest, recommendedFields, rowsToRecord, serializeEndpoint, toRows, type KeyValueRow } from '@/utils/httpIntegration'
-import { notifySuccess } from '@/utils/notify'
+import { notifyErrorOnce, notifySuccess } from '@/utils/notify'
 
 const props = defineProps<{ connectionId: number; baseUrl: string }>()
 const emit = defineEmits<{ saved: [data: ConfigResponse] }>()
@@ -47,7 +47,11 @@ const readOnlyOperation = computed(() => isReadOnlyOperation(operation.value))
 const pretty = (value: unknown) => typeof value === 'string' ? value : JSON.stringify(value, null, 2)
 const showError = (cause: unknown) => {
   const message = cause instanceof Error ? cause.message : ''
-  error.value = message.startsWith('httpIntegration.') ? t(message) : (message || t('httpIntegration.failed'))
+  if (['httpIntegration.invalidRows', 'httpIntegration.invalidJson', 'httpIntegration.invalidPath', 'httpIntegration.conflictingBody'].includes(message)) {
+    error.value = t(message)
+    return
+  }
+  notifyErrorOnce(cause, t('httpIntegration.failed'))
 }
 function applyConfig(data: ConfigResponse) {
   const { config, configured: isConfigured } = data

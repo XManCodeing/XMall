@@ -15,7 +15,7 @@ import TableSkeleton from '@/components/TableSkeleton.vue'
 import ListPagination from '@/components/ListPagination.vue'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { confirmAction } from '@/utils/confirm'
-import { notifyError, notifySuccess } from '@/utils/notify'
+import { notifyError, notifyErrorOnce, notifySuccess } from '@/utils/notify'
 import { useFormValidation, rules } from '@/composables/useFormValidation'
 
 const { t } = useI18n()
@@ -214,7 +214,7 @@ const handleSubmit = async () => {
     fetchConnections(isEditing.value ? pagination.page : 1)
     notifySuccess()
   } catch (err: any) {
-    notifyError(err?.response?.data?.message || err?.message)
+    notifyErrorOnce(err, err?.response?.data?.message || err?.message || t('common.api.requestFailed'))
   } finally {
     submitting.value = false
   }
@@ -228,7 +228,7 @@ const handlePing = async (conn: AdminSiteConnection) => {
     notifySuccess(t('siteConnections.ping.success'))
     fetchConnections(pagination.page)
   } catch (err: any) {
-    notifyError(t('siteConnections.ping.failed') + ': ' + (err?.response?.data?.message || err?.message || ''))
+    notifyErrorOnce(err, t('siteConnections.ping.failed') + ': ' + (err?.response?.data?.message || err?.message || ''))
   } finally {
     pingingId.value = null
   }
@@ -246,7 +246,7 @@ const handleToggleStatus = async (conn: AdminSiteConnection) => {
     fetchConnections(pagination.page)
     notifySuccess()
   } catch (err: any) {
-    notifyError(err?.response?.data?.message || err?.message)
+    notifyErrorOnce(err, err?.response?.data?.message || err?.message || t('common.api.requestFailed'))
   }
 }
 
@@ -262,7 +262,7 @@ const handleDelete = async (conn: AdminSiteConnection) => {
     fetchConnections(pagination.page)
     notifySuccess()
   } catch (err: any) {
-    notifyError(err?.response?.data?.message || err?.message)
+    notifyErrorOnce(err, err?.response?.data?.message || err?.message || t('common.api.requestFailed'))
   }
 }
 
@@ -279,7 +279,7 @@ const handleReapplyMarkup = async (conn: AdminSiteConnection) => {
     const count = (res.data?.data as Record<string, number>)?.updated_products ?? 0
     notifySuccess(t('siteConnections.reapplyMarkup.success', { count }))
   } catch (err: any) {
-    notifyError(err?.response?.data?.message || err?.message)
+    notifyErrorOnce(err, err?.response?.data?.message || err?.message || t('common.api.requestFailed'))
   } finally {
     reapplyingId.value = null
   }
@@ -352,14 +352,14 @@ onMounted(() => {
             <TableCell class="min-w-[200px] px-6 py-4 text-xs text-muted-foreground font-mono break-all">{{ conn.base_url }}</TableCell>
             <TableCell class="min-w-[80px] px-6 py-4 text-xs text-muted-foreground break-words">{{ isGeneric(conn) ? t('httpIntegration.protocol') : conn.protocol === 'dujiao-next' ? t('siteConnections.form.standardProtocol') : conn.protocol }}</TableCell>
             <TableCell class="min-w-[80px] px-6 py-4 text-xs text-muted-foreground">
-              <span v-if="!isGeneric(conn) && conn.price_markup_percent && Number(conn.price_markup_percent) !== 0" class="inline-flex rounded-full border border-primary/20 bg-primary/10 px-2 py-0.5 text-xs text-primary">
+              <span v-if="!isGeneric(conn) && conn.price_markup_percent && Number(conn.price_markup_percent) !== 0" class="inline-flex shrink-0 whitespace-nowrap rounded-full border border-primary/20 bg-primary/10 px-2 py-0.5 text-xs text-primary">
                 +{{ conn.price_markup_percent }}%
               </span>
               <span v-else class="text-muted-foreground">-</span>
             </TableCell>
             <TableCell class="min-w-[90px] px-6 py-4">
               <span
-                class="inline-flex rounded-full border px-2.5 py-1 text-xs"
+                class="inline-flex shrink-0 whitespace-nowrap rounded-full border px-2.5 py-1 text-xs"
                 :class="statusBadgeClass(conn.status)"
               >
                 {{ statusLabel(conn.status) }}

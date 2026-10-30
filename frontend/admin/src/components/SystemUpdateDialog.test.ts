@@ -11,14 +11,19 @@ vi.mock('vue-i18n', async importOriginal => ({
   useI18n: () => ({ t: (key: string) => key }),
 }))
 vi.mock('@/utils/confirm', () => ({ confirmAction: vi.fn().mockResolvedValue(true) }))
-vi.mock('@/utils/notify', () => ({ notifySuccess: vi.fn(), notifyError: vi.fn() }))
+vi.mock('@/utils/notify', () => {
+  const notifyError = vi.fn()
+  return { notifySuccess: vi.fn(), notifyError, notifyErrorOnce: vi.fn((error: { __notified?: boolean } | null, message: string) => {
+    if (!error?.__notified) notifyError(message)
+  }) }
+})
 vi.mock('@/components/ui/dialog', async () => {
   const { defineComponent, h } = await import('vue')
   const passthrough = defineComponent({ setup: (_, { slots }) => () => h('div', slots.default?.()) })
   return Object.fromEntries(['Dialog', 'DialogContent', 'DialogHeader', 'DialogTitle', 'DialogFooter'].map(key => [key, passthrough]))
 })
 import { adminAPI } from '@/api/admin'
-import { notifyError } from '@/utils/notify'
+import { notifyError, notifyErrorOnce, notifySuccess } from '@/utils/notify'
 import { confirmAction } from '@/utils/confirm'
 import SystemUpdateDialog from './SystemUpdateDialog.vue'
 import i18n from '@/i18n'
@@ -238,9 +243,46 @@ describe('system update restart readiness', () => {
   it('reports restart failure without starting probes', async () => {
     vi.mocked(adminAPI.restartSystemService).mockRejectedValue(new Error('restart rejected'))
     await mount(); await click('restartNow'); await tick(6000)
-    expect(notifyError).toHaveBeenCalledWith('restart rejected')
+    expect(notifyError).toHaveBeenCalledWith('admin.systemUpdate.restartFailed')
     expect(adminAPI.getUpdateStatus).not.toHaveBeenCalled()
     expect(root.textContent).toContain('admin.systemUpdate.restartNow')
+  })
+
+  it.each(['upgradeNow', 'restartNow', 'rollback'])('does not duplicate notified %s failures', async action => {
+    const error = Object.assign(new Error('already shown'), { __notified: true })
+    if (action === 'upgradeNow') {
+      vi.mocked(adminAPI.getUpdateCapability).mockResolvedValue(response({ capability: capability(), state: { ...state(false), status: 'idle' } }))
+      vi.mocked(adminAPI.startSystemUpdate).mockRejectedValueOnce(error)
+    } else if (action === 'restartNow') {
+      vi.mocked(adminAPI.restartSystemService).mockRejectedValueOnce(error)
+    } else {
+      vi.mocked(adminAPI.rollbackSystemUpdate).mockRejectedValueOnce(error)
+    }
+    await mount(); await click(action)
+    expect(notifyErrorOnce).toHaveBeenCalledWith(error, expect.stringMatching(/^admin\.systemUpdate\./))
+    expect(notifyError).not.toHaveBeenCalled()
+    expect(root.textContent).not.toContain('already shown')
+  })
+
+  it('copies with a success toast and no temporary icon timer', async () => {
+    vi.mocked(adminAPI.getUpdateCapability).mockResolvedValue(response({ capability: { ...capability(), can_update: false, block_reason: 'container' }, state: { ...state(false), status: 'idle' } }))
+    const writeText = vi.fn().mockResolvedValue(undefined)
+    vi.stubGlobal('navigator', { clipboard: { writeText } })
+    await mount()
+    const button = root.querySelector('button[title="admin.systemUpdate.copy"]') as HTMLButtonElement
+    button.click(); await flush()
+    expect(writeText).toHaveBeenCalledWith('docker compose pull && docker compose up -d')
+    expect(notifySuccess).toHaveBeenCalledExactlyOnceWith('admin.systemUpdate.copySucceeded')
+    expect(button.querySelector('.lucide-copy')).not.toBeNull()
+    expect(vi.getTimerCount()).toBe(0)
+  })
+
+  it('keeps failed update state visible after polling completes', async () => {
+    vi.mocked(adminAPI.getUpdateCapability).mockResolvedValue(response({ capability: capability(), state: { ...state(false), status: 'running', stage: 'downloading' } }))
+    vi.mocked(adminAPI.getUpdateStatus).mockResolvedValue(response({ ...state(false), status: 'failed', error: 'checksum mismatch' }))
+    await mount(); await tick(1500)
+    expect(root.textContent).toContain('checksum mismatch')
+    expect(root.textContent).toContain('admin.systemUpdate.failed')
   })
 
   it('times out even when a probe hangs and ignores its late success', async () => {

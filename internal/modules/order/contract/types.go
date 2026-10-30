@@ -4,18 +4,21 @@ import "time"
 
 // ListFilter 查询订单列表的过滤条件。
 type ListFilter struct {
-	Page           int
-	PageSize       int
-	UserID         uint
-	UserKeyword    string
-	Status         string
-	OrderNo        string
-	GuestEmail     string
-	ProductKeyword string
-	CreatedFrom    *time.Time
-	CreatedTo      *time.Time
-	SortBy         string
-	SortOrder      string
+	Page        int
+	PageSize    int
+	UserID      uint
+	UserKeyword string
+	Status      string
+	// EffectivePendingAt selects only pending, unexpired parent orders at this instant.
+	// Used by read-only pending lists and summaries before count and pagination.
+	EffectivePendingAt *time.Time
+	OrderNo            string
+	GuestEmail         string
+	ProductKeyword     string
+	CreatedFrom        *time.Time
+	CreatedTo          *time.Time
+	SortBy             string
+	SortOrder          string
 }
 
 // TenantScope 表示前台订单查询的分销租户范围。

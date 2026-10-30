@@ -12,7 +12,7 @@ import (
 type configuredContent struct{}
 
 func (configuredContent) Content(_ context.Context, a c.Actor) (c.Content, error) {
-	return c.Content{Welcome: "Welcome " + a.Locale, Help: "Configured help " + a.Locale, Menu: []c.MenuItem{{Action: "catalog", Label: "Browse"}, {Action: "help", Label: "Help"}, {Action: "language", Label: "Language"}, {Action: "relay", Label: "UNIMPLEMENTED"}, {URL: "javascript:alert(1)", Label: "BAD"}}}, nil
+	return c.Content{WelcomeEnabled: true, HelpEnabled: true, Welcome: "Welcome " + a.Locale, Help: "Configured help " + a.Locale, Menu: []c.MenuItem{{Action: "catalog", Label: "Browse"}, {Action: "help", Label: "Help"}, {Action: "language", Label: "Language"}, {Action: "relay", Label: "UNIMPLEMENTED"}, {URL: "javascript:alert(1)", Label: "BAD"}}}, nil
 }
 func TestConfiguredContentCommandsAndCallbacks(t *testing.T) {
 	s, _, _ := setup()
@@ -21,19 +21,19 @@ func TestConfiguredContentCommandsAndCallbacks(t *testing.T) {
 	if home[0].Text != "Welcome zh-CN" {
 		t.Fatal(home)
 	}
-	if len(home[0].Buttons) != 5 {
+	if len(home[0].Buttons) != 2 {
 		t.Fatal("unsupported or unsafe menu exposed")
 	}
 	help := click(t, s, 2, home, "Help")
 	if help[0].Text != "Configured help zh-CN" {
 		t.Fatal(help)
 	}
-	home = click(t, s, 3, help, "返回主菜单 / 取消")
+	home = click(t, s, 3, help, "🏠 首页")
 	if home[0].Text != "Welcome zh-CN" {
 		t.Fatal("callback home not configured")
 	}
 	lang := click(t, s, 4, home, "Language")
-	home = click(t, s, 5, lang, "en-US")
+	home = click(t, s, 5, lang, "English")
 	if home[0].Text != "Welcome en-US" {
 		t.Fatal("locale content not refreshed")
 	}
@@ -66,7 +66,7 @@ func TestRecreatedIdentityInvalidatesOldCheckout(t *testing.T) {
 	u := update(6, "")
 	u.CallbackData = button(t, m, "确认下单")
 	out := run(t, s, u)
-	if b.creates != 0 || out[0].Text != text("zh-CN", "stale") {
+	if b.creates != 0 || out[0].Text != text("zh-CN", "welcome") {
 		t.Fatal("recreated identity reused old operation")
 	}
 }
@@ -81,12 +81,10 @@ func TestPaymentUncertainOffersReadOnlyStatus(t *testing.T) {
 	s.d.Payments = uncertainPayments{b}
 	m := quoteFlow(t, s)
 	m = click(t, s, 6, m, "确认下单")
-	m = click(t, s, 7, m, "选择支付渠道")
-	m = click(t, s, 8, m, "Pay")
 	if m[0].Text != text("zh-CN", "payment_uncertain") {
 		t.Fatal(m)
 	}
-	button(t, m, "查询订单 / 支付结果")
+	button(t, m, "我已支付，查询结果")
 	for _, msg := range m {
 		for _, row := range msg.Buttons {
 			for _, btn := range row {
@@ -112,10 +110,8 @@ func TestPaymentOperationStableAcrossCASFailure(t *testing.T) {
 	p := &paymentRecorder{backend: b}
 	s.d.Payments = p
 	m := quoteFlow(t, s)
-	m = click(t, s, 6, m, "确认下单")
-	m = click(t, s, 7, m, "选择支付渠道")
-	u := update(8, "")
-	u.CallbackData = button(t, m, "Pay")
+	u := update(6, "")
+	u.CallbackData = button(t, m, "确认下单")
 	store.fail = true
 	if _, e := s.Handle(context.Background(), 1, u); !errors.Is(e, rt.ErrConflict) {
 		t.Fatal(e)

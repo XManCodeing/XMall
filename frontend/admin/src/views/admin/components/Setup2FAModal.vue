@@ -7,7 +7,8 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Dialog, DialogScrollContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { notifyError, notifySuccess } from '@/utils/notify'
+import { notifyError, notifyErrorOnce, notifySuccess } from '@/utils/notify'
+import { copyText } from '@/utils/clipboard'
 
 const props = defineProps<{ open: boolean }>()
 const emit = defineEmits<{
@@ -66,9 +67,12 @@ const submit = async () => {
 }
 
 const copySecret = async () => {
-  if (setupData.value?.secret) {
-    await navigator.clipboard.writeText(setupData.value.secret)
+  if (!setupData.value?.secret) return
+  try {
+    await copyText(setupData.value.secret)
     notifySuccess(t('admin.twofa.recovery.copied'))
+  } catch (err) {
+    notifyErrorOnce(err, t('admin.common.copyFailed'))
   }
 }
 

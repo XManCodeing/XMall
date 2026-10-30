@@ -122,7 +122,7 @@ func (c *Container) initIdentityAndCatalogServices() {
 		AllowedExtensions: c.Config.Upload.AllowedExtensions,
 		MaxWidth:          c.Config.Upload.MaxWidth,
 		MaxHeight:         c.Config.Upload.MaxHeight,
-	}, uploadlocal.New("uploads"))
+	}, uploadlocal.New(uploadlocal.DefaultRoot))
 	c.AffiliateService = affiliateapp.NewService(c.AffiliateRepo, c.UserStore, c.OrderStore, c.ProductRepo, c.SettingService)
 	productServices := catalogproductbootstrap.New(catalogproductbootstrap.Dependencies{
 		Products:          c.ProductRepo,

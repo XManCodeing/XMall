@@ -12,13 +12,18 @@ import (
 )
 
 type Manager struct {
-	Store c.Store
-	API   c.API
-	key   []byte
+	Store      c.Store
+	API        c.API
+	key        []byte
+	uploadRoot string
 }
 
 func NewManager(store c.Store, api c.API, secret string) *Manager {
-	manager := &Manager{Store: store, API: api, key: crypto.DeriveKey(secret)}
+	return NewManagerWithUploadRoot(store, api, secret, "")
+}
+
+func NewManagerWithUploadRoot(store c.Store, api c.API, secret, uploadRoot string) *Manager {
+	manager := &Manager{Store: store, API: api, key: crypto.DeriveKey(secret), uploadRoot: strings.TrimSpace(uploadRoot)}
 	if guarded, ok := store.(interface {
 		SetCredentialOpener(func(string) (string, error))
 	}); ok {
@@ -45,7 +50,7 @@ func (m *Manager) Create(ctx context.Context, token string) (*d.Instance, error)
 	if err != nil {
 		return nil, err
 	}
-	instance := &d.Instance{TelegramID: identity.ID, Username: identity.Username, TokenCipher: cipher, Mode: "internal", Version: 1, State: "stopped"}
+	instance := &d.Instance{TelegramID: identity.ID, Username: identity.Username, TokenCipher: cipher, Mode: "internal", Version: 1, ProfileVersion: 1, State: "stopped"}
 	if err = m.Store.Create(ctx, instance); err != nil {
 		return nil, err
 	}
@@ -81,7 +86,7 @@ func (m *Manager) Configure(ctx context.Context, id uint, version uint64, enable
 	if enabled != nil {
 		if *enabled {
 			if instance.Mode != "internal" {
-				return errors.New("external bot requires explicit cutover")
+				return c.ErrConflict
 			}
 			plain, err := m.Token(instance)
 			if err != nil {
@@ -156,9 +161,7 @@ func View(i d.Instance) InstanceView {
 	fresh := i.LastSeenAt != nil && time.Since(*i.LastSeenAt) < 45*time.Second
 	// Enabled is desired configuration, not evidence that the worker has stopped.
 	// A confirmed stop is terminal and does not require continuing heartbeats.
-	if i.Mode != "internal" {
-		i.State = "external"
-	} else if i.State != "stopped" && !fresh {
+	if i.State != "stopped" && !fresh {
 		i.State = "stale"
 	}
 	return InstanceView{Instance: &i, TokenSet: tokenSet, Fresh: fresh}

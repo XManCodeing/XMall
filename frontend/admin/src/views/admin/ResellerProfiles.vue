@@ -24,7 +24,7 @@ import { useListRefresh, type ListFetchOptions } from '@/composables/useListRefr
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
 import { confirmAction } from '@/utils/confirm'
-import { notifyError, notifySuccess } from '@/utils/notify'
+import { notifyError, notifyErrorOnce, notifySuccess } from '@/utils/notify'
 import { formatDate, toRFC3339 } from '@/utils/format'
 import { getResellerProfileActionState, getResellerProfileStatusKey } from '@/utils/resellerManagement'
 import { adminUrl } from '@/utils/adminBase'
@@ -173,7 +173,7 @@ const submitApproveProfile = async () => {
     notifySuccess(t('admin.resellerProfiles.actions.approveSuccess'))
     await fetchRows(pagination.value.page, { preserveRows: true })
   } catch (err: any) {
-    notifyError(err?.message || t('admin.resellerProfiles.actions.approveFailed'))
+    notifyErrorOnce(err, err?.message || t('admin.resellerProfiles.actions.approveFailed'))
   } finally {
     operatingId.value = null
   }
@@ -205,7 +205,7 @@ const submitReasonAction = async () => {
     showReasonDialog.value = false
     await fetchRows(pagination.value.page, { preserveRows: true })
   } catch (err: any) {
-    notifyError(err?.message || (reasonAction.value === 'reject' ? t('admin.resellerProfiles.actions.rejectFailed') : t('admin.resellerProfiles.actions.disableFailed')))
+    notifyErrorOnce(err, err?.message || (reasonAction.value === 'reject' ? t('admin.resellerProfiles.actions.rejectFailed') : t('admin.resellerProfiles.actions.disableFailed')))
   } finally {
     operatingId.value = null
   }
@@ -236,7 +236,7 @@ const submitEditProfile = async () => {
     notifySuccess(t('admin.resellerProfiles.actions.updateSuccess'))
     await fetchRows(pagination.value.page, { preserveRows: true })
   } catch (err: any) {
-    notifyError(err?.message || t('admin.resellerProfiles.actions.updateFailed'))
+    notifyErrorOnce(err, err?.message || t('admin.resellerProfiles.actions.updateFailed'))
   } finally {
     operatingId.value = null
   }
@@ -251,7 +251,7 @@ const restoreProfile = async (row: AdminResellerProfile) => {
     notifySuccess(t('admin.resellerProfiles.actions.restoreSuccess'))
     await fetchRows(pagination.value.page, { preserveRows: true })
   } catch (err: any) {
-    notifyError(err?.message || t('admin.resellerProfiles.actions.restoreFailed'))
+    notifyErrorOnce(err, err?.message || t('admin.resellerProfiles.actions.restoreFailed'))
   } finally {
     operatingId.value = null
   }
@@ -357,12 +357,12 @@ onMounted(() => {
               </a>
             </TableCell>
             <TableCell class="px-6 py-4 text-xs">
-              <span class="inline-flex rounded-full border px-2.5 py-1 text-xs" :class="statusClass(item.status)">
+              <span class="inline-flex shrink-0 whitespace-nowrap rounded-full border px-2.5 py-1 text-xs" :class="statusClass(item.status)">
                 {{ statusLabel(item.status) }}
               </span>
             </TableCell>
             <TableCell class="px-6 py-4 text-xs">
-              <span class="inline-flex rounded-full border px-2.5 py-1 text-xs" :class="settlementClass(item.settlement_status)">
+              <span class="inline-flex shrink-0 whitespace-nowrap rounded-full border px-2.5 py-1 text-xs" :class="settlementClass(item.settlement_status)">
                 {{ settlementLabel(item.settlement_status) }}
               </span>
             </TableCell>

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { reactive, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { notifyErrorOnce, notifySuccess } from '@/utils/notify'
 import { adminAPI } from '@/api/admin'
 import type { AdminOrder } from '@/api/types'
 import IdCell from '@/components/IdCell.vue'
@@ -29,7 +30,6 @@ const detailError = ref('')
 const selectedOrder = ref<AdminOrder | null>(null)
 const fulfillmentSubmitting = ref(false)
 const fulfillmentError = ref('')
-const fulfillmentSuccess = ref('')
 const fulfillmentForm = reactive({
   note: '',
   entries: [] as Array<{ key: string; value: string }>,
@@ -73,7 +73,6 @@ const resetFulfillmentForm = () => {
   fulfillmentForm.note = ''
   fulfillmentForm.entries = [createEmptyDeliveryEntry()]
   fulfillmentError.value = ''
-  fulfillmentSuccess.value = ''
 }
 
 const fetchOrderDetail = async (orderId: number) => {
@@ -93,7 +92,6 @@ const fetchOrderDetail = async (orderId: number) => {
 const submitFulfillment = async () => {
   if (!selectedOrder.value) return
   fulfillmentError.value = ''
-  fulfillmentSuccess.value = ''
   if (!hasFulfillmentSubmitData()) {
     fulfillmentError.value = t('admin.orders.fulfillmentSubmitRequired')
     return
@@ -104,10 +102,10 @@ const submitFulfillment = async () => {
       order_id: Number(selectedOrder.value.id),
       delivery_data: buildDeliveryDataPayload(),
     })
-    fulfillmentSuccess.value = t('admin.orders.fulfillmentSuccess')
+    notifySuccess(t('admin.orders.fulfillmentSuccess'))
     emit('success', props.parentId)
   } catch (err: any) {
-    fulfillmentError.value = err?.message || t('admin.orders.fulfillmentFailed')
+    notifyErrorOnce(err, t('admin.orders.fulfillmentFailed'))
   } finally {
     fulfillmentSubmitting.value = false
   }
@@ -205,10 +203,6 @@ watch(
             <div v-if="fulfillmentError" class="rounded-lg border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
               {{ fulfillmentError }}
             </div>
-            <div v-if="fulfillmentSuccess" class="rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-700">
-              {{ fulfillmentSuccess }}
-            </div>
-
             <div class="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
               <Button class="w-full sm:w-auto" type="button" variant="outline" size="sm" @click="resetFulfillmentForm">
                 {{ t('admin.common.reset') }}

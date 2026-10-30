@@ -29,6 +29,7 @@ import (
 	orderrisk "github.com/XManCodeing/XMall/internal/modules/orderrisk/contract"
 	paymentapp "github.com/XManCodeing/XMall/internal/modules/payment/application"
 	paymentdomain "github.com/XManCodeing/XMall/internal/modules/payment/domain"
+	settingsapp "github.com/XManCodeing/XMall/internal/modules/settings/application"
 	delivery "github.com/XManCodeing/XMall/internal/modules/telegram/delivery/contract"
 	shopapp "github.com/XManCodeing/XMall/internal/modules/telegram/shop/application"
 	c "github.com/XManCodeing/XMall/internal/modules/telegram/shop/contract"
@@ -81,8 +82,12 @@ type ContentSettings interface {
 	GetTelegramBotConfig() (settings.TelegramBotConfigSetting, error)
 }
 
-func localizedContent(values settings.LocalizedText, locale string) string {
-	for _, key := range []string{locale, "zh-CN", "en-US", "zh-TW"} {
+func localizedContent(values settings.LocalizedText, locale, fallback string) string {
+	for _, key := range []string{locale, fallback, "zh-CN", "en-US", "zh-TW"} {
+		key = strings.TrimSpace(key)
+		if key == "" {
+			continue
+		}
 		if value := strings.TrimSpace(values[key]); value != "" {
 			return value
 		}
@@ -98,26 +103,46 @@ func (p shopContent) Content(_ context.Context, a c.Actor) (c.Content, error) {
 	if e != nil {
 		return c.Content{}, e
 	}
-	out := c.Content{}
+	fallback := strings.TrimSpace(cfg.DefaultLocale)
+	out := c.Content{
+		WelcomeEnabled: cfg.Welcome.Enabled,
+		HelpEnabled:    cfg.Help.Enabled,
+		// DisplayName / Description / CoverURL are Telegram Bot profile fields
+		// (per-instance) and are no longer mirrored into the shop home panel.
+		SupportURL:    strings.TrimSpace(cfg.Basic.SupportURL),
+		DefaultLocale: fallback,
+	}
 	if cfg.Welcome.Enabled {
-		out.Welcome = localizedContent(cfg.Welcome.Message, a.Locale)
+		out.Welcome = localizedContent(cfg.Welcome.Message, a.Locale, fallback)
 	}
 	if cfg.Help.Enabled {
+		out.HelpTitle = localizedContent(cfg.Help.Title, a.Locale, fallback)
+		out.HelpIntro = localizedContent(cfg.Help.Intro, a.Locale, fallback)
+		out.CenterHint = localizedContent(cfg.Help.CenterHint, a.Locale, fallback)
+		out.SupportHint = localizedContent(cfg.Help.SupportHint, a.Locale, fallback)
 		parts := []string{}
-		for _, value := range []settings.LocalizedText{cfg.Help.Title, cfg.Help.Intro} {
-			if t := localizedContent(value, a.Locale); t != "" {
-				parts = append(parts, t)
+		for _, value := range []string{out.HelpTitle, out.HelpIntro} {
+			if value != "" {
+				parts = append(parts, value)
 			}
 		}
 		items := append([]settings.TelegramBotHelpItem(nil), cfg.Help.Items...)
 		sort.SliceStable(items, func(i, j int) bool { return items[i].Order < items[j].Order })
 		for _, item := range items {
-			if item.Enabled {
-				title := localizedContent(item.Title, a.Locale)
-				body := localizedContent(item.Content, a.Locale)
-				if body != "" {
-					parts = append(parts, title+"\n"+body)
-				}
+			if !item.Enabled {
+				continue
+			}
+			title := localizedContent(item.Title, a.Locale, fallback)
+			summary := localizedContent(item.Summary, a.Locale, fallback)
+			body := localizedContent(item.Content, a.Locale, fallback)
+			if title == "" && summary == "" && body == "" {
+				continue
+			}
+			out.HelpItems = append(out.HelpItems, c.HelpItem{
+				Key: item.Key, Summary: summary, Title: title, Body: body, ShowSupport: item.ShowSupportLink,
+			})
+			if body != "" {
+				parts = append(parts, strings.TrimSpace(title+"\n"+body))
 			}
 		}
 		out.Help = strings.Join(parts, "\n\n")
@@ -131,11 +156,14 @@ func (p shopContent) Content(_ context.Context, a c.Actor) (c.Content, error) {
 			if !item.Enabled {
 				continue
 			}
-			label := localizedContent(item.Label, a.Locale)
+			label := localizedContent(item.Label, a.Locale, fallback)
 			if item.Action.Type == "url" {
 				out.Menu = append(out.Menu, c.MenuItem{Label: label, URL: item.Action.Value})
 			} else if item.Action.Type == "builtin" {
 				if kind := actions[item.Action.Value]; kind != "" {
+					if kind == "help" && !cfg.Help.Enabled {
+						continue
+					}
 					out.Menu = append(out.Menu, c.MenuItem{Label: label, Action: kind})
 				}
 			}
@@ -316,12 +344,33 @@ func (a *shopAdapter) Products(ctx context.Context, x c.Actor, id uint, page int
 	return out, int64(page*6) < total, nil
 }
 func productView(p pd.Product, l string, deps ...*ShopDependencies) c.Product {
-	out := c.Product{ID: p.ID, Title: localized(p.TitleJSON, l), Description: localized(p.DescriptionJSON, l), Min: p.MinPurchaseQuantity, Max: p.MaxPurchaseQuantity}
+	out := c.Product{ID: p.ID, Title: localized(p.TitleJSON, l), Description: localized(p.ContentJSON, l), Summary: localized(p.DescriptionJSON, l), FulfillmentType: p.FulfillmentType, Min: p.MinPurchaseQuantity, Max: p.MaxPurchaseQuantity}
+	if out.Description == "" {
+		out.Description = out.Summary
+	}
+	if out.Summary == "" {
+		out.Summary = out.Description
+	}
+	if summary := []rune(out.Summary); len(summary) > 500 {
+		out.Summary = string(summary[:500]) + "…"
+	}
+	if len(p.Images) > 0 {
+		out.Image = p.Images[0]
+	}
+	if len(deps) > 0 && deps[0] != nil {
+		if brand, ok := deps[0].ContentSettings.(interface {
+			GetSiteBrand() (settingsapp.SiteBrand, error)
+		}); ok {
+			if site, err := brand.GetSiteBrand(); err == nil {
+				base, err := url.Parse(strings.TrimRight(strings.TrimSpace(site.SiteURL), "/"))
+				if err == nil && (base.Scheme == "https" || base.Scheme == "http") && base.Host != "" && base.User == nil && p.Slug != "" {
+					out.URL = strings.TrimRight(base.String(), "/") + "/products/" + url.PathEscape(p.Slug)
+				}
+			}
+		}
+	}
 	if out.Min < 1 {
 		out.Min = 1
-	}
-	if len(out.Description) > 1500 {
-		out.Description = string([]rune(out.Description)[:min(500, len([]rune(out.Description)))])
 	}
 	// Refuse all nonempty form schemas rather than silently bypassing required fields.
 	if fields, ok := p.ManualFormSchemaJSON["fields"]; ok {
@@ -380,6 +429,17 @@ func productView(p pd.Product, l string, deps ...*ShopDependencies) c.Product {
 		}
 		return fmt.Sprintf("%s: %d", labels["stock"], quantity)
 	}
+	stockBounds := func(quantity int64) (bool, *int) {
+		available := stockKnown && (quantity < 0 || quantity >= int64(out.Min)) && !out.Unsupported && (out.Max <= 0 || out.Max >= out.Min)
+		if !stockKnown || quantity < 0 || domaincatalog.NormalizeStockDisplayMode(p.StockDisplayMode) != constants.ProductStockDisplayExact {
+			return available, nil
+		}
+		limit := int(quantity)
+		if out.Max > 0 && limit > out.Max {
+			limit = out.Max
+		}
+		return available, &limit
+	}
 	totalStock := domaincatalog.StockQuantity(p.FulfillmentType, p.AutoStockAvailable, p.ManualStockTotal)
 	hasSKU, unlimited := false, false
 	for _, sku := range p.SKUs {
@@ -403,7 +463,9 @@ func productView(p pd.Product, l string, deps ...*ShopDependencies) c.Product {
 		if name == "" {
 			name = sku.SKUCode
 		}
-		out.SKUs = append(out.SKUs, c.SKU{ID: sku.ID, Name: name, Price: sku.PriceAmount.String(), Stock: stockText(quantity)})
+		available, limit := stockBounds(quantity)
+		out.SKUs = append(out.SKUs, c.SKU{ID: sku.ID, Name: name, Price: sku.PriceAmount.String(), Stock: stockText(quantity), Available: available, MaxQuantity: limit})
+		out.Available = out.Available || available
 	}
 	if upstream && !hasSKU {
 		// No mapped SKU means no cached upstream inventory can be asserted.
@@ -413,6 +475,11 @@ func productView(p pd.Product, l string, deps ...*ShopDependencies) c.Product {
 		totalStock = -1
 	}
 	out.Stock = stockText(totalStock)
+	available, limit := stockBounds(totalStock)
+	out.MaxQuantity = limit
+	if !hasSKU {
+		out.Available = available
+	}
 	return out
 }
 func (a *shopAdapter) Product(ctx context.Context, x c.Actor, id uint) (*c.Product, error) {
@@ -482,7 +549,7 @@ func (a *shopAdapter) Preview(ctx context.Context, x c.Actor, s c.Selection) (*c
 		return nil, e
 	}
 	h := sha256.Sum256(raw)
-	return &c.Quote{Amount: q.TotalAmount.String(), Currency: q.Currency, Fingerprint: hex.EncodeToString(h[:])}, nil
+	return &c.Quote{Amount: q.TotalAmount.String(), Currency: q.Currency, Fingerprint: hex.EncodeToString(h[:]), Discounted: q.TotalAmount.Decimal.LessThan(q.OriginalAmount.Decimal)}, nil
 }
 func shopOrderError(err error) error {
 	if errors.Is(err, delivery.ErrIdentityChanged) {
@@ -529,7 +596,7 @@ func (a *shopAdapter) Create(ctx context.Context, x c.Actor, s c.Selection, q c.
 	if out == nil || out.UserID != x.UserID {
 		return nil, c.ErrDenied
 	}
-	v := orderView(out)
+	v := orderView(out, x.Locale)
 	return &v, nil
 }
 func shopTransactionSource(x c.Actor) (*delivery.Source, error) {
@@ -575,34 +642,96 @@ func shopCreateInput(x c.Actor, s c.Selection, q c.Quote, key string) (orderapp.
 	input.ExpectedCurrency = q.Currency
 	return input, nil
 }
-func orderView(o *od.Order) c.Order {
-	v := c.Order{ID: o.ID, UserID: o.UserID, Number: o.OrderNo, Status: o.Status, Amount: o.TotalAmount.String(), Currency: o.Currency, ExpiresAt: o.ExpiresAt, Pending: o.ParentID == nil && o.Status == constants.OrderStatusPendingPayment && (o.ExpiresAt == nil || o.ExpiresAt.After(time.Now()))}
+func orderView(o *od.Order, locales ...string) c.Order {
+	locale := "zh-CN"
+	if len(locales) > 0 {
+		locale = locales[0]
+	}
+	v := c.Order{ID: o.ID, UserID: o.UserID, Number: o.OrderNo, Status: o.Status, Amount: o.TotalAmount.String(), Currency: o.Currency, CreatedAt: o.CreatedAt, ExpiresAt: o.ExpiresAt, Pending: o.DeletedAt == nil && o.ParentID == nil && o.Status == constants.OrderStatusPendingPayment && (o.ExpiresAt == nil || o.ExpiresAt.After(time.Now()))}
+	for _, item := range o.Items {
+		var specs jsonmap.JSON
+		switch value := item.SKUSnapshotJSON["spec_values"].(type) {
+		case map[string]interface{}:
+			specs = jsonmap.JSON(value)
+		case jsonmap.JSON:
+			specs = value
+		}
+		name := localized(specs, locale)
+		if name == "" {
+			name, _ = item.SKUSnapshotJSON["sku_code"].(string)
+		}
+		v.Items = append(v.Items, c.OrderItem{ProductID: item.ProductID, SKUID: item.SKUID, Title: localized(item.TitleJSON, locale), SKUName: name, Quantity: item.Quantity})
+	}
 	if o.Fulfillment != nil && o.Fulfillment.Status == "delivered" && o.Fulfillment.Payload != "" {
 		v.Delivered = append(v.Delivered, o.Fulfillment.Payload)
 	}
 	for i := range o.Children {
-		child := orderView(&o.Children[i])
+		child := orderView(&o.Children[i], locale)
 		v.Delivered = append(v.Delivered, child.Delivered...)
+		if len(o.Items) == 0 {
+			v.Items = append(v.Items, child.Items...)
+		}
 	}
 	return v
 }
 func (a *shopAdapter) List(ctx context.Context, x c.Actor, owner uint, page int) ([]c.Order, bool, error) {
+	return a.ListFiltered(ctx, x, owner, page, "")
+}
+func (a *shopAdapter) ListFiltered(ctx context.Context, x c.Actor, owner uint, page int, status string) ([]c.Order, bool, error) {
 	if e := a.readOwner(ctx, x, owner); e != nil {
 		return nil, false, e
 	}
 	if page < 1 || page > 10000 {
 		return nil, false, c.ErrDenied
 	}
-	items, total, e := a.d.Orders.ListOrdersByUser(ordercontract.ListFilter{UserID: owner, Page: page, PageSize: 6})
+	filter := ordercontract.ListFilter{UserID: owner, Page: page, PageSize: 6, Status: status}
+	var items []od.Order
+	var total int64
+	var e error
+	if status == constants.OrderStatusPendingPayment {
+		items, total, e = a.d.Orders.ListEffectivePendingOrdersByUser(filter)
+	} else {
+		items, total, e = a.d.Orders.ListOrdersByUser(filter)
+	}
 	if e != nil {
 		return nil, false, e
 	}
 	out := []c.Order{}
 	for i := range items {
-		out = append(out, orderView(&items[i]))
+		out = append(out, orderView(&items[i], x.Locale))
 	}
 	return out, int64(page*6) < total, nil
 }
+func (a *shopAdapter) PendingSummary(ctx context.Context, x c.Actor) (c.PendingSummary, error) {
+	if err := a.authorize(ctx, x); err != nil {
+		return c.PendingSummary{}, err
+	}
+	items, total, err := a.d.Orders.ListEffectivePendingOrdersByUser(ordercontract.ListFilter{UserID: x.UserID, Page: 1, PageSize: 1})
+	if err != nil {
+		return c.PendingSummary{}, err
+	}
+	result := c.PendingSummary{Count: total}
+	if len(items) > 0 {
+		latest := orderView(&items[0], x.Locale)
+		result.Latest = &latest
+	}
+	return result, nil
+}
+func (a *shopAdapter) Cancel(ctx context.Context, x c.Actor, id uint) error {
+	if err := a.authorize(ctx, x); err != nil {
+		return err
+	}
+	if id == 0 {
+		return c.ErrDenied
+	}
+	// Deliberately do not use readOwner: historical grants never authorize writes.
+	_, err := a.d.Orders.CancelOrder(id, x.UserID)
+	if errors.Is(err, orderapp.ErrOrderNotFound) || errors.Is(err, orderapp.ErrOrderCancelNotAllowed) {
+		return c.ErrDenied
+	}
+	return shopOrderError(err)
+}
+
 func (a *shopAdapter) Detail(ctx context.Context, x c.Actor, id, owner uint) (*c.Order, error) {
 	if e := a.readOwner(ctx, x, owner); e != nil {
 		return nil, e
@@ -614,7 +743,7 @@ func (a *shopAdapter) Detail(ctx context.Context, x c.Actor, id, owner uint) (*c
 	if o == nil {
 		return nil, c.ErrDenied
 	}
-	v := orderView(o)
+	v := orderView(o, x.Locale)
 	return &v, nil
 }
 func (a *shopAdapter) Account(ctx context.Context, x c.Actor) (*c.Account, error) {
@@ -695,7 +824,7 @@ func (a *shopAdapter) Channels(ctx context.Context, x c.Actor, id uint) ([]c.Cha
 	for _, ch := range allowed {
 		wallet := ch.ProviderType == constants.PaymentProviderWallet || ch.ChannelType == constants.PaymentChannelTypeBalance
 		if set[ch.ID] && ch.IsActive && (!wallet || canCover) {
-			out = append(out, c.Channel{ID: ch.ID, Name: ch.Name})
+			out = append(out, c.Channel{ID: ch.ID, Name: ch.Name, Wallet: wallet})
 		}
 	}
 	// Channel zero is the shared payment service's full-wallet route. Never
@@ -726,7 +855,7 @@ func (a *shopAdapter) Channels(ctx context.Context, x c.Actor, id uint) ([]c.Cha
 			} else if x.Locale == "zh-TW" {
 				name = "餘額支付"
 			}
-			out = append(out, c.Channel{ID: 0, Name: name})
+			out = append(out, c.Channel{ID: 0, Name: name, Wallet: true})
 		}
 	}
 	return out, nil

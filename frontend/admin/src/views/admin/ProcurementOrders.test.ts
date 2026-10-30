@@ -7,9 +7,15 @@ vi.mock('@/api/admin', () => ({ adminAPI: {
   getSiteConnections: vi.fn(), getProcurementOrders: vi.fn(), getProcurementOrderStats: vi.fn(),
   retryProcurementOrder: vi.fn(), cancelProcurementOrder: vi.fn(),
 } }))
-vi.mock('@/utils/notify', () => ({ notifySuccess: vi.fn(), notifyError: vi.fn() }))
+vi.mock('@/utils/notify', () => {
+  const notifyError = vi.fn()
+  return { notifySuccess: vi.fn(), notifyError, notifyErrorOnce: vi.fn((error: { __notified?: boolean } | null, message: string) => {
+    if (!error?.__notified) notifyError(message)
+  }) }
+})
 vi.mock('@/utils/confirm', () => ({ confirmAction: vi.fn().mockResolvedValue(true) }))
 import { adminAPI } from '@/api/admin'
+import { notifyError, notifyErrorOnce } from '@/utils/notify'
 import ProcurementOrders from './ProcurementOrders.vue'
 
 let app: App | undefined
@@ -49,6 +55,16 @@ describe('procurement outcome verification', () => {
     expect(button('Verify upstream outcome')).toBeUndefined()
     expect(button('Retry order')).toBeUndefined()
     expect(button('Cancel order')).toBeUndefined()
+  })
+  it.each([true, false])('keeps verification errors single-notification: %s', async notified => {
+    await mount('unknown')
+    const error = { __notified: notified }
+    vi.mocked(adminAPI.retryProcurementOrder).mockRejectedValueOnce(error)
+    button('Verify upstream outcome')!.click()
+    await flush()
+    expect(notifyErrorOnce).toHaveBeenCalledWith(error, httpIntegrationMessages['en-US'].failed)
+    expect(notifyError).toHaveBeenCalledTimes(notified ? 0 : 1)
+    expect(button('Verify upstream outcome')?.disabled).toBe(false)
   })
   it('preserves retry entry for a rejected order', async () => {
     await mount('rejected')

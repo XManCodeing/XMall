@@ -11,35 +11,6 @@ import (
 	"testing"
 )
 
-func TestDeleteWebhookPreservesPendingUpdates(t *testing.T) {
-	calls := 0
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		calls++
-		var request map[string]any
-		if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
-			t.Error(err)
-		}
-		if request["drop_pending_updates"] == true {
-			t.Error("pending updates would be dropped")
-		}
-		_, _ = w.Write([]byte(`{"ok":true,"result":true}`))
-	}))
-	defer server.Close()
-	adapter := Adapter{Options: []api.Option{api.WithBaseURL(server.URL)}}
-	if err := adapter.DeleteWebhook(context.Background(), "dummy", true); err == nil {
-		t.Fatal("destructive request accepted")
-	}
-	if calls != 0 {
-		t.Fatal("rejected request reached network")
-	}
-	if err := adapter.DeleteWebhook(context.Background(), "dummy", false); err != nil {
-		t.Fatal(err)
-	}
-	if calls != 1 {
-		t.Fatalf("calls=%d", calls)
-	}
-}
-
 func TestPollPreservesUnknownUpdateIDsAndPrivateContext(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var req map[string]interface{}

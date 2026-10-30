@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Switch } from '@/components/ui/switch'
 import { Label } from '@/components/ui/label'
-import { notifyError, notifySuccess } from '@/utils/notify'
+import { notifyErrorOnce, notifySuccess } from '@/utils/notify'
 const { t } = useI18n()
 
 const form = reactive({
@@ -63,7 +63,7 @@ const save = async () => {
     } as any)
     notifySuccess(t('admin.settings.saved'))
   } catch (err: any) {
-    notifyError(err?.message || t('admin.settings.saveFailed'))
+    notifyErrorOnce(err, err?.message || t('admin.settings.saveFailed'))
   } finally {
     saving.value = false
   }

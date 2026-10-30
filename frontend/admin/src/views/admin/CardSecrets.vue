@@ -18,6 +18,7 @@ import { useListRefresh, type ListFetchOptions } from '@/composables/useListRefr
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { formatDate, getLocalizedText } from '@/utils/format'
 import { confirmAction } from '@/utils/confirm'
+import { notifyErrorOnce, notifySuccess } from '@/utils/notify'
 import CardSecretEditModal from './components/CardSecretEditModal.vue'
 import { adminUrl } from '@/utils/adminBase'
 
@@ -64,9 +65,7 @@ const selectedSecretIds = ref<number[]>([])
 const operationScope = ref<'selected' | 'filtered'>('selected')
 const batchStatusTarget = ref<'available' | 'reserved' | 'used'>('available')
 const batchActionLoading = ref(false)
-const batchActionError = ref('')
-const batchActionSuccess = ref('')
-
+const scopeValidationError = ref('')
 const showEditModal = ref(false)
 const editingCardSecret = ref<AdminCardSecret | null>(null)
 
@@ -214,11 +213,6 @@ const resolveSecretBatchLabel = (secret: AdminCardSecret) => {
 
 const productLink = (productId: number) => adminUrl(`/products?product_id=${productId}`)
 const orderLink = (orderId: number) => adminUrl(`/orders?order_id=${orderId}`)
-
-const clearBatchActionMessages = () => {
-  batchActionError.value = ''
-  batchActionSuccess.value = ''
-}
 
 const normalizeSelectedSecretIDs = () => {
   return Array.from(
@@ -464,7 +458,7 @@ const fetchCardSecrets = async (page = 1, options: ListFetchOptions = {}) => {
 
 const refreshAll = async (options: ListFetchOptions = {}) => {
   const productId = parseProductId()
-  clearBatchActionMessages()
+  scopeValidationError.value = ''
   if (productId) {
     await loadProductInfo()
     await Promise.all([refreshStats(), fetchBatches(1, options), fetchCardSecrets(1, options)])
@@ -510,7 +504,7 @@ const handleSkuSelectionChange = async () => {
 }
 
 const applyListFilters = async () => {
-  clearBatchActionMessages()
+  scopeValidationError.value = ''
   await fetchCardSecrets(1, { preserveRows: true })
 }
 
@@ -519,7 +513,7 @@ const resetListFilters = async () => {
   filters.secret = ''
   filters.batchNo = ''
   clearBatchFilter()
-  clearBatchActionMessages()
+  scopeValidationError.value = ''
   await fetchCardSecrets(1, { preserveRows: true })
 }
 
@@ -557,13 +551,13 @@ const buildActionPayload = () => {
   if (operationScope.value === 'selected') {
     const ids = normalizeSelectedSecretIDs()
     if (ids.length === 0) {
-      batchActionError.value = t('admin.cardSecrets.errors.selectRequired')
+      scopeValidationError.value = t('admin.cardSecrets.errors.selectRequired')
       return null
     }
     return { ids }
   }
   if (filteredSecretCount.value <= 0) {
-    batchActionError.value = t('admin.cardSecrets.errors.scopeEmpty')
+    scopeValidationError.value = t('admin.cardSecrets.errors.scopeEmpty')
     return null
   }
   return { filter: currentQueryFilter.value }
@@ -578,7 +572,7 @@ const buildDangerDescription = (suffix: string) => {
 }
 
 const applyBatchStatus = async () => {
-  clearBatchActionMessages()
+  scopeValidationError.value = ''
   const payload = buildActionPayload()
   if (!payload) return
 
@@ -601,17 +595,21 @@ const applyBatchStatus = async () => {
     })
     const fallbackCount = currentScopeCount.value
     const affected = Number(response?.data?.data?.affected || fallbackCount)
-    batchActionSuccess.value = t('admin.cardSecrets.success.batchStatusUpdated', { count: affected })
+    notifySuccess(t('admin.cardSecrets.success.batchStatusUpdated', { count: affected }))
+  } catch (error: unknown) {
+    notifyErrorOnce(error, t('admin.cardSecrets.errors.batchStatusFailed'))
+    batchActionLoading.value = false
+    return
+  }
+  try {
     await refreshAfterMutations()
-  } catch (error: any) {
-    batchActionError.value = error?.message || t('admin.cardSecrets.errors.batchStatusFailed')
   } finally {
     batchActionLoading.value = false
   }
 }
 
 const deleteSecretsInScope = async () => {
-  clearBatchActionMessages()
+  scopeValidationError.value = ''
   const payload = buildActionPayload()
   if (!payload) return
 
@@ -629,20 +627,24 @@ const deleteSecretsInScope = async () => {
     const response = await adminAPI.batchDeleteCardSecrets(payload)
     const fallbackCount = currentScopeCount.value
     const affected = Number(response?.data?.data?.affected || fallbackCount)
-    batchActionSuccess.value = t('admin.cardSecrets.success.batchDeleted', { count: affected })
+    notifySuccess(t('admin.cardSecrets.success.batchDeleted', { count: affected }))
     if (operationScope.value === 'filtered' && currentBatchId.value && affected >= filteredSecretCount.value) {
       clearBatchFilter()
     }
+  } catch (error: unknown) {
+    notifyErrorOnce(error, t('admin.cardSecrets.errors.batchDeleteFailed'))
+    batchActionLoading.value = false
+    return
+  }
+  try {
     await refreshAfterMutations()
-  } catch (error: any) {
-    batchActionError.value = error?.message || t('admin.cardSecrets.errors.batchDeleteFailed')
   } finally {
     batchActionLoading.value = false
   }
 }
 
 const exportSecretsInScope = async (format: 'txt' | 'csv') => {
-  clearBatchActionMessages()
+  scopeValidationError.value = ''
   const payload = buildActionPayload()
   if (!payload) return
 
@@ -653,12 +655,12 @@ const exportSecretsInScope = async (format: 'txt' | 'csv') => {
       format,
     })
     downloadExportFile(response, format)
-    batchActionSuccess.value = t('admin.cardSecrets.success.batchExported', {
+    notifySuccess(t('admin.cardSecrets.success.batchExported', {
       count: currentScopeCount.value,
       format: format.toUpperCase(),
-    })
-  } catch (error: any) {
-    batchActionError.value = error?.message || t('admin.cardSecrets.errors.batchExportFailed')
+    }))
+  } catch (error: unknown) {
+    notifyErrorOnce(error, t('admin.cardSecrets.errors.batchExportFailed'))
   } finally {
     batchActionLoading.value = false
   }
@@ -684,7 +686,7 @@ const downloadExportFile = (response: any, format: 'txt' | 'csv') => {
 
 const filterByBatch = async (batch: AdminCardSecretBatch | null) => {
   currentBatchFilter.value = batch
-  clearBatchActionMessages()
+  scopeValidationError.value = ''
   await fetchCardSecrets(1)
 }
 
@@ -921,18 +923,18 @@ onMounted(async () => {
                 <p class="text-sm font-medium text-foreground">{{ batch.batch_no || `#${batch.id}` }}</p>
                 <p class="text-xs text-muted-foreground">#{{ batch.id }} · {{ batchSkuLabel(batch) }}</p>
               </div>
-              <span class="rounded-full bg-muted px-2 py-1 text-[11px] text-muted-foreground">
+              <span class="shrink-0 whitespace-nowrap rounded-full bg-muted px-2 py-1 text-[11px] text-muted-foreground">
                 {{ batch.total_count }}
               </span>
             </div>
             <div class="mt-3 flex flex-wrap gap-2 text-[11px]">
-              <span class="rounded-full border border-emerald-200 bg-emerald-50 px-2 py-1 text-emerald-700">
+              <span class="shrink-0 whitespace-nowrap rounded-full border border-emerald-200 bg-emerald-50 px-2 py-1 text-emerald-700">
                 {{ t('admin.cardSecrets.stats.available') }} {{ batch.available_count }}
               </span>
-              <span class="rounded-full border border-amber-200 bg-amber-50 px-2 py-1 text-amber-700">
+              <span class="shrink-0 whitespace-nowrap rounded-full border border-amber-200 bg-amber-50 px-2 py-1 text-amber-700">
                 {{ t('admin.cardSecrets.stats.reserved') }} {{ batch.reserved_count }}
               </span>
-              <span class="rounded-full border border-border bg-muted/40 px-2 py-1 text-muted-foreground">
+              <span class="shrink-0 whitespace-nowrap rounded-full border border-border bg-muted/40 px-2 py-1 text-muted-foreground">
                 {{ t('admin.cardSecrets.stats.used') }} {{ batch.used_count }}
               </span>
             </div>
@@ -1052,22 +1054,19 @@ onMounted(async () => {
             </div>
 
             <div class="mt-3 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-              <span class="rounded-full bg-muted px-2.5 py-1">
+              <span class="shrink-0 whitespace-nowrap rounded-full bg-muted px-2.5 py-1">
                 {{ t('admin.cardSecrets.batch.scopeCount', { scope: currentScopeLabel, count: currentScopeCount }) }}
               </span>
               <span
                 v-if="operationScope === 'selected' && selectedSecretCount > 0"
-                class="rounded-full border border-primary/20 bg-primary/5 px-2.5 py-1 text-primary"
+                class="shrink-0 whitespace-nowrap rounded-full border border-primary/20 bg-primary/5 px-2.5 py-1 text-primary"
               >
                 {{ t('admin.cardSecrets.batch.selectedCount', { count: selectedSecretCount }) }}
               </span>
             </div>
 
-            <div v-if="batchActionError" class="mt-3 rounded-lg border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
-              {{ batchActionError }}
-            </div>
-            <div v-if="batchActionSuccess" class="mt-3 rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-700">
-              {{ batchActionSuccess }}
+            <div v-if="scopeValidationError" class="mt-3 rounded-lg border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
+              {{ scopeValidationError }}
             </div>
           </div>
         </div>
@@ -1123,7 +1122,7 @@ onMounted(async () => {
                   <div class="break-words">{{ secretSkuLabel(secret) }}</div>
                 </TableCell>
                 <TableCell class="min-w-[90px] px-4 py-3 text-xs">
-                  <span class="inline-flex rounded-full border px-2.5 py-1 text-xs" :class="cardSecretStatusClass(secret.status)">
+                  <span class="inline-flex shrink-0 whitespace-nowrap rounded-full border px-2.5 py-1 text-xs" :class="cardSecretStatusClass(secret.status)">
                     {{ cardSecretStatusLabel(secret.status) }}
                   </span>
                 </TableCell>

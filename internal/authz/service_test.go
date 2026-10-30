@@ -221,6 +221,45 @@ func TestBootstrapBuiltinRolesRemovesRetiredChannelClientPolicies(t *testing.T) 
 	}
 }
 
+func TestBootstrapRemovesCutoverPoliciesFromAllRoles(t *testing.T) {
+	svc := setupAuthzServiceTest(t)
+	for _, role := range []string{"role:system_admin", "role:custom_integration"} {
+		for _, object := range []string{"/admin/telegram/cutover", "/admin/telegram/cutover/import", "/admin/telegram/cutover/preflight", "/admin/telegram/cutover/apply", "/admin/telegram/cutover/*"} {
+			if _, err := svc.enforcer.AddPolicy(role, object, "POST"); err != nil {
+				t.Fatal(err)
+			}
+		}
+	}
+	for _, object := range []string{"/admin/telegram-bot/instances", "/admin/telegram/cutover-report"} {
+		if _, err := svc.enforcer.AddPolicy("role:custom_integration", object, "GET"); err != nil {
+			t.Fatal(err)
+		}
+	}
+	for range 2 {
+		if err := svc.BootstrapBuiltinRoles(); err != nil {
+			t.Fatal(err)
+		}
+		// Reload proves cleanup is persisted, not just an in-memory removal.
+		if err := svc.enforcer.LoadPolicy(); err != nil {
+			t.Fatal(err)
+		}
+		policies, err := svc.enforcer.GetPolicy()
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, policy := range policies {
+			if len(policy) > 1 && (policy[1] == "/admin/telegram/cutover" || strings.HasPrefix(policy[1], "/admin/telegram/cutover/")) {
+				t.Errorf("retired cutover policy remains: %v", policy)
+			}
+		}
+		for _, object := range []string{"/admin/telegram-bot/instances", "/admin/telegram/cutover-report"} {
+			if ok, err := svc.enforcer.HasPolicy("role:custom_integration", object, "GET"); err != nil || !ok {
+				t.Fatalf("unrelated custom policy removed: %s, %v", object, err)
+			}
+		}
+	}
+}
+
 func TestBootstrapBuiltinRolesRemovesStaleImmutableWildcard(t *testing.T) {
 	svc := setupAuthzServiceTest(t)
 	if _, err := svc.EnsureRole("readonly_auditor"); err != nil {

@@ -76,8 +76,8 @@ func TestResumeUsesLedgerAndQuarantinesUnknown(t *testing.T) {
 	if got.Status != "needs_review" || got.SuccessCount != 1 || got.UnknownCount != 1 || len(bridge.keys) != 1 {
 		t.Fatalf("unexpected progress: %+v", got)
 	}
-	if got.MessageHTML != "" || len(got.RecipientChatIDs) != 0 || got.PayloadCipher != "encrypted" {
-		t.Fatal("plaintext snapshot retained")
+	if got.MessageHTML != "hello" || len(got.RecipientChatIDs) != 0 || got.PayloadCipher != "encrypted" {
+		t.Fatal("recipient snapshot leaked or detail body missing")
 	}
 }
 func TestLegacyNeverRestarts(t *testing.T) {

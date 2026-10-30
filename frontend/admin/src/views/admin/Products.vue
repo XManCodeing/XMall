@@ -13,7 +13,7 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { notifyError, notifySuccess } from '@/utils/notify'
+import { notifyError, notifyErrorOnce, notifySuccess } from '@/utils/notify'
 import TableSkeleton from '@/components/TableSkeleton.vue'
 import ListPagination from '@/components/ListPagination.vue'
 import type { ListFetchOptions } from '@/composables/useListRefresh'
@@ -77,7 +77,7 @@ const runBatch = async (ids: number[], call: (ids: number[]) => Promise<any>, re
     notifySuccess(t(resultKey, { success: data?.success_count || 0, total: ids.length }))
     selectedIds.value = new Set()
     fetchProducts()
-  } catch (err: any) { notifyError(err?.response?.data?.message || err?.message) } finally { batchOperating.value = false }
+  } catch (err: any) { notifyErrorOnce(err, err?.response?.data?.message || err?.message || t('common.api.requestFailed')) } finally { batchOperating.value = false }
 }
 
 const handleBatchStatus = async (isActive: boolean) => {
@@ -651,34 +651,34 @@ watch(
                   <div class="font-medium text-foreground break-words">{{ getLocalizedText(product.title) }}</div>
                   <div class="text-xs text-muted-foreground font-mono break-all">{{ product.slug }}</div>
                   <div class="mt-2 flex flex-wrap gap-2">
-                    <span class="rounded-full border px-2 py-0.5 text-[11px]" :class="purchaseTypeBadgeClass(product)">
+                    <span class="shrink-0 whitespace-nowrap rounded-full border px-2 py-0.5 text-[11px]" :class="purchaseTypeBadgeClass(product)">
                       {{ product.purchase_type === 'guest' ? t('admin.products.purchaseType.guest') : t('admin.products.purchaseType.member') }}
                     </span>
-                    <span class="rounded-full border px-2 py-0.5 text-[11px]" :class="fulfillmentTypeBadgeClass(product)">
+                    <span class="shrink-0 whitespace-nowrap rounded-full border px-2 py-0.5 text-[11px]" :class="fulfillmentTypeBadgeClass(product)">
                       {{ product.fulfillment_type === 'auto' ? t('admin.products.fulfillmentType.auto') : t('admin.products.fulfillmentType.manual') }}
                     </span>
                     <span
                       v-if="product.is_mapped"
-                      class="rounded-full border border-indigo-200 bg-indigo-50 px-2 py-0.5 text-[11px] text-indigo-700"
+                      class="shrink-0 whitespace-nowrap rounded-full border border-indigo-200 bg-indigo-50 px-2 py-0.5 text-[11px] text-indigo-700"
                     >
                       {{ t('admin.products.mappedProduct') }}
                     </span>
                     <span
-                      class="rounded-full border px-2 py-0.5 text-[11px]"
+                      class="shrink-0 whitespace-nowrap rounded-full border px-2 py-0.5 text-[11px]"
                       :class="product.is_affiliate_enabled ? 'border-sky-200 bg-sky-50 text-sky-700' : 'border-border bg-muted/30 text-muted-foreground'"
                     >
                       {{ product.is_affiliate_enabled ? t('admin.products.affiliate.enabled') : t('admin.products.affiliate.disabled') }}
                     </span>
                     <span
                       v-if="product.fulfillment_type === 'manual'"
-                      class="rounded-full border px-2 py-0.5 text-[11px]"
+                      class="shrink-0 whitespace-nowrap rounded-full border px-2 py-0.5 text-[11px]"
                       :class="manualStockBadgeClass(product)"
                     >
                       {{ formatManualStockSummary(product) }}
                     </span>
                     <span
                       v-if="product.fulfillment_type === 'auto'"
-                      class="rounded-full border px-2 py-0.5 text-[11px]"
+                      class="shrink-0 whitespace-nowrap rounded-full border px-2 py-0.5 text-[11px]"
                       :class="autoStockBadgeClass(product)"
                     >
                       {{ formatAutoStockSummary(product) }}

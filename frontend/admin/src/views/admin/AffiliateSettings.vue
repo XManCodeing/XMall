@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Switch } from '@/components/ui/switch'
 import { Label } from '@/components/ui/label'
-import { notifyError, notifySuccess } from '@/utils/notify'
+import { notifyErrorOnce, notifySuccess } from '@/utils/notify'
 
 const { t } = useI18n()
 const loading = ref(false)
@@ -62,7 +62,7 @@ const fetchSettings = async () => {
       form.withdraw_channels_text = joinChannels(data.withdraw_channels)
     }
   } catch (err: any) {
-    notifyError(err?.response?.data?.message || t('admin.settings.alerts.loadFailed'))
+    notifyErrorOnce(err, err?.response?.data?.message || t('admin.settings.alerts.loadFailed'))
   } finally {
     loading.value = false
   }
@@ -89,7 +89,7 @@ const saveSettings = async () => {
     }
     notifySuccess(t('admin.settings.alerts.saveSuccess'))
   } catch (err: any) {
-    notifyError(err?.response?.data?.message || t('admin.settings.alerts.saveFailed'))
+    notifyErrorOnce(err, err?.response?.data?.message || t('admin.settings.alerts.saveFailed'))
   } finally {
     loading.value = false
   }

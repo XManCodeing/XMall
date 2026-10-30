@@ -1,4 +1,6 @@
 import { ref } from 'vue'
+import { useI18n } from 'vue-i18n'
+import { notifyErrorOnce } from '@/utils/notify'
 
 export interface UseCrudModalOptions {
   /** 关闭弹窗后刷新数据 */
@@ -6,6 +8,7 @@ export interface UseCrudModalOptions {
 }
 
 export function useCrudModal(options: UseCrudModalOptions = {}) {
+  const { t } = useI18n()
   const showModal = ref(false)
   const isEditing = ref(false)
   const editingId = ref<number | null>(null)
@@ -43,7 +46,7 @@ export function useCrudModal(options: UseCrudModalOptions = {}) {
       closeModal()
       options.onSuccess?.()
     } catch (err: any) {
-      error.value = err?.response?.data?.msg || err?.message || 'Operation failed'
+      notifyErrorOnce(err, err?.response?.data?.msg || err?.message || t('common.api.requestFailed'))
     } finally {
       submitting.value = false
     }

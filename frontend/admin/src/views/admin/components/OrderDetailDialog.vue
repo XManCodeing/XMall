@@ -2,6 +2,7 @@
 import { reactive, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { Package } from 'lucide-vue-next'
+import { notifyErrorOnce, notifySuccess } from '@/utils/notify'
 import { adminAPI } from '@/api/admin'
 import type { AdminOrder, AdminOrderItem, AdminFulfillment, AdminProcurementOrder, AdminPayment } from '@/api/types'
 import IdCell from '@/components/IdCell.vue'
@@ -47,7 +48,6 @@ const procurementOrder = ref<AdminProcurementOrder | null | undefined>(null)
 
 const refundSubmitting = ref(false)
 const refundError = ref('')
-const refundSuccess = ref('')
 const refundTab = ref<'manual' | 'wallet'>('wallet')
 const refundForm = reactive({
   amount: '',
@@ -55,7 +55,6 @@ const refundForm = reactive({
 })
 const manualRefundSubmitting = ref(false)
 const manualRefundError = ref('')
-const manualRefundSuccess = ref('')
 const manualRefundForm = reactive({
   amount: '',
   reason: '',
@@ -503,7 +502,6 @@ const resetRefundForm = () => {
   refundForm.amount = ''
   refundForm.remark = ''
   refundError.value = ''
-  refundSuccess.value = ''
 }
 
 const resetManualRefundForm = () => {
@@ -511,7 +509,6 @@ const resetManualRefundForm = () => {
   manualRefundForm.reason = ''
   manualRefundForm.paymentFeeRefunded = true
   manualRefundError.value = ''
-  manualRefundSuccess.value = ''
 }
 
 const formatFeeRate = (channel: AdminPayment | { fee_rate: number | string; fixed_fee?: number | string }) => {
@@ -568,7 +565,6 @@ const fetchOrderDetail = async (orderId: number) => {
 const submitRefundToWallet = async () => {
   if (!selectedOrder.value) return
   refundError.value = ''
-  refundSuccess.value = ''
   if (!canRefundToWallet(selectedOrder.value)) {
     refundError.value = t('admin.orders.refundNoRemaining')
     return
@@ -590,13 +586,13 @@ const submitRefundToWallet = async () => {
       amount,
       remark: refundForm.remark.trim() || undefined,
     })
-    refundSuccess.value = t('admin.orders.refundSuccess')
+    notifySuccess(t('admin.orders.refundSuccess'))
     refundForm.amount = ''
     refundForm.remark = ''
     await fetchOrderDetail(Number(selectedOrder.value.id))
     emit('refresh')
   } catch (err: any) {
-    refundError.value = err?.message || t('admin.orders.refundFailed')
+    notifyErrorOnce(err, t('admin.orders.refundFailed'))
   } finally {
     refundSubmitting.value = false
   }
@@ -605,7 +601,6 @@ const submitRefundToWallet = async () => {
 const submitManualRefund = async () => {
   if (!selectedOrder.value) return
   manualRefundError.value = ''
-  manualRefundSuccess.value = ''
   if (!canManualRefund(selectedOrder.value)) {
     manualRefundError.value = t('admin.orders.refundNoRemaining')
     return
@@ -628,14 +623,14 @@ const submitManualRefund = async () => {
       remark: manualRefundForm.reason.trim() || undefined,
       payment_fee_refunded: manualRefundForm.paymentFeeRefunded,
     })
-    manualRefundSuccess.value = t('admin.orders.manualRefundSuccess')
+    notifySuccess(t('admin.orders.manualRefundSuccess'))
     manualRefundForm.amount = ''
     manualRefundForm.reason = ''
     manualRefundForm.paymentFeeRefunded = true
     await fetchOrderDetail(Number(selectedOrder.value.id))
     emit('refresh')
   } catch (err: any) {
-    manualRefundError.value = err?.message || t('admin.orders.refundFailed')
+    notifyErrorOnce(err, t('admin.orders.refundFailed'))
   } finally {
     manualRefundSubmitting.value = false
   }
@@ -851,8 +846,8 @@ watch(
                     <div class="text-xs text-muted-foreground">{{ t('orderDetail.quantityLabel') }}：{{ item.quantity }}</div>
                     <div class="mt-2 rounded-lg border border-border/70 bg-background/90 px-3 py-2">
                       <div class="flex flex-wrap items-center gap-2">
-                        <span class="inline-flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[11px] font-medium text-emerald-700">
-                          <Package class="h-3.5 w-3.5" />
+                        <span class="inline-flex shrink-0 whitespace-nowrap items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[11px] font-medium text-emerald-700">
+                          <Package class="h-3.5 w-3.5 shrink-0" />
                           {{ t('admin.orders.itemSkuLabel') }}
                         </span>
                         <span class="break-all font-mono text-xs text-foreground">{{ orderItemSkuCodeText(item) }}</span>
@@ -947,7 +942,7 @@ watch(
                     <div class="text-xs text-muted-foreground mt-1">{{ t('orderDetail.childOrderAmount') }}：{{ formatMoney(child.total_amount, child.currency || selectedOrder.currency) }}</div>
                   </div>
                   <div class="flex w-full flex-wrap items-center gap-2 md:w-auto md:justify-end">
-                    <span class="inline-flex rounded-full border px-2.5 py-1 text-xs" :class="statusClass(child.status)">
+                    <span class="inline-flex shrink-0 whitespace-nowrap rounded-full border px-2.5 py-1 text-xs" :class="statusClass(child.status)">
                       {{ statusLabel(child.status) }}
                     </span>
                     <Button v-if="canCreateChildFulfillment(child)" size="sm" variant="secondary" class="w-full sm:w-auto" @click="handleOpenFulfillment(child, selectedOrder.id)">
@@ -967,8 +962,8 @@ watch(
                         <div class="text-xs text-muted-foreground">{{ t('orderDetail.quantityLabel') }}：{{ item.quantity }}</div>
                         <div class="mt-2 rounded-lg border border-border/70 bg-muted/20 px-3 py-2">
                           <div class="flex flex-wrap items-center gap-2">
-                            <span class="inline-flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[11px] font-medium text-emerald-700">
-                              <Package class="h-3.5 w-3.5" />
+                            <span class="inline-flex shrink-0 whitespace-nowrap items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[11px] font-medium text-emerald-700">
+                              <Package class="h-3.5 w-3.5 shrink-0" />
                               {{ t('admin.orders.itemSkuLabel') }}
                             </span>
                             <span class="break-all font-mono text-xs text-foreground">{{ orderItemSkuCodeText(item) }}</span>
@@ -1078,7 +1073,7 @@ watch(
               <div>
                 <span class="text-xs text-muted-foreground">{{ t('procurement.columns.status') }}:</span>
                 <span
-                  class="ml-1 inline-flex rounded-full border px-2 py-0.5 text-xs"
+                  class="ml-1 inline-flex shrink-0 whitespace-nowrap rounded-full border px-2 py-0.5 text-xs"
                   :class="{
                     'text-yellow-700 border-yellow-200 bg-yellow-50': procurementOrder.status === 'pending',
                     'text-blue-700 border-blue-200 bg-blue-50': ['submitted', 'accepted', 'refunded'].includes(procurementOrder.status),
@@ -1146,7 +1141,7 @@ watch(
                       <div class="text-muted-foreground">{{ providerTypeLabel(payment.provider_type) }} / {{ paymentChannelTypeLabel(payment) }}</div>
                     </TableCell>
                     <TableCell class="px-4 py-3 text-xs">
-                      <span class="inline-flex rounded-full border px-2.5 py-1 text-xs" :class="paymentStatusClass(payment.status)">
+                      <span class="inline-flex shrink-0 whitespace-nowrap rounded-full border px-2.5 py-1 text-xs" :class="paymentStatusClass(payment.status)">
                         {{ paymentStatusLabel(payment.status) }}
                       </span>
                     </TableCell>
@@ -1268,22 +1263,10 @@ watch(
               {{ refundError }}
             </div>
             <div
-              v-if="refundTab === 'wallet' && canSelectWalletRefundTab(selectedOrder) && refundSuccess"
-              class="mt-3 rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-700"
-            >
-              {{ refundSuccess }}
-            </div>
-            <div
               v-if="(refundTab !== 'wallet' || !canSelectWalletRefundTab(selectedOrder)) && manualRefundError"
               class="mt-3 rounded-lg border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive"
             >
               {{ manualRefundError }}
-            </div>
-            <div
-              v-if="(refundTab !== 'wallet' || !canSelectWalletRefundTab(selectedOrder)) && manualRefundSuccess"
-              class="mt-3 rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-700"
-            >
-              {{ manualRefundSuccess }}
             </div>
           </div>
         </div>

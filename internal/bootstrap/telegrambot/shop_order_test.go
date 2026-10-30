@@ -7,11 +7,13 @@ import (
 	"fmt"
 	"image"
 	"image/png"
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/XManCodeing/XMall/internal/config"
 	"github.com/XManCodeing/XMall/internal/constants"
+	cardsecretdomain "github.com/XManCodeing/XMall/internal/modules/cardsecret/domain"
 	category "github.com/XManCodeing/XMall/internal/modules/catalog/category/domain"
 	mappingdomain "github.com/XManCodeing/XMall/internal/modules/catalog/mapping/domain"
 	productapp "github.com/XManCodeing/XMall/internal/modules/catalog/product/application"
@@ -36,6 +38,7 @@ import (
 	paymentgorm "github.com/XManCodeing/XMall/internal/modules/payment/infrastructure/gormstore"
 	promotion "github.com/XManCodeing/XMall/internal/modules/promotion/domain"
 	promotiongorm "github.com/XManCodeing/XMall/internal/modules/promotion/infrastructure/gormstore"
+	settingsapp "github.com/XManCodeing/XMall/internal/modules/settings/application"
 	settings "github.com/XManCodeing/XMall/internal/modules/settings/schema/messaging"
 	delivery "github.com/XManCodeing/XMall/internal/modules/telegram/delivery/contract"
 	shopapp "github.com/XManCodeing/XMall/internal/modules/telegram/shop/application"
@@ -50,6 +53,141 @@ import (
 	"github.com/shopspring/decimal"
 	"gorm.io/gorm"
 )
+
+type shopBrandSettings struct{ contentSettingsStub }
+
+func (shopBrandSettings) GetSiteBrand() (settingsapp.SiteBrand, error) {
+	return settingsapp.SiteBrand{SiteURL: "https://shop.example.test"}, nil
+}
+func TestShopProductMediaAndWebURL(t *testing.T) {
+	p := product.Product{Slug: "中文商品", Images: []string{"/uploads/image.png", "ignored"}, ContentJSON: jsonmap.JSON{"en-US": "Full markdown body"}, DescriptionJSON: jsonmap.JSON{"en-US": "Summary"}}
+	v := productView(p, "en-US", &ShopDependencies{ContentSettings: shopBrandSettings{}})
+	if v.Image != "/uploads/image.png" || v.URL != "https://shop.example.test/products/%E4%B8%AD%E6%96%87%E5%95%86%E5%93%81" || v.Description != "Full markdown body" || v.Summary != "Summary" {
+		t.Fatalf("product content: %+v", v)
+	}
+}
+
+func TestProductViewStructuredAvailabilityAndFullText(t *testing.T) {
+	full := strings.Repeat("中文详情", 600)
+	p := product.Product{DescriptionJSON: jsonmap.JSON{"en-US": full}, FulfillmentType: constants.FulfillmentTypeManual, MinPurchaseQuantity: 4,
+		SKUs: []product.ProductSKU{{ID: 1, IsActive: true, ManualStockTotal: 3}, {ID: 2, IsActive: true, ManualStockTotal: 8}}}
+	for _, mode := range []string{"exact", "range", "status", "hidden"} {
+		p.StockDisplayMode = mode
+		v := productView(p, "en-US")
+		if v.Description != full || len([]rune(v.Summary)) != 501 || !v.Available || v.SKUs[0].Available || !v.SKUs[1].Available || v.FulfillmentType != p.FulfillmentType {
+			t.Fatalf("structured product %s: %+v", mode, v)
+		}
+		if mode == "exact" {
+			if v.MaxQuantity == nil || *v.MaxQuantity != 11 || v.SKUs[1].MaxQuantity == nil || *v.SKUs[1].MaxQuantity != 8 {
+				t.Fatal("missing public exact bound")
+			}
+		} else if v.MaxQuantity != nil || v.SKUs[0].MaxQuantity != nil || v.SKUs[1].MaxQuantity != nil {
+			t.Fatalf("%s leaked quantity", mode)
+		}
+	}
+	p.StockDisplayMode = "exact"
+	p.SKUs[1].ManualStockTotal = -1
+	v := productView(p, "en-US")
+	if !v.Available || v.MaxQuantity != nil || v.SKUs[1].MaxQuantity != nil {
+		t.Fatal("unlimited bound")
+	}
+	p.FulfillmentType = constants.FulfillmentTypeUpstream
+	v = productView(p, "en-US")
+	if v.Available || v.MaxQuantity != nil || v.SKUs[1].Available {
+		t.Fatal("unknown upstream availability invented")
+	}
+}
+
+func TestOrderViewUsesSnapshotsWithoutDuplicatingAggregatedItems(t *testing.T) {
+	item := order.OrderItem{ProductID: 10, SKUID: 20, Quantity: 3, TitleJSON: jsonmap.JSON{"en-US": "Old title"}, SKUSnapshotJSON: jsonmap.JSON{"spec_values": map[string]interface{}{"en-US": "Old SKU"}, "sku_code": "fallback"}}
+	o := order.Order{CreatedAt: time.Now(), Children: []order.Order{{Items: []order.OrderItem{item}}}}
+	for _, aggregate := range []bool{false, true} {
+		if aggregate {
+			o.Items = []order.OrderItem{item}
+		}
+		v := orderView(&o, "en-US")
+		if len(v.Items) != 1 || v.Items[0].Title != "Old title" || v.Items[0].SKUName != "Old SKU" || v.Items[0].ProductID != 10 || v.Items[0].SKUID != 20 || v.Items[0].Quantity != 3 || !v.CreatedAt.Equal(o.CreatedAt) {
+			t.Fatalf("snapshot: %+v", v)
+		}
+	}
+}
+
+func TestShopEffectivePendingQueryBeforePagination(t *testing.T) {
+	db, err := gorm.Open(sqlite.Open(fmt.Sprintf("file:shop-pending-%d?mode=memory&cache=shared", time.Now().UnixNano())), &gorm.Config{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	pool, _ := db.DB()
+	pool.SetMaxOpenConns(1)
+	t.Cleanup(func() { pool.Close() })
+	if err := db.AutoMigrate(&user.User{}, &externalidentity.Identity{}, &order.Order{}, &order.OrderItem{}, &fulfillment.Fulfillment{}); err != nil {
+		t.Fatal(err)
+	}
+	u := user.User{Email: "pending@example.test", PasswordHash: "test", Status: "active"}
+	if err := db.Create(&u).Error; err != nil {
+		t.Fatal(err)
+	}
+	identity := externalidentity.Identity{UserID: u.ID, Provider: "telegram", ProviderUserID: "123"}
+	if err := db.Create(&identity).Error; err != nil {
+		t.Fatal(err)
+	}
+	past, future := time.Now().Add(-time.Hour), time.Now().Add(time.Hour)
+	parent := uint(999)
+	for i := 1; i <= 12; i++ {
+		o := order.Order{UserID: u.ID, OrderNo: fmt.Sprintf("PENDING-%d", i), Status: constants.OrderStatusPendingPayment, Currency: "CNY"}
+		switch i {
+		case 8:
+			o.ExpiresAt = &past
+		case 9:
+			o.ParentID = &parent
+		case 10:
+			o.DeletedAt = &past
+		case 11:
+			o.UserID = u.ID + 1
+		case 12:
+			o.Status = constants.OrderStatusPaid
+		case 7:
+			o.ExpiresAt = &future
+		}
+		if err := db.Create(&o).Error; err != nil {
+			t.Fatal(err)
+		}
+	}
+	auth := userauth.NewService(&config.Config{}, usergorm.New(db), identitygorm.New(db), nil, nil, nil, nil)
+	auth.SetAuthUnitOfWork(userauthgorm.New(db))
+	a := &shopAdapter{d: ShopDependencies{Auth: auth, Orders: app.NewOrderService(app.OrderServiceOptions{OrderStore: ordergorm.New(db, "test")})}}
+	actor := c.Actor{BotID: 7, TelegramID: 123, UserID: u.ID}
+	summary, err := a.PendingSummary(context.Background(), actor)
+	if err != nil || summary.Count != 7 || summary.Latest == nil || summary.Latest.Number != "PENDING-7" {
+		t.Fatalf("summary: %+v %v", summary, err)
+	}
+	rows, more, err := a.ListFiltered(context.Background(), actor, u.ID, 1, constants.OrderStatusPendingPayment)
+	if err != nil || !more || len(rows) != 6 || rows[0].ID != summary.Latest.ID {
+		t.Fatalf("first page: %+v %v", rows, err)
+	}
+	rows, more, err = a.ListFiltered(context.Background(), actor, u.ID, 2, constants.OrderStatusPendingPayment)
+	if err != nil || more || len(rows) != 1 || rows[0].Number != "PENDING-1" {
+		t.Fatalf("last page: %+v %v", rows, err)
+	}
+	// A current-owner cancel uses the existing transactional cancel workflow.
+	if err := db.AutoMigrate(&cardsecretdomain.Secret{}, &coupon.CouponUsage{}, &paymentdomain.Payment{}); err != nil {
+		t.Fatal(err)
+	}
+	if err := a.Cancel(context.Background(), actor, summary.Latest.ID); err != nil {
+		t.Fatalf("cancel own pending order: %v", err)
+	}
+	after, err := a.PendingSummary(context.Background(), actor)
+	if err != nil || after.Count != 6 || after.Latest == nil || after.Latest.ID == summary.Latest.ID {
+		t.Fatalf("cancel did not refresh pending: %+v %v", after, err)
+	}
+	if err := a.Cancel(context.Background(), actor, summary.Latest.ID); !errors.Is(err, c.ErrDenied) {
+		t.Fatalf("cancel terminal order: %v", err)
+	}
+	var expired order.Order
+	if err := db.Where("order_no = ?", "PENDING-8").First(&expired).Error; err != nil || expired.Status != constants.OrderStatusPendingPayment {
+		t.Fatal("pending read mutated expired order")
+	}
+}
 
 func TestPaymentDeadlineUsesOrderNotExpirationEvent(t *testing.T) {
 	deadline := time.Now().Add(time.Hour)
@@ -303,6 +441,36 @@ func TestContentOmitsUnsupportedMenuAndUsesLocale(t *testing.T) {
 	}
 }
 
+func TestContentMapsBasicHelpAndDisabledWelcome(t *testing.T) {
+	cfg := settings.DefaultTelegramBotConfig()
+	cfg.DefaultLocale = "en-US"
+	cfg.Basic.DisplayName = "Shop Bot"
+	cfg.Basic.Description = settings.LocalizedText{"en-US": "Buy cards"}
+	cfg.Basic.SupportURL = "https://support.example/help"
+	cfg.Basic.CoverURL = "/uploads/cover.png"
+	cfg.Welcome.Enabled = false
+	cfg.Welcome.Message = settings.LocalizedText{"en-US": "should stay hidden"}
+	cfg.Help.Enabled = true
+	cfg.Help.CenterHint = settings.LocalizedText{"en-US": "Pick a topic"}
+	cfg.Help.SupportHint = settings.LocalizedText{"en-US": "No support yet"}
+	cfg.Help.Items = []settings.TelegramBotHelpItem{{
+		Key: "pay", Enabled: true, Order: 1, ShowSupportLink: true,
+		Summary: settings.LocalizedText{"en-US": "Payment"},
+		Title:   settings.LocalizedText{"en-US": "How to pay"},
+		Content: settings.LocalizedText{"en-US": "Use QR"},
+	}}
+	content, err := (shopContent{settings: contentSettingsStub{cfg}}).Content(context.Background(), c.Actor{Locale: "zh-CN"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if content.WelcomeEnabled || content.Welcome != "" || content.DisplayName != "" || content.Description != "" || content.CoverURL != "" || content.SupportURL != "https://support.example/help" || content.DefaultLocale != "en-US" {
+		t.Fatalf("basic/welcome mapping: %+v", content)
+	}
+	if !content.HelpEnabled || content.CenterHint != "Pick a topic" || len(content.HelpItems) != 1 || content.HelpItems[0].Key != "pay" || !content.HelpItems[0].ShowSupport {
+		t.Fatalf("help mapping: %+v", content)
+	}
+}
+
 func TestContentRequiresSupportedActionType(t *testing.T) {
 	for _, actionType := range []string{"web_app", "command", "unknown", ""} {
 		t.Run(actionType, func(t *testing.T) {
@@ -413,6 +581,16 @@ func TestShopIdentityLifetimeAndHistoryReadOnly(t *testing.T) {
 			t.Fatalf("invalid history page: %v", err)
 		}
 	}
+	// Historical reads must never authorize cancellation.
+	if err := a.Cancel(context.Background(), actor, historical.ID); !errors.Is(err, c.ErrDenied) {
+		t.Fatalf("history cancellation accepted: %v", err)
+	}
+	if summary, err := a.PendingSummary(context.Background(), actor); err != nil || summary.Count != 0 || summary.Latest != nil {
+		t.Fatalf("summary leaked historical order: %+v %v", summary, err)
+	}
+	if rows, more, err := a.ListFiltered(context.Background(), actor, previous.ID, 1, constants.OrderStatusPendingPayment); err != nil || more || len(rows) != 1 {
+		t.Fatalf("historical filtered read: %+v %v", rows, err)
+	}
 	// Payments must use current ownership, never the historical read grant.
 	if _, err := a.Pay(context.Background(), actor, historical.ID, 1, "pay"); err == nil {
 		t.Fatal("history payment accepted")
@@ -428,6 +606,9 @@ func TestShopIdentityLifetimeAndHistoryReadOnly(t *testing.T) {
 	identity.ID = 0
 	if err := db.Create(&identity).Error; err != nil {
 		t.Fatal(err)
+	}
+	if err := a.Cancel(context.Background(), actor, historical.ID); !errors.Is(err, c.ErrDenied) {
+		t.Fatalf("stale lifetime cancellation: %v", err)
 	}
 	if err := a.authorize(context.Background(), actor); !errors.Is(err, c.ErrDenied) {
 		t.Fatalf("stale lifetime: %v", err)
@@ -478,6 +659,11 @@ func TestShopTransactionSourceAndSelectionFingerprint(t *testing.T) {
 	first, err := shopCreateInput(actor, selection, quote, "same-key")
 	if err != nil {
 		t.Fatal(err)
+	}
+	quote.Discounted = true
+	presentationOnly, err := shopCreateInput(actor, selection, quote, "same-key")
+	if err != nil || first.RequestHash != presentationOnly.RequestHash {
+		t.Fatal("presentation changed existing idempotency fingerprint")
 	}
 	if first.Source.ExpectedIdentityID != 3 {
 		t.Fatalf("missing identity guard: %+v", first.Source)
@@ -726,7 +912,7 @@ func TestShopBalanceChannelHonorsProductsAndPays(t *testing.T) {
 		t.Fatal(err)
 	}
 	channels, err := a.Channels(context.Background(), actor, o.ID)
-	if err != nil || len(channels) != 1 || channels[0].ID != 0 {
+	if err != nil || len(channels) != 1 || channels[0].ID != 0 || !channels[0].Wallet {
 		t.Fatalf("full balance missing: %+v %v", channels, err)
 	}
 	if err := db.Model(&p).Update("payment_channel_ids", "[99]").Error; err != nil {
@@ -738,6 +924,17 @@ func TestShopBalanceChannelHonorsProductsAndPays(t *testing.T) {
 	}
 	if _, err := a.Pay(context.Background(), actor, o.ID, 0, "restricted"); !errors.Is(err, c.ErrDenied) {
 		t.Fatalf("restricted wallet accepted: %v", err)
+	}
+	explicitWallet := paymentdomain.PaymentChannel{ID: 99, Name: "Configured balance", ProviderType: constants.PaymentProviderWallet, ChannelType: constants.PaymentChannelTypeBalance, IsActive: true}
+	if err := db.Create(&explicitWallet).Error; err != nil {
+		t.Fatal(err)
+	}
+	channels, err = a.Channels(context.Background(), actor, o.ID)
+	if err != nil || len(channels) != 1 || channels[0].ID != 99 || !channels[0].Wallet {
+		t.Fatalf("nonzero wallet channel: %+v %v", channels, err)
+	}
+	if err := db.Delete(&explicitWallet).Error; err != nil {
+		t.Fatal(err)
 	}
 	if err := db.Model(&p).Update("payment_channel_ids", "[]").Error; err != nil {
 		t.Fatal(err)

@@ -13,7 +13,7 @@ import TableSkeleton from '@/components/TableSkeleton.vue'
 import MediaPicker from '@/components/admin/MediaPicker.vue'
 import { getLocalizedText } from '@/utils/format'
 import { getImageUrl } from '@/utils/image'
-import { notifyError } from '@/utils/notify'
+import { notifyErrorOnce } from '@/utils/notify'
 import { confirmAction } from '@/utils/confirm'
 import { flattenPostCategories, createPostCategoryMap, createPostCategoryChildCountMap, buildPostCategoryPath, type PostCategory } from '@/utils/postCategory'
 import { useFormValidation, rules } from '@/composables/useFormValidation'
@@ -116,7 +116,7 @@ const submit = async () => {
     closeModal()
     fetchCategories()
   } catch (err: any) {
-    notifyError(t('admin.postCategories.errors.operationFailed', { message: err?.message || '' }))
+    notifyErrorOnce(err, t('admin.postCategories.errors.operationFailed', { message: err?.message || '' }))
   } finally { submitting.value = false }
 }
 
@@ -127,7 +127,7 @@ const toggleActive = async (cat: PostCategory) => {
     await adminAPI.patchPostCategoryStatus(cat.id, newStatus)
   } catch (err: any) {
     cat.is_active = !newStatus
-    notifyError(t('admin.postCategories.errors.toggleFailed', { message: err?.message || '' }))
+    notifyErrorOnce(err, t('admin.postCategories.errors.toggleFailed', { message: err?.message || '' }))
   }
 }
 
@@ -135,7 +135,7 @@ const handleDelete = async (cat: PostCategory) => {
   const confirmed = await confirmAction({ description: t('admin.postCategories.confirmDelete', { name: getLocalizedText(cat.name) }), confirmText: t('admin.common.delete'), variant: 'destructive' })
   if (!confirmed) return
   try { await adminAPI.deletePostCategory(cat.id); fetchCategories() }
-  catch (err: any) { notifyError(t('admin.postCategories.errors.deleteFailed', { message: err?.message || '' })) }
+  catch (err: any) { notifyErrorOnce(err, t('admin.postCategories.errors.deleteFailed', { message: err?.message || '' })) }
 }
 
 const openEditById = async (rawId: unknown) => {
@@ -184,7 +184,7 @@ watch(() => route.query.category_id, (v) => { if (v) openEditById(v) })
             <TableCell class="min-w-[260px] px-6 py-4">
               <div class="space-y-1" :class="item.depth > 0 ? 'pl-6' : ''">
                 <div class="flex items-start gap-2">
-                  <span class="inline-flex shrink-0 rounded-full border px-2 py-0.5 text-[11px]" :class="item.depth > 0 ? 'border-sky-200 bg-sky-50 text-sky-700' : 'border-border bg-muted/30 text-muted-foreground'">{{ getLevelText(item.depth) }}</span>
+                  <span class="inline-flex shrink-0 whitespace-nowrap rounded-full border px-2 py-0.5 text-[11px]" :class="item.depth > 0 ? 'border-sky-200 bg-sky-50 text-sky-700' : 'border-border bg-muted/30 text-muted-foreground'">{{ getLevelText(item.depth) }}</span>
                   <span class="min-w-0 break-words font-medium text-foreground">{{ getLocalizedText(item.category.name) }}</span>
                 </div>
                 <div v-if="item.parent" class="text-xs text-muted-foreground break-words">{{ t('admin.categories.table.parentPrefix', { name: getLocalizedText(item.parent.name) }) }}</div>
@@ -193,7 +193,7 @@ watch(() => route.query.category_id, (v) => { if (v) openEditById(v) })
             <TableCell class="min-w-[220px] px-6 py-4 font-mono text-muted-foreground break-all">{{ item.category.slug }}</TableCell>
             <TableCell class="px-6 py-4 font-mono text-muted-foreground">{{ item.category.sort_order }}</TableCell>
             <TableCell class="px-6 py-4">
-              <span class="inline-flex cursor-pointer rounded-full border px-2.5 py-1 text-xs transition-colors" :class="item.category.is_active ? 'text-emerald-700 border-emerald-200 bg-emerald-50 hover:bg-emerald-100' : 'text-muted-foreground border-border bg-muted/30 hover:bg-muted/50'" @click="toggleActive(item.category)">{{ item.category.is_active ? t('admin.categories.status.active') : t('admin.categories.status.inactive') }}</span>
+              <span class="inline-flex shrink-0 whitespace-nowrap cursor-pointer rounded-full border px-2.5 py-1 text-xs transition-colors" :class="item.category.is_active ? 'text-emerald-700 border-emerald-200 bg-emerald-50 hover:bg-emerald-100' : 'text-muted-foreground border-border bg-muted/30 hover:bg-muted/50'" @click="toggleActive(item.category)">{{ item.category.is_active ? t('admin.categories.status.active') : t('admin.categories.status.inactive') }}</span>
             </TableCell>
             <TableCell class="min-w-[140px] px-6 py-4 text-right">
               <div class="flex items-center justify-end gap-2">

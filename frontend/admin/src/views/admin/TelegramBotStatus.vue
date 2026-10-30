@@ -2,7 +2,7 @@
 import { ref, onMounted, onUnmounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { adminAPI } from '@/api/admin'
-import { botState, useTelegramBotInstances, type BotInstance } from '@/composables/useTelegramBotInstances'
+import { botState, botStateVariant, useTelegramBotInstances, type BotInstance } from '@/composables/useTelegramBotInstances'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -12,7 +12,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { formatDate } from '@/utils/format'
 
 const { t, te } = useI18n()
-const { instances, loading, busy, error, refreshError, notice, now, canList, canCreate, can, refresh, startPolling, create, patch, test } = useTelegramBotInstances()
+const { instances, loading, busy, testingId, refreshError, now, canList, canCreate, can, refresh, startPolling, create, patch, test } = useTelegramBotInstances()
 const dialog = ref(false)
 const editing = ref<BotInstance | null>(null)
 const token = ref('')
@@ -57,8 +57,7 @@ async function loadDeliveries(item: BotInstance, nextPage = 1) {
       </div>
     </div>
     <p v-if="!canList" class="text-muted-foreground">{{ t('telegramBot.instances.forbidden') }}</p>
-    <p v-if="error || refreshError" role="alert" class="text-sm text-destructive">{{ error || refreshError }}</p>
-    <p v-if="notice" role="status" class="text-sm text-muted-foreground">{{ notice }}</p>
+    <p v-if="refreshError" role="alert" class="text-sm text-destructive">{{ refreshError }}</p>
     <p v-if="loading" role="status" class="text-muted-foreground">{{ t('telegramBot.instances.loading') }}</p>
     <div v-if="canList" class="rounded-lg border border-border">
       <Table>
@@ -70,14 +69,14 @@ async function loadDeliveries(item: BotInstance, nextPage = 1) {
             <TableCell><p class="font-medium">{{ item.username ? `@${item.username}` : item.telegram_id }}</p><p v-if="item.last_error" class="max-w-64 break-words text-xs text-destructive">{{ item.last_error }}</p></TableCell>
             <TableCell>{{ t(item.token_set ? 'telegramBot.instances.tokenSet' : 'telegramBot.instances.tokenMissing') }}</TableCell>
             <TableCell>{{ t(item.enabled ? 'telegramBot.instances.desiredRunning' : 'telegramBot.instances.desiredStopped') }}</TableCell>
-            <TableCell><Badge variant="secondary">{{ stateLabel(botState(item, now)) }}</Badge></TableCell>
+            <TableCell><Badge :variant="botStateVariant(item, now)" class="rounded-full whitespace-nowrap"><span aria-hidden="true" class="size-1.5 shrink-0 rounded-full bg-current" />{{ stateLabel(botState(item, now)) }}</Badge></TableCell>
             <TableCell>{{ item.applied_version }} / {{ item.version }}</TableCell>
             <TableCell>{{ item.last_seen_at ? formatDate(item.last_seen_at) : '-' }}</TableCell>
             <TableCell>{{ item.backlog ?? '-' }} / {{ item.unknown ?? '-' }}</TableCell>
             <TableCell><div class="flex flex-wrap gap-1">
-              <Button v-if="can('PATCH', item.id)" size="sm" variant="outline" :disabled="busy || loading" @click="patch(item, { enabled: !item.enabled })">{{ t(item.enabled ? 'telegramBot.instances.stop' : 'telegramBot.instances.start') }}</Button>
+              <Button v-if="can('PATCH', item.id)" size="sm" :variant="item.enabled ? 'destructive' : 'success'" :disabled="busy || loading" @click="patch(item, { enabled: !item.enabled })">{{ t(item.enabled ? 'telegramBot.instances.stop' : 'telegramBot.instances.start') }}</Button>
               <Button v-if="can('PATCH', item.id)" size="sm" variant="ghost" :disabled="busy || loading" @click="open(item)">{{ t('telegramBot.instances.rotate') }}</Button>
-              <Button v-if="can('POST', item.id, '/test')" size="sm" variant="ghost" :disabled="busy || loading" @click="test(item)">{{ t('telegramBot.instances.test') }}</Button>
+              <Button v-if="can('POST', item.id, '/test')" size="sm" variant="ghost" :disabled="busy || loading" :aria-busy="testingId === item.id" @click="test(item)">{{ t(testingId === item.id ? 'telegramBot.instances.testing' : 'telegramBot.instances.test') }}</Button>
               <Button v-if="can('GET', item.id, '/deliveries')" size="sm" variant="ghost" @click="loadDeliveries(item)">{{ t('telegramBot.instances.deliveries') }}</Button>
             </div></TableCell>
           </TableRow>
@@ -88,7 +87,6 @@ async function loadDeliveries(item: BotInstance, nextPage = 1) {
     <Dialog v-model:open="dialog" @update:open="token = ''">
       <DialogContent><DialogHeader><DialogTitle>{{ t(editing ? 'telegramBot.instances.rotate' : 'telegramBot.instances.create') }}</DialogTitle></DialogHeader>
         <div class="space-y-3"><Label for="bot-token">{{ t('telegramBot.instances.token') }}</Label><Input id="bot-token" v-model="token" type="password" autocomplete="new-password" />
-          <p v-if="error" role="alert" class="text-sm text-destructive">{{ error }}</p>
         </div>
         <DialogFooter><Button :disabled="busy || !token.trim()" @click="save">{{ t('telegramBot.settings.save') }}</Button></DialogFooter>
       </DialogContent>

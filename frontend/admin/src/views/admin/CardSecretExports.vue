@@ -12,6 +12,7 @@ import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { getLocalizedText } from '@/utils/format'
 import { adminUrl } from '@/utils/adminBase'
+import { notifyErrorOnce, notifySuccess } from '@/utils/notify'
 
 const { t } = useI18n()
 
@@ -29,10 +30,8 @@ const exportCount = ref(1)
 const exportFormat = ref<'txt' | 'csv'>('txt')
 const deleteAfterExport = ref(false)
 const exporting = ref(false)
-const successMessage = ref('')
-const errorMessage = ref('')
+const validationError = ref('')
 const confirmExportOpen = ref(false)
-const resultMessage = ref('')
 const exportResult = ref<{
   content: string
   blob: Blob
@@ -151,12 +150,6 @@ const confirmExportMessage = computed(() => {
 })
 
 const productLink = (productId: number) => adminUrl(`/products?product_id=${productId}`)
-
-const resetMessages = () => {
-  successMessage.value = ''
-  errorMessage.value = ''
-  resultMessage.value = ''
-}
 
 const syncSkuSelection = () => {
   if (!currentProductId.value || availableSkus.value.length === 0) {
@@ -282,7 +275,7 @@ const handleSearchProducts = async () => {
 const debouncedSearchProducts = useDebounceFn(handleSearchProducts, 300)
 
 const handleProductSelectionChange = async () => {
-  resetMessages()
+  validationError.value = ''
   skuFilterValue.value = '__all__'
   batchFilterValue.value = '__all__'
   exportCount.value = 1
@@ -291,7 +284,7 @@ const handleProductSelectionChange = async () => {
 }
 
 const handleSkuSelectionChange = async () => {
-  resetMessages()
+  validationError.value = ''
   batchFilterValue.value = '__all__'
   exportCount.value = 1
   await loadInventoryMeta()
@@ -316,13 +309,13 @@ const downloadBlob = (blob: Blob, filename: string) => {
 }
 
 const submitExport = async () => {
-  resetMessages()
+  validationError.value = ''
   if (!currentProductId.value) {
-    errorMessage.value = t('admin.cardSecrets.errors.productRequired')
+    validationError.value = t('admin.cardSecrets.errors.productRequired')
     return
   }
   if (exportCount.value <= 0 || exportCount.value > currentAvailableCount.value) {
-    errorMessage.value = t('admin.cardSecretExports.errors.countInvalid')
+    validationError.value = t('admin.cardSecretExports.errors.countInvalid')
     return
   }
   confirmExportOpen.value = true
@@ -356,12 +349,16 @@ const runConfirmedExport = async () => {
       productLabel: currentProductLabel.value,
       skuLabel: currentSkuLabel.value,
     }
-    successMessage.value = deleted
+    notifySuccess(deleted
       ? t('admin.cardSecretExports.success.deleted', { count })
-      : t('admin.cardSecretExports.success.used', { count })
+      : t('admin.cardSecretExports.success.used', { count }))
+  } catch (error: unknown) {
+    notifyErrorOnce(error, t('admin.cardSecretExports.errors.exportFailed'))
+    exporting.value = false
+    return
+  }
+  try {
     await loadInventoryMeta()
-  } catch (error: any) {
-    errorMessage.value = error?.message || t('admin.cardSecretExports.errors.exportFailed')
   } finally {
     exporting.value = false
   }
@@ -369,7 +366,6 @@ const runConfirmedExport = async () => {
 
 const copyExportContent = async () => {
   if (!exportResult.value) return
-  resultMessage.value = ''
   try {
     if (navigator.clipboard?.writeText) {
       await navigator.clipboard.writeText(exportResult.value.content)
@@ -380,24 +376,34 @@ const copyExportContent = async () => {
       textarea.style.position = 'fixed'
       textarea.style.left = '-9999px'
       document.body.appendChild(textarea)
-      textarea.select()
-      document.execCommand('copy')
-      textarea.remove()
+      try {
+        textarea.select()
+        if (!document.execCommand('copy')) throw new Error('Copy failed')
+      } finally {
+        textarea.remove()
+      }
     }
-    resultMessage.value = t('admin.cardSecretExports.result.copied')
-  } catch {
-    resultMessage.value = t('admin.common.copyFailed')
+    notifySuccess(t('admin.cardSecretExports.result.copied'))
+  } catch (error: unknown) {
+    notifyErrorOnce(error, t('admin.common.copyFailed'))
   }
 }
 
 const downloadExportResult = () => {
   if (!exportResult.value) return
-  downloadBlob(exportResult.value.blob, exportResult.value.filename)
+  try {
+    downloadBlob(exportResult.value.blob, exportResult.value.filename)
+    notifySuccess(t('admin.cardSecrets.success.batchExported', {
+      count: exportResult.value.count,
+      format: exportResult.value.format.toUpperCase(),
+    }))
+  } catch (error: unknown) {
+    notifyErrorOnce(error, t('admin.cardSecretExports.errors.exportFailed'))
+  }
 }
 
 const closeExportResult = () => {
   exportResult.value = null
-  resultMessage.value = ''
 }
 
 watch(currentAvailableCount, (count) => {
@@ -573,11 +579,8 @@ onMounted(async () => {
           </div>
         </div>
 
-        <div v-if="successMessage" class="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700">
-          {{ successMessage }}
-        </div>
-        <div v-if="errorMessage" class="rounded-lg border border-destructive/20 bg-destructive/5 px-3 py-2 text-sm text-destructive">
-          {{ errorMessage }}
+        <div v-if="validationError" class="rounded-lg border border-destructive/20 bg-destructive/5 px-3 py-2 text-sm text-destructive">
+          {{ validationError }}
         </div>
 
         <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-end">
@@ -701,7 +704,6 @@ onMounted(async () => {
         <div class="min-h-0 flex-1 p-5">
           <div class="mb-2 flex items-center justify-between gap-3">
             <div class="text-sm font-medium text-foreground">{{ t('admin.cardSecretExports.result.content') }}</div>
-            <div v-if="resultMessage" class="text-xs text-muted-foreground">{{ resultMessage }}</div>
           </div>
           <textarea
             :value="exportResult.content"

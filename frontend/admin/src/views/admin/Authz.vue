@@ -17,7 +17,7 @@ import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Switch } from '@/components/ui/switch'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { notifyError, notifySuccess } from '@/utils/notify'
+import { notifyError, notifyErrorOnce, notifySuccess } from '@/utils/notify'
 import { confirmAction } from '@/utils/confirm'
 
 const { locale } = useI18n()
@@ -478,7 +478,7 @@ const fetchRoles = async () => {
       selectedRole.value = roles.value[0] ?? ''
     }
   } catch (err: any) {
-    notifyError(err?.message || text.value.fetchRolesFailed)
+    notifyErrorOnce(err, err?.message || text.value.fetchRolesFailed)
   } finally {
     loadingRoles.value = false
   }
@@ -495,7 +495,7 @@ const fetchRolePolicies = async () => {
     policies.value = Array.isArray(res.data.data) ? res.data.data : []
   } catch (err: any) {
     policies.value = []
-    notifyError(err?.message || text.value.fetchPoliciesFailed)
+    notifyErrorOnce(err, err?.message || text.value.fetchPoliciesFailed)
   } finally {
     loadingPolicies.value = false
   }
@@ -508,7 +508,7 @@ const fetchPermissionCatalog = async () => {
     permissionCatalog.value = Array.isArray(res.data.data) ? res.data.data : []
   } catch (err: any) {
     permissionCatalog.value = []
-    notifyError(err?.message || text.value.fetchCatalogFailed)
+    notifyErrorOnce(err, err?.message || text.value.fetchCatalogFailed)
   } finally {
     loadingCatalog.value = false
   }
@@ -531,7 +531,7 @@ const fetchAdmins = async () => {
       resetAdminForm()
     }
   } catch (err: any) {
-    notifyError(err?.message || text.value.fetchAdminsFailed)
+    notifyErrorOnce(err, err?.message || text.value.fetchAdminsFailed)
   } finally {
     loadingAdmins.value = false
   }
@@ -547,7 +547,7 @@ const fetchSelectedAdminRoles = async () => {
     selectedAdminRoles.value = Array.isArray(res.data.data) ? res.data.data : []
   } catch (err: any) {
     selectedAdminRoles.value = []
-    notifyError(err?.message || text.value.fetchAdminRolesFailed)
+    notifyErrorOnce(err, err?.message || text.value.fetchAdminRolesFailed)
   }
 }
 
@@ -589,7 +589,7 @@ const handleCreateRole = async () => {
     await fetchRolePolicies()
     notifySuccess(text.value.roleCreated)
   } catch (err: any) {
-    notifyError(err?.message || text.value.createRoleFailed)
+    notifyErrorOnce(err, err?.message || text.value.createRoleFailed)
   }
 }
 
@@ -616,7 +616,7 @@ const handleDeleteRole = async (role: string) => {
     await fetchSelectedAdminRoles()
     notifySuccess(text.value.roleDeleted)
   } catch (err: any) {
-    notifyError(err?.message || text.value.deleteRoleFailed)
+    notifyErrorOnce(err, err?.message || text.value.deleteRoleFailed)
   }
 }
 
@@ -643,7 +643,7 @@ const handleGrantPolicy = async () => {
     await fetchRolePolicies()
     notifySuccess(text.value.policyGranted)
   } catch (err: any) {
-    notifyError(err?.message || text.value.grantPolicyFailed)
+    notifyErrorOnce(err, err?.message || text.value.grantPolicyFailed)
   }
 }
 
@@ -670,7 +670,7 @@ const handleGrantCatalogPolicy = async (item: AdminPermissionCatalogItem) => {
     await fetchRolePolicies()
     notifySuccess(text.value.policyGranted)
   } catch (err: any) {
-    notifyError(err?.message || text.value.grantPolicyFailed)
+    notifyErrorOnce(err, err?.message || text.value.grantPolicyFailed)
   }
 }
 
@@ -696,7 +696,7 @@ const handleRevokePolicy = async (item: AdminAuthzPolicy) => {
     await fetchRolePolicies()
     notifySuccess(text.value.policyRevoked)
   } catch (err: any) {
-    notifyError(err?.message || text.value.revokePolicyFailed)
+    notifyErrorOnce(err, err?.message || text.value.revokePolicyFailed)
   }
 }
 
@@ -730,7 +730,7 @@ const handleSubmitAdminForm = async () => {
       resetAdminForm()
       notifySuccess(text.value.adminCreated)
     } catch (err: any) {
-      notifyError(err?.message || text.value.createAdminFailed)
+      notifyErrorOnce(err, err?.message || text.value.createAdminFailed)
     } finally {
       savingAdminForm.value = false
     }
@@ -761,7 +761,7 @@ const handleSubmitAdminForm = async () => {
     resetAdminForm()
     notifySuccess(text.value.adminUpdated)
   } catch (err: any) {
-    notifyError(err?.message || text.value.updateAdminFailed)
+    notifyErrorOnce(err, err?.message || text.value.updateAdminFailed)
   } finally {
     savingAdminForm.value = false
   }
@@ -792,7 +792,7 @@ const handleDeleteAdmin = async (admin: AdminAuthzAdmin) => {
     }
     notifySuccess(text.value.adminDeleted)
   } catch (err: any) {
-    notifyError(err?.message || text.value.deleteAdminFailed)
+    notifyErrorOnce(err, err?.message || text.value.deleteAdminFailed)
   }
 }
 
@@ -825,7 +825,7 @@ const handleSaveAdminRoles = async () => {
     await fetchAdmins()
     notifySuccess(text.value.adminRolesSaved)
   } catch (err: any) {
-    notifyError(err?.message || text.value.saveAdminRolesFailed)
+    notifyErrorOnce(err, err?.message || text.value.saveAdminRolesFailed)
   } finally {
     savingAdminRoles.value = false
   }

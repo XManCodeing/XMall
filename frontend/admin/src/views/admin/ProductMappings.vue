@@ -12,7 +12,7 @@ import { Label } from '@/components/ui/label'
 import { Dialog, DialogScrollContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { confirmAction } from '@/utils/confirm'
-import { notifyError, notifySuccess } from '@/utils/notify'
+import { notifyError, notifyErrorOnce, notifySuccess } from '@/utils/notify'
 import { getLocalizedText } from '@/utils/format'
 import { buildAdminCategoryPath, createAdminCategoryChildCountMap, createAdminCategoryMap, flattenAdminCategories, isAdminProductCategorySelectable } from '@/utils/category'
 import TableSkeleton from '@/components/TableSkeleton.vue'
@@ -305,7 +305,7 @@ const handleBatchSync = async () => {
     notifySuccess(t('productMappings.batch.syncResult', { success: data?.success_count || 0, total: ids.length }))
     selectedMappingIds.value = new Set()
     fetchMappings(pagination.page)
-  } catch (err: any) { notifyError(err?.response?.data?.message || err?.message) } finally { batchOperating.value = false }
+  } catch (err: any) { notifyErrorOnce(err, err?.response?.data?.message || err?.message || t('common.api.requestFailed')) } finally { batchOperating.value = false }
 }
 
 const handleBatchStatus = async (isActive: boolean) => {
@@ -318,7 +318,7 @@ const handleBatchStatus = async (isActive: boolean) => {
     notifySuccess(t('productMappings.batch.statusResult', { success: data?.success_count || 0, total: ids.length }))
     selectedMappingIds.value = new Set()
     fetchMappings(pagination.page)
-  } catch (err: any) { notifyError(err?.response?.data?.message || err?.message) } finally { batchOperating.value = false }
+  } catch (err: any) { notifyErrorOnce(err, err?.response?.data?.message || err?.message || t('common.api.requestFailed')) } finally { batchOperating.value = false }
 }
 
 const handleBatchDelete = async () => {
@@ -337,7 +337,7 @@ const handleBatchDelete = async () => {
     notifySuccess(t('productMappings.batch.deleteResult', { success: data?.success_count || 0, total: ids.length }))
     selectedMappingIds.value = new Set()
     fetchMappings(pagination.page)
-  } catch (err: any) { notifyError(err?.response?.data?.message || err?.message) } finally { batchOperating.value = false }
+  } catch (err: any) { notifyErrorOnce(err, err?.response?.data?.message || err?.message || t('common.api.requestFailed')) } finally { batchOperating.value = false }
 }
 
 // --- Actions ---
@@ -349,7 +349,7 @@ const handleSync = async (mapping: AdminProductMapping) => {
     notifySuccess(t('productMappings.sync.success'))
     fetchMappings(pagination.page)
   } catch (err: any) {
-    notifyError(t('productMappings.sync.failed') + ': ' + (err?.response?.data?.message || err?.message || ''))
+    notifyErrorOnce(err, t('productMappings.sync.failed') + ': ' + (err?.response?.data?.message || err?.message || ''))
   } finally { syncingId.value = null }
 }
 
@@ -358,7 +358,7 @@ const handleToggleStatus = async (mapping: AdminProductMapping) => {
     await adminAPI.updateProductMappingStatus(mapping.id, { is_active: !mapping.is_active })
     fetchMappings(pagination.page)
     notifySuccess()
-  } catch (err: any) { notifyError(err?.response?.data?.message || err?.message) }
+  } catch (err: any) { notifyErrorOnce(err, err?.response?.data?.message || err?.message || t('common.api.requestFailed')) }
 }
 
 const handleDelete = async (mapping: AdminProductMapping) => {
@@ -372,7 +372,7 @@ const handleDelete = async (mapping: AdminProductMapping) => {
     await adminAPI.deleteProductMapping(mapping.id)
     fetchMappings(pagination.page)
     notifySuccess()
-  } catch (err: any) { notifyError(err?.response?.data?.message || err?.message) }
+  } catch (err: any) { notifyErrorOnce(err, err?.response?.data?.message || err?.message || t('common.api.requestFailed')) }
 }
 
 // --- Import dialog ---
@@ -464,7 +464,7 @@ const parseUpstreamResult = (res: any, generic = genericImport.value): CatalogPa
 const showCatalogError = (cause: unknown) => {
   const message = cause instanceof Error ? cause.message : 'httpIntegration.failed'
   upstreamError.value = message.startsWith('httpIntegration.') ? t(message) : message
-  notifyError(upstreamError.value)
+  notifyErrorOnce(cause, upstreamError.value || t('httpIntegration.failed'))
 }
 const appendCatalogPage = (page: ReturnType<typeof parseUpstreamResult>) => {
   const next = advanceCatalog(catalogPagination.value, upstreamProducts.value, page, upstreamPageSize)
@@ -658,7 +658,7 @@ const handleImportCategory = async (catId: number) => {
     fetchMappings(1)
     fetchCategories()
   } catch (err: any) {
-    notifyError(err?.response?.data?.message || err?.message)
+    notifyErrorOnce(err, err?.response?.data?.message || err?.message || t('common.api.requestFailed'))
   } finally { categoryImporting.value = false }
 }
 
@@ -748,7 +748,7 @@ const handleBatchImport = async () => {
     for (const r of allResults) { if (r.success) newMapped.add(r.upstream_product_id) }
     mappedUpstreamIds.value = newMapped
     fetchMappings(1)
-  } catch (err: any) { notifyError(err?.response?.data?.message || err?.message) } finally { importing.value = false }
+  } catch (err: any) { notifyErrorOnce(err, err?.response?.data?.message || err?.message || t('common.api.requestFailed')) } finally { importing.value = false }
 }
 
 onMounted(() => { fetchConnections(); fetchCategories(); fetchMappings() })
@@ -867,20 +867,20 @@ onMounted(() => { fetchConnections(); fetchCategories(); fetchMappings() })
               <span class="break-words text-sm font-medium text-foreground sm:truncate">{{ getLocalProductTitle(mapping) }}</span>
               <span class="shrink-0 text-[10px] font-mono text-muted-foreground">#{{ mapping.local_product_id }}</span>
               <span
-                class="shrink-0 inline-flex rounded-full border px-2 py-0.5 text-[10px]"
+                class="shrink-0 inline-flex whitespace-nowrap rounded-full border px-2 py-0.5 text-[10px]"
                 :class="mapping.is_active ? 'text-primary border-primary/20 bg-primary/10' : 'text-muted-foreground border-border bg-muted/30'"
               >
                 {{ mapping.is_active ? t('productMappings.status.active') : t('productMappings.status.inactive') }}
               </span>
               <span
                 v-if="mapping.upstream_status === 'inactive'"
-                class="shrink-0 inline-flex rounded-full border border-border bg-muted/30 px-2 py-0.5 text-[10px] text-muted-foreground"
+                class="shrink-0 inline-flex whitespace-nowrap rounded-full border border-border bg-muted/30 px-2 py-0.5 text-[10px] text-muted-foreground"
               >
                 {{ t('productMappings.upstreamStatus.inactive') }}
               </span>
               <span
                 v-else-if="mapping.upstream_status === 'deleted'"
-                class="shrink-0 inline-flex rounded-full border border-destructive/20 bg-destructive/10 px-2 py-0.5 text-[10px] text-destructive"
+                class="shrink-0 inline-flex whitespace-nowrap rounded-full border border-destructive/20 bg-destructive/10 px-2 py-0.5 text-[10px] text-destructive"
               >
                 {{ t('productMappings.upstreamStatus.deleted') }}
               </span>
@@ -962,7 +962,7 @@ onMounted(() => { fetchConnections(); fetchCategories(); fetchMappings() })
                       <template v-if="skuMappingByLocalId[sku.id]">
                         <span
                           v-if="Number(sku.price_amount) !== toLocalCurrency(Number(skuMappingByLocalId[sku.id]?.upstream_price), mapping.connection_id)"
-                          class="inline-flex rounded-full px-1.5 py-0.5 text-[10px] font-medium border"
+                          class="inline-flex shrink-0 whitespace-nowrap rounded-full px-1.5 py-0.5 text-[10px] font-medium border"
                           :class="Number(sku.price_amount) > toLocalCurrency(Number(skuMappingByLocalId[sku.id]?.upstream_price), mapping.connection_id) ? 'text-primary bg-primary/10 border-primary/20' : 'text-destructive bg-destructive/10 border-destructive/20'"
                         >
                           {{ Number(sku.price_amount) > toLocalCurrency(Number(skuMappingByLocalId[sku.id]?.upstream_price), mapping.connection_id) ? '+' : '' }}{{ (Number(sku.price_amount) - toLocalCurrency(Number(skuMappingByLocalId[sku.id]?.upstream_price), mapping.connection_id)).toFixed(2) }}
@@ -974,7 +974,7 @@ onMounted(() => { fetchConnections(); fetchCategories(); fetchMappings() })
                     <td class="px-3 py-2.5 text-center">
                       <template v-if="skuMappingByLocalId[sku.id]">
                         <span
-                          class="inline-flex rounded-full px-1.5 py-0.5 text-[10px]"
+                          class="inline-flex shrink-0 whitespace-nowrap rounded-full px-1.5 py-0.5 text-[10px]"
                           :class="(skuMappingByLocalId[sku.id]?.upstream_stock ?? 0) !== 0
                             ? 'text-primary bg-primary/10'
                             : 'text-destructive bg-destructive/10'"
@@ -1138,7 +1138,7 @@ onMounted(() => { fetchConnections(); fetchCategories(); fetchMappings() })
                         <div class="flex flex-wrap items-center gap-2">
                           <span class="break-words text-sm text-foreground sm:truncate">{{ getLocalizedText(product.title) }}</span>
                           <span class="shrink-0 text-[10px] font-mono text-muted-foreground">#{{ product.id }}</span>
-                          <span v-if="mappedUpstreamIds.has(product.id)" class="shrink-0 inline-flex rounded-full border border-border bg-muted/30 px-2 py-0.5 text-[10px] text-muted-foreground">
+                          <span v-if="mappedUpstreamIds.has(product.id)" class="shrink-0 inline-flex whitespace-nowrap rounded-full border border-border bg-muted/30 px-2 py-0.5 text-[10px] text-muted-foreground">
                             {{ t('productMappings.import.alreadyMapped') }}
                           </span>
                         </div>
@@ -1189,10 +1189,10 @@ onMounted(() => { fetchConnections(); fetchCategories(); fetchMappings() })
                       <div class="flex flex-wrap items-center gap-2">
                         <span class="break-words text-sm font-medium text-foreground sm:truncate">{{ getLocalizedText(product.title) }}</span>
                         <span class="shrink-0 text-[10px] font-mono text-muted-foreground">#{{ product.id }}</span>
-                        <span class="shrink-0 inline-flex rounded-full border px-2 py-0.5 text-[10px]" :class="product.is_active ? 'text-primary border-primary/20 bg-primary/10' : 'text-muted-foreground border-border bg-muted/30'">
+                        <span class="shrink-0 inline-flex whitespace-nowrap rounded-full border px-2 py-0.5 text-[10px]" :class="product.is_active ? 'text-primary border-primary/20 bg-primary/10' : 'text-muted-foreground border-border bg-muted/30'">
                           {{ product.is_active ? t('productMappings.status.active') : t('productMappings.status.inactive') }}
                         </span>
-                        <span v-if="mappedUpstreamIds.has(product.id)" class="shrink-0 inline-flex rounded-full border border-border bg-muted/30 px-2 py-0.5 text-[10px] text-muted-foreground">
+                        <span v-if="mappedUpstreamIds.has(product.id)" class="shrink-0 inline-flex whitespace-nowrap rounded-full border border-border bg-muted/30 px-2 py-0.5 text-[10px] text-muted-foreground">
                           {{ t('productMappings.import.alreadyMapped') }}
                         </span>
                       </div>
@@ -1222,7 +1222,7 @@ onMounted(() => { fetchConnections(); fetchCategories(); fetchMappings() })
                           </div>
                           <div class="py-1.5 text-right font-mono text-foreground">{{ sku.price_amount }}<span v-if="product.currency" class="text-muted-foreground ml-0.5">{{ product.currency }}</span></div>
                           <div class="py-1.5 text-center">
-                            <span class="inline-flex rounded-full px-1.5 py-0.5 text-[10px]" :class="isSkuAvailable(sku.stock_status) ? 'text-primary bg-primary/10' : 'text-destructive bg-destructive/10'">
+                            <span class="inline-flex shrink-0 whitespace-nowrap rounded-full px-1.5 py-0.5 text-[10px]" :class="isSkuAvailable(sku.stock_status) ? 'text-primary bg-primary/10' : 'text-destructive bg-destructive/10'">
                               {{ isSkuAvailable(sku.stock_status) ? t('productMappings.import.inStock') : t('productMappings.import.outOfStock') }}
                             </span>
                           </div>

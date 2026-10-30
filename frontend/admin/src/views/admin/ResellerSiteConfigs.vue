@@ -29,7 +29,7 @@ import { useListRefresh, type ListFetchOptions } from '@/composables/useListRefr
 import { confirmAction } from '@/utils/confirm'
 import { formatDate } from '@/utils/format'
 import { getImageUrl } from '@/utils/image'
-import { notifyError, notifySuccess } from '@/utils/notify'
+import { notifyErrorOnce, notifySuccess } from '@/utils/notify'
 import {
   blankLocalizedText,
   canEditResellerSiteConfig,
@@ -250,7 +250,7 @@ const fetchRows = async (page = 1, options: ListFetchOptions = {}) => {
     pagination.value = response.data.pagination || pagination.value
   } catch (err: any) {
     if (!options.preserveRows) rows.value = []
-    notifyError(err?.message || t('admin.resellerSiteConfigs.messages.loadFailed'))
+    notifyErrorOnce(err, err?.message || t('admin.resellerSiteConfigs.messages.loadFailed'))
   } finally {
     if (!options.preserveRows) loading.value = false
   }
@@ -288,7 +288,7 @@ const openEditor = async (row: AdminResellerSiteConfig) => {
     activeLocale.value = 'zh-CN'
     showEditor.value = true
   } catch (err: any) {
-    notifyError(err?.message || t('admin.resellerSiteConfigs.messages.loadFailed'))
+    notifyErrorOnce(err, err?.message || t('admin.resellerSiteConfigs.messages.loadFailed'))
   } finally {
     operatingId.value = null
   }
@@ -312,7 +312,7 @@ const saveConfig = async () => {
     notifySuccess(t('admin.resellerSiteConfigs.messages.saveSuccess'))
     await fetchRows(pagination.value.page, { preserveRows: true })
   } catch (err: any) {
-    notifyError(err?.message || t('admin.resellerSiteConfigs.messages.saveFailed'))
+    notifyErrorOnce(err, err?.message || t('admin.resellerSiteConfigs.messages.saveFailed'))
   } finally {
     saving.value = false
   }
@@ -335,7 +335,7 @@ const resetConfig = async (row: AdminResellerSiteConfig) => {
       assignForm(createBlankForm())
     }
   } catch (err: any) {
-    notifyError(err?.message || t('admin.resellerSiteConfigs.messages.resetFailed'))
+    notifyErrorOnce(err, err?.message || t('admin.resellerSiteConfigs.messages.resetFailed'))
   } finally {
     operatingId.value = null
   }

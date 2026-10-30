@@ -39,6 +39,40 @@ func (r renderStub) Render(context.Context, events.Event) (runtime.Message, erro
 	return runtime.Message{Text: "sensitive delivery"}, r.err
 }
 
+type followupRenderer struct {
+	renderStub
+	queue *enqueueStub
+	err   error
+	calls int
+}
+
+func (r *followupRenderer) AfterEnqueue(_ context.Context, _ events.Event) error {
+	if len(r.queue.keys) == 0 {
+		return errors.New("notification must be enqueued first")
+	}
+	r.calls++
+	return r.err
+}
+func TestPanelRefreshFailureDoesNotDuplicateNotification(t *testing.T) {
+	store := &eventStoreStub{rows: []events.Event{{ID: 7, BotID: 2}}}
+	queue := &enqueueStub{keys: map[string]string{}}
+	renderer := &followupRenderer{queue: queue, err: errors.New("CAS conflict")}
+	dispatcher := Dispatcher{Store: store, Renderer: renderer, Outbox: queue, Secret: "test-key"}
+	if err := dispatcher.Reconcile(context.Background(), 2); err != nil {
+		t.Fatal(err)
+	}
+	if store.marked != 0 || store.retried != 1 || renderer.calls != 1 || len(queue.keys) != 1 {
+		t.Fatal("refresh failure discarded event or notification")
+	}
+	renderer.err = nil
+	if err := dispatcher.Reconcile(context.Background(), 2); err != nil {
+		t.Fatal(err)
+	}
+	if store.marked != 1 || renderer.calls != 2 || len(queue.keys) != 1 {
+		t.Fatal("refresh retry duplicated notification")
+	}
+}
+
 type enqueueStub struct {
 	keys map[string]string
 	err  error

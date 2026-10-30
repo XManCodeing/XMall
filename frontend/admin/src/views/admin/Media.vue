@@ -10,7 +10,7 @@ import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import ListPagination from '@/components/ListPagination.vue'
 import { getImageUrl } from '@/utils/image'
-import { notifyError, notifySuccess } from '@/utils/notify'
+import { notifyError, notifyErrorOnce, notifyInfo, notifySuccess } from '@/utils/notify'
 import { confirmAction } from '@/utils/confirm'
 import FileInput from '@/components/FileInput.vue'
 import { DEFAULT_UPLOAD_MAX_SIZE_BYTES, formatFileSizeLimit, splitFilesBySize } from '@/utils/upload'
@@ -153,18 +153,17 @@ async function handleFileChange(files: FileList | null) {
       formData.append('file', file)
       try {
         await adminAPI.upload(formData, 'common')
-      } catch {
+      } catch (err) {
         failCount++
+        notifyErrorOnce(err, t('admin.common.uploadFailed'))
       } finally {
         uploadProgress.value.current++
       }
     }))
   }
 
-  if (failCount > 0) {
-    notifyError(failCount === total
-      ? t('admin.media.errors.uploadFailed', { message: `${total}` })
-      : t('admin.media.errors.uploadPartialFailed', { fail: failCount, total }))
+  if (failCount > 0 && failCount < total) {
+    notifyInfo(t('admin.media.errors.uploadPartialFailed', { fail: failCount, total }))
   }
   fetchMedia(1)
   uploading.value = false
@@ -187,7 +186,7 @@ async function saveRename(item: AdminMedia) {
     item.name = name
     notifySuccess(t('admin.media.card.renameSaved'))
   } catch (err: any) {
-    notifyError(t('admin.media.errors.renameFailed', { message: err?.message || '' }))
+    notifyErrorOnce(err, t('admin.media.errors.renameFailed', { message: err?.message || '' }))
   } finally {
     editingId.value = null
   }
@@ -213,7 +212,7 @@ async function handleDelete(item: AdminMedia) {
     await adminAPI.deleteMedia(item.id)
     fetchMedia(pagination.page)
   } catch (err: any) {
-    notifyError(t('admin.media.errors.deleteFailed', { message: err?.message || '' }))
+    notifyErrorOnce(err, t('admin.media.errors.deleteFailed', { message: err?.message || '' }))
   }
 }
 
@@ -237,7 +236,7 @@ async function handleBatchDelete() {
     const nextPage = items.value.length <= successCount && pagination.page > 1 ? pagination.page - 1 : pagination.page
     await fetchMedia(nextPage)
   } catch (err: any) {
-    notifyError(t('admin.media.errors.deleteFailed', { message: err?.message || '' }))
+    notifyErrorOnce(err, t('admin.media.errors.deleteFailed', { message: err?.message || '' }))
   } finally {
     batchOperating.value = false
   }

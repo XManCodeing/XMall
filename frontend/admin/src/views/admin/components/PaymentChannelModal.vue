@@ -3,6 +3,7 @@ import { onMounted, computed, reactive, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { adminAPI } from '@/api/admin'
 import type { AdminGatewaySecurityTestResult, AdminMemberLevel } from '@/api/types'
+import { notifyErrorOnce, notifySuccess } from '@/utils/notify'
 import { getLocalizedText } from '@/utils/format'
 import { resolveOkpayChannelTypeFromConfig } from '@/utils/paymentChannelDisplay'
 import MediaPicker from '@/components/admin/MediaPicker.vue'
@@ -1088,8 +1089,8 @@ const handleWechatPublicKeyTest = async () => {
   try {
     const response = await adminAPI.testWechatPayPublicKey(props.channelId)
     wechatPublicKeyTestResult.value = response.data.data as AdminGatewaySecurityTestResult
-  } catch (err: any) {
-    error.value = err?.message || t('admin.paymentChannels.modal.wechatPublicKeyTestFailed')
+  } catch (err) {
+    notifyErrorOnce(err, t('admin.paymentChannels.modal.wechatPublicKeyTestFailed'))
   } finally {
     testingWechatPublicKey.value = false
   }
@@ -1229,13 +1230,18 @@ const handleSubmit = async () => {
     sort_order: form.sort_order,
   }
 
-  if (isEditing.value && props.channelId) {
-    await adminAPI.updatePaymentChannel(props.channelId, payload)
-  } else {
-    await adminAPI.createPaymentChannel(payload)
+  try {
+    if (isEditing.value && props.channelId) {
+      await adminAPI.updatePaymentChannel(props.channelId, payload)
+    } else {
+      await adminAPI.createPaymentChannel(payload)
+    }
+    notifySuccess(t('admin.common.operationSuccess'))
+    emit('update:modelValue', false)
+    emit('success')
+  } catch (err) {
+    notifyErrorOnce(err, t('admin.settings.saveFailed'))
   }
-  emit('update:modelValue', false)
-  emit('success')
 }
 
 const closeModal = () => {
@@ -1270,7 +1276,7 @@ const closeModal = () => {
                 <SelectItem value="dujiaopay">
                   <span class="flex w-full items-center justify-between gap-2">
                     <span>{{ t('admin.paymentChannels.providerTypes.dujiaopay') }}</span>
-                    <span class="shrink-0 rounded border border-emerald-500/30 bg-emerald-500/10 px-1.5 py-0.5 text-[10px] font-semibold leading-none text-emerald-600 dark:text-emerald-400">
+                    <span class="shrink-0 whitespace-nowrap rounded border border-emerald-500/30 bg-emerald-500/10 px-1.5 py-0.5 text-[10px] font-semibold leading-none text-emerald-600 dark:text-emerald-400">
                       {{ t('admin.paymentChannels.providerOfficialCertified') }}
                     </span>
                   </span>

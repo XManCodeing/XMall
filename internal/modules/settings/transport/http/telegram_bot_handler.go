@@ -61,7 +61,7 @@ func (h *TelegramBotHandler) PatchTelegramBotConfigSection(c *gin.Context) {
 		response.ErrorWithHTTPStatus(c, http.StatusConflict, 409, i18n.T(i18n.ResolveLocale(c), "error.settings_save_failed"))
 		return
 	}
-	if errors.Is(err, settingsapp.ErrTelegramBotMenuUnsupported) {
+	if errors.Is(err, settingsapp.ErrTelegramBotMenuUnsupported) || errors.Is(err, settingsapp.ErrTelegramBotMenuDuplicate) {
 		response.ErrorWithHTTPStatus(c, http.StatusBadRequest, response.CodeBadRequest, err.Error())
 		return
 	}

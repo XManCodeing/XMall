@@ -29,6 +29,14 @@ type APIError struct {
 	HTTPStatus int
 	ErrorCode  int
 	RetryAfter int
+	kind       string
+}
+
+func (e *APIError) Kind() string {
+	if e.kind == "" {
+		return "unknown"
+	}
+	return e.kind
 }
 
 func (e *APIError) Error() string {
@@ -151,16 +159,17 @@ func (c *Client) call(ctx context.Context, method, contentType string, body io.R
 		return errors.New("telegram: response exceeds size limit")
 	}
 	var envelope struct {
-		OK         bool            `json:"ok"`
-		Result     json.RawMessage `json:"result"`
-		ErrorCode  int             `json:"error_code"`
-		Parameters struct {
+		OK          bool            `json:"ok"`
+		Result      json.RawMessage `json:"result"`
+		ErrorCode   int             `json:"error_code"`
+		Description string          `json:"description"`
+		Parameters  struct {
 			RetryAfter int `json:"retry_after"`
 		} `json:"parameters"`
 	}
 	decodeErr := json.Unmarshal(data, &envelope)
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 || (decodeErr == nil && !envelope.OK) {
-		return &APIError{HTTPStatus: resp.StatusCode, ErrorCode: envelope.ErrorCode, RetryAfter: envelope.Parameters.RetryAfter}
+		return &APIError{HTTPStatus: resp.StatusCode, ErrorCode: envelope.ErrorCode, RetryAfter: envelope.Parameters.RetryAfter, kind: classifyFailure(method, resp.StatusCode, envelope.ErrorCode, envelope.Description)}
 	}
 	if decodeErr != nil || len(envelope.Result) == 0 || bytes.Equal(bytes.TrimSpace(envelope.Result), []byte("null")) {
 		return errors.New("telegram: invalid API response")
@@ -215,22 +224,55 @@ func (c *Client) DeleteWebhook(ctx context.Context, dropPending bool) error {
 }
 
 func (c *Client) SendMessage(ctx context.Context, request SendMessageRequest) (Message, error) {
+	if request.Text == "" {
+		return Message{}, invalid("invalid_content")
+	}
+	if err := validateContent(request.Text, request.ParseMode, 4096, request.ReplyMarkup); err != nil {
+		return Message{}, err
+	}
 	var result Message
 	err := c.callJSON(ctx, "sendMessage", request, &result)
 	return result, err
 }
 
-// SendPhoto uploads an in-memory PNG, never a local path or remote URL.
+// SendPhoto accepts JPEG/PNG bytes, a Telegram file_id, or an HTTPS URL.
 func (c *Client) SendPhoto(ctx context.Context, request SendPhotoRequest) (Message, error) {
-	if !bytes.HasPrefix(request.PNG, []byte("\x89PNG\r\n\x1a\n")) {
-		return Message{}, errors.New("telegram: photo must be PNG")
+	data := request.Data
+	if len(request.PNG) > 0 {
+		if len(data) > 0 {
+			return Message{}, invalid("invalid_media")
+		}
+		data = request.PNG
 	}
-	return c.sendFile(ctx, "sendPhoto", "photo", "photo.png", "image/png", request.PNG, request.ChatID, request.Caption, request.ParseMode, request.DisableNotification, request.ProtectContent, request.ReplyMarkup)
+	source, filename, contentType, err := photoSource(data, request.Filename, request.FileID, request.URL)
+	if err != nil {
+		return Message{}, err
+	}
+	if err := validateContent(request.Caption, request.ParseMode, 1024, request.ReplyMarkup); err != nil {
+		return Message{}, err
+	}
+	if len(data) > 0 {
+		return c.sendFile(ctx, "sendPhoto", "photo", filename, contentType, data, request.ChatID, request.Caption, request.ParseMode, request.DisableNotification, request.ProtectContent, request.ReplyMarkup)
+	}
+	var result Message
+	err = c.callJSON(ctx, "sendPhoto", struct {
+		ChatID              int64                 `json:"chat_id"`
+		Photo               string                `json:"photo"`
+		Caption             string                `json:"caption,omitempty"`
+		ParseMode           string                `json:"parse_mode,omitempty"`
+		DisableNotification bool                  `json:"disable_notification,omitempty"`
+		ProtectContent      bool                  `json:"protect_content,omitempty"`
+		ReplyMarkup         *InlineKeyboardMarkup `json:"reply_markup,omitempty"`
+	}{request.ChatID, source, request.Caption, request.ParseMode, request.DisableNotification, request.ProtectContent, request.ReplyMarkup}, &result)
+	return result, err
 }
 
 func (c *Client) SendDocument(ctx context.Context, request SendDocumentRequest) (Message, error) {
+	if err := validateContent(request.Caption, request.ParseMode, 1024, request.ReplyMarkup); err != nil {
+		return Message{}, err
+	}
 	if request.Filename == "" || strings.ContainsAny(request.Filename, "\r\n/\\") {
-		return Message{}, errors.New("telegram: invalid document filename")
+		return Message{}, invalid("invalid_content")
 	}
 	return c.sendFile(ctx, "sendDocument", "document", request.Filename, "application/octet-stream", request.Data, request.ChatID, request.Caption, request.ParseMode, request.DisableNotification, request.ProtectContent, request.ReplyMarkup)
 }
@@ -249,7 +291,7 @@ func (c *Client) sendFile(ctx context.Context, method, field, filename, contentT
 		return Message{}, err
 	}
 	if len(data) == 0 || len(data) > MaxUploadBytes {
-		return Message{}, errors.New("telegram: invalid upload size")
+		return Message{}, invalid("invalid_media")
 	}
 	var body bytes.Buffer
 	writer := multipart.NewWriter(&body)

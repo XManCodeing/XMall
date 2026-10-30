@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Switch } from '@/components/ui/switch'
-import { notifyError, notifySuccess } from '@/utils/notify'
+import { notifyErrorOnce, notifySuccess } from '@/utils/notify'
 
 const { t } = useI18n()
 
@@ -141,8 +141,8 @@ const save = async () => {
     await adminAPI.updateSettings(payload)
     notifySuccess(t('admin.settings.alerts.saveSuccess'))
     emit('saved')
-  } catch {
-    notifyError(t('admin.settings.alerts.saveFailed'))
+  } catch (error) {
+    notifyErrorOnce(error, t('admin.settings.alerts.saveFailed'))
   } finally {
     submitting.value = false
   }

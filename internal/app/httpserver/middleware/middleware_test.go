@@ -2,13 +2,58 @@ package middleware
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
 
 	"github.com/gin-gonic/gin"
+	"go.uber.org/zap"
+	"go.uber.org/zap/zaptest/observer"
 )
+
+func TestRequestLogsSuppressSuccessButRetainFailures(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	for _, tc := range []struct {
+		name         string
+		status       int
+		handlerError bool
+		want         int
+	}{
+		{"success", 200, false, 0},
+		{"redirect", 302, false, 0},
+		{"client error", 400, false, 1},
+		{"server error", 500, false, 1},
+		{"handler error", 200, true, 1},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			core, logs := observer.New(zap.InfoLevel)
+			r := gin.New()
+			r.Use(RequestIDMiddleware(), LoggerMiddleware(zap.New(core)))
+			r.GET("/poll", func(c *gin.Context) {
+				if tc.handlerError {
+					_ = c.Error(errors.New("test failure"))
+				}
+				c.Status(tc.status)
+			})
+			r.ServeHTTP(httptest.NewRecorder(), httptest.NewRequest(http.MethodGet, "/poll", nil))
+			if logs.Len() != tc.want {
+				t.Fatalf("got %d logs, want %d", logs.Len(), tc.want)
+			}
+			if tc.want != 0 {
+				entry := logs.All()[0]
+				wantLevel := zap.WarnLevel
+				if tc.status >= 500 || tc.handlerError {
+					wantLevel = zap.ErrorLevel
+				}
+				if entry.Level != wantLevel || entry.ContextMap()["request_id"] == "" {
+					t.Fatalf("missing severity or request context: %+v", entry)
+				}
+			}
+		})
+	}
+}
 
 func TestResolveAllowedOrigin(t *testing.T) {
 	got := resolveAllowedOrigin("https://example.com", []string{"*"}, false)

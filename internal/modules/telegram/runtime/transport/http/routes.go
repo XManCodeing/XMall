@@ -9,4 +9,6 @@ func RegisterRoutes(admin gin.IRoutes, h *Handler) {
 	admin.POST("/telegram-bot/instances/:id/test", h.Test)
 	admin.GET("/telegram-bot/instances/:id/status", h.Status)
 	admin.GET("/telegram-bot/instances/:id/deliveries", h.Deliveries)
+	admin.GET("/telegram-bot/instances/:id/profile", h.GetProfile)
+	admin.PUT("/telegram-bot/instances/:id/profile", h.UpdateProfile)
 }

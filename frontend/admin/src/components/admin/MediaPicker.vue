@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Dialog, DialogScrollContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { getImageUrl } from '@/utils/image'
-import { notifyError } from '@/utils/notify'
+import { notifyError, notifyErrorOnce } from '@/utils/notify'
 import { DEFAULT_UPLOAD_MAX_SIZE_BYTES, formatFileSizeLimit, splitFilesBySize } from '@/utils/upload'
 
 const props = withDefaults(defineProps<{
@@ -16,11 +16,13 @@ const props = withDefaults(defineProps<{
   multiple?: boolean
   scene?: string
   dialogOnly?: boolean
+  accept?: string
 }>(), {
   modelValue: '',
   multiple: false,
   scene: 'common',
   dialogOnly: false,
+  accept: 'image/*',
 })
 
 const emit = defineEmits<{
@@ -55,6 +57,15 @@ const currentImages = computed(() => {
 })
 
 const hasImage = computed(() => currentImages.value.length > 0)
+const acceptsVideo = computed(() => props.accept.includes('video'))
+
+function isVideo(path: string) {
+  return /\.mp4$/i.test(path)
+}
+
+function isAcceptedFile(file: File) {
+  return file.type.startsWith('image/') || (acceptsVideo.value && file.type.startsWith('video/'))
+}
 
 function filterFilesByUploadSize(files: File[]) {
   const { accepted, rejected } = splitFilesBySize(files)
@@ -146,8 +157,6 @@ async function handleDialogUpload(e: Event) {
   uploading.value = true
   const total = fileList.length
   uploadProgress.value = { current: 0, total }
-  let failCount = 0
-
   for (let i = 0; i < fileList.length; i += 3) {
     const batch = fileList.slice(i, i + 3)
     await Promise.allSettled(batch.map(async (file) => {
@@ -163,19 +172,14 @@ async function handleDialogUpload(e: Event) {
             selected.value = new Set([url])
           }
         }
-      } catch {
-        failCount++
+      } catch (err) {
+        notifyErrorOnce(err, t('admin.common.uploadFailed'))
       } finally {
         uploadProgress.value.current++
       }
     }))
   }
 
-  if (failCount > 0) {
-    notifyError(failCount === total
-      ? t('admin.media.errors.uploadFailed', { message: `${total}` })
-      : t('admin.media.errors.uploadPartialFailed', { fail: failCount, total }))
-  }
   activeTab.value = 'library'
   await fetchMedia(1)
   uploading.value = false
@@ -191,7 +195,7 @@ function handleTriggerDrop(e: DragEvent) {
   isDragOver.value = false
   const files = e.dataTransfer?.files
   if (!files || files.length === 0) return
-  const imageFiles = Array.from(files).filter(f => f.type.startsWith('image/'))
+  const imageFiles = Array.from(files).filter(isAcceptedFile)
   if (imageFiles.length > 0) {
     doDirectUpload(imageFiles)
   }
@@ -212,7 +216,6 @@ async function doDirectUpload(files: File[]) {
 
   uploading.value = true
   uploadProgress.value = { current: 0, total: fileList.length }
-  let failCount = 0
   const uploadedUrls: string[] = []
 
   for (let i = 0; i < fileList.length; i += 3) {
@@ -224,8 +227,8 @@ async function doDirectUpload(files: File[]) {
         const res = await adminAPI.upload(formData, props.scene)
         const url = (res.data.data as any)?.url
         if (url) uploadedUrls.push(url)
-      } catch {
-        failCount++
+      } catch (err) {
+        notifyErrorOnce(err, t('admin.common.uploadFailed'))
       } finally {
         uploadProgress.value.current++
       }
@@ -239,11 +242,6 @@ async function doDirectUpload(files: File[]) {
     } else {
       emit('update:modelValue', uploadedUrls[uploadedUrls.length - 1]!)
     }
-  }
-  if (failCount > 0) {
-    notifyError(failCount === fileList.length
-      ? t('admin.media.errors.uploadFailed', { message: `${fileList.length}` })
-      : t('admin.media.errors.uploadPartialFailed', { fail: failCount, total: fileList.length }))
   }
   uploading.value = false
   if (fileInput.value) fileInput.value.value = ''
@@ -290,7 +288,7 @@ defineExpose({ openPicker })
     @dragover.prevent="isDragOver = true"
     @dragleave="isDragOver = false"
   >
-    <input ref="fileInput" type="file" class="hidden" accept="image/*" :multiple="multiple" @change="handleDirectUpload" />
+    <input ref="fileInput" type="file" class="hidden" :accept="accept" :multiple="multiple" @change="handleDirectUpload" />
 
     <!-- Has image(s) -->
     <div v-if="hasImage" class="p-4">
@@ -301,7 +299,8 @@ defineExpose({ openPicker })
           class="group relative overflow-hidden rounded-lg border border-border bg-muted"
           :class="multiple ? 'h-24 w-24' : 'h-36 w-full max-w-xs'"
         >
-          <img :src="getImageUrl(img)" class="h-full w-full object-contain" />
+          <video v-if="isVideo(img)" :src="getImageUrl(img)" class="h-full w-full object-contain" muted loop autoplay playsinline />
+          <img v-else :src="getImageUrl(img)" class="h-full w-full object-contain" />
           <!-- Hover overlay -->
           <div class="absolute inset-0 flex flex-col items-center justify-center gap-1.5 bg-black/50 opacity-0 transition-opacity group-hover:opacity-100">
             <button
@@ -427,7 +426,8 @@ defineExpose({ openPicker })
             @click="toggleSelect(item.path)"
           >
             <div class="relative aspect-square overflow-hidden bg-muted">
-              <img :src="getImageUrl(item.path)" :alt="item.name" class="h-full w-full object-contain transition-transform group-hover:scale-105" loading="lazy" />
+              <video v-if="isVideo(item.path)" :src="getImageUrl(item.path)" class="h-full w-full object-contain" muted loop playsinline preload="metadata" />
+              <img v-else :src="getImageUrl(item.path)" :alt="item.name" class="h-full w-full object-contain transition-transform group-hover:scale-105" loading="lazy" />
               <!-- Check badge -->
               <Transition name="check">
                 <div v-if="isSelected(item.path)" class="absolute right-1.5 top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-primary text-[10px] text-primary-foreground shadow">
@@ -468,13 +468,13 @@ defineExpose({ openPicker })
             <svg class="h-8 w-8 text-muted-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" /></svg>
           </div>
           <p class="text-sm font-medium text-foreground">{{ t('admin.mediaPicker.uploadHint') }}</p>
-          <p class="mt-1 text-xs text-muted-foreground">PNG, JPG, GIF, WebP, SVG</p>
+          <p class="mt-1 text-xs text-muted-foreground">PNG, JPG, GIF, WebP, SVG<template v-if="acceptsVideo">, MP4</template></p>
           <div v-if="uploading" class="mt-4 flex items-center gap-2">
             <div class="h-5 w-5 animate-spin rounded-full border-2 border-primary border-t-transparent"></div>
             <span v-if="uploadProgress.total > 1" class="text-xs text-muted-foreground">{{ t('admin.media.uploadProgress', uploadProgress) }}</span>
           </div>
         </div>
-        <input ref="dialogFileInput" type="file" class="hidden" accept="image/*" :multiple="multiple" @change="handleDialogUpload" />
+        <input ref="dialogFileInput" type="file" class="hidden" :accept="accept" :multiple="multiple" @change="handleDialogUpload" />
       </div>
 
       <!-- Footer -->

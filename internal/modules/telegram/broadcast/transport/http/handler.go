@@ -24,14 +24,15 @@ type AdminService interface {
 }
 
 type createBroadcastRequest struct {
-	BotID          uint         `json:"bot_id" binding:"required"`
-	Title          string       `json:"title" binding:"required"`
-	RecipientType  string       `json:"recipient_type" binding:"required"`
-	UserIDs        []uint       `json:"user_ids"`
-	Filters        jsonmap.JSON `json:"filters"`
-	AttachmentURL  string       `json:"attachment_url"`
-	AttachmentName string       `json:"attachment_name"`
-	MessageHTML    string       `json:"message_html" binding:"required"`
+	BotID          uint                    `json:"bot_id" binding:"required"`
+	Title          string                  `json:"title" binding:"required"`
+	RecipientType  string                  `json:"recipient_type" binding:"required"`
+	UserIDs        []uint                  `json:"user_ids"`
+	Filters        jsonmap.JSON            `json:"filters"`
+	AttachmentURL  string                  `json:"attachment_url"`
+	AttachmentName string                  `json:"attachment_name"`
+	MessageHTML    string                  `json:"message_html" binding:"required"`
+	Buttons        [][]broadcastapp.Button `json:"buttons"`
 }
 
 // AdminHandler handles administrative Telegram broadcast requests.
@@ -78,6 +79,7 @@ func (h *AdminHandler) Create(c *gin.Context) {
 		AttachmentURL:  req.AttachmentURL,
 		AttachmentName: req.AttachmentName,
 		MessageHTML:    req.MessageHTML,
+		Buttons:        req.Buttons,
 	})
 	if err != nil {
 		if errors.Is(err, broadcastapp.ErrInvalid) ||

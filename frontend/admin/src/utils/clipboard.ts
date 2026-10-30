@@ -11,7 +11,7 @@ export const copyText = async (value: string): Promise<void> => {
   textarea.focus()
   textarea.select()
   try {
-    document.execCommand('copy')
+    if (!document.execCommand('copy')) throw new Error('Clipboard copy failed')
   } finally {
     document.body.removeChild(textarea)
   }

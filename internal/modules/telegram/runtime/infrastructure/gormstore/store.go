@@ -22,162 +22,12 @@ type Store struct {
 // SetCredentialOpener is wired once before the runtime is exposed.
 func (s *Store) SetCredentialOpener(open func(string) (string, error)) { s.openCredential = open }
 
-// legacyChannel deliberately projects only the fields required for ownership;
-// channel secrets and other credential material must never be loaded here.
-type legacyChannel struct {
-	ID       uint
-	BotToken string
-}
-
-// OwnershipLock is shared by both legacy-channel and runtime writers. A durable
-// singleton write lock covers absent identities on every supported SQL dialect.
-func OwnershipLock(tx *gorm.DB) error {
-	return result(tx.Model(&d.BotOwnership{}).Where("id = ? AND state = ?", 1, "lock").UpdateColumn("lock_version", gorm.Expr("lock_version + 1")), c.ErrConflict)
-}
-
-func tokenIdentity(open func(string) (string, error), cipher string) (int64, error) {
-	if open == nil || cipher == "" {
-		return 0, c.ErrConflict
-	}
-	token, err := open(cipher)
-	prefix, suffix, ok := strings.Cut(strings.TrimSpace(token), ":")
-	id, parseErr := strconv.ParseInt(prefix, 10, 64)
-	if err != nil || !ok || suffix == "" || parseErr != nil || id <= 0 {
-		return 0, c.ErrConflict
-	}
-	return id, nil
-}
-
-// OwnershipBackfill uses only the immutable upgrade snapshot. Replacing today's
-// credential cannot resolve an unknown historical identity. Unknown rows persist
-// across failed requests because migration installed them before writes resume.
-func OwnershipBackfill(tx *gorm.DB, open func(string) (string, error)) error {
-	var pending []d.BotOwnership
-	if err := tx.Where("state = ?", "unresolved").Find(&pending).Error; err != nil {
-		return err
-	}
-	for _, row := range pending {
-		id, err := tokenIdentity(open, row.SnapshotCipher)
-		if err != nil {
-			continue
-		}
-		history := d.BotOwnership{ChannelID: row.ChannelID, TelegramID: id, State: "legacy"}
-		if err := tx.Clauses(clause.OnConflict{DoNothing: true}).Create(&history).Error; err != nil {
-			return err
-		}
-		if err := tx.Model(&row).Updates(map[string]interface{}{"state": "resolved", "snapshot_cipher": ""}).Error; err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-func (s *Store) legacyOwners(tx *gorm.DB, telegramID int64) ([]uint, error) {
-	if err := OwnershipLock(tx); err != nil {
-		return nil, err
-	}
-	if err := OwnershipBackfill(tx, s.openCredential); err != nil {
-		return nil, err
-	}
-	var unknown int64
-	if err := tx.Model(&d.BotOwnership{}).Where("state = ?", "unresolved").Count(&unknown).Error; err != nil {
-		return nil, err
-	}
-	if unknown != 0 {
-		return nil, c.ErrConflict
-	}
-	var owners []uint
-	if err := tx.Model(&d.BotOwnership{}).Where("telegram_id = ? AND channel_id > 0", telegramID).Order("channel_id").Pluck("channel_id", &owners).Error; err != nil {
-		return nil, err
-	}
-	return owners, nil
-}
-
-// GuardLegacyWrite runs under OwnershipLock before any channel mutation. History
-// is append-only, and pending/completed takeover permanently fences its channel.
-func GuardLegacyWrite(tx *gorm.DB, open func(string) (string, error), channel uint, cipher string, safeDisable bool) error {
-	if err := OwnershipBackfill(tx, open); err != nil {
-		return err
-	}
-	var records []d.BotOwnership
-	if err := tx.Where("channel_id = ?", channel).Find(&records).Error; err != nil {
-		return err
-	}
-	for _, record := range records {
-		if record.State == "unresolved" {
-			if safeDisable {
-				return nil
-			}
-			return c.ErrConflict
-		}
-		if record.State == "pending" || record.State == "internal" {
-			if safeDisable {
-				return nil
-			}
-			return c.ErrConflict
-		}
-		if record.TelegramID > 0 && !safeDisable {
-			var conflicts int64
-			if err := tx.Model(&d.Instance{}).Where("telegram_id = ? AND (channel_client_id IS NULL OR channel_client_id <> ? OR mode <> ?)", record.TelegramID, channel, "external").Count(&conflicts).Error; err != nil {
-				return err
-			}
-			if conflicts != 0 {
-				return c.ErrConflict
-			}
-		}
-	}
-	var unknown int64
-	if err := tx.Model(&d.BotOwnership{}).Where("state = ?", "unresolved").Count(&unknown).Error; err != nil {
-		return err
-	}
-	if unknown != 0 && !safeDisable {
-		return c.ErrConflict
-	}
-	if cipher == "" {
-		if len(records) == 0 {
-			return c.ErrConflict
-		}
-		return nil
-	}
-	id, err := tokenIdentity(open, cipher)
-	if err != nil {
-		return err
-	}
-	var instances int64
-	if err := tx.Model(&d.Instance{}).Where("telegram_id = ? AND (channel_client_id IS NULL OR channel_client_id <> ? OR mode <> ?)", id, channel, "external").Count(&instances).Error; err != nil {
-		return err
-	}
-	if instances != 0 {
-		return c.ErrConflict
-	}
-	var conflicts int64
-	if err := tx.Model(&d.BotOwnership{}).Where("telegram_id = ? AND channel_id <> ?", id, channel).Count(&conflicts).Error; err != nil {
-		return err
-	}
-	if conflicts != 0 {
-		return c.ErrConflict
-	}
-	return tx.Clauses(clause.OnConflict{DoNothing: true}).Create(&d.BotOwnership{ChannelID: channel, TelegramID: id, State: "legacy"}).Error
-}
-
-func (s *Store) guardInternal(tx *gorm.DB, row *d.Instance) error {
+func (s *Store) guardCredential(row *d.Instance) error {
 	if s.openCredential != nil {
 		token, err := s.openCredential(row.TokenCipher)
-		prefix, _, ok := strings.Cut(strings.TrimSpace(token), ":")
+		prefix, suffix, ok := strings.Cut(strings.TrimSpace(token), ":")
 		id, parseErr := strconv.ParseInt(prefix, 10, 64)
-		if err != nil || !ok || parseErr != nil || id != row.TelegramID {
-			return c.ErrConflict
-		}
-	}
-	owners, err := s.legacyOwners(tx, row.TelegramID)
-	if err != nil {
-		return err
-	}
-	if row.ChannelClientID != nil && !row.CutoverCompleted {
-		return c.ErrConflict
-	}
-	for _, owner := range owners {
-		if !row.CutoverCompleted || row.ChannelClientID == nil || *row.ChannelClientID != owner {
+		if err != nil || !ok || suffix == "" || parseErr != nil || id <= 0 || id != row.TelegramID {
 			return c.ErrConflict
 		}
 	}
@@ -237,15 +87,18 @@ func (s *Store) Get(ctx context.Context, id uint) (*d.Instance, error) {
 }
 func (s *Store) Create(ctx context.Context, row *d.Instance) error {
 	row.LastError = safeError(row.LastError)
-	if row.CutoverCompleted || row.ChannelClientID != nil || (row.Mode != "" && row.Mode != "internal") {
+	if row.Mode != "" && row.Mode != "internal" {
 		return c.ErrConflict
 	}
-	return s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		if err := s.guardInternal(tx, row); err != nil {
-			return err
-		}
-		return tx.Create(row).Error
-	})
+	if err := s.guardCredential(row); err != nil {
+		return err
+	}
+	// The unique TelegramID index arbitrates simultaneous creates on both
+	// SQLite and PostgreSQL; do not perform a racy read-before-insert check.
+	tx := s.db.WithContext(ctx).Clauses(clause.OnConflict{
+		Columns: []clause.Column{{Name: "telegram_id"}}, DoNothing: true,
+	}).Create(row)
+	return result(tx, c.ErrDuplicate)
 }
 func (s *Store) Configure(ctx context.Context, id uint, version uint64, values map[string]interface{}) error {
 	changes := make(map[string]interface{}, len(values)+1)
@@ -267,13 +120,7 @@ func (s *Store) Configure(ctx context.Context, id uint, version uint64, values m
 	}
 	changes["version"] = gorm.Expr("version + 1")
 	return s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		if err := OwnershipLock(tx); err != nil {
-			return err
-		}
 		if err := lockBot(tx, id); err != nil {
-			return err
-		}
-		if err := OwnershipLock(tx); err != nil {
 			return err
 		}
 		var row d.Instance
@@ -285,24 +132,17 @@ func (s *Store) Configure(ctx context.Context, id uint, version uint64, values m
 		}
 		enabled, hasEnabled := values["enabled"].(bool)
 		_, credentialChange := values["token_cipher"]
-		if credentialChange && s.openCredential != nil {
-			cipher, ok := values["token_cipher"].(string)
-			plain, err := s.openCredential(cipher)
-			prefix, _, valid := strings.Cut(strings.TrimSpace(plain), ":")
-			identity, parseErr := strconv.ParseInt(prefix, 10, 64)
-			if !ok || err != nil || !valid || parseErr != nil || identity != row.TelegramID {
-				return c.ErrConflict
+		if credentialChange {
+			row.TokenCipher = values["token_cipher"].(string)
+			if err := s.guardCredential(&row); err != nil {
+				return err
 			}
-			row.TokenCipher = cipher
-		}
-		if credentialChange && row.Mode == "cutover_pending" {
-			return c.ErrConflict
 		}
 		if (hasEnabled && enabled) || (row.Enabled && credentialChange && !(hasEnabled && !enabled)) {
 			if row.Mode != "internal" {
 				return c.ErrConflict
 			}
-			if err := s.guardInternal(tx, &row); err != nil {
+			if err := s.guardCredential(&row); err != nil {
 				return err
 			}
 		}
@@ -310,123 +150,50 @@ func (s *Store) Configure(ctx context.Context, id uint, version uint64, values m
 	})
 }
 
-// ImportLegacy is the only entry point that may associate a legacy channel.
-// It also quarantines pre-existing ordinary instances instead of allowing them
-// to escape cutover by virtue of having been created before this protection.
-func (s *Store) ImportLegacy(ctx context.Context, input *d.Instance, sourceCipher string) (*d.Instance, error) {
-	var row d.Instance
-	err := s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		owners, err := s.legacyOwners(tx, input.TelegramID)
-		if err != nil {
-			return err
-		}
-		if input.ChannelClientID == nil || len(owners) != 1 || owners[0] != *input.ChannelClientID {
-			return c.ErrConflict
-		}
-		var source legacyChannel
-		if err := tx.Table("channel_clients").Clauses(clause.Locking{Strength: "UPDATE"}).Select("id", "bot_token").Where("id = ? AND deleted_at IS NULL", owners[0]).First(&source).Error; err != nil {
-			return c.ErrConflict
-		}
-		if source.BotToken != sourceCipher {
-			return c.ErrConflict
-		}
-		sourceID, sourceErr := tokenIdentity(s.openCredential, source.BotToken)
-		inputID, inputErr := tokenIdentity(s.openCredential, input.TokenCipher)
-		if sourceErr != nil || inputErr != nil || sourceID != input.TelegramID || inputID != input.TelegramID {
-			return c.ErrConflict
-		}
-		err = tx.Clauses(clause.Locking{Strength: "UPDATE"}).Where("telegram_id = ?", input.TelegramID).First(&row).Error
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			row = *input
-			row.ID, row.Enabled, row.Mode, row.CutoverCompleted = 0, false, "external", false
-			return tx.Create(&row).Error
-		}
-		if err != nil {
-			return err
-		}
-		if row.ChannelClientID != nil && *row.ChannelClientID != owners[0] {
-			return c.ErrConflict
-		}
-		if row.CutoverCompleted {
-			if row.ChannelClientID == nil {
+func (s *Store) SaveProfile(ctx context.Context, id uint, version uint64, values map[string]interface{}) error {
+	changes := make(map[string]interface{}, len(values)+1)
+	for k, v := range values {
+		switch k {
+		case "profile_name", "profile_description", "profile_cover_url", "profile_sync_error":
+			if _, ok := v.(string); !ok {
 				return c.ErrConflict
 			}
-			return nil
+			changes[k] = v
+		default:
+			return fmt.Errorf("unsupported telegram profile field %q", k)
 		}
-		if !row.Enabled && row.ChannelClientID != nil && (row.Mode == "external" || row.Mode == "cutover_pending") {
-			stored, oldErr := s.openCredential(row.TokenCipher)
-			incoming, newErr := s.openCredential(input.TokenCipher)
-			if oldErr == nil && newErr == nil && stored == incoming {
-				return nil
-			}
-		}
-		// Import may rotate a credential only while still external. Pending
-		// operations must not silently acquire a different source snapshot.
-		if row.Mode == "cutover_pending" {
-			return c.ErrConflict
-		}
-		if err := tx.Model(&row).Updates(map[string]interface{}{"channel_client_id": owners[0], "mode": "external", "enabled": false, "token_cipher": input.TokenCipher, "username": input.Username, "version": gorm.Expr("version + 1"), "generation": gorm.Expr("generation + 1")}).Error; err != nil {
-			return err
-		}
-		return tx.First(&row, row.ID).Error
-	})
-	return &row, err
-}
-
-// SwitchCutover is intentionally separate from ordinary configuration. The
-// completion marker can only be earned by the explicit pending -> internal CAS.
-func (s *Store) SwitchCutover(ctx context.Context, id uint, version uint64, mode string) error {
-	from := "external"
-	completed := false
-	if mode == "internal" {
-		from, completed = "cutover_pending", true
-	} else if mode != "cutover_pending" {
-		return c.ErrConflict
 	}
+	changes["profile_version"] = gorm.Expr("CASE WHEN profile_version = 0 THEN 2 ELSE profile_version + 1 END")
 	return s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		if err := OwnershipLock(tx); err != nil {
+		if err := lockBot(tx, id); err != nil {
 			return err
 		}
 		var row d.Instance
 		if err := tx.First(&row, id).Error; err != nil {
 			return notFound(err)
 		}
-		owners, err := s.legacyOwners(tx, row.TelegramID)
-		if err != nil {
-			return err
+		current := row.ProfileVersion
+		if current == 0 {
+			current = 1
 		}
-		if row.ChannelClientID == nil || len(owners) != 1 || owners[0] != *row.ChannelClientID {
+		if current != version {
 			return c.ErrConflict
 		}
-		var source legacyChannel
-		if err := tx.Table("channel_clients").Select("id", "bot_token").Where("id = ? AND deleted_at IS NULL", *row.ChannelClientID).First(&source).Error; err != nil {
-			return c.ErrConflict
-		}
-		sourceID, err := tokenIdentity(s.openCredential, source.BotToken)
-		if err != nil || sourceID != row.TelegramID {
-			return c.ErrConflict
-		}
-		if err := result(tx.Model(&d.Instance{}).Where("id = ? AND version = ? AND mode = ? AND enabled = ? AND channel_client_id IS NOT NULL", id, version, from, false).Updates(map[string]interface{}{"mode": mode, "cutover_completed": completed, "version": gorm.Expr("version + 1")}), c.ErrConflict); err != nil {
-			return err
-		}
-		state := "pending"
-		if completed {
-			state = "internal"
-		}
-		return tx.Model(&d.BotOwnership{}).Where("channel_id = ? AND telegram_id > 0", *row.ChannelClientID).Update("state", state).Error
+		return result(tx.Model(&d.Instance{}).Where("id = ? AND (profile_version = ? OR (profile_version = 0 AND ? = 1))", id, version, version).Updates(changes), c.ErrConflict)
 	})
 }
+
 func (s *Store) BeginGeneration(ctx context.Context, id uint, version uint64) (*d.Instance, error) {
 	var row d.Instance
 	err := s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		if err := OwnershipLock(tx); err != nil {
+		if err := lockBot(tx, id); err != nil {
 			return err
 		}
 		var current d.Instance
 		if err := tx.First(&current, id).Error; err != nil {
 			return notFound(err)
 		}
-		if err := s.guardInternal(tx, &current); err != nil {
+		if err := s.guardCredential(&current); err != nil {
 			return err
 		}
 		if err := result(tx.Model(&d.Instance{}).Where("id = ? AND version = ? AND enabled = ? AND mode = ?", id, version, true, "internal").Updates(map[string]interface{}{"generation": gorm.Expr("generation + 1"), "state": "starting", "last_error": ""}), c.ErrStale); err != nil {
@@ -442,14 +209,14 @@ func (s *Store) BeginGeneration(ctx context.Context, id uint, version uint64) (*
 func (s *Store) Heartbeat(ctx context.Context, id uint, generation uint64, state, lastError string, applied uint64) error {
 	return s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		if state == "running" {
-			if err := OwnershipLock(tx); err != nil {
+			if err := lockBot(tx, id); err != nil {
 				return err
 			}
 			var row d.Instance
 			if err := tx.First(&row, id).Error; err != nil {
 				return notFound(err)
 			}
-			if err := s.guardInternal(tx, &row); err != nil {
+			if err := s.guardCredential(&row); err != nil {
 				return err
 			}
 		}
@@ -582,7 +349,7 @@ func (s *Store) SaveSession(ctx context.Context, row *d.Session, version uint64)
 		*row = fresh
 		return nil
 	}
-	tx := s.db.WithContext(ctx).Model(&d.Session{}).Where("bot_id = ? AND telegram_user_id = ? AND chat_id = ? AND version = ?", row.BotID, row.TelegramUserID, row.ChatID, version).Updates(map[string]interface{}{"version": gorm.Expr("version + 1"), "state": row.State, "data_cipher": row.DataCipher, "expires_at": row.ExpiresAt})
+	tx := s.db.WithContext(ctx).Model(&d.Session{}).Where("bot_id = ? AND telegram_user_id = ? AND chat_id = ? AND version = ?", row.BotID, row.TelegramUserID, row.ChatID, version).Updates(map[string]interface{}{"version": gorm.Expr("version + 1"), "state": row.State, "data_cipher": row.DataCipher, "expires_at": row.ExpiresAt, "panel_epoch": row.PanelEpoch, "panel_revision": row.PanelRevision})
 	if err := result(tx, c.ErrConflict); err != nil {
 		return err
 	}
@@ -598,7 +365,21 @@ func (s *Store) Enqueue(ctx context.Context, row *d.Delivery) error {
 	if row.Status == "" {
 		row.Status = "pending"
 	}
-	return s.db.WithContext(ctx).Clauses(clause.OnConflict{Columns: []clause.Column{{Name: "bot_id"}, {Name: "key"}}, DoNothing: true}).Create(row).Error
+	return s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		if err := lockBot(tx, row.BotID); err != nil {
+			return err
+		}
+		created := tx.Clauses(clause.OnConflict{Columns: []clause.Column{{Name: "bot_id"}, {Name: "key"}}, DoNothing: true}).Create(row)
+		if created.Error != nil || created.RowsAffected == 0 {
+			return created.Error
+		}
+		if row.Purpose != "panel" {
+			return nil
+		}
+		// Only untouched render requests are mergeable. Notices, cleanup and
+		// started/unknown creations are never replaced by a newer rendering.
+		return tx.Model(&d.Delivery{}).Where("bot_id = ? AND chat_id = ? AND telegram_user_id = ? AND purpose = ? AND panel_epoch = ? AND panel_revision < ? AND status = ? AND attempts = 0", row.BotID, row.ChatID, row.TelegramUserID, "panel", row.PanelEpoch, row.PanelRevision, "pending").Updates(map[string]interface{}{"status": "superseded", "payload_cipher": ""}).Error
+	})
 }
 func (s *Store) ClaimDelivery(ctx context.Context, bot uint, claim string, until time.Time) (*d.Delivery, error) {
 	if claim == "" || !until.After(time.Now()) {
@@ -612,6 +393,11 @@ func (s *Store) ClaimDelivery(ctx context.Context, bot uint, claim string, until
 			return err
 		}
 		now := time.Now().UTC()
+		// Editing/deleting the same target is idempotent; recover it only within
+		// the bounded attempt budget. A send remains unknown after a crash.
+		if err := tx.Model(&d.Delivery{}).Where("bot_id = ? AND status = ? AND operation IN ? AND attempts < ? AND target_message_id > 0 AND (claimed_until IS NULL OR claimed_until <= ?)", bot, "processing", []string{"edit", "delete", "clear_buttons", "markup"}, 3, now).Where("purpose <> ? OR attempts < ?", "cleanup", 2).Updates(map[string]interface{}{"status": "retry", "claim": "", "claimed_until": nil, "available_at": now}).Error; err != nil {
+			return err
+		}
 		// A crash after send has an unknown outcome. Never automatically resend it.
 		if err := tx.Model(&d.Delivery{}).Where("bot_id = ? AND status = ? AND (claimed_until IS NULL OR claimed_until <= ?)", bot, "processing", now).Updates(map[string]interface{}{"status": "unknown", "claim": "", "claimed_until": nil, "last_error": "delivery outcome unknown"}).Error; err != nil {
 			return err

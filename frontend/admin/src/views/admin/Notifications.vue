@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import TableSkeleton from '@/components/TableSkeleton.vue'
 import { formatDate, toRFC3339 } from '@/utils/format'
-import { notifyError, notifySuccess } from '@/utils/notify'
+import { notifyError, notifyErrorOnce, notifySuccess } from '@/utils/notify'
 import SettingsNotificationTab from './components/SettingsNotificationTab.vue'
 
 const { t } = useI18n()
@@ -210,7 +210,7 @@ const fetchSettings = async () => {
     notificationData.templates.exception_alert = normalizeNotificationSceneTemplate(notifTemplates?.exception_alert)
     syncTestTarget(true)
   } catch (err: any) {
-    notifyError(err?.response?.data?.message || t('admin.settings.alerts.loadFailed'))
+    notifyErrorOnce(err, err?.response?.data?.message || t('admin.settings.alerts.loadFailed'))
   } finally {
     loading.value = false
   }
@@ -238,7 +238,7 @@ const fetchNotificationLogs = async (page = 1) => {
     notificationLogPagination.value = response.data.pagination || notificationLogPagination.value
   } catch (err: any) {
     notificationLogs.value = []
-    notifyError(err?.response?.data?.message || t('admin.settings.notification.logs.failed'))
+    notifyErrorOnce(err, err?.response?.data?.message || t('admin.settings.notification.logs.failed'))
   } finally {
     notificationLogsLoading.value = false
   }
@@ -313,7 +313,7 @@ const sendNotificationTest = async () => {
     notifySuccess(t('admin.settings.notification.test.success'))
     await fetchNotificationLogs(1)
   } catch (err: any) {
-    notifyError(err?.response?.data?.message || t('admin.settings.notification.test.failed'))
+    notifyErrorOnce(err, err?.response?.data?.message || t('admin.settings.notification.test.failed'))
   } finally {
     notificationTesting.value = false
   }
@@ -530,7 +530,7 @@ onMounted(async () => {
               <TableCell class="px-4 py-4 font-mono text-xs text-foreground break-all">{{ item.recipient || '-' }}</TableCell>
               <TableCell class="px-4 py-4 text-xs text-muted-foreground">{{ notificationLogTypeLabel(item.is_test) }}</TableCell>
               <TableCell class="px-4 py-4">
-                <span class="inline-flex rounded-full border px-2.5 py-1 text-xs" :class="notificationLogStatusClass(item.status)">
+                <span class="inline-flex shrink-0 whitespace-nowrap rounded-full border px-2.5 py-1 text-xs" :class="notificationLogStatusClass(item.status)">
                   {{ notificationLogStatusLabel(item.status) }}
                 </span>
               </TableCell>

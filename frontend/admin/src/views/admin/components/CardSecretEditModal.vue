@@ -2,6 +2,7 @@
 import { reactive, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { adminAPI } from '@/api/admin'
+import { notifyErrorOnce, notifySuccess } from '@/utils/notify'
 import type { AdminCardSecret } from '@/api/types'
 import IdCell from '@/components/IdCell.vue'
 import { Button } from '@/components/ui/button'
@@ -22,7 +23,6 @@ const emit = defineEmits<{
 const { t } = useI18n()
 
 const editSubmitting = ref(false)
-const editError = ref('')
 const editForm = reactive({
   id: 0,
   secret: '',
@@ -36,14 +36,12 @@ watch(
       editForm.id = secret.id
       editForm.secret = secret.secret || ''
       editForm.status = secret.status || 'available'
-      editError.value = ''
     }
   },
 )
 
 const closeModal = () => {
   emit('update:modelValue', false)
-  editError.value = ''
 }
 
 const handleOpenChange = (value: boolean) => {
@@ -53,19 +51,20 @@ const handleOpenChange = (value: boolean) => {
 const submitEdit = async () => {
   if (!editForm.id) return
   editSubmitting.value = true
-  editError.value = ''
   try {
     await adminAPI.updateCardSecret(editForm.id, {
       secret: editForm.secret,
       status: editForm.status,
     })
-    closeModal()
-    emit('success')
-  } catch (error: any) {
-    editError.value = error?.message || t('admin.cardSecrets.errors.updateFailed')
+    notifySuccess(t('admin.common.operationSuccess'))
+  } catch (error: unknown) {
+    notifyErrorOnce(error, t('admin.cardSecrets.errors.updateFailed'))
+    return
   } finally {
     editSubmitting.value = false
   }
+  closeModal()
+  emit('success')
 }
 </script>
 
@@ -97,9 +96,6 @@ const submitEdit = async () => {
               <SelectItem value="used">{{ t('admin.cardSecrets.status.used') }}</SelectItem>
             </SelectContent>
           </Select>
-        </div>
-        <div v-if="editError" class="rounded-lg border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
-          {{ editError }}
         </div>
         <div class="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
           <Button class="w-full sm:w-auto" type="button" variant="outline" @click="closeModal">{{ t('admin.common.cancel') }}</Button>

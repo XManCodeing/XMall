@@ -27,35 +27,51 @@ type Category struct {
 	Name string
 }
 type SKU struct {
-	ID    uint
-	Name  string
-	Price string // Public/base unit price, never a member-price quote.
-	Stock string // Policy-filtered display; never an unmasked quantity.
+	ID          uint
+	Name        string
+	Price       string // Public/base unit price, never a member-price quote.
+	Stock       string // Policy-filtered display; never an unmasked quantity.
+	Available   bool
+	MaxQuantity *int // Public exact stock bound only; nil for hidden/unknown/unlimited stock.
 }
 type Product struct {
-	ID                 uint
-	Title, Description string
-	Price, Currency    string // Public/base price; payable total comes from PreviewOrder.
-	Stock              string
-	SKUs               []SKU
-	Min, Max           int
-	Unsupported        bool
+	ID                                   uint
+	Title, Description                   string
+	Summary, Image, URL, FulfillmentType string
+	Available                            bool
+	MaxQuantity                          *int   // Public exact stock bound only; nil for hidden/unknown/unlimited stock.
+	Price, Currency                      string // Public/base price; payable total comes from PreviewOrder.
+	Stock                                string
+	SKUs                                 []SKU
+	Min, Max                             int
+	Unsupported                          bool
 }
 type Selection struct {
 	ProductID, SKUID uint
 	Quantity         int
 }
-type Quote struct{ Amount, Currency, Fingerprint string }
+type Quote struct {
+	Amount, Currency, Fingerprint string
+	Discounted                    bool `json:"-"` // Presentation-only; excluded from the existing idempotency request hash.
+}
 type Order struct {
 	ID, UserID                       uint
 	Number, Status, Amount, Currency string
 	ExpiresAt                        *time.Time
 	Pending                          bool
 	Delivered                        []string
+	Items                            []OrderItem
+	CreatedAt                        time.Time
+}
+type OrderItem struct {
+	ProductID, SKUID uint
+	Title, SKUName   string
+	Quantity         int
 }
 type Channel struct {
-	ID   uint
-	Name string
+	ID     uint
+	Name   string
+	Wallet bool
 }
 type Payment struct {
 	Amount, Currency, PayURL, QRCode string
@@ -95,14 +111,40 @@ type Orders interface {
 	// Detail is read-only: it must never allocate new card secrets.
 	Detail(context.Context, Actor, uint, uint) (*Order, error)
 }
+
+// OrdersFilter optionally supplies status-filtered reads and effective pending counts.
+type OrdersFilter interface {
+	ListFiltered(context.Context, Actor, uint, int, string) ([]Order, bool, error)
+	PendingSummary(context.Context, Actor) (PendingSummary, error)
+}
+type PendingSummary struct {
+	Count  int64
+	Latest *Order
+}
+
+// OrdersCancel never grants writes through historical account access.
+type OrdersCancel interface {
+	Cancel(context.Context, Actor, uint) error
+}
 type Payments interface {
 	Channels(context.Context, Actor, uint) ([]Channel, error)
 	Pay(context.Context, Actor, uint, uint, string) (*Payment, error)
 }
 type MenuItem struct{ Action, Label, URL string }
+type HelpItem struct {
+	Key, Summary, Title, Body string
+	ShowSupport               bool
+}
 type Content struct {
-	Welcome, Help string
-	Menu          []MenuItem
+	WelcomeEnabled, HelpEnabled bool
+	Welcome, Help               string
+	HelpTitle, HelpIntro        string
+	DisplayName, Description    string
+	SupportURL, CoverURL        string
+	CenterHint, SupportHint     string
+	DefaultLocale               string
+	HelpItems                   []HelpItem
+	Menu                        []MenuItem
 }
 type ContentProvider interface {
 	Content(context.Context, Actor) (Content, error)

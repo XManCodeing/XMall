@@ -7,7 +7,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"net/url"
+	"html"
 	"strconv"
 	"strings"
 	"time"
@@ -62,6 +62,19 @@ type state struct {
 	LastUpdate                          int64
 	ReplyOwner                          uint
 	Reply                               []rt.Message
+	PanelEpoch                          string
+	PanelRevision                       uint64
+	PanelTarget                         int64
+	Current, ReturnPage                 action
+	Category                            uint
+	ProductPage                         int
+	Filter                              string
+	MoreQuantity                        bool
+	OrderID, OrderOwner                 uint
+	Payment                             *c.Payment
+	PaymentUncertain                    bool
+	UncertainOrders                     map[uint]bool
+	Resent                              map[uint]time.Time
 }
 type view struct {
 	service  *Service
@@ -71,6 +84,7 @@ type view struct {
 	update   rt.Update
 	content  c.Content
 	messages []rt.Message
+	replace  bool
 }
 
 func (s *Service) Handle(ctx context.Context, botID uint, u rt.Update) ([]rt.Message, error) {
@@ -96,7 +110,7 @@ func (s *Service) Handle(ctx context.Context, botID uint, u rt.Update) ([]rt.Mes
 	if err != nil && !errors.Is(err, rt.ErrNotFound) {
 		return nil, err
 	}
-	st := &state{Locale: a.Locale, UserID: uid}
+	st := &state{Locale: a.Locale, UserID: uid, Generation: a.Generation}
 	if row == nil {
 		row = &rd.Session{BotID: botID, TelegramUserID: u.UserID, ChatID: u.ChatID}
 	} else if row.ExpiresAt.After(s.now()) && row.DataCipher != "" {
@@ -126,7 +140,7 @@ func (s *Service) Handle(ctx context.Context, botID uint, u rt.Update) ([]rt.Mes
 	if err = s.d.Store.SaveContact(ctx, contact); err != nil {
 		return nil, err
 	}
-	if st.LastUpdate == u.ID && u.ID != 0 {
+	if u.ID != 0 && st.LastUpdate == u.ID {
 		if st.ReplyOwner != 0 {
 			if e := s.AuthorizeDelivery(ctx, botID, u.UserID, st.ReplyOwner); e != nil {
 				return nil, e
@@ -134,79 +148,156 @@ func (s *Service) Handle(ctx context.Context, botID uint, u rt.Update) ([]rt.Mes
 		}
 		return st.Reply, nil
 	}
-	var act action
-	if u.CallbackData != "" {
-		parts := strings.Split(u.CallbackData, ":")
-		if len(parts) != 4 || parts[0] != "s" || parts[1] != st.Ref || parts[2] != strconv.FormatUint(row.Version, 36) {
-			return []rt.Message{{IdentityStamp: a.Generation, OwnerUserID: uid, ChatID: u.ChatID, Text: text(a.Locale, "stale")}}, nil
-		}
-		var ok bool
-		act, ok = st.Actions[parts[3]]
-		if !ok {
-			return []rt.Message{{IdentityStamp: a.Generation, OwnerUserID: uid, ChatID: u.ChatID, Text: text(a.Locale, "stale")}}, nil
-		}
+	// Inbox is ordered. An older update must never repeat a quantity delta or a write.
+	if u.ID != 0 && st.LastUpdate > u.ID {
+		return nil, nil
 	}
-	ref, err := nonce()
-	if err != nil {
-		return nil, err
-	}
-	st.Ref = ref
-	st.ReplyOwner = 0
-	st.Actions = map[string]action{}
 	v := &view{service: s, session: row, state: st, actor: a, update: u}
 	if s.d.Content != nil {
 		v.content, err = s.d.Content.Content(ctx, a)
 		if err != nil {
 			return nil, err
 		}
+		if strings.TrimSpace(st.Locale) == "" && strings.TrimSpace(v.content.DefaultLocale) != "" {
+			st.Locale = locale(v.content.DefaultLocale)
+			a.Locale = st.Locale
+			v.actor.Locale = st.Locale
+			v.content, err = s.d.Content.Content(ctx, a)
+			if err != nil {
+				return nil, err
+			}
+		}
+	}
+	var act action
+	stale := false
+	if row.PanelMessageID > 0 && row.PanelMessageEpoch == st.PanelEpoch {
+		st.PanelTarget = row.PanelMessageID
 	}
 	if u.CallbackData != "" {
+		parts := strings.Split(u.CallbackData, ":")
+		if len(parts) != 4 || parts[0] != "s" || parts[1] != st.Ref {
+			stale = true
+		} else {
+			var ok bool
+			act, ok = st.Actions[parts[3]]
+			stale = !ok || (parts[2] != strconv.FormatUint(st.PanelRevision, 36) && !(act.Kind == "delta" && parts[2] == "0"))
+		}
+	}
+	if st.PanelTarget > 0 && u.CallbackData != "" && u.MessageID > 0 && st.PanelTarget != u.MessageID {
+		stale = true
+	}
+	if st.PanelEpoch == "" {
+		st.PanelEpoch, err = nonce()
+		if err != nil {
+			return nil, err
+		}
+	}
+	if stale {
+		if st.PanelTarget == 0 && row.PanelMessageID > 0 && row.PanelMessageID == u.MessageID {
+			st.PanelTarget = u.MessageID
+		}
+		rt.AnswerCallback(ctx, text(a.Locale, "restored"))
+		// A callback from an older physical panel cannot take over the active target.
+		if st.PanelTarget != 0 && u.MessageID != 0 && st.PanelTarget != u.MessageID {
+			return []rt.Message{{Purpose: "cleanup", Operation: "delete", TargetMessageID: u.MessageID, ChatID: u.ChatID, OwnerUserID: uid, IdentityStamp: a.Generation}}, nil
+		}
+		act = st.Current
+		if act.Kind == "" {
+			act = action{Kind: "home"}
+		}
+		// Recovery is read-only: do not retry payment creation, confirmation or cancellation.
+		if st.OrderID != 0 && (act.Kind == "channels" || act.Kind == "pay" || act.Kind == "cancel_confirm") {
+			act = action{Kind: "order", ID: st.OrderID, Owner: st.OrderOwner}
+		}
+	}
+	if u.CallbackData != "" && !stale && u.MessageID > 0 {
+		st.PanelTarget = u.MessageID
+	}
+	if u.CallbackData == "" && strings.HasPrefix(strings.TrimSpace(u.Text), "/") {
+		st.PanelEpoch, err = nonce()
+		if err != nil {
+			return nil, err
+		}
+		v.replace = true
+		st.PanelTarget = 0
+	}
+	// Ref is the operation context, not a render or CAS version. Keep it for deltas.
+	if st.Ref == "" || (!stale && u.CallbackData != "" && act.Kind != "delta" && act.Kind != "quantity" && act.Kind != "more_quantity" && act.Kind != "quantity_input" && act.Kind != "details" && act.Kind != "purchase" && act.Kind != "noop" && act.Kind != "label" && act.Kind != "check_payment") || v.replace {
+		st.Ref, err = nonce()
+		if err != nil {
+			return nil, err
+		}
+	}
+	oldActions := st.Actions
+	st.Actions = map[string]action{}
+	st.ReplyOwner = 0
+	if stale || u.CallbackData != "" {
 		err = v.perform(ctx, act)
 	} else {
 		err = v.input(ctx, strings.TrimSpace(u.Text))
 	}
 	if err != nil {
-		// Never expose backend errors (which can contain gateway credentials or personal data).
 		if !errors.Is(err, c.ErrDenied) && !errors.Is(err, c.ErrUnavailable) && !errors.Is(err, c.ErrPriceChanged) {
 			return nil, err
 		}
-		key := "failed"
-		if errors.Is(err, c.ErrPriceChanged) {
-			key = "price_changed"
-			st.Quote = nil
-			st.Operation = ""
-			st.Step = ""
-		}
-		v.say(text(a.Locale, key))
+		v.say(text(a.Locale, "failed"))
 		v.homeButton()
 	}
+	rt.AnswerCallback(ctx, "")
+	if u.CallbackData == "" && u.MessageID > 0 {
+		v.messages = append([]rt.Message{{Purpose: "cleanup", Operation: "delete", TargetMessageID: u.MessageID, ChatID: u.ChatID}}, v.messages...)
+	}
 	st.LastUpdate = u.ID
-	for index := range v.messages {
-		v.messages[index].IdentityStamp = v.actor.Generation
-		v.messages[index].OwnerUserID = v.actor.UserID
-		if st.ReplyOwner != 0 {
-			v.messages[index].OwnerUserID = st.ReplyOwner
+	if len(v.messages) == 0 {
+		st.Actions = oldActions
+	}
+	return v.save(ctx)
+}
+func (v *view) save(ctx context.Context) ([]rt.Message, error) {
+	for _, message := range v.messages {
+		if message.Purpose == "panel" {
+			v.state.PanelRevision++
+			break
 		}
 	}
-	st.Reply = v.messages
-	raw, err := json.Marshal(st)
-	if err != nil {
-		return nil, err
+	v.session.PanelEpoch = v.state.PanelEpoch
+	v.session.PanelRevision = v.state.PanelRevision
+	for i := range v.messages {
+		m := &v.messages[i]
+		m.IdentityStamp = v.actor.Generation
+		m.OwnerUserID = v.actor.UserID
+		if m.Purpose != "cleanup" && v.state.ReplyOwner != 0 {
+			m.OwnerUserID = v.state.ReplyOwner
+		}
+		if m.Purpose == "panel" {
+			budget := 3900
+			if len(m.Photo) > 0 || m.PhotoURL != "" || m.FileID != "" {
+				budget = 950
+			}
+			m.Text = limitHTML(m.Text, budget)
+			m.PanelEpoch = v.state.PanelEpoch
+			m.PanelRevision = v.state.PanelRevision
+			m.ReplacePanel = v.replace
+			m.TargetMessageID = v.state.PanelTarget
+		}
 	}
-	cipher, err := crypto.Encrypt(s.key, string(raw))
-	if err != nil {
-		return nil, err
+	v.state.Reply = v.messages
+	raw, e := json.Marshal(v.state)
+	if e != nil {
+		return nil, e
 	}
-	row.DataCipher = cipher
-	row.State = st.Step
-	row.ExpiresAt = s.now().Add(30 * time.Minute)
-	if err = s.d.Store.SaveSession(ctx, row, row.Version); err != nil {
-		return nil, err
+	cipher, e := crypto.Encrypt(v.service.key, string(raw))
+	if e != nil {
+		return nil, e
+	}
+	v.session.DataCipher = cipher
+	v.session.State = v.state.Step
+	v.session.ExpiresAt = v.service.now().Add(30 * time.Minute)
+	if e = v.service.d.Store.SaveSession(ctx, v.session, v.session.Version); e != nil {
+		return nil, e
 	}
 	return v.messages, nil
 }
-
-// DeliveryStamp also supports business-event messages produced outside Handle.
 func (s *Service) DeliveryStamp(ctx context.Context, bot uint, tg int64) (string, error) {
 	a := c.Actor{BotID: bot, TelegramID: tg}
 	uid, e := s.d.Identity.Resolve(ctx, a, false)
@@ -226,17 +317,17 @@ func (s *Service) AuthorizeDelivery(ctx context.Context, botID uint, telegramID 
 	if userID == 0 || telegramID <= 0 {
 		return c.ErrDenied
 	}
-	contact, err := s.d.Store.Contact(ctx, botID, telegramID)
-	if err != nil {
-		return err
+	contact, e := s.d.Store.Contact(ctx, botID, telegramID)
+	if e != nil {
+		return e
 	}
 	if contact == nil || !contact.Reachable || contact.ChatID != telegramID {
 		return c.ErrDenied
 	}
 	a := c.Actor{BotID: botID, TelegramID: telegramID}
-	current, err := s.d.Identity.Resolve(ctx, a, false)
-	if err != nil {
-		return err
+	current, e := s.d.Identity.Resolve(ctx, a, false)
+	if e != nil {
+		return e
 	}
 	if current == 0 {
 		return c.ErrDenied
@@ -245,9 +336,9 @@ func (s *Service) AuthorizeDelivery(ctx context.Context, botID uint, telegramID 
 	if current == userID {
 		return nil
 	}
-	ids, err := s.d.Identity.HistoryUsers(ctx, a)
-	if err != nil {
-		return err
+	ids, e := s.d.Identity.HistoryUsers(ctx, a)
+	if e != nil {
+		return e
 	}
 	for _, id := range ids {
 		if id == userID {
@@ -258,409 +349,8 @@ func (s *Service) AuthorizeDelivery(ctx context.Context, botID uint, telegramID 
 }
 func nonce() (string, error) {
 	b := make([]byte, 12)
-	_, err := rand.Read(b)
-	return hex.EncodeToString(b), err
-}
-func (v *view) say(t string) {
-	v.messages = append(v.messages, rt.Message{ChatID: v.update.ChatID, Text: t})
-}
-func (v *view) button(label string, a action) {
-	if len(v.messages) == 0 {
-		v.say("")
-	}
-	key := strconv.FormatInt(int64(len(v.state.Actions)), 36)
-	v.state.Actions[key] = a
-	data := fmt.Sprintf("s:%s:%s:%s", v.state.Ref, strconv.FormatUint(v.session.Version+1, 36), key)
-	i := len(v.messages) - 1
-	v.messages[i].Buttons = append(v.messages[i].Buttons, []rt.Button{{Text: label, Data: data}})
-}
-func (v *view) homeButton() { v.button(text(v.actor.Locale, "back"), action{Kind: "home"}) }
-func (v *view) home() {
-	v.state.Step = ""
-	v.state.Quote = nil
-	v.state.Operation = ""
-	v.state.Email = ""
-	welcome := v.content.Welcome
-	if welcome == "" {
-		welcome = text(v.actor.Locale, "welcome")
-	}
-	v.say(welcome)
-	if v.content.Menu == nil {
-		for _, k := range []string{"catalog", "orders", "account", "bind", "history", "language", "help"} {
-			v.button(text(v.actor.Locale, k), action{Kind: k})
-		}
-		return
-	}
-	for _, item := range v.content.Menu {
-		if item.URL != "" {
-			u, e := url.Parse(item.URL)
-			if e == nil && u.Scheme == "https" && u.Host != "" && u.User == nil && item.Label != "" {
-				v.messages[len(v.messages)-1].Buttons = append(v.messages[len(v.messages)-1].Buttons, []rt.Button{{Text: item.Label, URL: u.String()}})
-			}
-			continue
-		}
-		switch item.Action {
-		case "catalog", "orders", "account", "language", "help":
-			label := item.Label
-			if label == "" {
-				label = text(v.actor.Locale, item.Action)
-			}
-			v.button(label, action{Kind: item.Action})
-		}
-	}
-	for _, k := range []string{"bind", "history"} {
-		v.button(text(v.actor.Locale, k), action{Kind: k})
-	}
-}
-func (v *view) input(ctx context.Context, t string) error {
-	command := strings.Fields(t)
-	cmd := ""
-	if len(command) > 0 {
-		cmd = strings.Split(command[0], "@")[0]
-	}
-	switch cmd {
-	case "/start", "/cancel", "/back":
-		v.home()
-		return nil
-	case "/help":
-		return v.perform(ctx, action{Kind: "help"})
-	case "/language":
-		return v.perform(ctx, action{Kind: "language"})
-	}
-	switch v.state.Step {
-	case "quantity":
-		n, e := strconv.Atoi(t)
-		if e != nil || n < 1 || n > 10000 {
-			v.say(text(v.actor.Locale, "quantity"))
-			return nil
-		}
-		v.state.Selection.Quantity = n
-		return v.quote(ctx)
-	case "email":
-		if len(t) > 254 || !strings.Contains(t, "@") {
-			v.say(text(v.actor.Locale, "email"))
-			return nil
-		}
-		if e := v.service.d.Identity.SendBindCode(ctx, v.actor, t); e != nil {
-			return e
-		}
-		v.state.Email = t
-		v.state.Step = "code"
-		v.say(text(v.actor.Locale, "code"))
-		v.homeButton()
-		return nil
-	case "code":
-		if len(t) < 4 || len(t) > 12 {
-			return c.ErrDenied
-		}
-		id, e := v.service.d.Identity.Bind(ctx, v.actor, v.state.Email, t)
-		if e != nil {
-			return e
-		}
-		if id == 0 {
-			return c.ErrDenied
-		}
-		v.state.UserID = id
-		v.actor.UserID = id
-		if identity, ok := v.service.d.Identity.(c.IdentityGeneration); ok {
-			generation, e := identity.Generation(ctx, v.actor)
-			if e != nil {
-				return e
-			}
-			v.actor.Generation = generation
-			v.state.Generation = generation
-		}
-		v.home()
-		return nil
-	default:
-		v.home()
-		return nil
-	}
-}
-func (v *view) perform(ctx context.Context, a action) error {
-	switch a.Kind {
-	case "home":
-		v.home()
-	case "help":
-		help := v.content.Help
-		if help == "" {
-			help = text(v.actor.Locale, "help_text")
-		}
-		v.say(help)
-		v.homeButton()
-	case "language":
-		v.say(text(v.actor.Locale, "language"))
-		for _, l := range []string{"zh-CN", "zh-TW", "en-US"} {
-			v.button(l, action{Kind: "locale", Value: l})
-		}
-		v.homeButton()
-	case "locale":
-		v.state.Locale = locale(a.Value)
-		v.actor.Locale = v.state.Locale
-		if v.service.d.Content != nil {
-			content, e := v.service.d.Content.Content(ctx, v.actor)
-			if e != nil {
-				return e
-			}
-			v.content = content
-		}
-		v.home()
-	case "catalog":
-		cats, e := v.service.d.Catalog.Categories(ctx, v.actor)
-		if e != nil {
-			return e
-		}
-		v.say(text(v.actor.Locale, "catalog"))
-		page := a.Page
-		if page < 1 {
-			page = 1
-		}
-		start := min((page-1)*8, len(cats))
-		end := min(start+8, len(cats))
-		for _, cat := range cats[start:end] {
-			v.button(cat.Name, action{Kind: "products", ID: cat.ID, Page: 1})
-		}
-		v.pages(action{Kind: "catalog", Page: page}, end < len(cats))
-		v.homeButton()
-	case "products":
-		items, more, e := v.service.d.Catalog.Products(ctx, v.actor, a.ID, a.Page)
-		if e != nil {
-			return e
-		}
-		v.say(text(v.actor.Locale, "catalog"))
-		for _, p := range items {
-			label := p.Title
-			if p.Price != "" {
-				label += " · " + p.Currency + " " + p.Price
-			}
-			if p.Stock != "" {
-				label += " · " + p.Stock
-			}
-			v.button(label, action{Kind: "product", ID: p.ID})
-		}
-		v.pages(a, more)
-		v.homeButton()
-	case "product":
-		p, e := v.service.d.Catalog.Product(ctx, v.actor, a.ID)
-		if e != nil {
-			return e
-		}
-		if p == nil {
-			return c.ErrDenied
-		}
-		v.state.Selection = c.Selection{ProductID: p.ID}
-		v.state.Quote = nil
-		v.say(p.Title + "\n" + p.Description)
-		if p.Price != "" {
-			priceLabel, notice := "公开价", "实际应付金额（含会员优惠）以选择数量后的订单预览为准。"
-			if v.actor.Locale == "en-US" {
-				priceLabel, notice = "Public price", "Payable amount (including member discounts) is shown in the order preview after choosing quantity."
-			} else if v.actor.Locale == "zh-TW" {
-				priceLabel, notice = "公開價", "實際應付金額（含會員優惠）以選擇數量後的訂單預覽為準。"
-			}
-			v.say(priceLabel + ": " + p.Currency + " " + p.Price + "\n" + notice)
-		}
-		if p.Stock != "" {
-			v.say(p.Stock)
-		}
-		if p.Unsupported {
-			v.say(text(v.actor.Locale, "unsupported"))
-		} else if len(p.SKUs) > 0 {
-			for _, sku := range p.SKUs {
-				label := sku.Name
-				if sku.Price != "" {
-					label += " · " + p.Currency + " " + sku.Price
-				}
-				if sku.Stock != "" {
-					label += " · " + sku.Stock
-				}
-				v.button(label, action{Kind: "sku", ID: sku.ID})
-			}
-		} else {
-			v.state.Step = "quantity"
-			v.say(text(v.actor.Locale, "quantity"))
-		}
-		v.homeButton()
-	case "sku":
-		p, e := v.service.d.Catalog.Product(ctx, v.actor, v.state.Selection.ProductID)
-		if e != nil {
-			return e
-		}
-		if p == nil || p.Unsupported {
-			return c.ErrDenied
-		}
-		valid := false
-		for _, sku := range p.SKUs {
-			if sku.ID == a.ID {
-				valid = true
-				v.say(sku.Name)
-				if sku.Price != "" {
-					v.say(p.Currency + " " + sku.Price)
-				}
-				if sku.Stock != "" {
-					v.say(sku.Stock)
-				}
-			}
-		}
-		if !valid {
-			return c.ErrDenied
-		}
-		v.state.Selection.SKUID = a.ID
-		v.state.Step = "quantity"
-		v.say(text(v.actor.Locale, "quantity"))
-		v.homeButton()
-	case "confirm":
-		if v.state.Quote == nil || v.state.Operation == "" {
-			return c.ErrDenied
-		}
-		// Creation replays an existing operation BEFORE validating today's price.
-		o, e := v.service.d.Orders.Create(ctx, v.actor, v.state.Selection, *v.state.Quote, v.state.Operation)
-		if errors.Is(e, c.ErrPriceChanged) {
-			v.say(text(v.actor.Locale, "price_changed"))
-			v.state.Quote = nil
-			v.state.Operation = ""
-			return v.quote(ctx)
-		}
-		if e != nil {
-			return e
-		}
-		if o == nil || o.UserID != v.actor.UserID {
-			return c.ErrDenied
-		}
-		v.state.Quote = nil
-		v.state.Step = ""
-		return v.order(ctx, o.ID, v.actor.UserID)
-	case "orders":
-		return v.orders(ctx, v.actor.UserID, a.Page)
-	case "history":
-		ids, e := v.service.d.Identity.HistoryUsers(ctx, v.actor)
-		if e != nil {
-			return e
-		}
-		v.say(text(v.actor.Locale, "history"))
-		for _, id := range ids {
-			v.button(fmt.Sprintf("#%d", id), action{Kind: "history_orders", Owner: id, Page: 1})
-		}
-		v.homeButton()
-	case "history_orders":
-		if err := v.orders(ctx, a.Owner, a.Page); err != nil {
-			return err
-		}
-		if _, ok := v.service.d.Accounts.(c.HistoryAccounts); ok {
-			v.button(text(v.actor.Locale, "history_account"), action{Kind: "history_account", Owner: a.Owner})
-		}
-		return nil
-	case "history_account", "history_refunds":
-		if a.Owner == v.actor.UserID {
-			return c.ErrDenied
-		}
-		if e := v.allowed(ctx, a.Owner); e != nil {
-			return e
-		}
-		reader, ok := v.service.d.Accounts.(c.HistoryAccounts)
-		if !ok {
-			return c.ErrUnavailable
-		}
-		v.state.ReplyOwner = a.Owner
-		if a.Kind == "history_account" {
-			account, err := reader.HistoryAccount(ctx, v.actor, a.Owner)
-			if err != nil {
-				return err
-			}
-			if account == nil || account.ID != a.Owner {
-				return c.ErrDenied
-			}
-			v.say(fmt.Sprintf("%s\n#%d\n%s %s", text(v.actor.Locale, "history_account"), account.ID, account.Balance, account.Currency))
-			v.button(text(v.actor.Locale, "history_refunds"), action{Kind: "history_refunds", Owner: a.Owner, Page: 1})
-		} else {
-			if a.Page < 1 {
-				a.Page = 1
-			}
-			rows, more, err := reader.HistoryRefunds(ctx, v.actor, a.Owner, a.Page)
-			if err != nil {
-				return err
-			}
-			v.say(text(v.actor.Locale, "history_refunds"))
-			for _, row := range rows {
-				v.say(fmt.Sprintf("%s\n%s %s\n%s", row.CreatedAt.Format(time.RFC3339), row.Amount, row.Currency, row.Reference))
-			}
-			v.pages(a, more)
-		}
-		v.homeButton()
-	case "order":
-		return v.order(ctx, a.ID, a.Owner)
-	case "channels":
-		chs, e := v.service.d.Payments.Channels(ctx, v.actor, a.ID)
-		if e != nil {
-			return e
-		}
-		v.say(text(v.actor.Locale, "channels"))
-		paymentOperation, e := nonce()
-		if e != nil {
-			return e
-		}
-		for _, ch := range chs {
-			v.button(ch.Name, action{Kind: "pay", ID: a.ID, Owner: ch.ID, Value: fmt.Sprintf("tgp:%d:%d:%s:%d", v.actor.BotID, v.actor.UserID, paymentOperation, ch.ID)})
-		}
-		v.homeButton()
-	case "pay":
-		p, e := v.service.d.Payments.Pay(ctx, v.actor, a.ID, a.Owner, a.Value)
-		if errors.Is(e, c.ErrPaymentUncertain) {
-			v.say(text(v.actor.Locale, "payment_uncertain"))
-			v.button(text(v.actor.Locale, "refresh"), action{Kind: "order", ID: a.ID, Owner: v.actor.UserID})
-			v.homeButton()
-			return nil
-		}
-		if e != nil {
-			return e
-		}
-		return v.payment(p, a.ID)
-	case "account":
-		acc, e := v.service.d.Accounts.Account(ctx, v.actor)
-		if e != nil {
-			return e
-		}
-		if acc == nil || acc.ID != v.actor.UserID {
-			return c.ErrDenied
-		}
-		v.say(fmt.Sprintf("%s\n#%d\n%s\n%s %s", text(v.actor.Locale, "account"), acc.ID, acc.Email, acc.Balance, acc.Currency))
-		v.homeButton()
-	case "bind":
-		v.state.Step = "email"
-		v.say(text(v.actor.Locale, "email"))
-		v.homeButton()
-	default:
-		return c.ErrDenied
-	}
-	return nil
-}
-func (v *view) quote(ctx context.Context) error {
-	p, e := v.service.d.Catalog.Product(ctx, v.actor, v.state.Selection.ProductID)
-	if e != nil {
-		return e
-	}
-	n := v.state.Selection.Quantity
-	if p == nil || p.Unsupported || n < p.Min || (p.Max > 0 && n > p.Max) {
-		return c.ErrDenied
-	}
-	q, e := v.service.d.Orders.Preview(ctx, v.actor, v.state.Selection)
-	if e != nil {
-		return e
-	}
-	if q == nil {
-		return c.ErrUnavailable
-	}
-	op, e := nonce()
-	if e != nil {
-		return e
-	}
-	v.state.Operation = fmt.Sprintf("tg:%d:%d:%s", v.actor.BotID, v.actor.UserID, op)
-	v.state.Quote = q
-	v.state.Step = "confirm"
-	v.say(fmt.Sprintf("%s\n%s × %d\n%s %s", text(v.actor.Locale, "quote"), p.Title, n, q.Amount, q.Currency))
-	v.button(text(v.actor.Locale, "confirm"), action{Kind: "confirm"})
-	v.homeButton()
-	return nil
+	_, e := rand.Read(b)
+	return hex.EncodeToString(b), e
 }
 func (v *view) allowed(ctx context.Context, owner uint) error {
 	if owner == v.actor.UserID {
@@ -677,73 +367,201 @@ func (v *view) allowed(ctx context.Context, owner uint) error {
 	}
 	return c.ErrDenied
 }
-func (v *view) orders(ctx context.Context, owner uint, page int) error {
-	if e := v.allowed(ctx, owner); e != nil {
-		return e
+
+func (v *view) input(ctx context.Context, t string) error {
+	parts := strings.Fields(t)
+	cmd := ""
+	if len(parts) > 0 {
+		cmd = strings.Split(parts[0], "@")[0]
 	}
-	if page < 1 {
-		page = 1
+	switch cmd {
+	case "/start", "/cancel", "/back":
+		return v.home(ctx)
+	case "/help":
+		return v.perform(ctx, action{Kind: "help"})
+	case "/language":
+		return v.perform(ctx, action{Kind: "language"})
 	}
-	items, more, e := v.service.d.Orders.List(ctx, v.actor, owner, page)
-	if e != nil {
-		return e
+	switch v.state.Step {
+	case "quantity":
+		n, e := strconv.Atoi(t)
+		if e != nil || n < 1 || n > 10000 {
+			v.say(text(v.actor.Locale, "quantity"))
+			return v.purchase(ctx, false)
+		}
+		return v.changeQuantity(ctx, n)
+	case "email":
+		if len(t) > 254 || !strings.Contains(t, "@") {
+			v.say(text(v.actor.Locale, "email"))
+			v.homeButton()
+			return nil
+		}
+		if e := v.service.d.Identity.SendBindCode(ctx, v.actor, t); e != nil {
+			return e
+		}
+		v.state.Email = t
+		v.state.Step = "code"
+		return v.bindCode("")
+	case "code":
+		if len(t) < 4 || len(t) > 12 {
+			return v.bindCode(text(v.actor.Locale, "code_error"))
+		}
+		id, e := v.service.d.Identity.Bind(ctx, v.actor, v.state.Email, t)
+		if e != nil || id == 0 {
+			return v.bindCode(text(v.actor.Locale, "code_error"))
+		}
+		v.state.UserID = id
+		v.actor.UserID = id
+		if identity, ok := v.service.d.Identity.(c.IdentityGeneration); ok {
+			generation, e := identity.Generation(ctx, v.actor)
+			if e != nil {
+				return e
+			}
+			v.actor.Generation = generation
+			v.state.Generation = generation
+		}
+		v.state.Ref = ""
+		var err error
+		v.state.Ref, err = nonce()
+		if err != nil {
+			return err
+		}
+		return v.home(ctx)
+	default:
+		v.say(text(v.actor.Locale, "use_buttons"))
+		return v.renderCurrent(ctx)
 	}
-	v.say(text(v.actor.Locale, "orders"))
-	for _, o := range items {
-		if o.UserID != owner {
+}
+func (v *view) bindCode(notice string) error {
+	v.state.Current = action{Kind: "bind_code"}
+	if notice != "" {
+		v.say(notice)
+	}
+	v.say(text(v.actor.Locale, "code") + "\n" + v.state.Email)
+	v.button(text(v.actor.Locale, "resend_code"), action{Kind: "resend_code"})
+	v.homeButton()
+	return nil
+}
+func (v *view) renderCurrent(ctx context.Context) error {
+	a := v.state.Current
+	if a.Kind == "" {
+		a.Kind = "home"
+	}
+	if a.Kind == "pay" || a.Kind == "channels" {
+		return v.order(ctx, v.state.OrderID, v.state.OrderOwner)
+	}
+	return v.perform(ctx, a)
+}
+func (v *view) perform(ctx context.Context, a action) error {
+	switch a.Kind {
+	case "language", "locale", "bind_code", "resend_code", "quantity_input", "purchase", "noop", "details", "more_quantity", "delta", "quantity", "sku":
+	default:
+		v.state.Step = ""
+	}
+	switch a.Kind {
+	case "label":
+		rt.AnswerCallback(ctx, a.Value)
+		return nil
+	case "home":
+		return v.home(ctx)
+	case "catalog", "products":
+		return v.catalog(ctx, a)
+	case "product", "sku", "delta", "quantity", "more_quantity", "quantity_input", "details", "purchase", "noop":
+		return v.catalogAction(ctx, a)
+	case "confirm":
+		return v.confirm(ctx)
+	case "orders", "history_orders":
+		v.state.Filter = a.Value
+		v.state.Current = a
+		return v.orders(ctx, chooseOwner(a.Owner, v.actor.UserID), a.Page)
+	case "order":
+		return v.order(ctx, a.ID, a.Owner)
+	case "channels":
+		return v.channels(ctx, a.ID, false)
+	case "pay":
+		return v.pay(ctx, a)
+	case "cancel_order", "cancel_confirm", "rebuy", "resend_delivery", "check_payment":
+		return v.orderAction(ctx, a)
+	case "help":
+		return v.help(a)
+	case "language":
+		v.state.ReturnPage = v.state.Current
+		v.state.Current = a
+		v.html("<b>" + html.EscapeString(text(v.actor.Locale, "language")) + "</b>")
+		names := map[string]string{"zh-CN": "简体中文", "zh-TW": "繁體中文", "en-US": "English"}
+		for _, l := range []string{"zh-CN", "zh-TW", "en-US"} {
+			if locale(v.actor.Locale) == l {
+				v.styled("✓ "+names[l], stylePrimary, action{Kind: "locale", Value: l})
+				continue
+			}
+			v.button(names[l], action{Kind: "locale", Value: l})
+		}
+		v.columns(3, 0)
+		v.homeButton()
+	case "locale":
+		v.state.Locale = locale(a.Value)
+		v.actor.Locale = v.state.Locale
+		if v.service.d.Content != nil {
+			content, e := v.service.d.Content.Content(ctx, v.actor)
+			if e != nil {
+				return e
+			}
+			v.content = content
+		}
+		target := v.state.ReturnPage
+		if target.Kind == "" || target.Kind == "language" {
+			target.Kind = "home"
+		}
+		if target.Kind == "pay" || target.Kind == "channels" {
+			target = action{Kind: "order", ID: v.state.OrderID, Owner: v.state.OrderOwner}
+		}
+		return v.perform(ctx, target)
+	case "account":
+		acc, e := v.service.d.Accounts.Account(ctx, v.actor)
+		if e != nil {
+			return e
+		}
+		if acc == nil || acc.ID != v.actor.UserID {
 			return c.ErrDenied
 		}
-		v.button(o.Number+" · "+o.Status, action{Kind: "order", ID: o.ID, Owner: owner})
-	}
-	kind := "orders"
-	if owner != v.actor.UserID {
-		kind = "history_orders"
-	}
-	v.pages(action{Kind: kind, Owner: owner, Page: page}, more)
-	v.homeButton()
-	return nil
-}
-func (v *view) order(ctx context.Context, id, owner uint) error {
-	if e := v.allowed(ctx, owner); e != nil {
-		return e
-	}
-	o, e := v.service.d.Orders.Detail(ctx, v.actor, id, owner)
-	if e != nil {
-		return e
-	}
-	if o == nil || o.UserID != owner {
+		v.state.Current = a
+		v.html("<b>" + html.EscapeString(text(v.actor.Locale, "account")) + "</b>")
+		facts := []string{html.EscapeString(fmt.Sprintf(text(v.actor.Locale, "account_id"), acc.ID))}
+		if acc.Email != "" {
+			facts = append(facts, html.EscapeString(text(v.actor.Locale, "email_label")+acc.Email))
+		}
+		facts = append(facts, html.EscapeString(text(v.actor.Locale, "balance_label"))+"<b>"+html.EscapeString(money(acc.Currency, acc.Balance))+"</b>")
+		v.html(strings.Join(facts, "\n"))
+		start := len(v.panel().Buttons)
+		v.button(text(v.actor.Locale, "bind"), action{Kind: "bind"})
+		v.button(text(v.actor.Locale, "history"), action{Kind: "history"})
+		v.columns(2, start)
+		v.homeButton()
+	case "bind":
+		v.state.Current = a
+		v.state.Step = "email"
+		v.say(text(v.actor.Locale, "email"))
+		v.homeButton()
+	case "bind_code":
+		return v.bindCode("")
+	case "resend_code":
+		if v.state.Step != "code" || v.state.Email == "" {
+			return c.ErrDenied
+		}
+		if e := v.service.d.Identity.SendBindCode(ctx, v.actor, v.state.Email); e != nil {
+			return e
+		}
+		return v.bindCode("")
+	case "history", "history_account", "history_refunds":
+		return v.history(ctx, a)
+	default:
 		return c.ErrDenied
 	}
-	v.state.ReplyOwner = owner
-	v.say(fmt.Sprintf("%s\n%s\n%s %s", o.Number, o.Status, o.Amount, o.Currency))
-	if o.ExpiresAt != nil {
-		v.say(text(v.actor.Locale, "expires") + o.ExpiresAt.Format(time.RFC3339))
-	}
-	for _, delivery := range o.Delivered {
-		for len([]rune(delivery)) > 3500 {
-			r := []rune(delivery)
-			v.say(string(r[:3500]))
-			delivery = string(r[3500:])
-		}
-		if delivery != "" {
-			v.say(delivery)
-		}
-	}
-	if owner == v.actor.UserID && o.Pending {
-		v.button(text(v.actor.Locale, "channels"), action{Kind: "channels", ID: id})
-	}
-	v.button(text(v.actor.Locale, "refresh"), action{Kind: "order", ID: id, Owner: owner})
-	v.homeButton()
 	return nil
 }
-func (v *view) pages(a action, more bool) {
-	if a.Page > 1 {
-		prev := a
-		prev.Page--
-		v.button("‹", prev)
+func chooseOwner(owner, current uint) uint {
+	if owner == 0 {
+		return current
 	}
-	if more {
-		a.Page++
-		v.button("›", a)
-	}
+	return owner
 }

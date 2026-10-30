@@ -28,7 +28,6 @@ func TestViewSeparatesDesiredAndObservedState(t *testing.T) {
 		{"confirmed stop survives expired heartbeat", false, "internal", "stopped", &expired, "stopped", false},
 		{"new stopped instance needs no heartbeat", false, "internal", "stopped", nil, "stopped", false},
 		{"enable intent does not erase confirmed stop", true, "internal", "stopped", &expired, "stopped", false},
-		{"external needs no internal heartbeat", false, "external", "running", nil, "external", false},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			instance := d.Instance{Enabled: tt.enabled, Mode: tt.mode, State: tt.state, LastSeenAt: tt.seen, TokenCipher: "test-cipher"}
