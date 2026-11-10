@@ -50,6 +50,42 @@ function target(name: string) {
 }
 
 describe('Telegram instance navigation', () => {
+  it('registers preview-only recovery with its actual task read permission', () => {
+    const route = target('telegram-bot-recovery')
+    expect(route.path).toBe('/telegram-bot/recovery')
+    expect(route.meta.permission).toBe('GET:/admin/telegram-bot/recovery/tasks')
+  })
+  it.each(['products', 'orders'])('registers membership %s with exact scope', resource => {
+    const route = target(`telegram-membership-${resource}`)
+    expect(route.path).toBe(`/telegram-bot/membership/${resource}`)
+    expect(route.meta.permission).toBe(`GET:/admin/telegram-bot/membership/${resource}`)
+  })
+  it('redirects the former support settings page to group management without a standalone component', async () => {
+    const route = registered.routes.flatMap(item => item.children || []).find(item => item.name === 'telegram-bot-support-settings')
+    expect(route.redirect).toEqual({ name: 'telegram-bot-groups' })
+    expect(route.component).toBeUndefined()
+    const { createRouter, createMemoryHistory } = await vi.importActual<typeof import('vue-router')>('vue-router')
+    const router = createRouter({ history: createMemoryHistory(), routes: [
+      { path: '/telegram-bot/support/settings', redirect: route.redirect },
+      { path: '/telegram-bot/groups', name: 'telegram-bot-groups', component: { template: '<div />' }, meta: { permission: 'GET:/admin/telegram-bot/groups' } },
+    ] })
+    await router.push('/telegram-bot/support/settings')
+    expect(router.currentRoute.value.path).toBe('/telegram-bot/groups')
+    auth.hasPermission.mockReturnValue(false)
+    try { expect(await registered.guard(target('telegram-bot-groups'))).toMatchObject({ path: '/forbidden' }) }
+    finally { auth.hasPermission.mockReturnValue(true) }
+  })
+  it('registers support pages with independent metadata permissions', () => {
+    expect(target('telegram-bot-support-sessions').path).toBe('/telegram-bot/support/sessions')
+    expect(target('telegram-bot-support-sessions').meta.permission).toBe('GET:/admin/telegram-bot/support/sessions')
+    expect(target('telegram-bot-support-tasks').path).toBe('/telegram-bot/support/tasks')
+    expect(target('telegram-bot-support-tasks').meta.permission).toBe('GET:/admin/telegram-bot/support/downstreams')
+  })
+  it('registers group management with its own read permission and runtime-relative path', () => {
+    const route = target('telegram-bot-groups')
+    expect(route.path).toBe('/telegram-bot/groups')
+    expect(route.meta.permission).toBe('GET:/admin/telegram-bot/groups')
+  })
   it('has one management page and redirects the former status entry', () => {
     const children = registered.routes.flatMap((item) => item.children || [])
     const management = children.find((item) => item.name === 'telegram-bot')

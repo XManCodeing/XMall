@@ -39,6 +39,7 @@ type Order struct {
 	RiskIP                  string       `gorm:"type:varchar(80);index;index:idx_orders_risk_pending,priority:1" json:"-"`         // 规范化风控IP（IPv6按/64）
 	ExpiresAt               *time.Time   `gorm:"index" json:"expires_at"`                                                          // 过期时间
 	PaidAt                  *time.Time   `gorm:"index" json:"paid_at"`                                                             // 支付时间
+	CancellationReason      string       `gorm:"type:varchar(32);not null;default:''" json:"-"`                                    // 仅取消事务写入；历史空值不可推断为超时
 	CanceledAt              *time.Time   `gorm:"index" json:"canceled_at"`                                                         // 取消时间
 	CreatedAt               time.Time    `gorm:"index" json:"created_at"`                                                          // 创建时间
 	UpdatedAt               time.Time    `gorm:"index" json:"updated_at"`                                                          // 更新时间

@@ -78,7 +78,7 @@ func (s *Service) Export(ids []uint, format string) ([]byte, string, error) {
 			redeemedUserID,
 			formatNullableTime(card.RedeemedAt),
 			formatNullableTime(card.ExpiresAt),
-			card.CreatedAt.Format(time.RFC3339),
+			constants.DisplayTime(card.CreatedAt, time.RFC3339),
 		}
 		if err := writer.Write(record); err != nil {
 			return nil, "", giftcardcontract.ErrFetchFailed

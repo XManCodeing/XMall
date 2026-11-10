@@ -24,6 +24,10 @@ interface RequestOptions {
     headers?: Record<string, string>
     blob?: boolean
     silentBusinessError?: boolean
+    /** 敏感响应不将服务端错误原文写入日志或展示。 */
+    sensitiveResponse?: boolean
+    /** 临时邀请使用 no-store，避免浏览器 HTTP 缓存。 */
+    cache?: RequestCache
     credentials?: RequestCredentials
     [key: string]: any
 }
@@ -101,6 +105,7 @@ function createClient(injectAuth: boolean) {
                 headers,
                 body: body instanceof FormData ? body : body !== undefined ? JSON.stringify(body) : undefined,
                 credentials: opts.credentials,
+                cache: opts.cache,
                 signal: controller.signal,
             })
         } catch (err: any) {
@@ -152,7 +157,7 @@ function createClient(injectAuth: boolean) {
         // HTTP error with JSON body
         if (!response.ok) {
             const status = response.status
-            const message = data?.msg || getHttpErrorMessage(status)
+            const message = opts.sensitiveResponse ? getHttpErrorMessage(status) : data?.msg || getHttpErrorMessage(status)
             if (status === 401 && injectAuth && !isPublicAuthEndpoint(path)) {
                 localStorage.removeItem('user_token')
                 localStorage.removeItem('user_profile')
@@ -171,7 +176,7 @@ function createClient(injectAuth: boolean) {
                 return Promise.reject(new Error(t('common.api.unauthorized')))
             }
             const fallbackMessage = t('common.api.requestFailed')
-            const errorMessage = data.msg || fallbackMessage
+            const errorMessage = opts.sensitiveResponse ? fallbackMessage : data.msg || fallbackMessage
             const silentBusinessError = Boolean(opts.silentBusinessError)
             if (!silentBusinessError) {
                 console.error('API Error:', errorMessage)

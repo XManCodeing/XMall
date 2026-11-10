@@ -12,6 +12,8 @@ func TestBroadcastDeliveryPolicies(t *testing.T) {
 			t.Fatal(err)
 		}
 		for _, route := range []struct{ path, method string }{
+			{"/api/v1/admin/telegram-bot/broadcasts/preview", "POST"},
+			{"/api/v1/admin/telegram-bot/broadcasts/4", "GET"},
 			{"/api/v1/admin/telegram-bot/broadcasts/4/deliveries", "GET"},
 			{"/api/v1/admin/telegram-bot/broadcasts/4/deliveries/8/retry", "POST"},
 		} {

@@ -1,3 +1,4 @@
+import { formatDate } from '../utils/format'
 import { ref, onMounted, onUnmounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAppStore } from '../stores/app'
@@ -34,16 +35,6 @@ export function usePostList(
     if (!jsonData) return ''
     const locale = appStore.locale
     return jsonData[locale] || jsonData['zh-CN'] || jsonData['en-US'] || ''
-  }
-
-  const formatDate = (dateString: string) => {
-    if (!dateString) return ''
-    const date = new Date(dateString)
-    return date.toLocaleDateString(appStore.locale, {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-    })
   }
 
   const loadPosts = async () => {

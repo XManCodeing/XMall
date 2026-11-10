@@ -52,35 +52,34 @@ async function loadDeliveries(item: BotInstance, nextPage = 1) {
     <div class="flex items-center justify-between gap-3">
       <div><h2 class="text-2xl font-bold tracking-tight">{{ t('telegramBot.instances.title') }}</h2><p class="text-muted-foreground">{{ t('telegramBot.instances.subtitle') }}</p></div>
       <div class="flex gap-2">
-        <Button variant="outline" :disabled="loading || busy || !canList" @click="refresh">{{ t('telegramBot.instances.reload') }}</Button>
+        <Button variant="outline" :disabled="loading || busy || !canList" @click="refresh">{{ t('admin.common.search') }}</Button>
         <Button v-if="canCreate" :disabled="busy" @click="open(null)">{{ t('telegramBot.instances.create') }}</Button>
       </div>
     </div>
     <p v-if="!canList" class="text-muted-foreground">{{ t('telegramBot.instances.forbidden') }}</p>
-    <p v-if="refreshError" role="alert" class="text-sm text-destructive">{{ refreshError }}</p>
     <p v-if="loading" role="status" class="text-muted-foreground">{{ t('telegramBot.instances.loading') }}</p>
-    <div v-if="canList" class="rounded-lg border border-border">
-      <Table>
-        <TableHeader><TableRow>
-          <TableHead>{{ t('telegramBot.instances.bot') }}</TableHead><TableHead>{{ t('telegramBot.instances.token') }}</TableHead><TableHead>{{ t('telegramBot.instances.desiredState') }}</TableHead><TableHead>{{ t('telegramBot.instances.actualState') }}</TableHead><TableHead>{{ t('telegramBot.instances.version') }}</TableHead><TableHead>{{ t('telegramBot.status.lastSeenAt') }}</TableHead><TableHead>{{ t('telegramBot.instances.backlog') }}</TableHead><TableHead>{{ t('telegramBot.instances.actions') }}</TableHead>
+    <div v-if="canList" class="rounded-xl border border-border bg-card overflow-x-auto">
+      <Table class="min-w-[1080px]">
+        <TableHeader class="border-b border-border bg-muted/40 text-xs uppercase text-muted-foreground"><TableRow>
+          <TableHead class="px-6 py-3">{{ t('telegramBot.instances.bot') }}</TableHead><TableHead class="px-6 py-3">{{ t('telegramBot.instances.token') }}</TableHead><TableHead class="px-6 py-3">{{ t('telegramBot.instances.desiredState') }}</TableHead><TableHead class="px-6 py-3">{{ t('telegramBot.instances.actualState') }}</TableHead><TableHead class="px-6 py-3">{{ t('telegramBot.instances.version') }}</TableHead><TableHead class="px-6 py-3">{{ t('telegramBot.status.lastSeenAt') }}</TableHead><TableHead class="px-6 py-3">{{ t('telegramBot.instances.backlog') }}</TableHead><TableHead class="px-6 py-3 text-right">{{ t('telegramBot.instances.actions') }}</TableHead>
         </TableRow></TableHeader>
-        <TableBody>
-          <TableRow v-for="item in instances" :key="item.id">
-            <TableCell><p class="font-medium">{{ item.username ? `@${item.username}` : item.telegram_id }}</p><p v-if="item.last_error" class="max-w-64 break-words text-xs text-destructive">{{ item.last_error }}</p></TableCell>
-            <TableCell>{{ t(item.token_set ? 'telegramBot.instances.tokenSet' : 'telegramBot.instances.tokenMissing') }}</TableCell>
-            <TableCell>{{ t(item.enabled ? 'telegramBot.instances.desiredRunning' : 'telegramBot.instances.desiredStopped') }}</TableCell>
-            <TableCell><Badge :variant="botStateVariant(item, now)" class="rounded-full whitespace-nowrap"><span aria-hidden="true" class="size-1.5 shrink-0 rounded-full bg-current" />{{ stateLabel(botState(item, now)) }}</Badge></TableCell>
-            <TableCell>{{ item.applied_version }} / {{ item.version }}</TableCell>
-            <TableCell>{{ item.last_seen_at ? formatDate(item.last_seen_at) : '-' }}</TableCell>
-            <TableCell>{{ item.backlog ?? '-' }} / {{ item.unknown ?? '-' }}</TableCell>
-            <TableCell><div class="flex flex-wrap gap-1">
-              <Button v-if="can('PATCH', item.id)" size="sm" :variant="item.enabled ? 'destructive' : 'success'" :disabled="busy || loading" @click="patch(item, { enabled: !item.enabled })">{{ t(item.enabled ? 'telegramBot.instances.stop' : 'telegramBot.instances.start') }}</Button>
-              <Button v-if="can('PATCH', item.id)" size="sm" variant="ghost" :disabled="busy || loading" @click="open(item)">{{ t('telegramBot.instances.rotate') }}</Button>
-              <Button v-if="can('POST', item.id, '/test')" size="sm" variant="ghost" :disabled="busy || loading" :aria-busy="testingId === item.id" @click="test(item)">{{ t(testingId === item.id ? 'telegramBot.instances.testing' : 'telegramBot.instances.test') }}</Button>
-              <Button v-if="can('GET', item.id, '/deliveries')" size="sm" variant="ghost" @click="loadDeliveries(item)">{{ t('telegramBot.instances.deliveries') }}</Button>
+        <TableBody class="divide-y divide-border">
+          <TableRow v-for="item in instances" :key="item.id" class="hover:bg-muted/30">
+            <TableCell class="px-6 py-4"><p class="font-medium">{{ item.username ? `@${item.username}` : item.telegram_id }}</p><p v-if="item.last_error" class="max-w-64 break-words text-xs text-destructive">{{ item.last_error }}</p></TableCell>
+            <TableCell class="px-6 py-4">{{ t(item.token_set ? 'telegramBot.instances.tokenSet' : 'telegramBot.instances.tokenMissing') }}</TableCell>
+            <TableCell class="px-6 py-4">{{ t(item.enabled ? 'telegramBot.instances.desiredRunning' : 'telegramBot.instances.desiredStopped') }}</TableCell>
+            <TableCell class="px-6 py-4"><Badge :variant="botStateVariant(item, now)" class="rounded-full whitespace-nowrap"><span aria-hidden="true" class="size-1.5 shrink-0 rounded-full bg-current" />{{ stateLabel(botState(item, now)) }}</Badge></TableCell>
+            <TableCell class="px-6 py-4 font-mono whitespace-nowrap">{{ item.applied_version }} / {{ item.version }}</TableCell>
+            <TableCell class="px-6 py-4 whitespace-nowrap text-muted-foreground">{{ item.last_seen_at ? formatDate(item.last_seen_at) : '-' }}</TableCell>
+            <TableCell class="px-6 py-4 whitespace-nowrap">{{ item.backlog ?? '-' }} / {{ item.unknown ?? '-' }}</TableCell>
+            <TableCell class="min-w-[240px] px-6 py-4 text-right"><div class="flex flex-wrap items-center justify-end gap-2">
+              <Button v-if="can('PATCH', item.id)" size="sm" :variant="item.enabled ? 'destructive' : 'outline'" :disabled="busy || loading" @click="patch(item, { enabled: !item.enabled })">{{ t(item.enabled ? 'telegramBot.instances.stop' : 'telegramBot.instances.start') }}</Button>
+              <Button v-if="can('PATCH', item.id)" size="sm" variant="outline" :disabled="busy || loading" @click="open(item)" :title="t('telegramBot.instances.rotate')" :aria-label="t('telegramBot.instances.rotate')">{{ t('tableAction.rotate') }}</Button>
+              <Button v-if="can('POST', item.id, '/test')" size="sm" variant="outline" :disabled="busy || loading" :aria-busy="testingId === item.id" @click="test(item)" :title="t('telegramBot.instances.test')" :aria-label="t('telegramBot.instances.test')">{{ t(testingId === item.id ? 'tableAction.testing' : 'tableAction.test') }}</Button>
+              <Button v-if="can('GET', item.id, '/deliveries')" size="sm" variant="outline" @click="loadDeliveries(item)" :title="t('telegramBot.instances.deliveries')" :aria-label="t('telegramBot.instances.deliveries')">{{ t('tableAction.deliveries') }}</Button>
             </div></TableCell>
           </TableRow>
-          <TableRow v-if="!instances.length && !loading"><TableCell :colspan="8" class="py-8 text-center text-muted-foreground">{{ t('telegramBot.instances.empty') }}</TableCell></TableRow>
+          <TableRow v-if="!instances.length && !loading && !refreshError"><TableCell :colspan="8" class="px-6 py-8 text-center text-muted-foreground">{{ t('telegramBot.instances.empty') }}</TableCell></TableRow>
         </TableBody>
       </Table>
     </div>
@@ -91,13 +90,16 @@ async function loadDeliveries(item: BotInstance, nextPage = 1) {
         <DialogFooter><Button :disabled="busy || !token.trim()" @click="save">{{ t('telegramBot.settings.save') }}</Button></DialogFooter>
       </DialogContent>
     </Dialog>
-    <Dialog v-model:open="deliveryOpen"><DialogContent class="sm:max-w-3xl"><DialogHeader><DialogTitle>{{ t('telegramBot.instances.deliveries') }}</DialogTitle></DialogHeader>
+    <Dialog scope="page" v-model:open="deliveryOpen"><DialogContent class="sm:max-w-3xl"><DialogHeader><DialogTitle>{{ t('telegramBot.instances.deliveries') }}</DialogTitle></DialogHeader>
+      <Button variant="outline" :disabled="deliveryLoading || !deliveryBot || !can('GET', deliveryBot.id, '/deliveries')" @click="deliveryBot && loadDeliveries(deliveryBot, 1)">{{ t('admin.common.search') }}</Button>
       <p v-if="deliveryError" role="alert" class="text-destructive">{{ deliveryError }}</p>
       <p v-if="deliveryLoading">{{ t('telegramBot.instances.loading') }}</p>
-      <Table><TableHeader><TableRow><TableHead>ID</TableHead><TableHead>{{ t('telegramBot.instances.state') }}</TableHead><TableHead>{{ t('telegramBot.instances.attempts') }}</TableHead><TableHead>{{ t('telegramBot.instances.error') }}</TableHead></TableRow></TableHeader><TableBody>
-        <TableRow v-for="item in deliveries" :key="item.id"><TableCell>{{ item.id }}</TableCell><TableCell>{{ stateLabel(item.status) }}</TableCell><TableCell>{{ item.attempts }}</TableCell><TableCell>{{ item.last_error || '-' }}</TableCell></TableRow>
-        <TableRow v-if="!deliveries.length && !deliveryLoading"><TableCell :colspan="4">{{ t('telegramBot.instances.empty') }}</TableCell></TableRow>
-      </TableBody></Table>
+      <div class="rounded-xl border border-border bg-card overflow-x-auto">
+        <Table><TableHeader class="border-b border-border bg-muted/40 text-xs uppercase text-muted-foreground"><TableRow><TableHead class="px-4 py-3">ID</TableHead><TableHead class="px-4 py-3">{{ t('telegramBot.instances.state') }}</TableHead><TableHead class="px-4 py-3">{{ t('telegramBot.instances.attempts') }}</TableHead><TableHead class="px-4 py-3">{{ t('telegramBot.instances.error') }}</TableHead></TableRow></TableHeader><TableBody class="divide-y divide-border">
+          <TableRow v-for="item in deliveries" :key="item.id" class="hover:bg-muted/30"><TableCell class="px-4 py-3 font-mono">{{ item.id }}</TableCell><TableCell class="px-4 py-3">{{ stateLabel(item.status) }}</TableCell><TableCell class="px-4 py-3">{{ item.attempts }}</TableCell><TableCell class="px-4 py-3 max-w-80 break-words text-muted-foreground">{{ item.last_error || '-' }}</TableCell></TableRow>
+          <TableRow v-if="!deliveries.length && !deliveryLoading"><TableCell :colspan="4" class="px-4 py-8 text-center text-muted-foreground">{{ t('telegramBot.instances.empty') }}</TableCell></TableRow>
+        </TableBody></Table>
+      </div>
       <DialogFooter><Button variant="outline" :disabled="page <= 1 || deliveryLoading" @click="deliveryBot && loadDeliveries(deliveryBot, page - 1)">{{ t('telegramBot.instances.previous') }}</Button><Button variant="outline" :disabled="page * 20 >= deliveryTotal || deliveryLoading" @click="deliveryBot && loadDeliveries(deliveryBot, page + 1)">{{ t('telegramBot.instances.next') }}</Button></DialogFooter>
     </DialogContent></Dialog>
   </div>

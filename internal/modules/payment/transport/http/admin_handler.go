@@ -2,8 +2,13 @@ package paymenthttp
 
 import (
 	"encoding/csv"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/XManCodeing/XMall/internal/constants"
+	paymentcontract "github.com/XManCodeing/XMall/internal/modules/payment/contract"
+	"io"
+	"net/http"
 	"strconv"
 	"strings"
 	"time"
@@ -20,6 +25,88 @@ import (
 
 	"github.com/gin-gonic/gin"
 )
+
+// ManualConfirmationRequest 是 HTTP 自有 DTO，字段与财务 contract 一致；操作者不接受 JSON 输入。
+type ManualConfirmationRequest paymentcontract.ManualConfirmationInput
+
+// ManualConfirmationHandler 必须挂在 admin JWT 与独立财务 Casbin 权限之后。
+type ManualConfirmationHandler struct {
+	service paymentcontract.ManualConfirmationService
+}
+
+// NewManualConfirmationHandler 注入原支付服务；空依赖拒绝装配。
+func NewManualConfirmationHandler(service paymentcontract.ManualConfirmationService) *ManualConfirmationHandler {
+	if service == nil {
+		panic("payment manual confirmation handler: service is nil")
+	}
+	return &ManualConfirmationHandler{service: service}
+}
+
+// GetManualConfirmation 返回 URL 指定支付的安全快照，管理员身份仅从认证上下文取得。
+func (h *ManualConfirmationHandler) GetManualConfirmation(c *gin.Context) {
+	adminID, ok := ginutil.GetAdminID(c)
+	if !ok || adminID == 0 {
+		return
+	}
+	id, err := ginutil.ParseParamUint(c, "id")
+	if err != nil || id == 0 {
+		ginutil.RespondError(c, response.CodeBadRequest, "error.payment_invalid", nil)
+		return
+	}
+	result, err := h.service.GetManualConfirmation(id)
+	if err != nil {
+		respondManualConfirmationError(c, err)
+		return
+	}
+	response.Success(c, result)
+}
+
+// ConfirmManually 严格解析有限大小的 JSON，拒绝未知操作者字段及尾随内容；成功仅表示收款提交。
+func (h *ManualConfirmationHandler) ConfirmManually(c *gin.Context) {
+	adminID, ok := ginutil.GetAdminID(c)
+	if !ok || adminID == 0 {
+		return
+	}
+	id, err := ginutil.ParseParamUint(c, "id")
+	if err != nil || id == 0 {
+		ginutil.RespondError(c, response.CodeBadRequest, "error.payment_invalid", nil)
+		return
+	}
+	var input ManualConfirmationRequest
+	decoder := json.NewDecoder(http.MaxBytesReader(c.Writer, c.Request.Body, 8192))
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(&input); err != nil {
+		ginutil.RespondError(c, response.CodeBadRequest, "error.bad_request", nil)
+		return
+	}
+	if err := decoder.Decode(new(any)); err != io.EOF {
+		ginutil.RespondError(c, response.CodeBadRequest, "error.bad_request", nil)
+		return
+	}
+	input.AdminID = adminID
+	result, err := h.service.ConfirmManually(id, paymentcontract.ManualConfirmationInput(input))
+	if err != nil {
+		respondManualConfirmationError(c, err)
+		return
+	}
+	response.Success(c, result)
+}
+
+// respondManualConfirmationError 映射受控错误，不泄露数据库细节或收款证据。
+func respondManualConfirmationError(c *gin.Context, err error) {
+	switch {
+	case errors.Is(err, ErrPaymentNotFound):
+		ginutil.RespondError(c, response.CodeNotFound, "error.payment_not_found", nil)
+	case errors.Is(err, paymentcontract.ErrManualConfirmationInvalid):
+		ginutil.RespondError(c, response.CodeBadRequest, "error.payment_invalid", nil)
+	case errors.Is(err, paymentcontract.ErrManualConfirmationConflict):
+		ginutil.RespondError(c, http.StatusConflict, "error.order_status_invalid", nil)
+	case errors.Is(err, ErrMembershipSalesClosed):
+		ginutil.RespondError(c, http.StatusConflict, "error.membership_sales_closed", nil)
+	default:
+		ginutil.RespondError(c, response.CodeInternal, "error.payment_update_failed", nil)
+	}
+}
 
 const adminPaymentExportBatchSize = 500
 
@@ -159,7 +246,7 @@ func (h *AdminHandler) ExportAdminPayments(c *gin.Context) {
 		return
 	}
 
-	filename := fmt.Sprintf("payments_%s.csv", time.Now().Format("20060102_150405"))
+	filename := fmt.Sprintf("payments_%s.csv", constants.DisplayTime(time.Now(), "20060102_150405"))
 	c.Header("Content-Type", "text/csv; charset=utf-8")
 	c.Header("Content-Disposition", fmt.Sprintf("attachment; filename=\"%s\"", filename))
 
@@ -284,7 +371,7 @@ func formatTimeNullable(raw *time.Time) string {
 	if raw == nil {
 		return ""
 	}
-	return raw.Format(time.RFC3339)
+	return constants.DisplayTime(*raw, time.RFC3339)
 }
 
 func buildAdminPaymentFilter(c *gin.Context, page, pageSize int) (AdminPaymentListFilter, error) {
@@ -340,7 +427,7 @@ func (h *AdminHandler) writeAdminPaymentCSVRows(writer *csv.Writer, payments []p
 			payment.Status,
 			payment.Amount.String(),
 			payment.Currency,
-			payment.CreatedAt.Format(time.RFC3339),
+			constants.DisplayTime(payment.CreatedAt, time.RFC3339),
 			formatTimeNullable(payment.PaidAt),
 			formatTimeNullable(payment.ExpiredAt),
 			payment.ProviderRef,

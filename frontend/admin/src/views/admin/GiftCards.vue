@@ -83,22 +83,7 @@ const editForm = reactive({
 
 const normalizeFilterValue = (value: string) => (value === '__all__' ? '' : value)
 
-const toISO = (raw?: string) => {
-  const text = String(raw || '').trim()
-  if (!text) return ''
-  const date = new Date(text)
-  if (Number.isNaN(date.getTime())) return ''
-  return date.toISOString()
-}
-
-const toLocalInput = (raw?: string) => {
-  if (!raw) return ''
-  const date = new Date(raw)
-  if (Number.isNaN(date.getTime())) return ''
-  const offset = date.getTimezoneOffset()
-  const local = new Date(date.getTime() - offset * 60000)
-  return local.toISOString().slice(0, 16)
-}
+import { toISO, toLocalInput } from '@/utils/format'
 
 const formatMoney = (amount?: string | number, currency?: string) => {
   if (!amount) return '-'
@@ -214,8 +199,17 @@ const fetchGiftCards = async (page = 1, options: ListFetchOptions = {}) => {
   }
 }
 
-const handleSearch = () => {
-  fetchGiftCards(1, { preserveRows: true })
+/** 按当前筛选查询第一页，加载期间忽略重复操作。@returns 查询完成。 */
+const handleSearch = async (): Promise<void> => {
+  if (loading.value || refreshing.value) return
+  pagination.value.page = 1
+  await fetchGiftCards(1)
+}
+/** 恢复全部筛选默认值并保留分页尺寸。@returns 查询完成。 */
+const resetFilters = async (): Promise<void> => {
+  if (loading.value || refreshing.value) return
+  Object.assign(filters, { code: '', status: '__all__', redeemedUserID: '', createdFrom: '', createdTo: '' })
+  await handleSearch()
 }
 
 const refresh = () => {
@@ -286,7 +280,7 @@ const exportSelected = async (format: 'txt' | 'csv') => {
     const response = await adminAPI.exportGiftCards(payload) as { data: string; headers?: Record<string, string> }
     const contentDisposition = String(response?.headers?.['content-disposition'] || '')
     const filenameMatch = contentDisposition.match(/filename=\"?([^\";]+)\"?/i)
-    const fallbackName = `gift-cards-${new Date().toISOString().replace(/[:.]/g, '-')}.${format}`
+    const fallbackName = `gift-cards-${formatDate(new Date()).replace(/[ :]/g, '-')}.${format}`
     const filename = filenameMatch?.[1] || fallbackName
     const contentType = format === 'csv' ? 'text/csv;charset=utf-8' : 'text/plain;charset=utf-8'
     const blob = new Blob([response.data], { type: contentType })
@@ -475,7 +469,7 @@ onMounted(() => {
           <Input v-model="filters.redeemedUserID" type="number" min="1" :placeholder="t('admin.giftCards.filterUserID')" @keyup.enter="handleSearch" />
         </div>
         <div class="md:col-span-2">
-          <Select v-model="filters.status" @update:modelValue="handleSearch">
+          <Select v-model="filters.status">
             <SelectTrigger class="h-9 w-full">
               <SelectValue :placeholder="t('admin.giftCards.filterStatusAll')" />
             </SelectTrigger>
@@ -489,13 +483,14 @@ onMounted(() => {
           </Select>
         </div>
         <div class="md:col-span-2">
-          <Input v-model="filters.createdFrom" type="datetime-local" :placeholder="t('admin.giftCards.filterCreatedFrom')" />
+          <Input v-model="filters.createdFrom" type="datetime-local" :placeholder="t('admin.giftCards.filterCreatedFrom')" @keydown.enter="handleSearch" />
         </div>
         <div class="md:col-span-2">
-          <Input v-model="filters.createdTo" type="datetime-local" :placeholder="t('admin.giftCards.filterCreatedTo')" />
+          <Input v-model="filters.createdTo" type="datetime-local" :placeholder="t('admin.giftCards.filterCreatedTo')" @keydown.enter="handleSearch" />
         </div>
-        <div class="md:col-span-1 flex items-center justify-end">
-          <Button size="sm" class="w-full md:w-auto" @click="handleSearch">{{ t('admin.giftCards.search') }}</Button>
+        <div class="md:col-span-12 flex items-center justify-end gap-2">
+          <Button size="sm" class="w-full md:w-auto" :disabled="loading || refreshing" @click="handleSearch">{{ t('admin.giftCards.search') }}</Button>
+          <Button size="sm" variant="outline" :disabled="loading || refreshing" @click="resetFilters">{{ t('admin.common.reset') }}</Button>
         </div>
       </div>
     </div>
@@ -661,7 +656,7 @@ onMounted(() => {
       </DialogScrollContent>
     </Dialog>
 
-    <Dialog v-model:open="showEditModal" @update:open="(value) => { if (!value) closeEditModal() }">
+    <Dialog scope="page" v-model:open="showEditModal" @update:open="(value) => { if (!value) closeEditModal() }">
       <DialogScrollContent class="w-[calc(100vw-1rem)] max-w-xl p-4 sm:p-6" @interact-outside="(e) => e.preventDefault()">
         <DialogHeader>
           <DialogTitle>{{ t('admin.giftCards.modal.editTitle') }}</DialogTitle>

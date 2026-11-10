@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { onMounted, reactive, ref } from 'vue'
-import { useDebounceFn } from '@vueuse/core'
 import { useI18n } from 'vue-i18n'
 import { useRoute } from 'vue-router'
 import { adminAPI } from '@/api/admin'
@@ -81,10 +80,19 @@ const fetchRows = async (page = 1, options: ListFetchOptions = {}) => {
   }
 }
 
-const handleSearch = () => {
-  fetchRows(1, { preserveRows: true })
+/** 按当前筛选查询第一页，加载期间忽略重复操作。@returns 查询完成。 */
+const handleSearch = async (): Promise<void> => {
+  if (loading.value || refreshing.value) return
+  pagination.value.page = 1
+  await fetchRows(1)
 }
-const debouncedSearch = useDebounceFn(handleSearch, 300)
+/** 恢复筛选默认值并保留路由分销商上下文及分页尺寸。@returns 查询完成。 */
+const resetFilters = async (): Promise<void> => {
+  if (loading.value || refreshing.value) return
+  Object.assign(filters, { keyword: '', resellerId: '', userId: '', status: '__all__', createdFrom: '', createdTo: '' })
+  initFiltersFromQuery()
+  await handleSearch()
+}
 
 const refreshCurrentPage = () => {
   refreshList(() => fetchRows(pagination.value.page, { preserveRows: true }))
@@ -184,16 +192,16 @@ onMounted(() => {
       <div class="rounded-xl border border-border bg-card p-4 shadow-sm">
         <div class="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
           <div class="w-full md:w-56">
-            <Input v-model="filters.keyword" :placeholder="t('admin.resellerWithdraws.filters.keyword')" @update:modelValue="debouncedSearch" />
+            <Input v-model="filters.keyword" :placeholder="t('admin.resellerWithdraws.filters.keyword')" @keydown.enter="handleSearch" />
           </div>
           <div class="w-full md:w-36">
-            <Input v-model="filters.resellerId" :placeholder="t('admin.resellerWithdraws.filters.resellerId')" @update:modelValue="debouncedSearch" />
+            <Input v-model="filters.resellerId" :placeholder="t('admin.resellerWithdraws.filters.resellerId')" @keydown.enter="handleSearch" />
           </div>
           <div class="w-full md:w-32">
-            <Input v-model="filters.userId" :placeholder="t('admin.resellerWithdraws.filters.userId')" @update:modelValue="debouncedSearch" />
+            <Input v-model="filters.userId" :placeholder="t('admin.resellerWithdraws.filters.userId')" @keydown.enter="handleSearch" />
           </div>
           <div class="w-full md:w-44">
-            <Select v-model="filters.status" @update:modelValue="handleSearch">
+            <Select v-model="filters.status" @keydown.enter="handleSearch">
               <SelectTrigger class="h-9 w-full">
                 <SelectValue :placeholder="t('admin.resellerWithdraws.filters.statusAll')" />
               </SelectTrigger>
@@ -207,12 +215,14 @@ onMounted(() => {
           </div>
           <div class="flex w-full flex-col gap-2 md:w-auto md:flex-row md:flex-wrap md:items-center">
             <span class="text-xs text-muted-foreground whitespace-nowrap">{{ t('admin.resellerWithdraws.filters.createdRange') }}</span>
-            <Input v-model="filters.createdFrom" type="datetime-local" class="h-9 w-full md:w-auto" @update:modelValue="handleSearch" />
+            <Input v-model="filters.createdFrom" type="datetime-local" class="h-9 w-full md:w-auto" @keydown.enter="handleSearch" />
             <span class="hidden text-muted-foreground md:inline">-</span>
-            <Input v-model="filters.createdTo" type="datetime-local" class="h-9 w-full md:w-auto" @update:modelValue="handleSearch" />
+            <Input v-model="filters.createdTo" type="datetime-local" class="h-9 w-full md:w-auto" @keydown.enter="handleSearch" />
           </div>
           <div class="hidden flex-1 sm:block"></div>
-          <Button size="sm" variant="outline" class="w-full sm:w-auto" :disabled="refreshing" @click="refreshCurrentPage">{{ t('admin.common.refresh') }}</Button>
+          <Button size="sm" variant="outline" :disabled="loading || refreshing" @click="handleSearch">{{ t('admin.common.search') }}</Button>
+          <Button size="sm" variant="outline" :disabled="loading || refreshing" @click="resetFilters">{{ t('admin.common.reset') }}</Button>
+          <Button size="sm" variant="outline" class="w-full sm:w-auto" :disabled="loading || refreshing" @click="refreshCurrentPage">{{ t('admin.common.refresh') }}</Button>
         </div>
       </div>
 
@@ -293,7 +303,7 @@ onMounted(() => {
                     :disabled="operating || item.status !== RESELLER_WITHDRAW_STATUS_PENDING"
                     @click="payWithdraw(item)"
                   >
-                    {{ t('admin.resellerWithdraws.actions.pay') }}
+                    <span :title="t('admin.resellerWithdraws.actions.pay')" :aria-label="t('admin.resellerWithdraws.actions.pay')">{{ t('tableAction.paid') }}</span>
                   </Button>
                 </div>
               </TableCell>
@@ -301,7 +311,7 @@ onMounted(() => {
           </TableBody>
         </Table>
 
-        <ListPagination
+        <ListPagination :loading="loading || refreshing"
           :page="pagination.page"
           :total-page="pagination.total_page"
           :total="pagination.total"

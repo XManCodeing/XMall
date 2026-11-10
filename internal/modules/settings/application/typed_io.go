@@ -1,8 +1,11 @@
 package settingsapp
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
+	"fmt"
+	"io"
 	"strings"
 	"time"
 
@@ -94,6 +97,74 @@ func (s *Service) GetUpstreamSyncInterval(fallbackInterval string) (time.Duratio
 		return time.Duration(config.IntervalMinutes) * time.Minute, err
 	}
 	return time.Duration(config.IntervalMinutes) * time.Minute, nil
+}
+
+// WithNotificationDefaults 注入发送服务使用的静态回退配置；参数为邮件及 Telegram 配置，返回当前服务。
+// 仅在启动装配时调用，数据库配置仍优先于这些默认值。
+func (s *Service) WithNotificationDefaults(email config.EmailConfig, telegram config.TelegramAuthConfig) *Service {
+	s.defaultNotificationEmail = email
+	s.defaultNotificationTelegram = telegram
+	return s
+}
+
+// GetNotificationPrerequisites 返回邮件及 Telegram 必要配置是否齐全，不返回密钥，也不进行联网验证。
+// 无参数；读取失败时返回错误，配置存在不代表消息可送达。
+func (s *Service) GetNotificationPrerequisites() (map[string]bool, error) {
+	email, err := s.notificationEmailConfigured()
+	if err != nil {
+		return nil, err
+	}
+	telegram, err := s.notificationTelegramConfigured()
+	if err != nil {
+		return nil, err
+	}
+	return map[string]bool{"email": email, "telegram": telegram}, nil
+}
+
+// notificationEmailConfigured 无参数；返回 SMTP 是否启用且满足现有配置校验，或读取错误。
+func (s *Service) notificationEmailConfigured() (bool, error) {
+	setting, err := s.GetSMTPSetting(s.defaultNotificationEmail)
+	if err != nil {
+		return false, err
+	}
+	return setting.Enabled && settingsmessaging.ValidateSMTPSetting(setting) == nil, nil
+}
+
+// notificationTelegramConfigured 无参数；返回有效配置来源中是否保存非空 Token，或读取错误。
+// Telegram 登录开关、用户名和 Mini App 地址不是通知的前置条件。
+func (s *Service) notificationTelegramConfigured() (bool, error) {
+	setting, err := s.GetTelegramAuthSetting(s.defaultNotificationTelegram)
+	if err != nil {
+		return false, err
+	}
+	return strings.TrimSpace(setting.BotToken) != "", nil
+}
+
+// validateNotificationPrerequisites 校验待保存配置中启用渠道的外部依赖，返回明确错误。
+// 仅检查启用的渠道，关闭渠道不要求补齐该渠道配置；飞书凭据由现有 schema 校验负责。
+func (s *Service) validateNotificationPrerequisites(setting settingsmessaging.NotificationCenterSetting) error {
+	if err := settingsmessaging.ValidateNotificationCenterSetting(setting); err != nil {
+		return err
+	}
+	if setting.Channels.Email.Enabled {
+		configured, err := s.notificationEmailConfigured()
+		if err != nil {
+			return err
+		}
+		if !configured {
+			return fmt.Errorf("%w: 请先在站点设置的邮件配置中启用 SMTP 并完整配置服务器、端口和发件邮箱", settingsmessaging.ErrNotificationConfigInvalid)
+		}
+	}
+	if setting.Channels.Telegram.Enabled {
+		configured, err := s.notificationTelegramConfigured()
+		if err != nil {
+			return err
+		}
+		if !configured {
+			return fmt.Errorf("%w: 请先在站点设置 → 系统设置 → Telegram能力相关配置中保存 Bot Token，无需开启 Telegram 登录", settingsmessaging.ErrNotificationConfigInvalid)
+		}
+	}
+	return nil
 }
 
 // GetNotificationCenterSetting 获取通知中心配置（优先 settings，空时回退默认）。
@@ -333,6 +404,12 @@ func (s *Service) updateTelegramBotConfig(cfg settingsmessaging.TelegramBotConfi
 	if cfg.ConfigVersion != current.ConfigVersion {
 		return settingsmessaging.TelegramBotConfigSetting{}, ErrTelegramBotConfigConflict
 	}
+	if normalizeMenu {
+		// Validate only user-supplied items, before normalization adds missing builtins.
+		if err := validateUniqueBuiltinMenus(cfg.Menu.Items); err != nil {
+			return settingsmessaging.TelegramBotConfigSetting{}, err
+		}
+	}
 	cfg.Enabled = false // Runtime is controlled exclusively by managed instances.
 	cfg.ConfigVersion = current.ConfigVersion + 1
 	cfg.Basic.Description = settingsmessaging.NormalizeLocalizedText(cfg.Basic.Description)
@@ -369,6 +446,9 @@ func (s *Service) updateTelegramBotConfig(cfg settingsmessaging.TelegramBotConfi
 }
 
 func normalizeBuiltinMenuItem(item settingsmessaging.TelegramBotMenuItem) settingsmessaging.TelegramBotMenuItem {
+	item.Key = strings.TrimSpace(item.Key)
+	item.Action.Type = strings.TrimSpace(item.Action.Type)
+	item.Action.Value = strings.TrimSpace(item.Action.Value)
 	if item.Action.Type != "builtin" {
 		return item
 	}
@@ -418,7 +498,7 @@ func validateUniqueBuiltinMenus(items []settingsmessaging.TelegramBotMenuItem) e
 
 var ErrTelegramBotConfigConflict = errors.New("telegram bot configuration version conflict")
 var ErrTelegramBotSection = errors.New("invalid telegram bot configuration section")
-var ErrTelegramBotMenuUnsupported = errors.New("internal bot menus support only builtin (shop, orders, wallet, language, help) and url actions")
+var ErrTelegramBotMenuUnsupported = errors.New("internal bot menus support only builtin (shop, orders, memberships, wallet, language, help) and url actions")
 var ErrTelegramBotMenuDuplicate = errors.New("duplicate builtin menu action")
 
 func localizedTextEmpty(values settingsmessaging.LocalizedText) bool {
@@ -443,6 +523,8 @@ func (s *Service) PatchTelegramBotConfigSection(section string, expected int, ra
 		return current, ErrTelegramBotConfigConflict
 	}
 	switch section {
+	case "registration":
+		current.Registration, err = decodeTelegramBotRegistrationPatch(raw)
 	case "basic":
 		var data struct {
 			Basic         settingsmessaging.TelegramBotBasicConfig `json:"basic"`
@@ -477,7 +559,7 @@ func (s *Service) PatchTelegramBotConfigSection(section string, expected int, ra
 			case "url":
 			case "builtin":
 				switch strings.TrimSpace(item.Action.Value) {
-				case "shop", "orders", "wallet", "language", "help":
+				case "shop", "orders", "memberships", "wallet", "language", "help":
 				default:
 					return current, ErrTelegramBotMenuUnsupported
 				}
@@ -497,6 +579,42 @@ func (s *Service) PatchTelegramBotConfigSection(section string, expected int, ra
 		return current, ErrTelegramBotSection
 	}
 	return s.updateTelegramBotConfig(current, section == "menu")
+}
+
+// decodeTelegramBotRegistrationPatch validates raw section JSON and returns the
+// explicitly supplied boolean. Missing/null values, unknown fields and trailing
+// JSON are rejected; callers must still enforce the configuration CAS version.
+func decodeTelegramBotRegistrationPatch(raw json.RawMessage) (settingsmessaging.TelegramBotRegistrationConfig, error) {
+	// Reject duplicate keys and case-insensitive aliases accepted by encoding/json.
+	keys := json.NewDecoder(bytes.NewReader(raw))
+	if token, err := keys.Token(); err != nil || token != json.Delim('{') {
+		return settingsmessaging.TelegramBotRegistrationConfig{}, ErrTelegramBotSection
+	}
+	seen := false
+	for keys.More() {
+		key, err := keys.Token()
+		if err != nil || key != "enabled" || seen {
+			return settingsmessaging.TelegramBotRegistrationConfig{}, ErrTelegramBotSection
+		}
+		seen = true
+		var value json.RawMessage
+		if err := keys.Decode(&value); err != nil || (strings.TrimSpace(string(value)) != "true" && strings.TrimSpace(string(value)) != "false") {
+			return settingsmessaging.TelegramBotRegistrationConfig{}, ErrTelegramBotSection
+		}
+	}
+	var dto struct {
+		Enabled *bool `json:"enabled"`
+	}
+	decoder := json.NewDecoder(bytes.NewReader(raw))
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(&dto); err != nil || dto.Enabled == nil {
+		return settingsmessaging.TelegramBotRegistrationConfig{}, ErrTelegramBotSection
+	}
+	var extra interface{}
+	if err := decoder.Decode(&extra); err != io.EOF {
+		return settingsmessaging.TelegramBotRegistrationConfig{}, ErrTelegramBotSection
+	}
+	return settingsmessaging.TelegramBotRegistrationConfig{Enabled: *dto.Enabled}, nil
 }
 
 // GetTelegramBotRuntimeStatus 获取 Telegram Bot 运行时状态。

@@ -7,11 +7,14 @@ import (
 	"context"
 	"errors"
 	"os"
+	"reflect"
 	"strings"
 	"testing"
 	"time"
 
+	"github.com/XManCodeing/XMall/internal/bootstrap/database/migrations"
 	paymentdomain "github.com/XManCodeing/XMall/internal/modules/payment/domain"
+	"github.com/XManCodeing/XMall/internal/platform/database/gormdb"
 
 	orderdomain "github.com/XManCodeing/XMall/internal/modules/order/domain"
 
@@ -29,62 +32,118 @@ import (
 	"github.com/XManCodeing/XMall/internal/shared/jsonmap"
 	"github.com/XManCodeing/XMall/internal/shared/money"
 
+	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/stdlib"
 	"github.com/shopspring/decimal"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 )
 
-// setupPostgresIntegrationDB 初始化 PostgreSQL 集成测试数据库。
+// setupPostgresIntegrationDB gives t migrated repository models in an owned database.
+// It returns the isolated handle; cleanup never drops tables in the supplied DSN.
 func setupPostgresIntegrationDB(t *testing.T) *gorm.DB {
 	t.Helper()
-
-	dsn := strings.TrimSpace(os.Getenv("TEST_POSTGRES_DSN"))
-	if dsn == "" {
-		t.Skip("skip postgres integration test: TEST_POSTGRES_DSN is empty")
-	}
-
-	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
-	if err != nil {
-		t.Fatalf("open postgres failed: %v", err)
-	}
-
-	cleanupModels := []interface{}{
-		&orderdomain.OrderItem{},
-		&paymentdomain.Payment{},
-		&orderdomain.Order{},
-		&contentdomain.PostProduct{},
-		&productdomain.ProductSKU{},
-		&productdomain.Product{},
-		&categorydomain.Category{},
-		&contentdomain.Banner{},
-		&contentdomain.Post{},
-	}
-	_ = db.Migrator().DropTable(cleanupModels...)
-
-	// product_skus 必须建表：商品搜索条件里含有对 product_skus 的 EXISTS 子查询
+	db := openIsolatedPostgresDB(t)
 	if err := db.AutoMigrate(
-		&categorydomain.Category{},
-		&productdomain.Product{},
-		&productdomain.ProductSKU{},
-		&contentdomain.Post{},
-		&contentdomain.PostProduct{},
-		&contentdomain.Banner{},
-		&orderdomain.Order{},
-		&orderdomain.OrderItem{},
-		&paymentdomain.Payment{},
+		&categorydomain.Category{}, &productdomain.Product{}, &productdomain.ProductSKU{},
+		&contentdomain.Post{}, &contentdomain.PostProduct{}, &contentdomain.Banner{},
+		&orderdomain.Order{}, &orderdomain.OrderItem{}, &paymentdomain.Payment{},
 	); err != nil {
 		t.Fatalf("migrate postgres models failed: %v", err)
 	}
+	return db
+}
 
+// openIsolatedPostgresDB uses t's explicit server login to create a random database.
+// The returned handle owns no existing data. Cleanup closes it before dropping only
+// the successfully created database, then closes the maintenance connection.
+func openIsolatedPostgresDB(t *testing.T) *gorm.DB {
+	t.Helper()
+	dsn := strings.TrimSpace(os.Getenv("TEST_POSTGRES_DSN"))
+	if dsn == "" {
+		t.Skip("TEST_POSTGRES_DSN is unset; real PostgreSQL integration not executed")
+	}
+	cfg, err := pgx.ParseConfig(dsn)
+	if err != nil {
+		t.Fatal("invalid test PostgreSQL DSN")
+	}
+	// Both URL and keyword DSNs are parsed before overriding the database. Never
+	// migrate or remove business objects in the database supplied by the caller.
+	cfg.Database = "postgres"
+	cfg.RuntimeParams = map[string]string{}
+	cfg.ConnectTimeout = 10 * time.Second
+	server := stdlib.OpenDB(*cfg)
 	t.Cleanup(func() {
-		_ = db.Migrator().DropTable(cleanupModels...)
-		sqlDB, err := db.DB()
-		if err == nil {
-			_ = sqlDB.Close()
+		if err := server.Close(); err != nil {
+			t.Errorf("close PostgreSQL maintenance connection: %v", err)
 		}
 	})
-
+	name := "xmall_pg_test_" + strings.ReplaceAll(uuid.NewString(), "-", "")
+	identifier := pgx.Identifier{name}.Sanitize()
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	if _, err := server.ExecContext(ctx, "CREATE DATABASE "+identifier+" TEMPLATE template0"); err != nil {
+		t.Fatal("cannot create isolated PostgreSQL test database; isolated server with CREATEDB permission required")
+	}
+	// Register deletion only after successful creation. LIFO cleanup closes the
+	// test pool first, so DROP needs neither FORCE nor termination of other users.
+	t.Cleanup(func() {
+		cleanupCtx, cleanupCancel := context.WithTimeout(context.Background(), 30*time.Second)
+		defer cleanupCancel()
+		if _, err := server.ExecContext(cleanupCtx, "DROP DATABASE "+identifier); err != nil {
+			t.Errorf("drop owned PostgreSQL database %s: %v", name, err)
+		}
+	})
+	cfg.Database = name
+	testPool := stdlib.OpenDB(*cfg)
+	t.Cleanup(func() {
+		if err := testPool.Close(); err != nil {
+			t.Errorf("close isolated PostgreSQL database: %v", err)
+		}
+	})
+	db, err := gorm.Open(postgres.New(postgres.Config{Conn: testPool}), &gorm.Config{})
+	if err != nil {
+		t.Fatal("cannot open newly created PostgreSQL test database")
+	}
 	return db
+}
+
+// TestPostgresFullMigrationFreshAndRepeat exercises the production migration entry.
+// t owns a fresh database; replay must preserve its ledger and inserted sentinel.
+func TestPostgresFullMigrationFreshAndRepeat(t *testing.T) {
+	db := openIsolatedPostgresDB(t)
+	previous := gormdb.DB
+	gormdb.DB = db
+	t.Cleanup(func() { gormdb.DB = previous })
+	if err := migrations.AutoMigrate(); err != nil {
+		t.Fatalf("fresh PostgreSQL migration: %v", err)
+	}
+	var before []struct {
+		Version     int64
+		CompletedAt string
+	}
+	if err := db.Table("schema_migrations").Order("version").Find(&before).Error; err != nil || len(before) != 1 {
+		t.Fatalf("fresh migration ledger: %v %v", before, err)
+	}
+	category := categorydomain.Category{Slug: "migration-sentinel", NameJSON: jsonmap.JSON{"en-US": "preserved"}}
+	if err := db.Create(&category).Error; err != nil {
+		t.Fatal(err)
+	}
+	if err := migrations.AutoMigrate(); err != nil {
+		t.Fatalf("repeat PostgreSQL migration: %v", err)
+	}
+	var after []struct {
+		Version     int64
+		CompletedAt string
+	}
+	if err := db.Table("schema_migrations").Order("version").Find(&after).Error; err != nil || !reflect.DeepEqual(before, after) {
+		t.Fatalf("repeat changed ledger: before=%v after=%v err=%v", before, after, err)
+	}
+	var preserved categorydomain.Category
+	if err := db.First(&preserved, category.ID).Error; err != nil || preserved.Slug != category.Slug {
+		t.Fatalf("repeat changed sentinel: %+v %v", preserved, err)
+	}
 }
 
 func TestPostgresLocalizedJSONSearchRepositories(t *testing.T) {

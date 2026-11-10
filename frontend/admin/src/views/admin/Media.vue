@@ -1,6 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref, watch } from 'vue'
-import { useDebounceFn } from '@vueuse/core'
+import { computed, onMounted, reactive, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { adminAPI } from '@/api/admin'
 import type { AdminMedia } from '@/api/types'
@@ -119,9 +118,18 @@ function changePageSize(size: number) {
   fetchMedia(1)
 }
 
-const debouncedFetch = useDebounceFn(() => fetchMedia(1), 300)
-watch(() => filters.search, debouncedFetch)
-watch(() => filters.scene, () => fetchMedia(1))
+/** 按当前筛选查询第一页。@returns 查询完成。 */
+async function handleSearch(): Promise<void> {
+  if (loading.value) return
+  pagination.page = 1
+  await fetchMedia(1)
+}
+/** 清空媒体查询筛选，保留分页尺寸。@returns 查询完成。 */
+async function resetFilters(): Promise<void> {
+  if (loading.value) return
+  Object.assign(filters, { search: '', scene: '__all__' })
+  await handleSearch()
+}
 
 function formatFileSize(bytes: number): string {
   if (bytes < 1024) return bytes + ' B'
@@ -269,6 +277,7 @@ onMounted(() => fetchMedia(1))
       <Input
         v-model="filters.search"
         :placeholder="t('admin.media.searchPlaceholder')"
+        @keydown.enter="handleSearch"
         class="w-64"
       />
       <Select v-model="filters.scene">
@@ -281,6 +290,8 @@ onMounted(() => fetchMedia(1))
           </SelectItem>
         </SelectContent>
       </Select>
+      <Button size="sm" variant="outline" :disabled="loading" @click="handleSearch">{{ t('admin.common.search') }}</Button>
+      <Button size="sm" variant="outline" :disabled="loading" @click="resetFilters">{{ t('admin.common.reset') }}</Button>
     </div>
 
     <div v-if="batchMode" class="flex flex-wrap items-center gap-3 rounded-lg border border-primary/20 bg-primary/5 px-4 py-3">

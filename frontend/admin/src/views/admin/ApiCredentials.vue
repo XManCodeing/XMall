@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { onMounted, reactive, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { useDebounceFn } from '@vueuse/core'
 import { adminAPI } from '@/api/admin'
 import type { AdminApiCredential } from '@/api/types'
 import IdCell from '@/components/IdCell.vue'
@@ -71,10 +70,19 @@ const fetchCredentials = async (page = 1, options: ListFetchOptions = {}) => {
   }
 }
 
-const handleSearch = () => {
-  fetchCredentials(1, { preserveRows: true })
+/** 按当前筛选查询第一页，加载期间忽略重复操作。@returns 查询完成。 */
+const handleSearch = async (): Promise<void> => {
+  if (loading.value) return
+  pagination.page = 1
+  await fetchCredentials(1)
 }
-const debouncedSearch = useDebounceFn(handleSearch, 300)
+/** 恢复全部筛选默认值并保留分页尺寸。@returns 查询完成。 */
+const resetFilters = async (): Promise<void> => {
+  if (loading.value) return
+  filterStatus.value = '__all__'
+  searchQuery.value = ''
+  await handleSearch()
+}
 
 const statusVariant = (status: string) => {
   switch (status) {
@@ -85,7 +93,7 @@ const statusVariant = (status: string) => {
   }
 }
 
-const formatDate = (d?: string) => d ? new Date(d).toLocaleString() : '-'
+import { formatDate } from '@/utils/format'
 
 const openDetail = (cred: AdminApiCredential) => {
   detailCred.value = cred
@@ -173,7 +181,7 @@ onMounted(() => fetchCredentials())
 
     <!-- Filters -->
     <div class="flex flex-wrap gap-3 items-center">
-      <Select v-model="filterStatus" @update:model-value="handleSearch">
+      <Select v-model="filterStatus">
         <SelectTrigger class="w-full sm:w-[160px]">
           <SelectValue :placeholder="t('apiCredentials.filters.statusPlaceholder')" />
         </SelectTrigger>
@@ -187,12 +195,12 @@ onMounted(() => fetchCredentials())
         v-model="searchQuery"
         class="w-full sm:w-[240px]"
         :placeholder="t('apiCredentials.filters.searchPlaceholder')"
-        @update:modelValue="debouncedSearch"
         @keyup.enter="handleSearch"
       />
-      <Button size="sm" variant="outline" @click="handleSearch">
+      <Button size="sm" variant="outline" :disabled="loading" @click="handleSearch">
         {{ t('apiCredentials.filters.search') }}
       </Button>
+      <Button size="sm" variant="outline" :disabled="loading" @click="resetFilters">{{ t('admin.common.reset') }}</Button>
     </div>
 
     <!-- Table -->
@@ -312,7 +320,7 @@ onMounted(() => fetchCredentials())
     </div>
 
     <!-- Detail Dialog -->
-    <Dialog v-model:open="showDetail">
+    <Dialog scope="page" v-model:open="showDetail">
       <DialogScrollContent class="w-[calc(100vw-1rem)] max-w-lg p-4 sm:p-6">
         <DialogHeader>
           <DialogTitle>{{ t('apiCredentials.detail.title') }}</DialogTitle>

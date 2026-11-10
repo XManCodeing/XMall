@@ -263,7 +263,16 @@ func TestDatabaseBootstrapIsSeparatedFromPlatformConnection(t *testing.T) {
 	assertFileDeclaresFunctions(t, filepath.Join(connectionRoot, "db.go"), []string{"InitDB"})
 	assertFileDeclaresFunctions(t, filepath.Join(migrationRoot, "registry.go"), []string{"AutoMigrate"})
 	assertDirectoryGoFileBudget(t, connectionRoot, 2)
-	assertDirectoryGoFileBudget(t, migrationRoot, 4)
+	// 会员迁移回归独立成测试文件，避免继续扩张已有超长 SKU 测试。
+	// 仅增加测试预算；生产迁移文件仍固定为 registry.go 和 migrations.go。
+	production, _ := countDirectGoFiles(t, migrationRoot)
+	if production != 2 {
+		t.Fatalf("migration production file budget must remain 2, got %d", production)
+	}
+	assertFileDeclaresFunctions(t, filepath.Join(migrationRoot, "membership_migration_test.go"), []string{
+		"TestMembershipV14InterruptedUpgrade", "TestMembershipV14ReplayPreservesSnapshots",
+	})
+	assertDirectoryGoFileBudget(t, migrationRoot, 5)
 }
 
 func TestNoNewCompatibilityOrLegacyProductionFiles(t *testing.T) {

@@ -24,6 +24,18 @@ import type {
   AdminResellerSystemDomainPayload,
 } from './types'
 
+export interface TelegramBroadcastPayload {
+  bot_id: number
+  title: string
+  recipient_type: string
+  user_ids?: number[]
+  filters?: Record<string, unknown>
+  attachment_url?: string
+  attachment_name?: string
+  message_html: string
+  buttons?: Array<Array<{ text: string; url: string }>>
+}
+
 export interface CaptchaPayload {
   captcha_id?: string
   captcha_code?: string
@@ -343,8 +355,8 @@ export const adminAPI = {
 
   getProducts: (params?: Record<string, unknown>) => api.get('/admin/products', { params }),
   getProduct: (id: number) => api.get(`/admin/products/${id}`),
-  createProduct: (data: Partial<AdminProduct>) => api.post('/admin/products', data),
-  updateProduct: (id: number, data: Partial<AdminProduct>) => api.put(`/admin/products/${id}`, data),
+  createProduct: (data: Partial<AdminProduct>) => api.post('/admin/products', data, { timeoutMs: 30000 }),
+  updateProduct: (id: number, data: Partial<AdminProduct>) => api.put(`/admin/products/${id}`, data, { timeoutMs: 30000 }),
   patchProduct: (id: number, data: { is_active?: boolean; sort_order?: number; category_id?: number }) => api.patch(`/admin/products/${id}`, data),
   updateProductWholesalePrices: (id: number, data: { wholesale_prices: AdminWholesalePrice[] }) =>
     api.patch(`/admin/products/${id}/wholesale-prices`, data),
@@ -395,8 +407,8 @@ export const adminAPI = {
   getPublicConfig: () => api.get('/public/config'),
   getImageCaptcha: () => api.get('/public/captcha/image'),
   getSystemVersion: () => api.get('/admin/system/version'),
-  checkSystemUpdate: (params?: { owner?: string; repo?: string }) =>
-    api.get('/admin/system/version/check', { params }),
+  checkSystemUpdate: (params?: { owner?: string; repo?: string }, options?: { silent?: boolean }) =>
+    api.get('/admin/system/version/check', { params, ...options }),
   getUpdateCapability: () => api.get('/admin/system/update/capability'),
   getUpdateStatus: () => api.get('/admin/system/update/status'),
   startSystemUpdate: () => api.post('/admin/system/update/start'),
@@ -637,17 +649,9 @@ export const adminAPI = {
     api.get(`/admin/telegram-bot/broadcasts/${id}/deliveries`, { params }),
   retryTelegramBroadcastDelivery: (id: number, deliveryId: number) =>
     api.post(`/admin/telegram-bot/broadcasts/${id}/deliveries/${deliveryId}/retry`),
-  createTelegramBroadcast: (data: {
-    bot_id: number
-    title: string
-    recipient_type: string
-    user_ids?: number[]
-    filters?: Record<string, unknown>
-    attachment_url?: string
-    attachment_name?: string
-    message_html: string
-    buttons?: Array<Array<{ text: string; url: string }>>
-  }) => api.post('/admin/telegram-bot/broadcasts', data),
+  previewTelegramBroadcast: (data: TelegramBroadcastPayload) =>
+    api.post('/admin/telegram-bot/broadcasts/preview', data),
+  createTelegramBroadcast: (data: TelegramBroadcastPayload) => api.post('/admin/telegram-bot/broadcasts', data),
   deleteTelegramBroadcast: (id: number) => api.delete(`/admin/telegram-bot/broadcasts/${id}`),
   getTelegramBroadcastUsers: (params?: Record<string, unknown>) =>
     api.get('/admin/telegram-bot/users', { params }),

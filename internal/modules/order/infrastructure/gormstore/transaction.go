@@ -3,6 +3,8 @@ package gormstore
 import (
 	delivery "github.com/XManCodeing/XMall/internal/modules/telegram/delivery/contract"
 	deliverygorm "github.com/XManCodeing/XMall/internal/modules/telegram/delivery/infrastructure/gormstore"
+	membership "github.com/XManCodeing/XMall/internal/modules/telegram/membership/contract"
+	membershipstore "github.com/XManCodeing/XMall/internal/modules/telegram/membership/infrastructure/gormstore"
 	"strings"
 	"time"
 
@@ -59,6 +61,24 @@ func useTransaction(tx *gorm.DB, guestCredentialSecret []byte) ordercontract.Tra
 
 func (tx transaction) Orders() ordercontract.Store {
 	return &Store{db: tx.db, guestCredentialSecret: tx.guestCredentialSecret, businessEventsEnabled: tx.businessEventsEnabled}
+}
+
+// MembershipCheckout 返回当前订单事务的会员预检、快照和真实永久覆盖检查端口。
+func (tx transaction) MembershipCheckout() (membership.Checkout, error) {
+	return membershipstore.CheckoutWithLedgerInTransaction(tx.db)
+}
+
+// MembershipPaymentPreflight 返回同事务历史快照及永久覆盖复核端口；销售门控由入口独立保持。
+func (tx transaction) MembershipPaymentPreflight() (membership.PaymentPreflight, error) {
+	checkout, err := membershipstore.CheckoutWithLedgerInTransaction(tx.db)
+	if err != nil {
+		return nil, err
+	}
+	preflight, ok := checkout.(membership.PaymentPreflight)
+	if !ok {
+		return nil, membership.ErrTransactionRequired
+	}
+	return preflight, nil
 }
 
 func (tx transaction) Products() productcontract.Repository {

@@ -18,7 +18,8 @@ import (
 // AdminService is the transport-facing broadcast application contract.
 type AdminService interface {
 	ListBroadcasts(context.Context, broadcastapp.ListInput) ([]broadcastdomain.Broadcast, int64, error)
-	GetBroadcast(context.Context, uint) (*broadcastdomain.Broadcast, error)
+	GetBroadcast(context.Context, uint) (*broadcastapp.BroadcastDetail, error)
+	PreviewBroadcast(context.Context, broadcastapp.CreateInput) (broadcastapp.PreviewResult, error)
 	CreateBroadcast(context.Context, broadcastapp.CreateInput) (*broadcastdomain.Broadcast, error)
 	ListTelegramUsers(broadcastapp.UserQuery) ([]broadcastapp.UserItem, int64, error)
 }
@@ -62,6 +63,28 @@ func (h *AdminHandler) List(c *gin.Context) {
 	response.SuccessWithPage(c, items, response.BuildPagination(page, pageSize, total))
 }
 
+func (req createBroadcastRequest) input() broadcastapp.CreateInput {
+	return broadcastapp.CreateInput{
+		BotID: req.BotID, Title: req.Title, RecipientType: req.RecipientType,
+		UserIDs: req.UserIDs, Filters: req.Filters, AttachmentURL: req.AttachmentURL,
+		AttachmentName: req.AttachmentName, MessageHTML: req.MessageHTML, Buttons: req.Buttons,
+	}
+}
+
+func (h *AdminHandler) Preview(c *gin.Context) {
+	var req createBroadcastRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		ginutil.RespondBindError(c, err)
+		return
+	}
+	result, err := h.broadcasts.PreviewBroadcast(c.Request.Context(), req.input())
+	if err != nil {
+		deliveryError(c, err)
+		return
+	}
+	response.Success(c, result)
+}
+
 // Create persists and dispatches a Telegram broadcast job.
 func (h *AdminHandler) Create(c *gin.Context) {
 	var req createBroadcastRequest
@@ -70,17 +93,7 @@ func (h *AdminHandler) Create(c *gin.Context) {
 		return
 	}
 
-	result, err := h.broadcasts.CreateBroadcast(c.Request.Context(), broadcastapp.CreateInput{
-		BotID:          req.BotID,
-		Title:          req.Title,
-		RecipientType:  req.RecipientType,
-		UserIDs:        req.UserIDs,
-		Filters:        req.Filters,
-		AttachmentURL:  req.AttachmentURL,
-		AttachmentName: req.AttachmentName,
-		MessageHTML:    req.MessageHTML,
-		Buttons:        req.Buttons,
-	})
+	result, err := h.broadcasts.CreateBroadcast(c.Request.Context(), req.input())
 	if err != nil {
 		if errors.Is(err, broadcastapp.ErrInvalid) ||
 			errors.Is(err, broadcastapp.ErrNoRecipients) ||
@@ -181,6 +194,7 @@ func RegisterAdminRoutes(admin gin.IRoutes, handler *AdminHandler) {
 	admin.GET("/telegram-bot/broadcasts/:id", handler.Get)
 	admin.GET("/telegram-bot/broadcasts/:id/deliveries", handler.ListDeliveries)
 	admin.POST("/telegram-bot/broadcasts/:id/deliveries/:delivery_id/retry", handler.RetryDelivery)
+	admin.POST("/telegram-bot/broadcasts/preview", handler.Preview)
 	admin.POST("/telegram-bot/broadcasts", handler.Create)
 	admin.GET("/telegram-bot/users", handler.ListUsers)
 }

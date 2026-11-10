@@ -40,22 +40,7 @@ const form = reactive({
   end_at: '',
 })
 
-// RFC3339 -> datetime-local 输入值（本地时区）
-const toLocalInput = (rfc: string): string => {
-  if (!rfc) return ''
-  const date = new Date(rfc)
-  if (Number.isNaN(date.getTime())) return ''
-  const pad = (n: number) => String(n).padStart(2, '0')
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`
-}
-
-// datetime-local 输入值 -> RFC3339（UTC）
-const toRFC3339 = (local: string): string => {
-  if (!local) return ''
-  const date = new Date(local)
-  if (Number.isNaN(date.getTime())) return ''
-  return date.toISOString()
-}
+import { toLocalInput, toISO as toRFC3339 } from '@/utils/format'
 
 // 判断富文本是否为空（保留纯图片/表格类内容）
 const isRichTextEmpty = (html: string): boolean => {

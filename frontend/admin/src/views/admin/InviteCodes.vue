@@ -58,21 +58,7 @@ const usersPagination = ref({ page: 1, page_size: 20, total: 0, total_page: 1 })
 
 const customCodePattern = /^[A-Za-z0-9_-]{4,32}$/
 
-const toISO = (raw?: string) => {
-  const text = String(raw || '').trim()
-  if (!text) return ''
-  const date = new Date(text)
-  if (Number.isNaN(date.getTime())) return ''
-  return date.toISOString()
-}
-
-const toLocalInput = (raw?: string | null) => {
-  if (!raw) return ''
-  const date = new Date(raw)
-  if (Number.isNaN(date.getTime())) return ''
-  const local = new Date(date.getTime() - date.getTimezoneOffset() * 60000)
-  return local.toISOString().slice(0, 16)
-}
+import { toISO, toLocalInput } from '@/utils/format'
 
 const isValidMaxUses = (value: number) => Number.isInteger(value) && value >= 0
 
@@ -125,7 +111,18 @@ const fetchCodes = async (page = 1, options: ListFetchOptions = {}) => {
   }
 }
 
-const handleSearch = () => fetchCodes(1, { preserveRows: true })
+/** 按当前筛选查询第一页，加载期间忽略重复操作。@returns 查询完成。 */
+const handleSearch = async (): Promise<void> => {
+  if (loading.value || refreshing.value) return
+  pagination.value.page = 1
+  await fetchCodes(1)
+}
+/** 恢复全部筛选默认值并保留分页尺寸。@returns 查询完成。 */
+const resetFilters = async (): Promise<void> => {
+  if (loading.value || refreshing.value) return
+  Object.assign(filters, { code: '', status: '__all__' })
+  await handleSearch()
+}
 
 const refresh = () => {
   refreshList(() => fetchCodes(pagination.value.page, { preserveRows: true }))
@@ -305,7 +302,7 @@ onMounted(() => {
           <Input v-model="filters.code" :placeholder="t('admin.inviteCodes.filterCode')" @keyup.enter="handleSearch" />
         </div>
         <div class="md:col-span-3">
-          <Select v-model="filters.status" @update:modelValue="handleSearch">
+          <Select v-model="filters.status">
             <SelectTrigger class="h-9 w-full">
               <SelectValue :placeholder="t('admin.inviteCodes.filterStatusAll')" />
             </SelectTrigger>
@@ -316,8 +313,9 @@ onMounted(() => {
             </SelectContent>
           </Select>
         </div>
-        <div class="md:col-span-5 flex items-center justify-end">
-          <Button size="sm" class="w-full md:w-auto" @click="handleSearch">{{ t('admin.common.search') }}</Button>
+        <div class="md:col-span-5 flex items-center justify-end gap-2">
+          <Button size="sm" class="w-full md:w-auto" :disabled="loading || refreshing" @click="handleSearch">{{ t('admin.common.search') }}</Button>
+          <Button size="sm" variant="outline" :disabled="loading || refreshing" @click="resetFilters">{{ t('admin.common.reset') }}</Button>
         </div>
       </div>
     </div>
@@ -371,7 +369,7 @@ onMounted(() => {
             <TableCell class="px-4 py-3 text-xs text-muted-foreground">{{ formatDate(item.created_at) || '-' }}</TableCell>
             <TableCell class="px-4 py-3 text-right">
               <div class="flex flex-wrap items-center justify-end gap-2">
-                <Button size="sm" variant="outline" @click="openUsersModal(item)">{{ t('admin.inviteCodes.actions.users') }}</Button>
+                <Button size="sm" variant="outline" @click="openUsersModal(item)" :title="t('admin.inviteCodes.actions.users')" :aria-label="t('admin.inviteCodes.actions.users')">{{ t('tableAction.users') }}</Button>
                 <Button size="sm" variant="outline" @click="toggleStatus(item)">
                   {{ item.status === 'active' ? t('admin.inviteCodes.actions.disable') : t('admin.inviteCodes.actions.enable') }}
                 </Button>
@@ -443,7 +441,7 @@ onMounted(() => {
       </DialogScrollContent>
     </Dialog>
 
-    <Dialog v-model:open="showResultModal">
+    <Dialog scope="page" v-model:open="showResultModal">
       <DialogScrollContent class="w-[calc(100vw-1rem)] max-w-xl p-4 sm:p-6" @interact-outside="(e) => e.preventDefault()">
         <DialogHeader>
           <DialogTitle>{{ t('admin.inviteCodes.modal.resultTitle', { count: generatedCodes.length }) }}</DialogTitle>
@@ -461,7 +459,7 @@ onMounted(() => {
       </DialogScrollContent>
     </Dialog>
 
-    <Dialog v-model:open="showEditModal">
+    <Dialog scope="page" v-model:open="showEditModal">
       <DialogScrollContent class="w-[calc(100vw-1rem)] max-w-xl p-4 sm:p-6" @interact-outside="(e) => e.preventDefault()">
         <DialogHeader>
           <DialogTitle>{{ t('admin.inviteCodes.modal.editTitle', { code: editingCode?.code || '' }) }}</DialogTitle>
@@ -497,7 +495,7 @@ onMounted(() => {
       </DialogScrollContent>
     </Dialog>
 
-    <Dialog v-model:open="showUsersModal">
+    <Dialog scope="page" v-model:open="showUsersModal">
       <DialogScrollContent class="w-[calc(100vw-1rem)] max-w-3xl p-4 sm:p-6">
         <DialogHeader>
           <DialogTitle>{{ t('admin.inviteCodes.modal.usersTitle', { code: usersCode?.code || '' }) }}</DialogTitle>

@@ -15,6 +15,7 @@ import (
 	"github.com/XManCodeing/XMall/internal/app"
 	databasemigrations "github.com/XManCodeing/XMall/internal/bootstrap/database/migrations"
 	"github.com/XManCodeing/XMall/internal/config"
+	"github.com/XManCodeing/XMall/internal/constants"
 	"github.com/XManCodeing/XMall/internal/logger"
 	adminapplication "github.com/XManCodeing/XMall/internal/modules/identity/admin/application"
 	adminstore "github.com/XManCodeing/XMall/internal/modules/identity/admin/infrastructure/gormstore"
@@ -334,7 +335,7 @@ func runRollbackCommand(args []string) {
 		fmt.Println("回滚到:     未知版本（元数据由本版本回填，不含来源版本）")
 	default:
 		fmt.Printf("当前版本:   %s\n", info.TargetVersion)
-		fmt.Printf("回滚到:     %s（%s 完成替换）\n", info.PreviousVersion, info.SwappedAt.Local().Format(time.RFC3339))
+		fmt.Printf("回滚到:     %s（%s 完成替换）\n", info.PreviousVersion, constants.DisplayTime(info.SwappedAt, time.RFC3339))
 	}
 	if known && info.NewVersionStarted {
 		fmt.Println("注意:       新版本已成功启动过，数据库结构可能已升级，回滚存在不兼容风险")

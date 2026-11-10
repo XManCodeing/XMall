@@ -4,6 +4,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/XManCodeing/XMall/internal/constants"
 	reportingdomain "github.com/XManCodeing/XMall/internal/modules/reporting/domain"
 )
 
@@ -16,18 +17,9 @@ func Resolve(input reportingdomain.Query, now time.Time) (reportingdomain.Window
 		rangeKey = "7d"
 	}
 
-	timezone := strings.TrimSpace(input.Timezone)
-	location := time.Local
-	if timezone != "" {
-		if parsed, err := time.LoadLocation(timezone); err == nil {
-			location = parsed
-		} else {
-			timezone = ""
-		}
-	}
-	if timezone == "" {
-		timezone = location.String()
-	}
+	// 报表自然日统一为东八区，旧客户端传入的浏览器时区不再改变统计口径。
+	location := constants.DisplayLocation()
+	timezone := location.String()
 
 	localNow := now.In(location)
 	todayStart := time.Date(localNow.Year(), localNow.Month(), localNow.Day(), 0, 0, 0, 0, location)

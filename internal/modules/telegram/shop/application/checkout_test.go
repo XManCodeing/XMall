@@ -3,11 +3,134 @@ package application
 import (
 	"context"
 	"errors"
+	"fmt"
+	"strings"
 	"testing"
 
 	rt "github.com/XManCodeing/XMall/internal/modules/telegram/runtime/contract"
 	c "github.com/XManCodeing/XMall/internal/modules/telegram/shop/contract"
 )
+
+// retryPayments models immutable durable attempts: an old key never dispatches
+// again, but returns the same authorized successor after a terminal failure.
+type retryPayments struct {
+	*backend
+	channels   []c.Channel
+	keys       []string
+	active     string
+	attempts   map[string]bool
+	fail       bool
+	dispatches int
+}
+
+// Channels returns the test channels without network or persistence effects.
+func (p *retryPayments) Channels(context.Context, c.Actor, uint) ([]c.Channel, error) {
+	return p.channels, nil
+}
+
+// Pay records keys and emulates terminal/successful replay for the requested key.
+func (p *retryPayments) Pay(_ context.Context, _ c.Actor, _ uint, _ uint, key string) (*c.Payment, error) {
+	p.keys = append(p.keys, key)
+	if terminal, exists := p.attempts[key]; exists {
+		if terminal || p.active != key {
+			return nil, &c.PaymentRetryError{OperationKey: key + ":retry"}
+		}
+	} else {
+		p.dispatches++
+		p.attempts[key] = p.fail
+		if p.fail {
+			return nil, &c.PaymentRetryError{OperationKey: key + ":retry"}
+		}
+		p.active = key
+	}
+	return &c.Payment{PayURL: "https://pay.example/" + fmt.Sprint(p.dispatches), Amount: "12.00", Currency: "CNY"}, nil
+}
+
+// TestPaymentRetryPersistsAcrossReentry checks single-channel automatic failure,
+// explicit retry, navigation reentry and duplicate callbacks with recovered config.
+func TestPaymentRetryPersistsAcrossReentry(t *testing.T) {
+	for _, reenter := range []bool{false, true} {
+		t.Run(fmt.Sprint(reenter), func(t *testing.T) {
+			s, _, b := setup()
+			p := &retryPayments{backend: b, channels: []c.Channel{{ID: 1, Name: "A"}}, attempts: map[string]bool{}, fail: true}
+			s.d.Payments = p
+			messages := click(t, s, 6, quoteFlow(t, s), "确认下单")
+			if !strings.Contains(messages[0].Text, text("zh-CN", "payment_retry")) || p.dispatches != 1 {
+				t.Fatalf("missing retry feedback: %+v", messages)
+			}
+			button(t, messages, text("zh-CN", "retry_payment"))
+			p.fail = false
+			nextID := int64(7)
+			label := text("zh-CN", "retry_payment")
+			if reenter {
+				messages = click(t, s, nextID, messages, text("zh-CN", "change_payment"))
+				nextID++
+				label = "A"
+			}
+			callback := update(nextID, "")
+			callback.CallbackData = button(t, messages, label)
+			run(t, s, callback)
+			run(t, s, callback)
+			if p.dispatches != 2 || len(p.keys) != 2 || p.keys[0] == p.keys[1] {
+				t.Fatalf("retry keys=%v dispatches=%d", p.keys, p.dispatches)
+			}
+		})
+	}
+}
+
+// TestPaymentTerminalRetrySurvivesSessionCASFailure verifies the retry button is
+// regenerated deterministically when durable session persistence fails.
+func TestPaymentTerminalRetrySurvivesSessionCASFailure(t *testing.T) {
+	s, store, b := setup()
+	p := &retryPayments{backend: b, channels: []c.Channel{{ID: 1, Name: "A"}}, attempts: map[string]bool{}, fail: true}
+	s.d.Payments = p
+	messages := quoteFlow(t, s)
+	callback := update(6, "")
+	callback.CallbackData = button(t, messages, "确认下单")
+	store.fail = true
+	if _, err := s.Handle(context.Background(), 1, callback); !errors.Is(err, rt.ErrConflict) {
+		t.Fatal(err)
+	}
+	messages = run(t, s, callback)
+	if p.dispatches != 1 || len(p.keys) != 2 || p.keys[0] != p.keys[1] {
+		t.Fatalf("CAS retry duplicated: %+v", p)
+	}
+	p.fail = false
+	messages = click(t, s, 7, messages, text("zh-CN", "retry_payment"))
+	if p.dispatches != 2 || len(messages) == 0 {
+		t.Fatalf("retry did not proceed: %+v", p)
+	}
+}
+
+// TestShopPaymentChannelRoundTrip uses real session routing for A -> B -> A.
+// The superseded A entry is replaced by explicit retry feedback, never a URL.
+func TestShopPaymentChannelRoundTrip(t *testing.T) {
+	s, _, b := setup()
+	p := &retryPayments{backend: b, channels: []c.Channel{{ID: 1, Name: "A"}, {ID: 2, Name: "B"}}, attempts: map[string]bool{}}
+	s.d.Payments = p
+	messages := click(t, s, 6, quoteFlow(t, s), "确认下单")
+	messages = click(t, s, 7, messages, "A")
+	messages = click(t, s, 8, messages, text("zh-CN", "change_payment"))
+	messages = click(t, s, 9, messages, "B")
+	messages = click(t, s, 10, messages, text("zh-CN", "change_payment"))
+	messages = click(t, s, 11, messages, "A")
+	if p.dispatches != 2 {
+		t.Fatalf("old A dispatched again: %d", p.dispatches)
+	}
+	for _, message := range messages {
+		for _, row := range message.Buttons {
+			for _, button := range row {
+				if button.URL != "" {
+					t.Fatal("old payment URL exposed")
+				}
+			}
+		}
+	}
+	messages = click(t, s, 12, messages, text("zh-CN", "retry_payment"))
+	if p.dispatches != 3 || len(messages) == 0 {
+		t.Fatal("new A not created")
+	}
+}
 
 type configuredContent struct{}
 
@@ -71,6 +194,29 @@ func TestRecreatedIdentityInvalidatesOldCheckout(t *testing.T) {
 	}
 }
 
+type insufficientPayments struct{ *backend }
+
+// Pay simulates an authoritative wallet shortfall without a gateway attempt.
+func (payments insufficientPayments) Pay(context.Context, c.Actor, uint, uint, string) (*c.Payment, error) {
+	return nil, c.ErrInsufficientBalance
+}
+
+// TestInsufficientBalanceFeedback checks checkout error consumption and three-language text.
+func TestInsufficientBalanceFeedback(t *testing.T) {
+	service, _, backend := setup()
+	service.d.Payments = insufficientPayments{backend}
+	messages := click(t, service, 6, quoteFlow(t, service), "确认下单")
+	if len(messages) == 0 || messages[0].Text != text("zh-CN", "insufficient_balance") {
+		t.Fatalf("wallet failure not actionable: %+v", messages)
+	}
+	for _, locale := range []string{"zh-CN", "zh-TW", "en-US"} {
+		message := text(locale, "insufficient_balance")
+		if message == "" || message == "insufficient_balance" || message == text(locale, "failed") {
+			t.Fatalf("missing balance feedback for %s: %q", locale, message)
+		}
+	}
+}
+
 type uncertainPayments struct{ *backend }
 
 func (p uncertainPayments) Pay(context.Context, c.Actor, uint, uint, string) (*c.Payment, error) {
@@ -90,6 +236,27 @@ func TestPaymentUncertainOffersReadOnlyStatus(t *testing.T) {
 			for _, btn := range row {
 				if btn.URL != "" {
 					t.Fatal("uncertain creation exposed unverified payment link")
+				}
+			}
+		}
+	}
+}
+
+// TestPaymentUnknownRefreshDoesNotDispatch checks stale session uncertainty is only a display fence.
+// Refresh performs reads; another explicit payment still reaches the authoritative unknown guard.
+func TestPaymentUnknownRefreshDoesNotDispatch(t *testing.T) {
+	s, _, backend := setup()
+	s.d.Payments = uncertainPayments{backend}
+	messages := click(t, s, 6, quoteFlow(t, s), "确认下单")
+	messages = click(t, s, 7, messages, text("zh-CN", "refresh"))
+	if backend.payments != 0 {
+		t.Fatal("refresh dispatched payment")
+	}
+	for _, message := range messages {
+		for _, row := range message.Buttons {
+			for _, button := range row {
+				if button.URL != "" {
+					t.Fatal("refresh exposed unverified payment link")
 				}
 			}
 		}

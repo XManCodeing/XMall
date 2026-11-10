@@ -4,6 +4,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/XManCodeing/XMall/internal/constants"
 	resellermodule "github.com/XManCodeing/XMall/internal/modules/reseller/contract"
 	dto "github.com/XManCodeing/XMall/internal/modules/reseller/transport/http/presenter"
 	"github.com/XManCodeing/XMall/internal/platform/http/ginutil"
@@ -126,7 +127,7 @@ func parseOrderTimeQuery(raw string, endOfDay bool) (*time.Time, error) {
 	if parsed, err := time.Parse(time.RFC3339, value); err == nil {
 		return &parsed, nil
 	}
-	parsed, err := time.ParseInLocation("2006-01-02", value, time.Local)
+	parsed, err := time.ParseInLocation("2006-01-02", value, constants.DisplayLocation())
 	if err != nil {
 		return nil, err
 	}

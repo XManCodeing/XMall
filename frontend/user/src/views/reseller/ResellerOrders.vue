@@ -8,7 +8,7 @@
       <ResellerMetricCard :label="t('resellerConsole.orders.currencyKinds')" :value="Object.keys(stats.by_currency || {}).length" :icon="Banknote" tone="info" />
     </div>
 
-    <ResellerFilterBar @search="reload" @reset="resetFilters">
+    <ResellerFilterBar :loading="queryLoading" @search="reload" @reset="resetFilters">
       <template #fields>
         <Input v-model.trim="filters.order_no" :placeholder="t('resellerConsole.orders.search')" />
         <Select v-model="filters.status">
@@ -121,13 +121,13 @@
       </div>
 
       <div v-if="pagination.total_page > 1" class="flex flex-wrap items-center justify-center gap-3">
-        <Button variant="outline" size="sm" :disabled="pagination.page <= 1" @click="goPage(pagination.page - 1)">
+        <Button variant="outline" size="sm" :disabled="queryLoading || pagination.page <= 1" @click="goPage(pagination.page - 1)">
           {{ t('orders.prevPage') }}
         </Button>
         <span class="rounded-full border bg-card px-4 py-1.5 text-sm text-muted-foreground">
           {{ t('orders.pageInfo', { page: pagination.page, total: pagination.total_page }) }}
         </span>
-        <Button variant="outline" size="sm" :disabled="pagination.page >= pagination.total_page" @click="goPage(pagination.page + 1)">
+        <Button variant="outline" size="sm" :disabled="queryLoading || pagination.page >= pagination.total_page" @click="goPage(pagination.page + 1)">
           {{ t('orders.nextPage') }}
         </Button>
       </div>
@@ -136,7 +136,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, reactive } from 'vue'
+import { computed, onMounted, reactive, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import { AlertTriangle, Banknote, CheckCircle2, ChevronRight, ShoppingBag } from 'lucide-vue-next'
@@ -193,16 +193,36 @@ const currentParams = () => ({
   created_to: filters.created_to || undefined,
 })
 
-const reload = () => Promise.all([load({ ...currentParams(), page: 1 }), loadStats(currentParams())])
-const goPage = (page: number) => load({ ...currentParams(), page })
+const statsLoading = ref(false)
+const queryLoading = computed(() => loading.value || statsLoading.value)
+
+/** 从第一页读取当前条件的订单及统计，统计完成前也阻止重复搜索。@returns 查询完成。 */
+const reload = async () => {
+  if (queryLoading.value) return
+  statsLoading.value = true
+  pagination.page = 1
+  const params = currentParams()
+  try {
+    await Promise.all([load({ ...params, page: 1 }), loadStats(params)])
+  } finally {
+    statsLoading.value = false
+  }
+}
+/** 翻页保留当前业务筛选和每页数量。@param page 目标页。@returns 列表请求或无操作。 */
+const goPage = (page: number) => {
+  if (queryLoading.value) return
+  return load({ ...currentParams(), page })
+}
 const goDetail = (orderNo: string) => router.push(`/reseller/orders/${encodeURIComponent(orderNo)}`)
 
+/** 恢复全部查询条件并只查询一次第一页，不改动每页数量。@returns 查询完成或无操作。 */
 const resetFilters = () => {
+  if (queryLoading.value) return
   filters.order_no = ''
   filters.status = 'all'
   filters.created_from = ''
   filters.created_to = ''
-  void reload()
+  return reload()
 }
 
 onMounted(reload)

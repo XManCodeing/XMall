@@ -2,6 +2,9 @@
   <div class="space-y-4">
     <PanelHeading :title="t('orders.title')" :description="t('orders.subtitle')" :icon="ShoppingBag">
       <template #actions>
+        <Button as-child variant="outline" class="min-h-11">
+          <router-link to="/me/membership-groups">{{ t('membershipGroups.title') }}</router-link>
+        </Button>
         <Badge variant="neutral" size="sm" class="rounded-full">
           {{ t('orders.pageInfo', { page: activePagination.page, total: activePagination.total_page }) }}
         </Badge>
@@ -241,6 +244,7 @@
 </template>
 
 <script setup lang="ts">
+import { formatDate } from '@/utils/format'
 import { computed, onMounted, onUnmounted, reactive, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ShoppingBag, Layers, Clock, CheckCircle2, Wallet } from 'lucide-vue-next'
@@ -478,13 +482,6 @@ const hasDiscountAmount = (amount?: string) => {
 const hasDiscount = (order: any) => {
   if (!order) return false
   return hasDiscountAmount(order.discount_amount) || hasDiscountAmount(order.promotion_discount_amount)
-}
-
-const formatDate = (raw?: string) => {
-  if (!raw) return ''
-  const date = new Date(raw)
-  if (Number.isNaN(date.getTime())) return raw
-  return date.toLocaleString()
 }
 
 onMounted(() => {

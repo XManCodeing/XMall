@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { useDebounceFn } from '@vueuse/core'
 import { adminAPI } from '@/api/admin'
 import type { AdminProcurementOrder, AdminSiteConnection } from '@/api/types'
 import { getLocalizedText, formatMoney, hasPositiveAmount, toRFC3339 } from '@/utils/format'
@@ -200,11 +199,18 @@ const changePageSize = (size: number) => {
   fetchOrders(1)
 }
 
-const handleSearch = () => {
-  fetchOrders(1, { preserveRows: true })
-  fetchStats()
+/** 按当前筛选查询第一页并更新统计，加载期间忽略重复操作。@returns 查询完成。 */
+const handleSearch = async (): Promise<void> => {
+  if (loading.value || refreshing.value) return
+  pagination.page = 1
+  await Promise.all([fetchOrders(1), fetchStats()])
 }
-const debouncedSearch = useDebounceFn(handleSearch, 300)
+/** 恢复全部筛选默认值并保留分页尺寸。@returns 查询完成。 */
+const resetFilters = async (): Promise<void> => {
+  if (loading.value || refreshing.value) return
+  Object.assign(filters, { status: '__all__', connection_id: '__all__', order_no: '', upstream_order_no: '', created_from: '', created_to: '' })
+  await handleSearch()
+}
 
 const selectStatusFilter = (status: string) => {
   if (filters.status === status) {
@@ -313,12 +319,7 @@ const statusIcon = (status: string) => {
   }
 }
 
-const formatTime = (raw?: string) => {
-  if (!raw) return '-'
-  const d = new Date(raw)
-  if (Number.isNaN(d.getTime())) return '-'
-  return d.toLocaleString()
-}
+import { formatDate as formatTime } from '@/utils/format'
 
 const relativeTime = (raw?: string) => {
   if (!raw) return ''
@@ -504,7 +505,7 @@ onMounted(() => {
     <div class="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end">
       <div class="w-full sm:w-auto">
         <label class="mb-1.5 block text-xs font-medium text-muted-foreground">{{ t('procurement.columns.status') }}</label>
-        <Select v-model="filters.status" @update:model-value="handleSearch">
+        <Select v-model="filters.status">
           <SelectTrigger class="h-9 w-full sm:w-36">
             <SelectValue :placeholder="t('procurement.filters.allStatus')" />
           </SelectTrigger>
@@ -517,7 +518,7 @@ onMounted(() => {
       </div>
       <div class="w-full sm:w-auto">
         <label class="mb-1.5 block text-xs font-medium text-muted-foreground">{{ t('procurement.columns.connection') }}</label>
-        <Select v-model="filters.connection_id" @update:model-value="handleSearch">
+        <Select v-model="filters.connection_id">
           <SelectTrigger class="h-9 w-full sm:w-44">
             <SelectValue :placeholder="t('procurement.filters.allConnections')" />
           </SelectTrigger>
@@ -531,21 +532,22 @@ onMounted(() => {
       </div>
       <div class="w-full sm:w-auto">
         <label class="mb-1.5 block text-xs font-medium text-muted-foreground">{{ t('procurement.filters.orderNo') }}</label>
-        <Input v-model="filters.order_no" class="h-9 w-full sm:w-44" :placeholder="t('procurement.filters.orderNoPlaceholder')" @update:modelValue="debouncedSearch" @keyup.enter="handleSearch" />
+        <Input v-model="filters.order_no" class="h-9 w-full sm:w-44" :placeholder="t('procurement.filters.orderNoPlaceholder')" @keyup.enter="handleSearch" />
       </div>
       <div class="w-full sm:w-auto">
         <label class="mb-1.5 block text-xs font-medium text-muted-foreground">{{ t('procurement.filters.upstreamOrderNo') }}</label>
-        <Input v-model="filters.upstream_order_no" class="h-9 w-full sm:w-44" :placeholder="t('procurement.filters.upstreamOrderNoPlaceholder')" @update:modelValue="debouncedSearch" @keyup.enter="handleSearch" />
+        <Input v-model="filters.upstream_order_no" class="h-9 w-full sm:w-44" :placeholder="t('procurement.filters.upstreamOrderNoPlaceholder')" @keyup.enter="handleSearch" />
       </div>
       <div class="w-full sm:w-auto">
         <label class="mb-1.5 block text-xs font-medium text-muted-foreground">{{ t('procurement.filters.dateRange') }}</label>
         <div class="flex flex-col gap-1.5 sm:flex-row sm:items-center">
-          <Input v-model="filters.created_from" type="datetime-local" class="h-9 w-full sm:w-44" @change="handleSearch" />
+          <Input v-model="filters.created_from" type="datetime-local" class="h-9 w-full sm:w-44" @keydown.enter="handleSearch" />
           <span class="hidden text-xs text-muted-foreground sm:inline">—</span>
-          <Input v-model="filters.created_to" type="datetime-local" class="h-9 w-full sm:w-44" @change="handleSearch" />
+          <Input v-model="filters.created_to" type="datetime-local" class="h-9 w-full sm:w-44" @keydown.enter="handleSearch" />
         </div>
       </div>
-      <Button size="sm" class="h-9 w-full sm:w-auto" @click="handleSearch">{{ t('procurement.filters.search') }}</Button>
+      <Button size="sm" class="h-9 w-full sm:w-auto" :disabled="loading || refreshing" @click="handleSearch">{{ t('procurement.filters.search') }}</Button>
+      <Button size="sm" variant="outline" :disabled="loading || refreshing" @click="resetFilters">{{ t('admin.common.reset') }}</Button>
     </div>
 
     <!-- Order Cards -->

@@ -2,7 +2,7 @@
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
-import { adminAPI } from '@/api/admin'
+import { adminAPI, type TelegramBroadcastPayload } from '@/api/admin'
 import type { AdminTelegramBroadcastUser } from '@/api/types'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -19,11 +19,14 @@ import { useAdminAuthStore } from '@/stores/auth'
 import { useTelegramBotInstances } from '@/composables/useTelegramBotInstances'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import FileInput from '@/components/FileInput.vue'
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { useTelegramBroadcastPreview } from '@/composables/useTelegramBroadcastPreview'
 
 const { t } = useI18n()
 const router = useRouter()
 const auth = useAdminAuthStore()
 const canCreate = computed(() => auth.hasPermission('POST:/admin/telegram-bot/broadcasts'))
+const canPreview = computed(() => auth.hasPermission('POST:/admin/telegram-bot/broadcasts/preview'))
 const canListUsers = computed(() => auth.hasPermission('GET:/admin/telegram-bot/users'))
 const { instances, refresh, loading: loadingBots, refreshError: botError, canList } = useTelegramBotInstances()
 const botID = ref('')
@@ -66,6 +69,10 @@ const buttonsInvalid = computed(() =>
 
 const canSubmit = computed(() =>
   canCreate.value
+  && canPreview.value
+  && canList.value
+  && !loadingBots.value
+  && !botError.value
   && !submitting.value
   && !uploading.value
   && availableBots.value.some(item => item.id === Number(botID.value))
@@ -74,7 +81,7 @@ const canSubmit = computed(() =>
 )
 
 const submitBlockedReason = computed(() => {
-  if (!canCreate.value || !canList.value) return t('telegramBot.instances.forbidden')
+  if (!canCreate.value || !canPreview.value || !canList.value) return t('telegramBot.instances.forbidden')
   if (!availableBots.value.length) return t('telegramBot.instances.empty')
   if (!botID.value) return t('telegramBot.broadcasts.botRequired')
   if (form.recipient_type === 'specific' && !canListUsers.value) return t('telegramBot.instances.forbidden')
@@ -130,14 +137,22 @@ const fetchUsers = async (page = 1) => {
   }
 }
 
-const resetFilters = () => {
+/** 按当前收件人筛选读取第一页，重复查询也重新请求。@returns 查询完成。 */
+async function searchUsers(): Promise<void> {
+  if (loadingUsers.value) return
+  pagination.value.page = 1
+  await fetchUsers(1)
+}
+/** 清空候选用户筛选，保留机器人、已选用户和广播草稿。@returns 查询完成。 */
+const resetFilters = async (): Promise<void> => {
+  if (loadingUsers.value) return
   filters.keyword = ''
   filters.display_name = ''
   filters.telegram_username = ''
   filters.telegram_user_id = ''
   filters.created_from = ''
   filters.created_to = ''
-  fetchUsers(1)
+  await searchUsers()
 }
 
 const toggleSelectAll = () => {
@@ -215,6 +230,31 @@ const handleAttachmentChange = async (files: FileList | null) => {
   }
 }
 
+const payload = computed<TelegramBroadcastPayload>(() => ({
+  bot_id: Number(botID.value),
+  title: form.title.trim(),
+  recipient_type: form.recipient_type,
+  user_ids: form.recipient_type === 'specific' ? [...selectedUserIds.value] : [],
+  filters: {},
+  attachment_url: form.attachment_url || undefined,
+  attachment_name: form.attachment_name || undefined,
+  message_html: form.message_html.trim(),
+  buttons: normalizedButtons.value.length ? normalizedButtons.value.map(item => [item]) : undefined,
+}))
+// Search filters select candidates only; they are not sent as broadcast audience filters.
+// Still invalidate any displayed count when those inputs or the selection change.
+const audienceInputs = computed(() => ({ filters: { ...filters }, user_ids: [...selectedUserIds.value] }))
+const previewEligible = computed(() => canSubmit.value && !!payload.value.title && !!payload.value.message_html
+  && (form.recipient_type !== 'specific' || selectedUserIds.value.length > 0))
+const {
+  open: previewOpen, loading: previewLoading, count: recipientCount, state: previewState,
+  canConfirm, preview, consume,
+} = useTelegramBroadcastPreview(payload, previewEligible, audienceInputs)
+const selectedBotLabel = computed(() => {
+  const bot = availableBots.value.find(item => item.id === Number(botID.value))
+  return bot?.username ? `@${bot.username}` : String(bot?.telegram_id || botID.value)
+})
+
 const handleSubmit = async () => {
   if (!canSubmit.value) return
   if (!form.title.trim() || !form.message_html.trim()) {
@@ -226,21 +266,16 @@ const handleSubmit = async () => {
     return
   }
 
+  await preview()
+}
+
+const confirmSubmit = async () => {
+  if (!canSubmit.value) return
+  const draft = consume()
+  if (!draft) return
   submitting.value = true
   try {
-    await adminAPI.createTelegramBroadcast({
-      bot_id: Number(botID.value),
-      title: form.title.trim(),
-      recipient_type: form.recipient_type,
-      user_ids: form.recipient_type === 'specific' ? selectedUserIds.value : [],
-      filters: {},
-      attachment_url: form.attachment_url || undefined,
-      attachment_name: form.attachment_name || undefined,
-      message_html: form.message_html.trim(),
-      buttons: normalizedButtons.value.length
-        ? normalizedButtons.value.map(item => [item])
-        : undefined,
-    })
+    await adminAPI.createTelegramBroadcast(draft)
     notifySuccess(t('telegramBot.broadcasts.createSuccess'))
     router.push('/telegram-bot/broadcasts')
   } catch (error) {
@@ -413,7 +448,7 @@ onMounted(() => {
         </div>
       </CardHeader>
       <CardContent class="space-y-4">
-        <div class="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+        <div class="grid gap-3 md:grid-cols-2 xl:grid-cols-3" @keydown.enter.prevent="searchUsers">
           <Input v-model="filters.keyword" :placeholder="t('telegramBot.broadcasts.filterKeyword')" />
           <Input v-model="filters.display_name" :placeholder="t('telegramBot.broadcasts.filterDisplayName')" />
           <Input v-model="filters.telegram_username" :placeholder="t('telegramBot.broadcasts.filterTelegramUsername')" />
@@ -423,7 +458,7 @@ onMounted(() => {
         </div>
 
         <div class="flex flex-wrap gap-2">
-          <Button variant="outline" :disabled="loadingUsers" @click="fetchUsers(1)">
+          <Button variant="outline" :disabled="loadingUsers" @click="searchUsers">
             <Search class="h-4 w-4 mr-2" />
             {{ t('telegramBot.broadcasts.searchUsers') }}
           </Button>
@@ -432,51 +467,51 @@ onMounted(() => {
           </Button>
         </div>
 
-        <div class="rounded-lg border overflow-x-auto">
+        <div class="rounded-xl border border-border bg-card overflow-x-auto">
           <Table class="min-w-[920px]">
-            <TableHeader>
+            <TableHeader class="border-b border-border bg-muted/40 text-xs uppercase text-muted-foreground">
               <TableRow>
-                <TableHead class="w-12">
+                <TableHead class="w-12 px-3 py-3">
                   <Checkbox :model-value="allPageSelected" @update:model-value="toggleSelectAll" />
                 </TableHead>
-                <TableHead class="min-w-[180px]">{{ t('telegramBot.broadcasts.userDisplayName') }}</TableHead>
-                <TableHead class="min-w-[180px]">{{ t('telegramBot.broadcasts.userTelegramUsername') }}</TableHead>
-                <TableHead class="min-w-[180px]">{{ t('telegramBot.broadcasts.userTelegramId') }}</TableHead>
-                <TableHead class="min-w-[220px]">{{ t('telegramBot.broadcasts.userEmail') }}</TableHead>
-                <TableHead class="min-w-[180px]">{{ t('telegramBot.broadcasts.userBoundAt') }}</TableHead>
+                <TableHead class="min-w-[180px] px-6 py-3">{{ t('telegramBot.broadcasts.userDisplayName') }}</TableHead>
+                <TableHead class="min-w-[180px] px-6 py-3">{{ t('telegramBot.broadcasts.userTelegramUsername') }}</TableHead>
+                <TableHead class="min-w-[180px] px-6 py-3">{{ t('telegramBot.broadcasts.userTelegramId') }}</TableHead>
+                <TableHead class="min-w-[220px] px-6 py-3">{{ t('telegramBot.broadcasts.userEmail') }}</TableHead>
+                <TableHead class="min-w-[180px] px-6 py-3">{{ t('telegramBot.broadcasts.userBoundAt') }}</TableHead>
               </TableRow>
             </TableHeader>
-            <TableBody>
+            <TableBody class="divide-y divide-border">
               <TableRow v-if="loadingUsers">
-                <TableCell :colspan="6" class="py-8 text-center text-muted-foreground">
+                <TableCell :colspan="6" class="px-6 py-8 text-center text-muted-foreground">
                   <Loader2 class="mx-auto h-5 w-5 animate-spin" />
                 </TableCell>
               </TableRow>
               <TableRow v-else-if="users.length === 0">
-                <TableCell :colspan="6" class="py-8 text-center text-muted-foreground">
+                <TableCell :colspan="6" class="px-6 py-8 text-center text-muted-foreground">
                   {{ t('telegramBot.broadcasts.userEmpty') }}
                 </TableCell>
               </TableRow>
-              <TableRow v-for="item in users" :key="item.user_id">
-                <TableCell>
+              <TableRow v-for="item in users" :key="item.user_id" class="hover:bg-muted/30">
+                <TableCell class="px-3 py-4">
                   <Checkbox
                     :model-value="selectedUserIds.includes(item.user_id)"
                     @update:model-value="(v) => toggleUser(item.user_id, v)"
                   />
                 </TableCell>
-                <TableCell class="min-w-[180px]">
+                <TableCell class="min-w-[180px] px-6 py-4">
                   <div class="break-words">{{ item.display_name || '-' }}</div>
                 </TableCell>
-                <TableCell class="min-w-[180px]">
+                <TableCell class="min-w-[180px] px-6 py-4">
                   <div class="break-all">{{ item.telegram_username ? `@${item.telegram_username}` : '-' }}</div>
                 </TableCell>
-                <TableCell class="min-w-[180px] font-mono text-xs">
+                <TableCell class="min-w-[180px] px-6 py-4 font-mono text-xs">
                   <div class="break-all">{{ item.telegram_user_id }}</div>
                 </TableCell>
-                <TableCell class="min-w-[220px]">
+                <TableCell class="min-w-[220px] px-6 py-4">
                   <div class="break-all">{{ item.user_email || '-' }}</div>
                 </TableCell>
-                <TableCell class="min-w-[180px]">{{ formatDate(item.bound_at) || '-' }}</TableCell>
+                <TableCell class="min-w-[180px] px-6 py-4">{{ formatDate(item.bound_at) || '-' }}</TableCell>
               </TableRow>
             </TableBody>
           </Table>
@@ -498,10 +533,36 @@ onMounted(() => {
 
     <div class="flex flex-col items-stretch gap-2 sm:items-end">
       <p v-if="submitBlockedReason" class="text-sm text-muted-foreground">{{ submitBlockedReason }}</p>
-      <Button class="w-full sm:w-auto" :disabled="!canSubmit" @click="handleSubmit">
+      <Button class="w-full sm:w-auto" :disabled="!canSubmit || previewLoading" @click="handleSubmit">
         <Send class="h-4 w-4 mr-2" />
-        {{ submitting ? t('admin.common.loading') : t('telegramBot.broadcasts.submit') }}
+        {{ submitting ? t('admin.common.loading') : t('telegramBot.broadcasts.previewAction') }}
       </Button>
     </div>
+
+    <Dialog v-model:open="previewOpen">
+      <DialogContent class="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>{{ t('telegramBot.broadcasts.previewTitle') }}</DialogTitle>
+          <DialogDescription>{{ t('telegramBot.broadcasts.previewHint') }}</DialogDescription>
+        </DialogHeader>
+        <p class="text-sm">{{ t('telegramBot.instances.bot') }}: {{ selectedBotLabel }} · ID {{ botID }}</p>
+        <div aria-live="polite" :aria-busy="previewLoading" class="space-y-2">
+          <p v-if="previewLoading" class="flex items-center gap-2 text-sm text-muted-foreground">
+            <Loader2 class="h-4 w-4 animate-spin" />{{ t('telegramBot.broadcasts.previewLoading') }}
+          </p>
+          <p v-else-if="previewState === 'failed'" role="alert" class="text-sm text-destructive">{{ t('telegramBot.broadcasts.previewFailed') }}</p>
+          <p v-else-if="previewState === 'stale'" role="alert" class="text-sm text-muted-foreground">{{ t('telegramBot.broadcasts.previewStale') }}</p>
+          <template v-else-if="recipientCount !== null">
+            <p class="font-medium">{{ t('telegramBot.broadcasts.previewCount', { count: recipientCount }) }}</p>
+            <p v-if="recipientCount === 0" role="alert" class="text-sm text-destructive">{{ t('telegramBot.broadcasts.previewEmpty') }}</p>
+          </template>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" @click="previewOpen = false">{{ t('admin.common.cancel') }}</Button>
+          <Button v-if="previewState !== 'loading' && (previewState !== 'ready' || recipientCount === 0)" variant="outline" :disabled="!previewEligible" @click="preview">{{ t('telegramBot.instances.reload') }}</Button>
+          <Button :disabled="!canConfirm || submitting" @click="confirmSubmit">{{ t('telegramBot.broadcasts.submit') }}</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   </div>
 </template>

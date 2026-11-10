@@ -1,0 +1,36 @@
+/** Membership-list operation messages share the existing locale registration. */
+export const membershipProductOperationsMessages = {
+  'zh-CN': {
+    status: '商品状态', active: '已上架', inactive: '已下架', unknownStatus: '状态待确认',
+    activate: '上架', deactivate: '下架', remove: '删除',
+    salesClosed: '会员销售尚未开放，暂不能上架。',
+    deleteConfirm: '确认删除会员商品「{name}」（ID：{id}）？删除后无法恢复。',
+    unknown: '操作结果未知，请刷新列表核对；当前版本已暂停写入，不能直接重复操作。',
+    conflict: '商品版本已变化，请刷新列表读取最新版本后重新确认操作。',
+    refreshFailed: '操作响应已收到，但列表刷新失败。请刷新核对，暂不重复操作。',
+    unchanged: '当前版本操作已暂停，请核对最新列表，不要重复操作。',
+    invalidVersion: '配置版本无效，请刷新列表后再操作。',
+  },
+  'zh-TW': {
+    status: '商品狀態', active: '已上架', inactive: '已下架', unknownStatus: '狀態待確認',
+    activate: '上架', deactivate: '下架', remove: '刪除',
+    salesClosed: '會員銷售尚未開放，暫不能上架。',
+    deleteConfirm: '確定刪除會員商品「{name}」（ID：{id}）？刪除後無法復原。',
+    unknown: '操作結果未知，請重新整理清單核對；目前版本已暫停寫入，不能直接重複操作。',
+    conflict: '商品版本已變更，請重新整理清單讀取最新版本後重新確認操作。',
+    refreshFailed: '已收到操作回應，但清單重新整理失敗。請重新整理核對，暫勿重複操作。',
+    unchanged: '目前版本操作已暫停，請核對最新清單，勿重複操作。',
+    invalidVersion: '設定版本無效，請重新整理清單後再操作。',
+  },
+  'en-US': {
+    status: 'Product status', active: 'Listed', inactive: 'Unlisted', unknownStatus: 'Status unconfirmed',
+    activate: 'List', deactivate: 'Unlist', remove: 'Delete',
+    salesClosed: 'Membership sales are closed. Listing is currently unavailable.',
+    deleteConfirm: 'Delete membership product “{name}” (ID: {id})? This cannot be undone.',
+    unknown: 'The outcome is unknown. Refresh the list to verify; writes for this version are paused to prevent replay.',
+    conflict: 'The product version changed. Refresh the list and review the latest version before acting.',
+    refreshFailed: 'The operation responded, but list refresh failed. Refresh to verify; do not repeat the operation.',
+    unchanged: 'Writes for this version are paused. Review the latest list; do not repeat the operation.',
+    invalidVersion: 'Invalid configuration version. Refresh the list before acting.',
+  },
+}

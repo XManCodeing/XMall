@@ -155,8 +155,9 @@
             <p v-if="requiresSKUSelection" class="mt-2 text-[13px] text-warning">{{ t('productDetail.skuRequired') }}</p>
           </div>
 
+          <MembershipPurchaseInfo :product="product" :sku-id="selectedSkuId" />
           <!-- 数量 -->
-          <div class="my-5">
+          <div v-if="!product.membership" class="my-5">
             <div class="mb-2.5 text-[13px] font-bold uppercase tracking-[0.04em] text-muted-foreground">{{ t('productDetail.quantity') }}</div>
             <div class="inline-flex items-center overflow-hidden rounded-full border-2 border-hairline-strong">
               <button type="button" class="grid h-11 w-[42px] place-items-center bg-card text-foreground disabled:opacity-35" :aria-label="t('productDetail.quantity')" :disabled="quantity <= quantityEffectiveMin" @click="quantity = Math.max(quantityEffectiveMin, quantity - 1)"><Minus class="h-[17px] w-[17px]" /></button>
@@ -255,6 +256,7 @@ import {
 import { Button } from '@/components/ui/button'
 import { processHtmlForDisplay } from '../../utils/content.ts'
 import { useProductDetail } from '../../composables/useProductDetail.ts'
+import MembershipPurchaseInfo from '@/components/product/MembershipPurchaseInfo.vue'
 import VaultProductMobileBar from './components/VaultProductMobileBar.vue'
 
 const { t } = useI18n()

@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/XManCodeing/XMall/internal/constants"
 	"github.com/XManCodeing/XMall/internal/crypto"
 	rt "github.com/XManCodeing/XMall/internal/modules/telegram/runtime/contract"
 	c "github.com/XManCodeing/XMall/internal/modules/telegram/shop/contract"
@@ -97,15 +98,19 @@ func (v *view) urlButton(label, raw string) {
 	m := v.panel()
 	m.Buttons = append(m.Buttons, []rt.Button{{Text: label, URL: u.String()}})
 }
-func (v *view) homeButton() { v.button(text(v.actor.Locale, "back"), action{Kind: "home"}) }
 
-// navRow keeps back + home on one bottom row.
-func (v *view) navRow(backLabel string, back action) {
+// homeButton renders the shared back/home row for every non-home panel.
+func (v *view) homeButton() {
 	start := len(v.panel().Buttons)
-	v.button(backLabel, back)
-	v.homeButton()
+	if v.state.Current.Kind != "home" {
+		v.button(text(v.actor.Locale, "nav_back"), action{Kind: "back"})
+	}
+	v.button(text(v.actor.Locale, "back"), action{Kind: "home"})
 	v.columns(2, start)
 }
+
+// navRow uses the same page stack, never a caller-provided business action.
+func (v *view) navRow(_ string, _ action) { v.homeButton() }
 func (v *view) pages(a action, more bool) {
 	start := len(v.panel().Buttons)
 	if a.Page > 1 {
@@ -139,13 +144,16 @@ func short(s string, n int) string {
 	}
 	return s
 }
-func (v *view) clock(t time.Time) string { return t.In(time.Local).Format("01-02 15:04") }
+
+// clock 将输入绝对时刻格式化为东八区商城展示文本，返回月日及小时分钟。
+func (v *view) clock(at time.Time) string { return constants.DisplayTime(at, "01-02 15:04") }
 func (v *view) contentConfigured() bool {
 	return v.content.Menu != nil || v.content.WelcomeEnabled || v.content.HelpEnabled ||
 		v.content.Welcome != "" || v.content.Help != "" || len(v.content.HelpItems) > 0 ||
 		v.content.CenterHint != "" || v.content.SupportURL != "" || v.content.SupportHint != ""
 }
 func (v *view) home(ctx context.Context) error {
+	v.state.Pages, v.state.ReturnView = nil, nil
 	v.state.Current = action{Kind: "home"}
 	v.state.Step = ""
 	v.state.Quote = nil
@@ -162,7 +170,7 @@ func (v *view) home(ctx context.Context) error {
 		}
 		v.say(short(welcome, 2600))
 	}
-	if filter, ok := v.service.d.Orders.(c.OrdersFilter); ok {
+	if filter, ok := v.service.d.Orders.(c.OrdersFilter); ok && v.actor.UserID != 0 {
 		summary, e := filter.PendingSummary(ctx, v.actor)
 		if e != nil {
 			return e
@@ -189,7 +197,7 @@ func (v *view) home(ctx context.Context) error {
 	}
 	if v.content.Menu == nil {
 		primary(text(v.actor.Locale, "catalog"))
-		for _, k := range []string{"orders", "account", "language", "help"} {
+		for _, k := range []string{"orders", "memberships", "account", "language", "help"} {
 			if k == "help" && v.contentConfigured() && !v.content.HelpEnabled {
 				continue
 			}
@@ -202,7 +210,7 @@ func (v *view) home(ctx context.Context) error {
 				continue
 			}
 			switch item.Action {
-			case "catalog", "orders", "account", "language", "help":
+			case "catalog", "orders", "memberships", "account", "language", "help":
 				if item.Action == "help" && !v.content.HelpEnabled {
 					continue
 				}
@@ -222,7 +230,7 @@ func (v *view) home(ctx context.Context) error {
 	return nil
 }
 func (v *view) help(a action) error {
-	v.state.Current = action{Kind: "help"}
+	v.state.Current = a
 	if v.contentConfigured() && !v.content.HelpEnabled {
 		v.say(text(v.actor.Locale, "help_closed"))
 		v.homeButton()
@@ -250,7 +258,6 @@ func (v *view) help(a action) error {
 					v.say(short(hint, 500))
 				}
 			}
-			v.button(text(v.actor.Locale, "back_list"), action{Kind: "help"})
 			v.homeButton()
 			return nil
 		}
@@ -379,7 +386,7 @@ func (v *view) orders(ctx context.Context, owner uint, page int) error {
 	var items []c.Order
 	var more bool
 	var e error
-	if filter, ok := v.service.d.Orders.(c.OrdersFilter); ok {
+	if filter, ok := v.service.d.Orders.(c.OrdersFilter); ok && v.actor.UserID != 0 {
 		items, more, e = filter.ListFiltered(ctx, v.actor, owner, page, v.state.Filter)
 	} else {
 		items, more, e = v.service.d.Orders.List(ctx, v.actor, owner, page)
@@ -428,6 +435,9 @@ func (v *view) orders(ctx context.Context, owner uint, page int) error {
 		v.say(text(v.actor.Locale, "orders_empty"))
 	}
 	v.pages(action{Kind: kind, Owner: owner, Page: page, Value: v.state.Filter}, more)
+	if owner == v.actor.UserID {
+		v.membershipButton()
+	}
 	if owner != v.actor.UserID {
 		if _, ok := v.service.d.Accounts.(c.HistoryAccounts); ok {
 			v.button(text(v.actor.Locale, "history_account"), action{Kind: "history_account", Owner: owner})
@@ -471,6 +481,9 @@ func (v *view) order(ctx context.Context, id, owner uint) error {
 	v.state.ReplyOwner = owner
 	v.state.Step = ""
 	v.orderHeading(o)
+	if err := v.orderMemberships(ctx, o); err != nil {
+		return err
+	}
 	pending := owner == v.actor.UserID && o.Pending && (o.ExpiresAt == nil || o.ExpiresAt.After(v.service.now()))
 	if pending && !v.state.PaymentUncertain {
 		v.styled(text(v.actor.Locale, "go_pay"), stylePrimary, action{Kind: "channels", ID: id})

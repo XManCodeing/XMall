@@ -3,6 +3,7 @@
 
 import argparse
 import fnmatch
+import hashlib
 from pathlib import Path
 import subprocess
 import sys
@@ -82,6 +83,13 @@ def check(skip_git=False):
                 "*.sql", "*.sql.gz", "*.log", "*.key", "*.p12", "*.pfx",
             ))
         )
+        # This exact schema-only fixture is generated offline from historical
+        # source, not exported from a runtime database. Keep all other SQL blocked.
+        if name == "internal/bootstrap/database/migrations/testdata/v9_sqlite.sql":
+            expected = "ef76ef9f9ecbf3ccb391181d04f45052ef7ccadebef7bc8e46890552b736a11c"
+            if hashlib.sha256((ROOT / name).read_bytes()).hexdigest() != expected:
+                raise ValueError("Synthetic v9 fixture changed; review and pin its checksum before release")
+            sensitive = False
         if sensitive:
             forbidden.append(name)
     if forbidden:

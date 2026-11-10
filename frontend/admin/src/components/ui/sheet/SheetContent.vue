@@ -11,6 +11,7 @@ import {
   DialogPortal,
   useForwardPropsEmits,
 } from "reka-ui"
+import { usePageDialogScope } from '../dialog/pageScope'
 import { cn } from "@/lib/utils"
 import { sheetVariants } from "."
 
@@ -29,16 +30,20 @@ const emits = defineEmits<DialogContentEmits>()
 
 const delegatedProps = reactiveOmit(props, "class", "side")
 
+const { scoped, target, open } = usePageDialogScope()
 const forwarded = useForwardPropsEmits(delegatedProps, emits)
 </script>
 
 <template>
-  <DialogPortal>
-    <DialogOverlay
-      class="fixed inset-0 z-50 bg-black/80 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0"
+  <DialogPortal :to="scoped ? target ?? undefined : undefined">
+    <div v-if="scoped && open" class="absolute inset-0 z-50 pointer-events-auto bg-overlay/80" />
+    <DialogOverlay v-if="!scoped"
+      class="fixed inset-0 z-50 bg-overlay/80 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0"
     />
     <DialogContent
-      :class="cn(sheetVariants({ side }), props.class)"
+      :class="cn(sheetVariants({ side }), scoped && 'absolute pointer-events-auto', props.class)"
+      @interact-outside="event => { if (scoped) event.preventDefault() }"
+      @close-auto-focus="event => { if (scoped) event.preventDefault() }"
       v-bind="{ ...forwarded, ...$attrs }"
     >
       <slot />

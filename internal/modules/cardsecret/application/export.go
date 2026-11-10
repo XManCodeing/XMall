@@ -165,7 +165,7 @@ func buildCardSecretExportContent(items []cardsecretdomain.Secret, normalizedFor
 			strconv.FormatUint(uint64(item.SKUID), 10),
 			orderID,
 			batchID,
-			item.CreatedAt.Format(time.RFC3339),
+			constants.DisplayTime(item.CreatedAt, time.RFC3339),
 		}
 		if err := writer.Write(row); err != nil {
 			return nil, "", ErrFetchFailed

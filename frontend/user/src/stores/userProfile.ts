@@ -14,6 +14,7 @@ import type {
     UserProfileData,
 } from '../api'
 import { useUserAuthStore } from './userAuth'
+import { usePurchaseReturn } from '../composables/usePurchaseReturn'
 
 interface PersonalOrderSummary {
     id: number
@@ -33,6 +34,7 @@ const normalizeErrorMessage = (error: unknown, fallback: string) => {
 
 export const useUserProfileStore = defineStore('user-profile', () => {
     const userAuthStore = useUserAuthStore()
+    const { finishPurchaseReturn } = usePurchaseReturn()
 
     const profile = ref<UserProfileData | null>(null)
     const recentOrders = ref<PersonalOrderSummary[]>([])
@@ -249,8 +251,9 @@ export const useUserProfileStore = defineStore('user-profile', () => {
         bindingTelegram.value = true
         clearSecurityError()
         try {
-            const response = await userProfileAPI.bindTelegram(payload)
-            telegramBinding.value = response.data.data || { bound: true }
+            await userProfileAPI.bindTelegram(payload)
+            if (!await loadTelegramBinding() || !telegramBinding.value?.bound) return false
+            await finishPurchaseReturn()
             return true
         } catch (error) {
             securityError.value = normalizeErrorMessage(error, '绑定 Telegram 失败')
@@ -264,8 +267,9 @@ export const useUserProfileStore = defineStore('user-profile', () => {
         bindingTelegram.value = true
         clearSecurityError()
         try {
-            const response = await userProfileAPI.bindTelegramMiniApp({ init_data: initData })
-            telegramBinding.value = response.data.data || { bound: true }
+            await userProfileAPI.bindTelegramMiniApp({ init_data: initData })
+            if (!await loadTelegramBinding() || !telegramBinding.value?.bound) return false
+            await finishPurchaseReturn()
             return true
         } catch (error) {
             securityError.value = normalizeErrorMessage(error, '绑定 Telegram 失败')

@@ -16,6 +16,8 @@ const cfAsyncModuleScriptPlugin = () => ({
 
 // https://vite.dev/config/
 export default defineConfig(({ mode }) => ({
+  // 自动测试显式跳过环境文件；不读取任何 .env*。
+  envDir: process.env.XMALL_SKIP_ENV_FILES === '1' ? false : undefined,
   plugins: [
     vue(),
     // 语言包 JSON 构建期预编译为 AST，运行时无需 message compiler（vue-i18n 走 runtime-only 构建）

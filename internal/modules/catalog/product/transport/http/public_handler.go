@@ -3,6 +3,7 @@ package producthttp
 import (
 	"context"
 	"errors"
+	"log/slog"
 	"strings"
 
 	promotiondomain "github.com/XManCodeing/XMall/internal/modules/promotion/domain"
@@ -17,6 +18,7 @@ import (
 
 	contentcontract "github.com/XManCodeing/XMall/internal/modules/content/contract"
 	reseller "github.com/XManCodeing/XMall/internal/modules/reseller/contract"
+	membership "github.com/XManCodeing/XMall/internal/modules/telegram/membership/contract"
 	"github.com/XManCodeing/XMall/internal/platform/http/ginutil"
 	"github.com/XManCodeing/XMall/internal/platform/http/response"
 	"github.com/XManCodeing/XMall/internal/shared/money"
@@ -64,6 +66,7 @@ type RelatedPostReader interface {
 
 // PublicHandler 处理公开商品目录 HTTP 请求。
 type PublicHandler struct {
+	membership   membership.DisplayReader
 	products     PublicProductQueries
 	pricer       ResellerDisplayPricer
 	promotions   ProductPromotionDecorator
@@ -95,6 +98,62 @@ func NewPublicHandler(
 		skuMappings:  skuMappings,
 		relatedPosts: relatedPosts,
 	}
+}
+
+// WithMembership 注入共享配置 reader，返回原公开 handler；不改变商品可见性。
+func (h *PublicHandler) WithMembership(reader membership.DisplayReader) *PublicHandler {
+	h.membership = reader
+	return h
+}
+
+// publicMembership 在 ctx 下读取可见 product 的配置，返回白名单投影或错误。
+// 仅缺配置视为普通商品；沿现有逐商品装饰模式，每商品读取一次，并复用预加载 SKU。
+func (h *PublicHandler) publicMembership(ctx context.Context, product *productdomain.Product) (*productpresenter.Membership, error) {
+	if h.membership == nil {
+		return nil, nil
+	}
+	config, err := h.membership.Display(ctx, product.ID)
+	if errors.Is(err, membership.ErrNotFound) {
+		return nil, nil
+	}
+	if err != nil {
+		slog.ErrorContext(ctx, "public membership configuration read failed", "product_id", product.ID)
+		return nil, err
+	}
+	if config == nil || config.ProductID != product.ID || config.Version == 0 || config.Quantity != 1 || len(config.Terms) == 0 || len(config.GroupNames) == 0 {
+		return nil, membership.ErrInvalid
+	}
+	projection := &productpresenter.Membership{
+		ConfigVersion: config.Version,
+		Quantity:      1,
+		SalesOpen:     config.SalesOpen && product.IsActive,
+		GroupNames:    append([]string(nil), config.GroupNames...),
+		Terms:         make([]productpresenter.MembershipTerm, 0, len(config.Terms)),
+	}
+	codes := make(map[uint]string, len(product.SKUs))
+	for _, sku := range product.SKUs {
+		if sku.IsActive {
+			codes[sku.ID] = sku.SKUCode
+		}
+	}
+	seen := make(map[uint]bool, len(config.Terms))
+	for _, term := range config.Terms {
+		if term.ProductID != product.ID || term.SKUID == 0 || seen[term.SKUID] ||
+			(term.Kind != "months" && term.Kind != "permanent") ||
+			(term.Kind == "months" && term.Months <= 0) || (term.Kind == "permanent" && term.Months != 0) {
+			return nil, membership.ErrInvalid
+		}
+		seen[term.SKUID] = true
+		// 已下架/删除 SKU 不随会员扩展重新暴露；隐藏规格 DEFAULT 仍有稳定 ID/编码。
+		code, visible := codes[term.SKUID]
+		if !visible {
+			continue
+		}
+		projection.Terms = append(projection.Terms, productpresenter.MembershipTerm{
+			SKUID: term.SKUID, SKUCode: code, Kind: term.Kind, Months: term.Months,
+		})
+	}
+	return projection, nil
 }
 
 func tenantFromRequest(c *gin.Context) reseller.TenantContext {
@@ -146,6 +205,11 @@ func (h *PublicHandler) GetProducts(c *gin.Context) {
 			ginutil.RespondError(c, response.CodeInternal, "error.product_fetch_failed", derr)
 			return
 		}
+		item.Membership, derr = h.publicMembership(c.Request.Context(), &products[i])
+		if derr != nil {
+			ginutil.RespondError(c, response.CodeInternal, "error.product_fetch_failed", derr)
+			return
+		}
 		decorated = append(decorated, item)
 	}
 
@@ -194,6 +258,12 @@ func (h *PublicHandler) GetProductBySlug(c *gin.Context) {
 			ginutil.RespondError(c, response.CodeNotFound, "error.product_not_found", nil)
 			return
 		}
+		ginutil.RespondError(c, response.CodeInternal, "error.product_fetch_failed", derr)
+		return
+	}
+
+	decorated.Membership, derr = h.publicMembership(c.Request.Context(), product)
+	if derr != nil {
 		ginutil.RespondError(c, response.CodeInternal, "error.product_fetch_failed", derr)
 		return
 	}

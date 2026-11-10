@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"html"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -177,6 +178,96 @@ func savedState(t *testing.T, s *Service, m *memoryStore) state {
 	}
 	return st
 }
+func setSavedState(t *testing.T, s *Service, m *memoryStore, st state) {
+	t.Helper()
+	row, err := m.GetSession(context.Background(), 1, 11, 11)
+	if err != nil || row == nil {
+		t.Fatal("missing session", err)
+	}
+	raw, err := json.Marshal(st)
+	if err != nil {
+		t.Fatal(err)
+	}
+	row.DataCipher, err = crypto.Encrypt(s.key, string(raw))
+	if err != nil {
+		t.Fatal(err)
+	}
+	row.State = st.Step
+	if err = m.SaveSession(context.Background(), row, row.Version); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestClickOnlyQuantityAndLegacyInputRecovery(t *testing.T) {
+	s, m, _ := setup()
+	s.d.Catalog = displayCatalog{product: c.Product{ID: 2, Title: "Product", Available: true, Min: 1, Max: 10000}}
+	out := quoteFlow(t, s)
+	out = click(t, s, 6, out, "更多数量")
+	for _, a := range savedState(t, s, m).Actions {
+		if a.Kind == "quantity_input" {
+			t.Fatal("new panel exposes text input")
+		}
+	}
+	out = click(t, s, 7, out, "+1000")
+	if savedState(t, s, m).Selection.Quantity != 1002 {
+		t.Fatal("large increment not applied")
+	}
+	// Duplicate updates cannot apply the increment twice.
+	uReplay := update(7, "")
+	uReplay.CallbackData = "ignored-on-replay"
+	run(t, s, uReplay)
+	if savedState(t, s, m).Selection.Quantity != 1002 {
+		t.Fatal("replayed increment applied twice")
+	}
+	out = click(t, s, 8, out, "−1000")
+	before := savedState(t, s, m)
+	before.Step = "quantity"
+	setSavedState(t, s, m, before)
+	u := update(9, "9999")
+	u.MessageID = 42
+	out = run(t, s, u)
+	after := savedState(t, s, m)
+	if after.Step != "" || after.Selection != before.Selection || after.Operation != before.Operation {
+		t.Fatal("legacy input changed selection or operation")
+	}
+	for _, message := range out {
+		if message.Purpose == "cleanup" {
+			t.Fatal("legacy quantity input deleted consultation")
+		}
+	}
+	// A persisted pre-upgrade button must recover controls without opening input.
+	after.Actions["legacy"] = action{Kind: "quantity_input"}
+	setSavedState(t, s, m, after)
+	u = update(10, "")
+	u.CallbackData = "s:" + after.Ref + ":" + strconv.FormatUint(after.PanelRevision, 36) + ":legacy"
+	run(t, s, u)
+	if savedState(t, s, m).Step != "" {
+		t.Fatal("legacy button re-enabled text input")
+	}
+}
+
+func TestQuantityButtonStepsRespectBounds(t *testing.T) {
+	for _, step := range []string{"+10", "+100", "+1000", "−10", "−100", "−1000"} {
+		t.Run(step, func(t *testing.T) {
+			s, m, _ := setup()
+			s.d.Catalog = displayCatalog{product: c.Product{ID: 2, Title: "Product", Available: true, Min: 1, Max: 10000}}
+			out := quoteFlow(t, s)
+			out = click(t, s, 6, out, "更多数量")
+			st := savedState(t, s, m)
+			if strings.HasPrefix(step, "+") {
+				st.Selection.Quantity = 10000
+			} else {
+				st.Selection.Quantity = 1
+			}
+			setSavedState(t, s, m, st)
+			click(t, s, 7, out, step)
+			if savedState(t, s, m).Selection != st.Selection {
+				t.Fatal("out-of-range quantity step changed selection")
+			}
+		})
+	}
+}
+
 func TestPanelQuantityBurstAndStaleConfirmation(t *testing.T) {
 	s, m, b := setup()
 	out := quoteFlow(t, s)
@@ -255,16 +346,39 @@ func TestCommandsNeverScheduleUserMessageDeletion(t *testing.T) {
 	}
 }
 
-func TestTransientInputsStillScheduleCleanup(t *testing.T) {
-	for _, input := range []string{"2", "buyer@example.com", "123456"} {
+func TestOrdinaryTextNeverSchedulesCleanup(t *testing.T) {
+	for _, input := range []string{"你好", "2", "buyer@example.com", "123456"} {
 		t.Run(input, func(t *testing.T) {
-			s, _, b := setup()
-			s.d.Identity = &generationIdentity{backend: b, generation: "g:7"}
+			s, _, _ := setup()
 			u := update(1, input)
+			u.MessageID = 42
+			for _, message := range run(t, s, u) {
+				if message.Purpose == "cleanup" {
+					t.Fatalf("ordinary text must be preserved: %+v", message)
+				}
+			}
+		})
+	}
+}
+
+func TestLegacyBindingInputsStillScheduleCleanup(t *testing.T) {
+	for _, step := range []string{"email", "code"} {
+		t.Run(step, func(t *testing.T) {
+			s, m, b := setup()
+			s.d.Identity = &generationIdentity{backend: b, generation: "g:7"}
+			run(t, s, update(1, "/start"))
+			st := savedState(t, s, m)
+			st.Step, st.Email = step, "buyer@example.com"
+			setSavedState(t, s, m, st)
+			input := "buyer@example.com"
+			if step == "code" {
+				input = "123456"
+			}
+			u := update(2, input)
 			u.MessageID = 42
 			out := run(t, s, u)
 			if len(out) != 2 || out[0].Purpose != "cleanup" || out[0].Operation != "delete" || out[0].TargetMessageID != 42 || out[0].IdentityStamp != "g:7" || out[0].OwnerUserID != 7 {
-				t.Fatalf("transient input cleanup missing or unauthorized: %+v", out)
+				t.Fatalf("legacy binding cleanup missing or unauthorized: %+v", out)
 			}
 		})
 	}
@@ -306,7 +420,7 @@ func TestQuantityBoundsAndDetailsPreserveSelection(t *testing.T) {
 	if out[0].PhotoURL != "" || len([]rune(out[0].Text)) > 16000 {
 		t.Fatal("details did not become bounded text")
 	}
-	out = click(t, s, 7, out, "返回选购")
+	out = click(t, s, 7, out, text("zh-CN", "nav_back"))
 	after := savedState(t, s, m)
 	if after.Selection != before.Selection || after.Operation != before.Operation || out[0].PhotoURL == "" {
 		t.Fatal("details lost selection")
@@ -500,16 +614,60 @@ func TestOrderEventRefreshDoesNotNavigateAndCASFences(t *testing.T) {
 		t.Fatal("event hijacked homepage")
 	}
 }
+
+type bindingContent struct{ url string }
+
+func (p bindingContent) Content(context.Context, c.Actor) (c.Content, error) {
+	return c.Content{BindingURL: p.url}, nil
+}
+
+func TestNewBindingUsesWebsiteWithoutSensitiveInputState(t *testing.T) {
+	for _, url := range []string{"", "https://shop.example/me/security"} {
+		t.Run(url, func(t *testing.T) {
+			s, m, _ := setup()
+			s.d.Content = bindingContent{url: url}
+			out := run(t, s, update(1, "/start"))
+			out = click(t, s, 2, out, "👤 账户余额")
+			out = click(t, s, 3, out, "绑定已有账号")
+			st := savedState(t, s, m)
+			if st.Step != "" || st.Email != "" {
+				t.Fatal("new binding entered legacy sensitive input")
+			}
+			found := false
+			for _, message := range out {
+				for _, row := range message.Buttons {
+					for _, b := range row {
+						if b.URL == url && url != "" {
+							found = true
+						}
+					}
+				}
+			}
+			if found != (url != "") {
+				t.Fatal("binding URL missing or unsafe fallback")
+			}
+			u := update(4, "buyer@example.com")
+			u.MessageID = 44
+			for _, message := range run(t, s, u) {
+				if message.Purpose == "cleanup" {
+					t.Fatal("new binding consumed email as legacy input")
+				}
+			}
+		})
+	}
+}
+
 func TestBindFailureKeepsEmailAndDeletesCode(t *testing.T) {
 	s, m, b := setup()
 	s.d.Identity = badCodeIdentity{b}
-	out := run(t, s, update(1, "/start"))
-	out = click(t, s, 2, out, "👤 账户余额")
-	out = click(t, s, 3, out, "绑定已有账号")
-	out = run(t, s, update(4, "a@example.com"))
+	run(t, s, update(1, "/start"))
+	legacy := savedState(t, s, m)
+	legacy.Step = "email"
+	setSavedState(t, s, m, legacy)
+	run(t, s, update(4, "a@example.com"))
 	u := update(5, "123456")
 	u.MessageID = 51
-	out = run(t, s, u)
+	out := run(t, s, u)
 	st := savedState(t, s, m)
 	if st.Email != "a@example.com" || st.Step != "code" || out[0].Purpose != "cleanup" {
 		t.Fatal(st, out)
@@ -533,7 +691,7 @@ func TestOldPhysicalPanelOnlyCleansWithoutBusiness(t *testing.T) {
 	u.MessageID = 66
 	u.CallbackData = "s:old:0:no"
 	out = run(t, s, u)
-	if len(out) != 1 || out[0].Purpose != "cleanup" || b.creates != 0 {
+	if len(out) != 0 || b.creates != 0 {
 		t.Fatal(out)
 	}
 }

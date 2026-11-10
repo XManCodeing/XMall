@@ -15,6 +15,7 @@ import (
 	"gorm.io/driver/mysql"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 	gormlogger "gorm.io/gorm/logger"
 	"gorm.io/gorm/migrator"
 	"gorm.io/gorm/schema"
@@ -31,6 +32,27 @@ type mysqlDialector struct {
 
 func (d mysqlDialector) Migrator(db *gorm.DB) gorm.Migrator {
 	return mysqlMigrator{Migrator: d.Dialector.Migrator(db).(mysql.Migrator), database: d.migrationDatabase}
+}
+
+// BindVarTo preserves Go's zero-time sentinel without MySQL's forbidden zero date.
+// GORM appends value to stmt.Vars before this call; only that bound argument changes.
+// The year-one string round-trips to IsZero(), while nil and nonzero times stay intact.
+func (d mysqlDialector) BindVarTo(writer clause.Writer, stmt *gorm.Statement, value interface{}) {
+	zero := false
+	switch timestamp := value.(type) {
+	case time.Time:
+		zero = timestamp.IsZero()
+	case *time.Time:
+		zero = timestamp != nil && timestamp.IsZero()
+	case sql.NullTime:
+		zero = timestamp.Valid && timestamp.Time.IsZero()
+	case *sql.NullTime:
+		zero = timestamp != nil && timestamp.Valid && timestamp.Time.IsZero()
+	}
+	if zero && len(stmt.Vars) > 0 {
+		stmt.Vars[len(stmt.Vars)-1] = "0001-01-01 00:00:00"
+	}
+	d.Dialector.BindVarTo(writer, stmt, value)
 }
 
 // WithMigrationDatabase resolves the selected schema once on the lock-owning

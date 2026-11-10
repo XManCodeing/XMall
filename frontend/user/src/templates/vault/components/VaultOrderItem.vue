@@ -17,6 +17,7 @@
         <div class="mt-0.5 text-[12.5px] text-muted-foreground">{{ t('orderDetail.quantityLabel') }}：{{ item.quantity }}</div>
         <div v-if="orderItemSkuText(item)" class="mt-0.5 text-[12.5px] text-muted-foreground">{{ t('orderDetail.itemSkuLabel') }}：{{ orderItemSkuText(item) }}</div>
         <div class="mt-0.5 text-[12.5px] text-muted-foreground">{{ t('orderDetail.itemFulfillmentLabel') }}：{{ fulfillmentTypeLabelText(item.fulfillment_type) }}</div>
+        <MembershipOrderSnapshot v-if="showMembership" :snapshot="item.membership_snapshot" />
         <div v-if="item.tags && item.tags.length" class="mt-2 flex flex-wrap gap-1.5">
           <Badge v-for="(tag, index) in item.tags" :key="index" variant="neutral" size="sm" class="rounded-full">{{ tag }}</Badge>
         </div>
@@ -45,12 +46,15 @@
 import { ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { Image as ImageIcon } from 'lucide-vue-next'
+import MembershipOrderSnapshot from '@/components/MembershipOrderSnapshot.vue'
 import { Badge } from '@/components/ui/badge'
 import { useOrderDisplayHelpers } from '../../../composables/useOrderDisplayHelpers'
 
 defineProps<{
   item: any
   currency?: string
+  /** 仅授权用户订单展示购买快照；游客路径保持不变。 */
+  showMembership?: boolean
 }>()
 
 const { t } = useI18n()

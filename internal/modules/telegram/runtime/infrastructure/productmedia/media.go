@@ -42,6 +42,21 @@ func (a *API) ApplyBotProfile(ctx context.Context, token string, profile rt.BotP
 	}
 	return profileAPI.ApplyBotProfile(ctx, token, profile)
 }
+
+var _ rt.SubscriptionAPI = (*API)(nil)
+
+// PollWithSubscription cannot fall back to Poll: that would silently lose events.
+func (a *API) PollWithSubscription(ctx context.Context, token string, offset int64, allowed []string) ([]rt.Update, error) {
+	if err := rt.ValidateSubscription(allowed); err != nil {
+		return nil, err
+	}
+	api, ok := a.API.(rt.SubscriptionAPI)
+	if !ok {
+		return nil, rt.ErrSubscriptionUnsupported
+	}
+	return api.PollWithSubscription(ctx, token, offset, append([]string(nil), allowed...))
+}
+
 func photoHashes(ref string, data []byte) (string, string) {
 	p, c := sha256.Sum256([]byte(ref)), sha256.Sum256(data)
 	return hex.EncodeToString(p[:]), hex.EncodeToString(c[:])

@@ -1,4 +1,27 @@
 {
+  "membershipGroups": {
+    "title": "My membership groups",
+    "description": "View each group's entitlement and current entry. An invitation is not proof of joining; approval still checks the beneficiary's identity.",
+    "refresh": "Refresh status", "renew": "Shop / Renew", "loading": "Loading membership groups…",
+    "loadFailed": "Could not load membership groups. Refresh or contact support.", "empty": "No membership group entitlements yet.",
+    "group": "Group", "expiry": "Entitlement", "status": "Current status", "action": "Group entry",
+    "identity": "Beneficiary Telegram ID: {id}", "permanent": "Permanent entitlement", "expiresAt": "Until {date}",
+    "expiryUnknown": "Expiry awaiting confirmation", "apply": "Request to join", "getInvitation": "Get group entry", "requesting": "Retrieving…",
+    "loadMore": "Load more", "support": "Need help?", "contactPage": "Contact merchant", "supportUnavailable": "The merchant has not configured an independent support channel. Check the contact page for contact details.",
+    "states": { "processing": "Activating", "available": "Entry available", "recovering": "Restoring entry", "unknown": "Awaiting verification", "expired": "Entitlement expired", "revoked": "Entitlement revoked", "identity_mismatch": "Binding identity mismatch", "unavailable": "Entry unavailable", "member": "Membership observed" },
+    "hints": { "processing": "Your entitlement is being processed. Refresh later; do not pay again.", "recovering": "Your group entry is being restored. The original entitlement period is unchanged.", "unknown": "The outcome is not confirmed. Refresh or contact support; do not repeat the request.", "identity_mismatch": "Your current binding differs from the beneficiary. Contact support; changing bindings does not transfer entitlements." }
+  },
+  "membershipPurchase": {
+    "groups": "Included groups",
+    "selectPlan": "Select a membership plan",
+    "permanent": "Permanent membership",
+    "months": "{months} months ({days} days)",
+    "fixedMonth": "Each month is exactly 30 days. Plan quantity is 1.",
+    "closed": "Membership sales are not open. Purchase submission is disabled; your selections are retained.",
+    "binding": "Link Telegram in security settings",
+    "login": "Sign in and keep selected plan",
+    "contextFailed": "Could not save your selection. Please retry."
+  },
   "common": {
     "siteName": "XMall",
     "loading": "Loading...",
@@ -1651,6 +1674,14 @@
     "timeTitle": "Timeline",
     "remarkLabel": "Remark",
     "paymentTitle": "Payment Info"
+  },
+  "membershipOrder": {
+    "title": "Membership purchase",
+    "beneficiary": "Beneficiary Telegram ID",
+    "duration": "Purchased duration",
+    "months": "{months} month(s) (fixed 30 days/month, {days} days total)",
+    "permanent": "Permanent",
+    "snapshotHint": "This records the purchase only, not current membership benefits or activation status."
   },
   "orderDetail": {
     "title": "Order Detail",

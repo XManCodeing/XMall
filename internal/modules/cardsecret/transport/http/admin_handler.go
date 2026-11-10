@@ -414,7 +414,7 @@ func (h *AdminHandler) ExportCardSecrets(c *gin.Context) {
 	}
 
 	normalizedFormat := strings.ToLower(strings.TrimSpace(req.Format))
-	filename := "card-secrets-" + time.Now().Format("20060102-150405") + "." + normalizedFormat
+	filename := "card-secrets-" + constants.DisplayTime(time.Now(), "20060102-150405") + "." + normalizedFormat
 	c.Header("Content-Type", contentType)
 	c.Header("Content-Disposition", "attachment; filename=\""+filename+"\"")
 	c.Data(200, contentType, content)
@@ -457,7 +457,7 @@ func (h *AdminHandler) ExportAvailableCardSecrets(c *gin.Context) {
 	}
 
 	normalizedFormat := strings.ToLower(strings.TrimSpace(req.Format))
-	filename := "card-secrets-available-" + time.Now().Format("20060102-150405") + "." + normalizedFormat
+	filename := "card-secrets-available-" + constants.DisplayTime(time.Now(), "20060102-150405") + "." + normalizedFormat
 	c.Header("Content-Type", result.ContentType)
 	c.Header("Content-Disposition", "attachment; filename=\""+filename+"\"")
 	c.Header("X-Exported-Count", strconv.Itoa(result.Count))

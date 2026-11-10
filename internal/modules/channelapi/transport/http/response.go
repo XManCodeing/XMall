@@ -31,6 +31,8 @@ func channelErrorRule(target error, httpCode, code int, errorCode, key string) m
 }
 
 var channelOrderCreateErrorRules = []mappedChannelError{
+	channelErrorRule(ErrWalletOnlyPaymentRequired, http.StatusBadRequest, response.CodeBadRequest, "wallet_only_payment_required", "error.wallet_only_payment_required"),
+	channelErrorRule(ErrWalletInsufficientBalance, http.StatusBadRequest, response.CodeBadRequest, "insufficient_balance", "error.wallet_insufficient_balance"),
 	channelErrorRule(ErrRiskIPBlacklisted, http.StatusForbidden, response.CodeForbidden, "risk_blocked", "error.risk_ip_blacklisted"),
 	channelErrorRule(ErrRiskClientIPUnavailable, http.StatusForbidden, response.CodeForbidden, "risk_blocked", "error.risk_client_ip_unavailable"),
 	channelErrorRule(ErrRiskTooManyPendingOrders, http.StatusTooManyRequests, response.CodeTooManyRequests, "risk_blocked", "error.risk_too_many_pending_orders"),
@@ -82,6 +84,7 @@ var channelPaymentCreateErrorRules = []mappedChannelError{
 	channelErrorRule(ErrPaymentGatewayRequestFailed, http.StatusBadRequest, response.CodeBadRequest, "payment_create_failed", "error.payment_gateway_request_failed"),
 	channelErrorRule(ErrPaymentGatewayResponseInvalid, http.StatusBadRequest, response.CodeBadRequest, "payment_create_failed", "error.payment_gateway_response_invalid"),
 	channelErrorRule(ErrPaymentCurrencyMismatch, http.StatusBadRequest, response.CodeBadRequest, "payment_create_failed", "error.payment_currency_mismatch"),
+	channelErrorRule(ErrWalletInsufficientBalance, http.StatusBadRequest, response.CodeBadRequest, "insufficient_balance", "error.wallet_insufficient_balance"),
 	channelErrorRule(ErrWalletOnlyPaymentRequired, http.StatusBadRequest, response.CodeBadRequest, "wallet_only_payment_required", "error.wallet_only_payment_required"),
 }
 

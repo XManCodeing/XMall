@@ -75,8 +75,9 @@
                   </Button>
                 </div>
 
+                <MembershipPurchaseInfo :product="item" :sku-id="item.skuId" :items="cartItems" return-path="/cart" />
                 <div class="mt-3 md:mt-4 flex flex-wrap items-center justify-between gap-3 border-t pt-3 md:pt-4">
-                  <div class="flex items-center gap-2">
+                  <div v-if="!item.membership" class="flex items-center gap-2">
                     <Button
                       variant="secondary"
                       size="icon"
@@ -162,6 +163,7 @@ import { Button } from '@/components/ui/button'
 import EmptyState from '../components/EmptyState.vue'
 import SmartImage from '../components/SmartImage.vue'
 import CheckoutSteps from '../components/checkout/CheckoutSteps.vue'
+import MembershipPurchaseInfo from '@/components/product/MembershipPurchaseInfo.vue'
 import { useCart } from '../composables/useCart.ts'
 
 const { t } = useI18n()

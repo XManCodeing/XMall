@@ -33,6 +33,9 @@ type AuthTransaction interface {
 	CreateIdentity(identity *externalidentitydomain.Identity) error
 	UpdateIdentity(identity *externalidentitydomain.Identity) error
 	DeleteIdentityByID(identityID uint) error
+	// TrustedTelegramHistoryBotIDs derives scopes from persisted private-chat
+	// contacts/order provenance for this exact owner and verified Telegram ID.
+	TrustedTelegramHistoryBotIDs(previousUserID uint, telegramUserID string) ([]uint, error)
 	CreateTelegramHistoryGrant(grant *userauthdomain.TelegramHistoryGrant) error
 	ListTelegramHistoryGrants(botID uint, telegramUserID string, currentUserID, identityID uint) ([]userauthdomain.TelegramHistoryGrant, error)
 	RevokeTelegramHistoryGrants(identityID uint, now time.Time) error

@@ -374,7 +374,7 @@ defineExpose({ openPicker })
   </div>
 
   <!-- ═══ Picker Dialog ═══ -->
-  <Dialog v-model:open="open">
+  <Dialog scope="page" v-model:open="open">
     <DialogScrollContent class="w-[calc(100vw-1rem)] max-w-5xl p-0" @interact-outside="(e: Event) => e.preventDefault()">
       <div class="px-6 pt-6">
         <DialogHeader>

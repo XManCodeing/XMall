@@ -3,9 +3,12 @@ package paymenthttp
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
+
+	"github.com/XManCodeing/XMall/internal/i18n"
 
 	"github.com/XManCodeing/XMall/internal/platform/http/response"
 
@@ -83,6 +86,21 @@ func TestRespondPaymentCaptureError(t *testing.T) {
 
 			assertErrorResponse(t, recorder, tt.code, tt.msg)
 		})
+	}
+}
+
+// TestMembershipPaymentErrors verifies localized, wrapped errors for both active payment endpoints.
+func TestMembershipPaymentErrors(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	for _, locale := range []string{"zh-CN", "zh-TW", "en-US"} {
+		for _, rule := range membershipPaymentErrorRules {
+			for _, respond := range []func(*gin.Context, error){respondPaymentCreateError, respondPaymentCaptureError} {
+				ctx, recorder := newResponseTestContext()
+				ctx.Request.Header.Set("Accept-Language", locale)
+				respond(ctx, fmt.Errorf("private route detail: %w", rule.target))
+				assertErrorResponse(t, recorder, response.CodeBadRequest, i18n.T(locale, rule.key))
+			}
+		}
 	}
 }
 

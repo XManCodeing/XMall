@@ -7,10 +7,12 @@ import (
 	promotionapp "github.com/XManCodeing/XMall/internal/modules/promotion/application"
 	promotioncontract "github.com/XManCodeing/XMall/internal/modules/promotion/contract"
 	reseller "github.com/XManCodeing/XMall/internal/modules/reseller/contract"
+	membership "github.com/XManCodeing/XMall/internal/modules/telegram/membership/contract"
 )
 
 // PublicHTTPDependencies 是公开 Product HTTP 入口的显式装配依赖。
 type PublicHTTPDependencies struct {
+	Membership   membership.DisplayReader
 	Products     *productapplication.Service
 	Hidden       productapplication.HiddenProductRepository
 	Pricer       producthttp.ResellerDisplayPricer
@@ -60,5 +62,5 @@ func NewPublicHTTP(dependencies PublicHTTPDependencies) *producthttp.PublicHandl
 		dependencies.Mappings,
 		dependencies.SKUMappings,
 		dependencies.RelatedPosts,
-	)
+	).WithMembership(dependencies.Membership)
 }

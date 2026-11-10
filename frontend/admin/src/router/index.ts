@@ -12,7 +12,7 @@ const routes = [
     path: '/',
     name: 'dashboard',
     component: () => import('@/layouts/AdminLayout.vue'),
-    meta: { requiresAuth: true },
+    meta: { requiresAuth: true, cachePage: true },
     children: [
       {
         path: '',
@@ -23,6 +23,7 @@ const routes = [
         path: 'forbidden',
         name: 'forbidden',
         component: () => import('@/views/Forbidden.vue'),
+        meta: { adminTab: false, cachePage: false },
       },
       {
         path: 'products',
@@ -356,6 +357,47 @@ const routes = [
         redirect: { name: 'telegram-bot' },
       },
       {
+        path: 'telegram-bot/membership/products',
+        name: 'telegram-membership-products',
+        component: () => import('@/views/admin/TelegramMembershipProducts.vue'),
+        meta: { permission: 'GET:/admin/telegram-bot/membership/products' },
+      },
+      {
+        path: 'telegram-bot/membership/orders',
+        name: 'telegram-membership-orders',
+        component: () => import('@/views/admin/TelegramMembershipOrders.vue'),
+        meta: { permission: 'GET:/admin/telegram-bot/membership/orders' },
+      },
+      {
+        path: 'telegram-bot/recovery',
+        name: 'telegram-bot-recovery',
+        component: () => import('@/views/admin/TelegramRecovery.vue'),
+        meta: { permission: 'GET:/admin/telegram-bot/recovery/tasks' },
+      },
+      {
+        path: 'telegram-bot/groups',
+        name: 'telegram-bot-groups',
+        component: () => import('@/views/admin/TelegramBotGroups.vue'),
+        meta: { permission: 'GET:/admin/telegram-bot/groups' },
+      },
+      {
+        path: 'telegram-bot/support/settings',
+        name: 'telegram-bot-support-settings',
+        redirect: { name: 'telegram-bot-groups' },
+      },
+      {
+        path: 'telegram-bot/support/sessions',
+        name: 'telegram-bot-support-sessions',
+        component: () => import('@/views/admin/TelegramBotSupportSessions.vue'),
+        meta: { permission: 'GET:/admin/telegram-bot/support/sessions' },
+      },
+      {
+        path: 'telegram-bot/support/tasks',
+        name: 'telegram-bot-support-tasks',
+        component: () => import('@/views/admin/TelegramBotSupportTasks.vue'),
+        meta: { permission: 'GET:/admin/telegram-bot/support/downstreams', tabTitle: 'telegramSupport.tasksTitle' },
+      },
+      {
         path: 'telegram-bot/broadcasts',
         name: 'telegram-bot-broadcasts',
         component: () => import('@/views/admin/TelegramBotBroadcasts.vue'),
@@ -405,7 +447,9 @@ router.beforeEach(async (to) => {
   }
 
   const requiredPermission = typeof to.meta.permission === 'string' ? to.meta.permission : ''
-  if (requiredPermission && !authStore.hasPermission(requiredPermission)) {
+  // Page access may accept an alternative read scope; each editor still enforces its own API permissions.
+  const alternatives = Array.isArray(to.meta.permissionAny) ? to.meta.permissionAny.filter((value): value is string => typeof value === 'string') : []
+  if (requiredPermission && ![requiredPermission, ...alternatives].some(permission => authStore.hasPermission(permission))) {
     if (to.path !== '/forbidden') {
       return {
         path: '/forbidden',

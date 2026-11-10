@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	delivery "github.com/XManCodeing/XMall/internal/modules/telegram/delivery/contract"
+	membership "github.com/XManCodeing/XMall/internal/modules/telegram/membership/contract"
 	"strings"
 	"time"
 
@@ -30,8 +31,6 @@ import (
 	"github.com/XManCodeing/XMall/internal/shared/jsonmap"
 	"github.com/XManCodeing/XMall/internal/shared/jsonslice"
 	"github.com/XManCodeing/XMall/internal/shared/money"
-	"github.com/XManCodeing/XMall/internal/shared/serial"
-
 	"github.com/shopspring/decimal"
 )
 
@@ -54,6 +53,8 @@ type OrderService struct {
 	resellerAccounting      resellerAccountingTransactions
 	riskControlSvc          orderriskcontract.Controller
 	productMappingService   upstreamStockEnsurer
+	membershipPreflight     membership.CapabilityPreflight
+	enforcePublicSale       bool
 	expireMinutes           int
 }
 
@@ -104,7 +105,9 @@ type OrderServiceOptions struct {
 	ResellerAccounting      resellerAccountingTransactions
 	RiskControlService      orderriskcontract.Controller
 	ProductMappingService   upstreamStockEnsurer
-	ExpireMinutes           int
+	// EnforcePublicSale enables the required production membership sales guard; legacy isolated fixtures may omit it.
+	EnforcePublicSale bool
+	ExpireMinutes     int
 }
 
 // SetProductMappingService 注入商品映射服务（用于下单前上游库存兜底校验）。
@@ -136,6 +139,7 @@ func NewOrderService(opts OrderServiceOptions) *OrderService {
 		resellerAccounting:      opts.ResellerAccounting,
 		riskControlSvc:          opts.RiskControlService,
 		productMappingService:   opts.ProductMappingService,
+		enforcePublicSale:       opts.EnforcePublicSale,
 		expireMinutes:           opts.ExpireMinutes,
 	}
 }
@@ -414,6 +418,9 @@ func (s *OrderService) previewOrder(input orderCreateParams) (*OrderPreview, err
 	} else if isResellerOrderContext(input.Tenant) {
 		return nil, ErrResellerProductNotListed
 	}
+	if _, err := s.prepareMembership(input, result); err != nil {
+		return nil, err
+	}
 	items := make([]OrderPreviewItem, 0, len(result.Plans))
 	for _, plan := range result.Plans {
 		item := plan.Item
@@ -448,6 +455,9 @@ func (s *OrderService) previewOrder(input orderCreateParams) (*OrderPreview, err
 }
 
 func (s *OrderService) createOrder(input orderCreateParams) (*orderdomain.Order, error) {
+	if err := s.checkPublicSale(s.productRepo, input.Items); err != nil {
+		return nil, err
+	}
 	if err := validateOperationInput(&input); err != nil {
 		return nil, err
 	}
@@ -471,6 +481,10 @@ func (s *OrderService) createOrder(input orderCreateParams) (*orderdomain.Order,
 	}
 
 	result, err := s.buildOrderResult(input)
+	if err != nil {
+		return nil, err
+	}
+	membershipPlan, err := s.prepareMembership(input, result)
 	if err != nil {
 		return nil, err
 	}
@@ -588,6 +602,9 @@ func (s *OrderService) createOrder(input orderCreateParams) (*orderdomain.Order,
 
 	var repeatedOrderID uint
 	err = s.orderStore.WithinTransaction(func(tx ordercontract.Transaction) error {
+		if err := s.checkPublicSale(tx.Products(), input.Items); err != nil {
+			return err
+		}
 		orderStore := tx.Orders()
 		if err := delivery.GuardIdentity(orderStore, input.UserID, input.Source); err != nil {
 			return err
@@ -605,6 +622,10 @@ func (s *OrderService) createOrder(input orderCreateParams) (*orderdomain.Order,
 				repeatedOrderID = op.OrderID
 				return nil
 			}
+		}
+		membershipCheckout, err := membershipInTransaction(tx, membershipPlan)
+		if err != nil {
+			return err
 		}
 		productSKURepo := tx.ProductSKUs()
 		if s.riskControlSvc != nil && !input.SkipRiskControl {
@@ -720,6 +741,9 @@ func (s *OrderService) createOrder(input orderCreateParams) (*orderdomain.Order,
 			}
 		}
 
+		if err := saveMembershipItems(membershipCheckout, membershipPlan, result); err != nil {
+			return err
+		}
 		if result.AppliedCoupon != nil {
 			couponRepo := tx.Coupons()
 			usageRepo := tx.CouponUsages()
@@ -772,6 +796,9 @@ func (s *OrderService) createOrder(input orderCreateParams) (*orderdomain.Order,
 		return existing, fetchErr
 	}
 	if err != nil {
+		if membershipCheckoutError(err) {
+			return nil, err
+		}
 		if errors.Is(err, ErrOperationConflict) || errors.Is(err, ErrBusinessEventsUnavailable) || errors.Is(err, delivery.ErrIdentityChanged) {
 			return nil, err
 		}
@@ -941,24 +968,6 @@ func validateOperationInput(input *orderCreateParams) error {
 		if input.OperationKey == "" {
 			return ErrInvalidOrderItem
 		}
-	}
-	return nil
-}
-
-func generateOrderNo() string {
-	return serial.Generate("DJ")
-}
-
-// guestPasswordMinLength 游客订单密码最小长度
-const guestPasswordMinLength = 6
-
-func validateGuestPassword(password string) error {
-	password = strings.TrimSpace(password)
-	if password == "" {
-		return ErrGuestPasswordRequired
-	}
-	if len([]rune(password)) < guestPasswordMinLength {
-		return ErrGuestPasswordTooShort
 	}
 	return nil
 }

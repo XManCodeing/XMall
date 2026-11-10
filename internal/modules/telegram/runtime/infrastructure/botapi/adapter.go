@@ -39,45 +39,7 @@ func (a Adapter) Webhook(ctx context.Context, token string) (string, error) {
 	return w.URL, err
 }
 func (a Adapter) Poll(ctx context.Context, token string, offset int64) ([]c.Update, error) {
-	client, err := a.client(token)
-	if err != nil {
-		return nil, err
-	}
-	allowed := []string{"message", "callback_query"}
-	updates, err := client.GetUpdates(ctx, api.GetUpdatesRequest{Offset: offset, Limit: 100, Timeout: 25, AllowedUpdates: &allowed})
-	if err != nil {
-		return nil, err
-	}
-	result := make([]c.Update, 0, len(updates))
-	for _, raw := range updates {
-		u := c.Update{ID: raw.UpdateID}
-		message := raw.Message
-		var from *api.User
-		if message != nil {
-			from = message.From
-			u.Text = message.Text
-		}
-		if raw.CallbackQuery != nil {
-			q := raw.CallbackQuery
-			message = q.Message
-			from = &q.From
-			u.CallbackID = q.ID
-			u.CallbackData = q.Data
-		}
-		if message != nil {
-			u.MessageID = message.MessageID
-			u.MessageKind = messageKind(*message)
-			u.ChatID = message.Chat.ID
-			u.Private = message.Chat.Type == "private"
-		}
-		if from != nil {
-			u.UserID = from.ID
-			u.Locale = from.LanguageCode
-			u.Username = from.Username
-		}
-		result = append(result, u)
-	}
-	return result, nil
+	return a.PollWithSubscription(ctx, token, offset, []string{"message", "callback_query"})
 }
 func (a Adapter) Answer(ctx context.Context, token, id, text string) error {
 	client, err := a.client(token)
@@ -112,6 +74,27 @@ func (a Adapter) Send(ctx context.Context, token string, m c.Message) (int64, er
 }
 
 func messageKind(m api.Message) string {
+	if m.Video != nil {
+		return "video"
+	}
+	if m.Voice != nil {
+		return "voice"
+	}
+	if m.Audio != nil {
+		return "audio"
+	}
+	if m.Animation != nil {
+		return "animation"
+	}
+	if m.VideoNote != nil {
+		return "video_note"
+	}
+	if m.Sticker != nil {
+		return "sticker"
+	}
+	if m.MigrateToChatID != 0 || m.MigrateFromChatID != 0 {
+		return "migration"
+	}
 	if len(m.Photo) > 0 {
 		return "photo"
 	}
@@ -126,6 +109,30 @@ func messageKind(m api.Message) string {
 
 // Apply executes exactly one operation. Replacement/fallback belongs to runtime.
 func (a Adapter) Apply(ctx context.Context, token string, m c.Message) (c.DeliveryResult, error) {
+	if m.Transfer != nil {
+		return c.DeliveryResult{}, &sendError{code: 400, kind: "unsupported_target"}
+	}
+	// Group Apply is restricted to explicitly authorized staff controls; customer
+	// content still uses Transfer, never this plain-text path.
+	target := m.TargetType.Normalize()
+	control := target == c.TargetSupportGroup && m.Purpose == "support_control"
+	if control {
+		if !validSupportControl(m) {
+			return c.DeliveryResult{}, &sendError{code: 400, kind: "unsupported_target"}
+		}
+	} else if target == c.TargetSupportPrivate {
+		if !validSupportGate(m) && !validSupportGateCleanup(m) {
+			return c.DeliveryResult{}, &sendError{code: 400, kind: "unsupported_target"}
+		}
+	} else if target != c.TargetShopPrivate {
+		return c.DeliveryResult{}, &sendError{code: 400, kind: "unsupported_target"}
+	}
+	if m.ThreadID != 0 && !control {
+		return c.DeliveryResult{}, &sendError{code: 400, kind: "unsupported_target"}
+	}
+	if m.TargetKind != "" && m.TargetKind != "text" && m.TargetKind != "photo" && m.TargetKind != "document" {
+		return c.DeliveryResult{}, &sendError{code: 400, kind: "invalid_content"}
+	}
 	client, err := a.client(token)
 	if err != nil {
 		return c.DeliveryResult{}, &sendError{code: 400, kind: "invalid_content"}
@@ -164,7 +171,7 @@ func (a Adapter) Apply(ctx context.Context, token string, m c.Message) (c.Delive
 			sent, err = client.SendPhoto(ctx, api.SendPhotoRequest{ChatID: m.ChatID, Data: m.Photo, FileID: m.FileID, URL: m.PhotoURL, Filename: m.MediaName, Caption: m.Text, ParseMode: m.ParseMode, ReplyMarkup: keyboard, ProtectContent: true})
 			kind = "photo"
 		default:
-			sent, err = client.SendMessage(ctx, api.SendMessageRequest{ChatID: m.ChatID, Text: m.Text, ParseMode: m.ParseMode, ReplyMarkup: keyboard, ProtectContent: true})
+			sent, err = client.SendMessage(ctx, api.SendMessageRequest{ChatID: m.ChatID, ThreadID: m.ThreadID, Text: m.Text, ParseMode: m.ParseMode, ReplyMarkup: keyboard, ProtectContent: true})
 			kind = "text"
 		}
 	case "edit":
@@ -193,7 +200,7 @@ func (a Adapter) Apply(ctx context.Context, token string, m c.Message) (c.Delive
 	if err != nil {
 		var upstream *api.APIError
 		if errors.As(err, &upstream) {
-			if operation != "send" && upstream.Kind() == "not_modified" {
+			if (operation != "send" && upstream.Kind() == "not_modified") || (operation == "delete" && upstream.Kind() == "target_missing") {
 				return c.DeliveryResult{MessageID: m.TargetMessageID, FileID: m.FileID, MessageKind: kind}, nil
 			}
 			code := upstream.ErrorCode

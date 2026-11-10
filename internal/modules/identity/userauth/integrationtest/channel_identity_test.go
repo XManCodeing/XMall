@@ -1,8 +1,11 @@
 package integrationtest
 
 import (
+	"context"
 	"fmt"
+	telegrambootstrap "github.com/XManCodeing/XMall/internal/bootstrap/telegrambot"
 	userauthgormstore "github.com/XManCodeing/XMall/internal/modules/identity/userauth/infrastructure/gormstore"
+	runtimecontract "github.com/XManCodeing/XMall/internal/modules/telegram/runtime/contract"
 	"testing"
 	"time"
 
@@ -101,6 +104,123 @@ func TestResolveTelegramChannelIdentityReturnsBoundUser(t *testing.T) {
 	}
 	if refreshed.Username != "new_username" {
 		t.Fatalf("stored username want new_username got %s", refreshed.Username)
+	}
+}
+
+// TestTelegramChannelProfilePresence verifies omitted, updated and explicitly cleared fields persist correctly.
+// t supplies the isolated test context; failures are reported through t without returning a value.
+func TestTelegramChannelProfilePresence(t *testing.T) {
+	svc, db := setupUserAuthServiceChannelIdentityTest(t)
+	now := time.Now().Add(-time.Hour)
+	user := &userdomain.User{Email: "profile@example.com", Status: constants.UserStatusActive}
+	if err := db.Create(user).Error; err != nil {
+		t.Fatalf("create user: %v", err)
+	}
+	identity := &externalidentitydomain.Identity{
+		UserID: user.ID, Provider: constants.UserOAuthProviderTelegram, ProviderUserID: "123456",
+		Username: "existing_user", AvatarURL: "https://example.com/avatar.png",
+		AuthAt: &now, CreatedAt: now, UpdatedAt: now,
+	}
+	if err := db.Create(identity).Error; err != nil {
+		t.Fatalf("create identity: %v", err)
+	}
+	testCases := []struct {
+		name      string
+		input     userauthapp.TelegramChannelIdentityInput
+		username  string
+		avatar    string
+		unchanged bool
+	}{
+		{"identifier only", userauthapp.TelegramChannelIdentityInput{}, "existing_user", "https://example.com/avatar.png", true},
+		{"blank omitted", userauthapp.TelegramChannelIdentityInput{Username: "  ", AvatarURL: "  "}, "existing_user", "https://example.com/avatar.png", true},
+		{"username update", userauthapp.TelegramChannelIdentityInput{Username: " next_user "}, "next_user", "https://example.com/avatar.png", false},
+		{"generation after update", userauthapp.TelegramChannelIdentityInput{}, "next_user", "https://example.com/avatar.png", true},
+		{"username explicitly removed", userauthapp.TelegramChannelIdentityInput{UsernamePresent: true}, "", "https://example.com/avatar.png", false},
+		{"avatar explicitly removed", userauthapp.TelegramChannelIdentityInput{AvatarPresent: true}, "", "", false},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			var before externalidentitydomain.Identity
+			if err := db.First(&before, identity.ID).Error; err != nil {
+				t.Fatalf("load identity before resolve: %v", err)
+			}
+			input := testCase.input
+			input.ChannelUserID = "123456"
+			resolvedUser, resolved, err := svc.ResolveTelegramChannelIdentity(input)
+			if err != nil || resolvedUser == nil || resolved == nil {
+				t.Fatalf("resolve identity failed: user=%v identity=%v err=%v", resolvedUser != nil, resolved != nil, err)
+			}
+			var stored externalidentitydomain.Identity
+			if err := db.First(&stored, identity.ID).Error; err != nil {
+				t.Fatalf("reload identity: %v", err)
+			}
+			if resolved.Username != testCase.username || stored.Username != testCase.username || stored.AvatarURL != testCase.avatar {
+				t.Fatalf("unexpected profile: resolved=%q stored=%q avatar=%q", resolved.Username, stored.Username, stored.AvatarURL)
+			}
+			if testCase.unchanged && (!stored.UpdatedAt.Equal(before.UpdatedAt) || !stored.AuthAt.Equal(*before.AuthAt)) {
+				t.Fatal("identifier-only lookup must not refresh identity timestamps")
+			}
+		})
+	}
+}
+
+// TestEventProfileSync verifies production dispatch updates existing identities without provisioning.
+// t owns the isolated database and reports all assertion failures; no value is returned.
+func TestEventProfileSync(t *testing.T) {
+	svc, db := setupUserAuthServiceChannelIdentityTest(t)
+	user := &userdomain.User{Email: "events@example.com", Status: constants.UserStatusActive}
+	if err := db.Create(user).Error; err != nil {
+		t.Fatal(err)
+	}
+	identity := &externalidentitydomain.Identity{UserID: user.ID, Provider: constants.UserOAuthProviderTelegram, ProviderUserID: "42", Username: "initial", AvatarURL: "keep-avatar"}
+	if err := db.Create(identity).Error; err != nil {
+		t.Fatal(err)
+	}
+	dispatcher := telegrambootstrap.NewUpdateDispatcher(nil, nil, telegrambootstrap.UpdateModules{Profiles: telegrambootstrap.EventProfileSync{Auth: svc}})
+	for _, eventType := range []string{"message", "edited_message", "callback_query", "chat_member", "my_chat_member", "chat_join_request"} {
+		t.Run(eventType, func(t *testing.T) {
+			update := runtimecontract.Update{Type: eventType, Actor: &runtimecontract.UserReference{ID: 42, Username: eventType}}
+			if _, err := dispatcher.Handle(context.Background(), 1, update); err != nil {
+				t.Fatal(err)
+			}
+			var stored externalidentitydomain.Identity
+			if err := db.First(&stored, identity.ID).Error; err != nil || stored.Username != eventType || stored.AvatarURL != "keep-avatar" {
+				t.Fatalf("event profile not persisted: %v %+v", err, stored)
+			}
+		})
+	}
+	testCases := []struct {
+		name   string
+		update runtimecontract.Update
+		want   string
+	}{
+		{"subject not operator", runtimecontract.Update{Type: "chat_member", Actor: &runtimecontract.UserReference{ID: 99, Username: "operator"}, Member: &runtimecontract.MemberUpdate{Subject: runtimecontract.UserReference{ID: 42, Username: "member"}}}, "member"},
+		{"applicant", runtimecontract.Update{Type: "chat_join_request", JoinRequest: &runtimecontract.JoinRequest{User: runtimecontract.UserReference{ID: 42, Username: "applicant"}}}, "applicant"},
+		{"identifier only", runtimecontract.Update{Type: "message", UserID: 42}, "applicant"},
+		{"bot excluded", runtimecontract.Update{Type: "message", Actor: &runtimecontract.UserReference{ID: 42, IsBot: true}}, "applicant"},
+		{"anonymous excluded", runtimecontract.Update{Type: "message", Actor: &runtimecontract.UserReference{ID: 42}, SenderChat: &runtimecontract.ChatReference{ID: -100}}, "applicant"},
+		{"historical reference excluded", runtimecontract.Update{Type: "message", Entities: []runtimecontract.MessageEntity{{User: &runtimecontract.UserReference{ID: 42, Username: "old"}}}}, "applicant"},
+		{"explicit deletion", runtimecontract.Update{Type: "callback_query", Actor: &runtimecontract.UserReference{ID: 42}}, ""},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			if _, err := dispatcher.Handle(context.Background(), 1, testCase.update); err != nil {
+				t.Fatal(err)
+			}
+			var stored externalidentitydomain.Identity
+			if err := db.First(&stored, identity.ID).Error; err != nil || stored.Username != testCase.want {
+				t.Fatalf("unexpected persisted username: %v %q", err, stored.Username)
+			}
+		})
+	}
+	var count int64
+	if err := db.Model(&userdomain.User{}).Count(&count).Error; err != nil || count != 1 {
+		t.Fatalf("event must not provision accounts: count=%d err=%v", count, err)
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	if _, err := dispatcher.Handle(ctx, 1, runtimecontract.Update{}); err == nil {
+		t.Fatal("cancellation must propagate to runtime retry")
 	}
 }
 

@@ -1,7 +1,16 @@
 package application
 
 import (
+	"errors"
 	"fmt"
+	category "github.com/XManCodeing/XMall/internal/modules/catalog/category/domain"
+	product "github.com/XManCodeing/XMall/internal/modules/catalog/product/domain"
+	identity "github.com/XManCodeing/XMall/internal/modules/identity/externalidentity/domain"
+	groups "github.com/XManCodeing/XMall/internal/modules/telegram/groups/domain"
+	c "github.com/XManCodeing/XMall/internal/modules/telegram/membership/contract"
+	d "github.com/XManCodeing/XMall/internal/modules/telegram/membership/domain"
+	store "github.com/XManCodeing/XMall/internal/modules/telegram/membership/infrastructure/gormstore"
+	wallet "github.com/XManCodeing/XMall/internal/modules/wallet/domain"
 	"strings"
 	"testing"
 	"time"
@@ -31,6 +40,60 @@ import (
 	"github.com/shopspring/decimal"
 	"gorm.io/gorm"
 )
+
+// TestEnabledMembershipWalletPayment verifies enabled sales with real binding, ledger and outbox.
+// t owns isolated SQLite; neither Telegram nor a real payment gateway is accessed.
+func TestEnabledMembershipWalletPayment(t *testing.T) {
+	svc, db := setupPaymentServiceWalletTest(t)
+	models := append(store.LedgerModels(), &category.Category{}, &groups.Target{}, &identity.Identity{}, &d.ProductConfig{}, &d.ProductTarget{}, &d.SKUTerm{}, &d.OrderItemSnapshot{}, &d.PaidEvent{})
+	if err := db.AutoMigrate(models...); err != nil {
+		t.Fatal(err)
+	}
+	now := time.Now().UTC()
+	amount := money.FromDecimal(decimal.NewFromInt(10))
+	rows := []any{
+		&userdomain.User{ID: 7, Email: "enabled-member@example.com", Status: constants.UserStatusActive},
+		&identity.Identity{ID: 4, UserID: 7, Provider: constants.UserOAuthProviderTelegram, ProviderUserID: "9007199254740993"},
+		&category.Category{ID: 1, Slug: "members", NameJSON: jsonmap.JSON{}, IsActive: true},
+		&product.Product{ID: 81, CategoryID: 1, Slug: "enabled-member", TitleJSON: jsonmap.JSON{}, IsActive: true},
+		&d.ProductConfig{ProductID: 81, Version: 2, Enabled: true, Quantity: 1},
+		&groups.Target{ID: 1, Name: "Members", Purpose: "membership", Enabled: true, Version: 1, RouteVersion: 1, BotInstanceID: 9, TelegramChatID: -10001, OccupancySlot: "chat:1", Observation: groups.Observation{RouteVersion: 1, ChatType: "supergroup", MemberStatus: "administrator", IsMember: true, CanInviteUsers: true, CanRestrictMembers: true, State: "ready", ObservedAt: &now}},
+		&wallet.Account{UserID: 7, Balance: amount},
+		&orderdomain.Order{ID: 9, OrderNo: "enabled-member", UserID: 7, Status: constants.OrderStatusPendingPayment, Currency: "CNY", TotalAmount: amount},
+		&orderdomain.OrderItem{ID: 11, OrderID: 9, ProductID: 81, SKUID: 1, Quantity: 1, TitleJSON: jsonmap.JSON{}, FulfillmentType: "manual"},
+		&d.OrderItemSnapshot{OrderItemID: 11, ProductID: 81, SKUID: 1, AccountID: 7, BeneficiaryTelegramID: 9007199254740993, IdentityVersion: 4, ConfigVersion: 1, Kind: d.TermMonths, Months: 2, DurationSeconds: 60 * 24 * 60 * 60, Quantity: 1, Targets: []d.SnapshotTarget{{TargetID: 1, RouteVersion: 1, BotInstanceID: 9, TelegramChatID: -10001}}},
+	}
+	for _, row := range rows {
+		if err := db.Omit("Category", "SKUs").Create(row).Error; err != nil {
+			t.Fatal(err)
+		}
+	}
+	svc.enforcePublicSale = true
+	if err := db.Delete(&d.ProductConfig{}, "product_id = 81").Error; err != nil {
+		t.Fatal(err)
+	}
+	input := CreatePaymentInput{OrderID: 9, UseBalance: true, OperationKey: "enabled-sale"}
+	if _, err := svc.CreatePayment(input); !errors.Is(err, c.ErrNotFound) {
+		t.Fatalf("orphan snapshot accepted: %v", err)
+	}
+	if err := db.Create(&d.ProductConfig{ProductID: 81, Version: 2, Enabled: true, Quantity: 1}).Error; err != nil {
+		t.Fatal(err)
+	}
+	for attempt := 0; attempt < 2; attempt++ {
+		result, err := svc.CreatePayment(input)
+		if err != nil || !result.OrderPaid {
+			t.Fatalf("enabled membership payment: %+v %v", result, err)
+		}
+	}
+	var events []d.PaidEvent
+	if err := db.Find(&events).Error; err != nil || len(events) != 1 {
+		t.Fatalf("payment outbox: %+v %v", events, err)
+	}
+	var account wallet.Account
+	if err := db.First(&account, "user_id = 7").Error; err != nil || !account.Balance.IsZero() {
+		t.Fatalf("wallet replay debited twice: %+v %v", account, err)
+	}
+}
 
 func TestBuildOrderNotificationPayloadIncludesCustomerAndItemSummary(t *testing.T) {
 	dsn := fmt.Sprintf("file:payment_notification_payload_%d?mode=memory&cache=shared", time.Now().UnixNano())

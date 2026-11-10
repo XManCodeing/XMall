@@ -16,7 +16,7 @@ export const formatOAuthProviderLabel = (provider?: string) => {
   return normalized || '-'
 }
 
-export const formatOAuthIdentityUsername = (identity: AdminUserOAuthIdentity) => {
+export const formatOAuthIdentityUsername = (identity: Pick<AdminUserOAuthIdentity, 'provider' | 'username'>) => {
   const username = identity.username?.trim()
   if (!username) return '-'
   if (normalizeOAuthProvider(identity.provider) === 'telegram') {

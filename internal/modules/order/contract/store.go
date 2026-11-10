@@ -1,6 +1,7 @@
 package contract
 
 import (
+	"context"
 	"errors"
 	"time"
 
@@ -17,6 +18,82 @@ import (
 )
 
 var ErrProcurementRefundBlocked = errors.New("active upstream procurement blocks local refund")
+
+var (
+	// ErrRefundRequestConflict rejects reuse of an idempotency key with a different intent.
+	ErrRefundRequestConflict = errors.New("refund request conflicts with persisted intent")
+	// ErrRefundRequestReplay indicates that the original committed request must be resumed.
+	ErrRefundRequestReplay = errors.New("refund request already committed")
+	// ErrRefundRequestInvalid indicates invalid amount, order, or explicit purchase selection.
+	ErrRefundRequestInvalid = errors.New("invalid membership refund request")
+	// ErrRefundRequestDenied indicates missing backend refund/disposition permissions.
+	ErrRefundRequestDenied = errors.New("membership refund permission denied")
+)
+
+// MembershipRefundRequest is the durable order-owned command shared with orchestration.
+type MembershipRefundRequest orderdomain.MembershipRefundRequest
+
+// TableName keeps the cross-module projection on the order-owned command table.
+func (MembershipRefundRequest) TableName() string { return "membership_refund_requests" }
+
+// MembershipRefundInput accepts one explicit intent; existing means no new money movement.
+type MembershipRefundInput struct {
+	RequestKey       string `json:"request_key"`
+	OrderID          uint   `json:"order_id,string"`
+	ExistingRefundID uint   `json:"existing_refund_id,string"`
+	ItemIDs          []uint `json:"item_ids"`
+	Method           string `json:"method"`
+	Amount           string `json:"amount"`
+	Remark           string `json:"remark"`
+	ActorAdminID     uint   `json:"-"`
+}
+
+// MembershipRefundCommands must be implemented on the same transaction-bound order store.
+type MembershipRefundCommands interface {
+	BeginMembershipRefund(*MembershipRefundRequest) error
+	BindMembershipRefund(string, uint) error
+	GetMembershipRefund(string) (*MembershipRefundRequest, error)
+	ListMembershipRefunds(uint, uint) ([]MembershipRefundRequest, error)
+	CompleteMembershipRefund(string) error
+}
+
+// MembershipRefundFunds persists request, actual refund and termination intent atomically.
+type MembershipRefundFunds interface {
+	CommitMembershipRefund(context.Context, MembershipRefundInput) (*MembershipRefundRequest, error)
+	ListMembershipRefunds(uint, uint) ([]MembershipRefundRequest, error)
+	CompleteMembershipRefund(string) error
+}
+
+// MembershipRefundRetry persists fenced rights-only attempts; manual bypasses backoff, never an active lease.
+// Claim returns nil when another worker owns the request or the automatic budget is exhausted.
+// Finish accepts only the claimed version, so an expired worker cannot overwrite a newer attempt.
+type MembershipRefundRetry interface {
+	ClaimMembershipRefund(context.Context, MembershipRefundRequest, time.Time, bool) (*MembershipRefundRequest, error)
+	FinishMembershipRefund(context.Context, MembershipRefundRequest, time.Time, bool) error
+}
+
+// MembershipRefundRetryLimit bounds automatic attempts, including crash/write-failure attempts.
+const MembershipRefundRetryLimit uint = 5
+
+// MembershipRefundRetryLease bounds ownership of local, idempotent rights disposal.
+const MembershipRefundRetryLease = 2 * time.Minute
+
+// MembershipRefundRetryDelay returns capped exponential backoff for a one-based attempt number.
+func MembershipRefundRetryDelay(attempt uint) time.Duration {
+	if attempt == 0 {
+		attempt = 1
+	}
+	if attempt > 7 {
+		attempt = 7
+	}
+	return time.Minute * time.Duration(1<<(attempt-1))
+}
+
+// MembershipRefundAdmin is the authenticated combined use case consumed by admin HTTP.
+type MembershipRefundAdmin interface {
+	Execute(context.Context, MembershipRefundInput) (*MembershipRefundRequest, error)
+	Requests(context.Context, uint, uint) ([]MembershipRefundRequest, error)
+}
 
 // RefundGuard must run on the transaction-bound store before any refund write.
 type RefundGuard interface{ LockRefundScope(uint) error }

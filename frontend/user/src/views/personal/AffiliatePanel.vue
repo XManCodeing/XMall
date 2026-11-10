@@ -282,12 +282,7 @@ const conversionRateText = computed(() => {
   return `${value.toFixed(2)}%`
 })
 
-const formatDate = (raw?: string) => {
-  if (!raw) return '-'
-  const date = new Date(raw)
-  if (Number.isNaN(date.getTime())) return raw
-  return date.toLocaleString()
-}
+import { formatDate } from '@/utils/format'
 
 const loadDashboard = async () => {
   try {

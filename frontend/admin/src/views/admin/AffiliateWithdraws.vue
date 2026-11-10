@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { onMounted, reactive, ref } from 'vue'
-import { useDebounceFn } from '@vueuse/core'
 import { useI18n } from 'vue-i18n'
 import { adminAPI } from '@/api/admin'
 import type { AdminAffiliateWithdraw } from '@/api/types'
@@ -10,6 +9,8 @@ import {
   AFFILIATE_WITHDRAW_STATUS_REJECTED,
 } from '@/constants/affiliate'
 import IdCell from '@/components/IdCell.vue'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog'
+import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
@@ -63,10 +64,18 @@ const fetchRows = async (page = 1, options: ListFetchOptions = {}) => {
   }
 }
 
-const handleSearch = () => {
-  fetchRows(1, { preserveRows: true })
+/** 按当前筛选查询第一页；加载期间忽略重复操作。@returns 查询完成。 */
+const handleSearch = async (): Promise<void> => {
+  if (loading.value || refreshing.value) return
+  pagination.value.page = 1
+  await fetchRows(1)
 }
-const debouncedSearch = useDebounceFn(handleSearch, 300)
+/** 清空筛选条件，保留分页尺寸。@returns 查询完成。 */
+const resetFilters = async (): Promise<void> => {
+  if (loading.value || refreshing.value) return
+  Object.assign(filters, { keyword: '', affiliateProfileId: '', status: '__all__' })
+  await handleSearch()
+}
 
 const refreshCurrentPage = () => {
   refreshList(() => fetchRows(pagination.value.page, { preserveRows: true }))
@@ -99,17 +108,23 @@ const statusClass = (status?: string) => {
   return 'border-border bg-muted/30 text-muted-foreground'
 }
 
-const rejectWithdraw = async (row: AdminAffiliateWithdraw) => {
-  const confirmed = await confirmAction({
-    description: t('admin.affiliatesWithdraws.actions.rejectConfirm', { id: row.id }),
-    variant: 'destructive',
-  })
-  if (!confirmed) return
+const rejectTarget = ref<AdminAffiliateWithdraw | null>(null)
+const rejectReason = ref('')
+/** 打开页面内驳回表单，不发送请求。@param row 待审核提现 @returns void */
+const rejectWithdraw = (row: AdminAffiliateWithdraw) => {
+  if (operating.value) return
+  rejectReason.value = ''
+  rejectTarget.value = row
+}
 
-  const reason = window.prompt(t('admin.affiliatesWithdraws.actions.rejectReasonPrompt')) ?? ''
+/** 提交当前提现的驳回原因；失败保留表单以便重试。@returns 提交完成通知 */
+const submitRejection = async () => {
+  const row = rejectTarget.value
+  if (!row || operating.value || row.status !== AFFILIATE_WITHDRAW_STATUS_PENDING_REVIEW) return
   operating.value = true
   try {
-    await adminAPI.rejectAffiliateWithdraw(row.id, { reason: reason.trim() || undefined })
+    await adminAPI.rejectAffiliateWithdraw(row.id, { reason: rejectReason.value.trim() || undefined })
+    rejectTarget.value = null
     notifySuccess(t('admin.affiliatesWithdraws.actions.rejectSuccess'))
     await fetchRows(pagination.value.page)
   } catch (err: any) {
@@ -141,6 +156,22 @@ onMounted(() => {
 
 <template>
   <div class="space-y-3">
+    <Dialog :open="!!rejectTarget" @update:open="value => { if (!value && !operating) rejectTarget = null }">
+      <DialogContent @escape-key-down="event => { if (operating) event.preventDefault() }">
+        <DialogHeader>
+          <DialogTitle>{{ t('admin.common.confirm') }}</DialogTitle>
+          <DialogDescription>{{ t('admin.affiliatesWithdraws.actions.rejectConfirm', { id: rejectTarget?.id }) }}</DialogDescription>
+        </DialogHeader>
+        <form class="space-y-4" @submit.prevent="submitRejection">
+          <Label for="affiliate-reject-reason">{{ t('admin.affiliatesWithdraws.actions.rejectReasonPrompt') }}</Label>
+          <Input id="affiliate-reject-reason" v-model="rejectReason" :disabled="operating" />
+          <DialogFooter>
+            <Button type="button" variant="outline" :disabled="operating" @click="rejectTarget = null">{{ t('admin.common.cancel') }}</Button>
+            <Button type="submit" variant="destructive" :disabled="operating">{{ t('admin.common.confirm') }}</Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
   <div class="space-y-6">
     <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
       <h1 class="text-2xl font-semibold">{{ t('admin.affiliatesWithdraws.title') }}</h1>
@@ -149,13 +180,13 @@ onMounted(() => {
     <div class="rounded-xl border border-border bg-card p-4 shadow-sm">
       <div class="flex flex-wrap items-center gap-3">
         <div class="w-full md:w-56">
-          <Input v-model="filters.keyword" :placeholder="t('admin.affiliatesWithdraws.filters.keyword')" @update:modelValue="debouncedSearch" />
+          <Input v-model="filters.keyword" :placeholder="t('admin.affiliatesWithdraws.filters.keyword')" @keydown.enter="handleSearch" />
         </div>
         <div class="w-full md:w-44">
-          <Input v-model="filters.affiliateProfileId" :placeholder="t('admin.affiliatesWithdraws.filters.profileId')" @update:modelValue="debouncedSearch" />
+          <Input v-model="filters.affiliateProfileId" :placeholder="t('admin.affiliatesWithdraws.filters.profileId')" @keydown.enter="handleSearch" />
         </div>
         <div class="w-full md:w-48">
-          <Select v-model="filters.status" @update:modelValue="handleSearch">
+          <Select v-model="filters.status">
             <SelectTrigger class="h-9 w-full">
               <SelectValue :placeholder="t('admin.affiliatesWithdraws.filters.statusAll')" />
             </SelectTrigger>
@@ -168,7 +199,9 @@ onMounted(() => {
           </Select>
         </div>
         <div class="flex-1"></div>
-        <Button size="sm" variant="outline" :disabled="refreshing" @click="refreshCurrentPage">{{ t('admin.common.refresh') }}</Button>
+        <Button size="sm" variant="outline" :disabled="loading || refreshing" @click="handleSearch">{{ t('admin.common.search') }}</Button>
+        <Button size="sm" variant="outline" :disabled="loading || refreshing" @click="resetFilters">{{ t('admin.common.reset') }}</Button>
+        <Button size="sm" variant="outline" :disabled="loading || refreshing" @click="refreshCurrentPage">{{ t('admin.common.refresh') }}</Button>
       </div>
     </div>
 
@@ -249,7 +282,7 @@ onMounted(() => {
                   :disabled="operating || item.status !== AFFILIATE_WITHDRAW_STATUS_PENDING_REVIEW"
                   @click="payWithdraw(item)"
                 >
-                  {{ t('admin.affiliatesWithdraws.actions.pay') }}
+                  <span :title="t('admin.affiliatesWithdraws.actions.pay')" :aria-label="t('admin.affiliatesWithdraws.actions.pay')">{{ t('tableAction.paid') }}</span>
                 </Button>
               </div>
             </TableCell>

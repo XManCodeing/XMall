@@ -29,6 +29,121 @@ import (
 	"github.com/shopspring/decimal"
 )
 
+// TestPaymentExportTimeUsesEastEight 验证支付导出时间跨 UTC 年界，空值不产生虚假时间。
+func TestPaymentExportTimeUsesEastEight(t *testing.T) {
+	instant := time.Date(2026, 12, 31, 20, 30, 0, 0, time.UTC)
+	if actual := formatTimeNullable(&instant); actual != "2027-01-01T04:30:00+08:00" {
+		t.Fatalf("export time = %q", actual)
+	}
+	if formatTimeNullable(nil) != "" {
+		t.Fatal("nil export time must be empty")
+	}
+}
+
+// manualHTTPProbe 记录 HTTP 注入的管理员身份，不执行真实付款。
+type manualHTTPProbe struct {
+	calls          int
+	adminID        uint
+	confirmTimeout bool
+}
+
+func (p *manualHTTPProbe) GetManualConfirmation(id uint) (*paymentcontract.ManualConfirmationReview, error) {
+	p.calls++
+	return &paymentcontract.ManualConfirmationReview{PaymentID: id}, nil
+}
+func (p *manualHTTPProbe) ConfirmManually(id uint, input paymentcontract.ManualConfirmationInput) (*paymentcontract.ManualConfirmationReview, error) {
+	p.calls++
+	p.adminID = input.AdminID
+	p.confirmTimeout = input.ConfirmTimeout
+	return &paymentcontract.ManualConfirmationReview{PaymentID: id}, nil
+}
+
+// TestManualHTTPIdentityAndStrictDTO 验证上下文身份、拒绝伪造管理员、未知字段与非法 RFC3339。
+func TestManualHTTPIdentityAndStrictDTO(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	for _, testCase := range []struct {
+		name, body              string
+		authenticated, wantCall bool
+	}{
+		{"valid", `{"request_id":"review-001","paid_at":"2026-01-01T00:00:00Z"}`, true, true},
+		{"timeout_confirmed", `{"confirm_timeout":true}`, true, true},
+		{"invalid_timeout", `{"confirm_timeout":"true"}`, true, false},
+		{"forged_admin", `{"admin_id":999}`, true, false},
+		{"unknown", `{"actor":999}`, true, false},
+		{"invalid_time", `{"paid_at":"yesterday"}`, true, false},
+		{"trailing", `{} {}`, true, false},
+		{"unauthenticated", `{}`, false, false},
+	} {
+		t.Run(testCase.name, func(t *testing.T) {
+			probe := &manualHTTPProbe{}
+			handler := NewManualConfirmationHandler(probe)
+			router := gin.New()
+			router.POST("/admin/payments/:id/manual-confirmation", func(c *gin.Context) {
+				if testCase.authenticated {
+					c.Set("admin_id", uint(17))
+				}
+				handler.ConfirmManually(c)
+			})
+			recorder := httptest.NewRecorder()
+			request := httptest.NewRequest(http.MethodPost, "/admin/payments/9/manual-confirmation", strings.NewReader(testCase.body))
+			request.Header.Set("Content-Type", "application/json")
+			router.ServeHTTP(recorder, request)
+			if (probe.calls == 1) != testCase.wantCall {
+				t.Fatalf("calls=%d body=%s", probe.calls, recorder.Body.String())
+			}
+			if testCase.wantCall && probe.confirmTimeout != (testCase.name == "timeout_confirmed") {
+				t.Fatal("timeout confirmation was not forwarded exactly")
+			}
+			if testCase.wantCall && probe.adminID != 17 {
+				t.Fatal("operator not from authenticated context")
+			}
+		})
+	}
+}
+
+// TestManualReviewTimeoutFlagAlwaysPresent protects the frontend's strict boolean review contract.
+// Both ordinary and expired review responses serialize the field, including its false value.
+func TestManualReviewTimeoutFlagAlwaysPresent(t *testing.T) {
+	for _, required := range []bool{false, true} {
+		encoded, err := json.Marshal(paymentcontract.ManualConfirmationReview{RequiresTimeoutConfirmation: required})
+		if err != nil {
+			t.Fatal(err)
+		}
+		var payload map[string]interface{}
+		if err := json.Unmarshal(encoded, &payload); err != nil {
+			t.Fatal(err)
+		}
+		value, exists := payload["requires_timeout_confirmation"]
+		if !exists || value != required {
+			t.Fatalf("missing boolean: %s", encoded)
+		}
+	}
+}
+
+// TestManualHTTPConflictClass keeps review conflicts distinguishable from unknown outcomes.
+// t invokes only the response mapper; no mutation or external request is performed.
+func TestManualHTTPConflictClass(t *testing.T) {
+	for _, testCase := range []struct {
+		err  error
+		want int
+	}{
+		{paymentcontract.ErrManualConfirmationConflict, http.StatusConflict},
+		{paymentcontract.ErrManualConfirmationInvalid, http.StatusBadRequest},
+		{ErrPaymentNotFound, http.StatusNotFound},
+	} {
+		recorder := httptest.NewRecorder()
+		ctx, _ := gin.CreateTestContext(recorder)
+		ctx.Request = httptest.NewRequest(http.MethodPost, "/admin/payments/9/manual-confirmation", nil)
+		respondManualConfirmationError(ctx, testCase.err)
+		var result struct {
+			StatusCode int `json:"status_code"`
+		}
+		if err := json.Unmarshal(recorder.Body.Bytes(), &result); err != nil || result.StatusCode != testCase.want {
+			t.Fatalf("status=%d want=%d err=%v", result.StatusCode, testCase.want, err)
+		}
+	}
+}
+
 type fakeAdminPaymentQuery struct {
 	payments []paymentdomain.Payment
 	owner    map[uint]uint // paymentID -> userID

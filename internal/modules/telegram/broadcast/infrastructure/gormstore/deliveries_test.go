@@ -12,6 +12,37 @@ import (
 	runtimestore "github.com/XManCodeing/XMall/internal/modules/telegram/runtime/infrastructure/gormstore"
 )
 
+// TestStaleProgressCannotHideExplicitRetry covers terminal snapshots racing requeue.
+func TestStaleProgressCannotHideExplicitRetry(t *testing.T) {
+	store := setupStoreTest(t)
+	if err := store.db.AutoMigrate(&d.Delivery{}); err != nil {
+		t.Fatal(err)
+	}
+	ctx := context.Background()
+	job := &b.Broadcast{BotID: 7, DeliveryVersion: 1, Status: "failed", FailedCount: 1}
+	if err := store.Create(ctx, job); err != nil {
+		t.Fatal(err)
+	}
+	row := d.Delivery{BotID: 7, BroadcastID: job.ID, Key: "stale-progress", Status: "failed", LastError: "telegram rejected message", PayloadCipher: "synthetic"}
+	if err := store.db.Create(&row).Error; err != nil {
+		t.Fatal(err)
+	}
+	stale, err := store.GetByID(ctx, job.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := store.RetryBroadcastDelivery(ctx, 7, job.ID, row.ID); err != nil {
+		t.Fatal(err)
+	}
+	if err := store.Update(ctx, stale); err != nil {
+		t.Fatal(err)
+	}
+	current, err := store.GetByID(ctx, job.ID)
+	if err != nil || current.Status != "running" || current.CompletedAt != nil {
+		t.Fatal("stale snapshot hid retry", current, err)
+	}
+}
+
 func TestRetryDeliveryAllowlistAndScope(t *testing.T) {
 	s := setupStoreTest(t)
 	if err := s.db.AutoMigrate(&d.Delivery{}); err != nil {

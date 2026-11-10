@@ -57,7 +57,7 @@ interface TelegramBotSettingsForm {
 }
 
 const menuActionTypes: MenuActionType[] = ['builtin', 'url']
-const builtinMenuValues = ['shop', 'orders', 'wallet', 'language', 'help']
+const builtinMenuValues = ['shop', 'orders', 'memberships', 'wallet', 'language', 'help']
 const menuItemsMaxCount = 20
 const helpItemsMaxCount = 12
 
@@ -188,6 +188,8 @@ export function useTelegramBotSettings(sections: Array<'basic' | 'welcome' | 'he
   const version = ref(0)
   const profileVersion = ref(0)
   const loadError = ref('')
+  const loadForbidden = computed(() => !auth.hasPermission('GET:/admin/settings/telegram-bot')
+    || (wantsProfile.value && !!selectedInstanceId.value && !auth.hasPermission(`GET:/admin/telegram-bot/instances/${selectedInstanceId.value}/profile`)))
   const needsReload = ref(false)
   const loaded = ref(false)
   const menuDroppedUnsupported = ref(false)
@@ -245,7 +247,8 @@ export function useTelegramBotSettings(sections: Array<'basic' | 'welcome' | 'he
       return
     }
     const res = await adminAPI.getTelegramBotInstances()
-    const items = (res.data?.data?.items ?? []) as Array<{ id: number; username: string; telegram_id: number }>
+    const items = res.data?.data?.items as Array<{ id: number; username: string; telegram_id: number }> | undefined
+    if (!Array.isArray(items)) throw new Error('Invalid instances response')
     instances.value = items.map(item => ({ id: item.id, username: item.username, telegram_id: item.telegram_id }))
     if (!instances.value.some(item => String(item.id) === selectedInstanceId.value)) {
       selectedInstanceId.value = instances.value[0] ? String(instances.value[0].id) : ''
@@ -539,6 +542,7 @@ export function useTelegramBotSettings(sections: Array<'basic' | 'welcome' | 'he
     canSave,
     canListInstances,
     loadError,
+    loadForbidden,
     needsReload,
     loaded,
     menuDroppedUnsupported,

@@ -36,14 +36,17 @@ export function useTelegramBroadcastDeliveries(
     try {
       const res = await adminAPI.getTelegramBroadcastDeliveries(broadcastId.value, { page, page_size: 20 })
       if (request !== requestID) return
-      items.value = res.data?.data || []
+      if (!Array.isArray(res.data?.data)) throw new Error(t('common.api.responseMissing'))
+      items.value = res.data.data
       pagination.value = res.data?.pagination || { page, page_size: 20, total: 0, total_page: 1 }
       if (!silent) error.value = ''
-    } catch {
-      if (request === requestID && !silent) {
+    } catch (cause) {
+      if (request !== requestID) return
+      if (!silent) {
         items.value = []
         error.value = t('telegramBot.instances.recipientLoadFailed')
       }
+      notifyErrorOnce(cause, t('telegramBot.instances.recipientLoadFailed'))
     } finally {
       if (request === requestID) loading.value = false
     }

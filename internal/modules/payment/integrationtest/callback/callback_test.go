@@ -85,6 +85,7 @@ func newOkpayCallbackFixture(t *testing.T) *okpayCallbackFixture {
 		&fulfillmentdomain.Fulfillment{},
 		&paymentdomain.PaymentChannel{},
 		&paymentdomain.Payment{},
+		&paymentdomain.PaymentEvidenceClaim{}, &paymentdomain.PaymentReceiptAnomaly{}, &paymentdomain.ManualConfirmation{},
 	); err != nil {
 		t.Fatalf("auto migrate failed: %v", err)
 	}

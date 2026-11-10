@@ -3,6 +3,8 @@ package contract
 import (
 	"context"
 	"errors"
+	rt "github.com/XManCodeing/XMall/internal/modules/telegram/runtime/contract"
+	walletcontract "github.com/XManCodeing/XMall/internal/modules/wallet/contract"
 	"time"
 )
 
@@ -11,7 +13,34 @@ var ErrPriceChanged = errors.New("shop price changed")
 var ErrPaymentUncertain = errors.New("payment creation outcome unknown")
 var ErrUnavailable = errors.New("shop operation unavailable")
 
+// ErrInsufficientBalance reuses the wallet contract instead of inventing another balance error.
+var ErrInsufficientBalance = walletcontract.ErrInsufficientBalance
+var ErrWalletOnlyPaymentRequired = walletcontract.ErrOnlyPaymentRequired
+
+// PaymentRetryError offers an explicit retry using a backend-authorized successor.
+// Unknown or processing attempts must never produce this error.
+type PaymentRetryError struct {
+	OperationKey string
+}
+
+// Error returns a safe diagnostic without exposing the operation key.
+func (e *PaymentRetryError) Error() string { return "payment attempt unavailable; retry permitted" }
+
+// ErrRegistrationDisabled and ErrAccountDisabled are terminal user-facing policy failures.
+var ErrRegistrationDisabled = errors.New("telegram registration disabled")
+var ErrAccountDisabled = errors.New("telegram account disabled")
+var ErrInviteRequired = errors.New("telegram registration requires invitation")
+
+// ProductLinkAccess validates current membership-product/target/bot association.
+// Implementations must read current relations; missing, inactive or unrelated products fail closed.
+type ProductLinkAccess interface {
+	ResolveProductLink(context.Context, string) (uint, error)
+	AuthorizeProductLink(context.Context, Actor, uint) error
+}
+
 type Actor struct {
+	// UsernamePresent is true only when Username came from an actual Telegram user update.
+	UsernamePresent  bool
 	BotID            uint
 	TelegramID       int64
 	UserID           uint
@@ -27,14 +56,27 @@ type Category struct {
 	Name string
 }
 type SKU struct {
-	ID          uint
-	Name        string
-	Price       string // Public/base unit price, never a member-price quote.
-	Stock       string // Policy-filtered display; never an unmasked quantity.
-	Available   bool
-	MaxQuantity *int // Public exact stock bound only; nil for hidden/unknown/unlimited stock.
+	// MembershipTerm is a read-only projection of this SKU's shared membership configuration.
+	MembershipTerm *MembershipTerm
+	ID             uint
+	Name           string
+	Price          string // Public/base unit price, never a member-price quote.
+	Stock          string // Policy-filtered display; never an unmasked quantity.
+	Available      bool
+	MaxQuantity    *int // Public exact stock bound only; nil for hidden/unknown/unlimited stock.
 }
+
+// MembershipTerm identifies the existing SKU term; months always mean fixed 30-day periods.
+type MembershipTerm struct {
+	Kind   string
+	Months int64
+}
+
 type Product struct {
+	// Membership is based on configuration existence, never purchase_type or enabled.
+	Membership bool
+	// GroupNames contains only administrator-registered public names in configuration order.
+	GroupNames                           []string
 	ID                                   uint
 	Title, Description                   string
 	Summary, Image, URL, FulfillmentType string
@@ -84,6 +126,65 @@ type Payment struct {
 	QRImage   []byte
 	ExpiresAt *time.Time
 	Paid      bool
+}
+
+// MembershipGroup mirrors the website's public, secret-free membership projection.
+// IDs must be canonical positive decimal strings; permanent groups have no deadline.
+type MembershipGroup struct {
+	TargetID              string     `json:"target_id"`
+	Title                 string     `json:"title"`
+	BeneficiaryTelegramID string     `json:"beneficiary_telegram_id"`
+	Permanent             bool       `json:"permanent"`
+	ExpiresAt             *time.Time `json:"expires_at,omitempty"`
+	State                 string     `json:"state"`
+	MemberStatus          string     `json:"member_status,omitempty"`
+	CanRequest            bool       `json:"can_request"`
+	// Replaced compares this order's immutable route with the current route, not other orders.
+	Replaced bool `json:"replaced"`
+	// HistoricalChats contains distinct replaced snapshot chat IDs and route versions, never invented titles.
+	HistoricalChats []string `json:"historical_chats,omitempty"`
+}
+
+// MembershipPage uses ascending target IDs and an exclusive cursor, bounded by limit.
+type MembershipPage struct {
+	Items      []MembershipGroup `json:"items"`
+	NextCursor string            `json:"next_cursor,omitempty"`
+}
+
+// MembershipInvitation discloses an authorized existing or explicitly requested link.
+// State describes invitation execution/lifetime, not membership entitlement. In particular,
+// expired/revoked never imply that a later purchase's membership has expired or been revoked.
+type MembershipInvitation struct {
+	// Permanent explicitly identifies a non-expiring invite; nil expiry alone is invalid.
+	Permanent      bool                  `json:"permanent"`
+	InviteDelivery *rt.InviteDeliveryRef `json:"-"`
+	State          string                `json:"state"`
+	InviteURL      string                `json:"invite_url,omitempty"`
+	ExpiresAt      *time.Time            `json:"expires_at,omitempty"`
+}
+
+// MembershipAccess revalidates Actor's current verified account, Telegram ID and
+// generation on every call. Historical account grants never authorize access.
+// List is read-only and never creates accounts, invitations or Telegram requests.
+// Request durably deduplicates by beneficiary/target, rechecks eligibility and
+// returns an existing live invite or schedules work; unknown outcomes never retry.
+// Both methods must restrict execution routes to Actor.BotID.
+type MembershipAccess interface {
+	List(context.Context, Actor, uint, int) (MembershipPage, error)
+	Request(context.Context, Actor, uint) (MembershipInvitation, error)
+}
+
+// MembershipReader revalidates actor, beneficiary, route and invitation scope on each read.
+// GetExisting never generates, renews, schedules or requests an invitation.
+type MembershipReader interface {
+	GetExisting(context.Context, Actor, uint) (MembershipInvitation, error)
+}
+
+// OrderMembershipReader returns only targets captured in this order's immutable
+// fulfillment snapshot, never the account's complete membership collection.
+// Targets validates order ownership and current beneficiary; historical grants do not authorize links.
+type OrderMembershipReader interface {
+	Targets(context.Context, Actor, uint, uint) ([]MembershipGroup, error)
 }
 
 type IdentityGeneration interface {
@@ -141,6 +242,7 @@ type Content struct {
 	HelpTitle, HelpIntro        string
 	DisplayName, Description    string
 	SupportURL, CoverURL        string
+	BindingURL                  string // Verified site security entry; never a client-supplied redirect.
 	CenterHint, SupportHint     string
 	DefaultLocale               string
 	HelpItems                   []HelpItem

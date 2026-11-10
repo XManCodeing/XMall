@@ -2,6 +2,7 @@ package application
 
 import (
 	"errors"
+	membership "github.com/XManCodeing/XMall/internal/modules/telegram/membership/contract"
 
 	"github.com/XManCodeing/XMall/internal/config"
 	"github.com/XManCodeing/XMall/internal/logger"
@@ -25,7 +26,7 @@ import (
 var (
 	ErrPaymentInvalid                      = errors.New("payment invalid")
 	ErrPaymentNotFound                     = errors.New("payment not found")
-	ErrPaymentCreateFailed                 = errors.New("payment create failed")
+	ErrPaymentCreateFailed                 = paymentcontract.ErrPaymentCreateFailed
 	ErrPaymentUpdateFailed                 = errors.New("payment update failed")
 	ErrPaymentStatusInvalid                = errors.New("payment status invalid")
 	ErrPaymentAmountMismatch               = errors.New("payment amount mismatch")
@@ -58,6 +59,8 @@ type PaymentService struct {
 	walletSvc               *walletapp.Service
 	settingService          *settingsapp.Service
 	defaultEmailConfig      config.EmailConfig
+	membershipPreflight     membership.CapabilityPreflight
+	enforcePublicSale       bool
 	expireMinutes           int
 	affiliateSvc            AffiliatePaymentLifecycle
 	notificationSvc         notificationcontract.NotificationEnqueuer
@@ -108,18 +111,20 @@ func (s *PaymentService) SetMemberLevelService(svc MemberLevelProgressor) {
 
 // PaymentServiceOptions 支付服务构造参数
 type PaymentServiceOptions struct {
-	OrderStore              ordercontract.Store
-	ProductRepo             productcontract.Repository
-	ProductSKURepo          productcontract.SKURepository
-	PaymentStore            paymentcontract.Store
-	ChannelStore            paymentcontract.ChannelStore
-	WalletRepo              walletcontract.Repository
-	UserStore               usercontract.Store
-	ExternalIdentityStore   externalidentitycontract.Store
-	Queue                   paymentcontract.Queue
-	WalletService           *walletapp.Service
-	SettingService          *settingsapp.Service
-	DefaultEmailConfig      config.EmailConfig
+	OrderStore            ordercontract.Store
+	ProductRepo           productcontract.Repository
+	ProductSKURepo        productcontract.SKURepository
+	PaymentStore          paymentcontract.Store
+	ChannelStore          paymentcontract.ChannelStore
+	WalletRepo            walletcontract.Repository
+	UserStore             usercontract.Store
+	ExternalIdentityStore externalidentitycontract.Store
+	Queue                 paymentcontract.Queue
+	WalletService         *walletapp.Service
+	SettingService        *settingsapp.Service
+	DefaultEmailConfig    config.EmailConfig
+	// EnforcePublicSale is required in production; isolated pre-membership fixtures may omit it.
+	EnforcePublicSale       bool
 	ExpireMinutes           int
 	AffiliateService        AffiliatePaymentLifecycle
 	NotificationService     notificationcontract.NotificationEnqueuer
@@ -142,6 +147,7 @@ func NewPaymentService(opts PaymentServiceOptions) *PaymentService {
 		walletSvc:               opts.WalletService,
 		settingService:          opts.SettingService,
 		defaultEmailConfig:      opts.DefaultEmailConfig,
+		enforcePublicSale:       opts.EnforcePublicSale,
 		expireMinutes:           opts.ExpireMinutes,
 		affiliateSvc:            opts.AffiliateService,
 		notificationSvc:         opts.NotificationService,

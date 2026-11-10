@@ -15,25 +15,7 @@ export const normalizeCurrencyRows = <T extends { currency?: string }>(rows?: T[
     ? rows.map((row) => ({ ...row, currency: String(row.currency || '').trim().toUpperCase() }))
     : []
 
-const padDatePart = (value: number) => String(value).padStart(2, '0')
-
-const formatPeriodBoundary = (raw?: string) => {
-  if (!raw) return '-'
-
-  const rfc3339Parts = raw.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::(\d{2}))?/)
-  if (rfc3339Parts) {
-    const [, year, month, day, hour, minute, second = '00'] = rfc3339Parts
-    return `${year}-${month}-${day} ${hour}:${minute}:${second}`
-  }
-
-  const date = new Date(raw)
-  if (Number.isNaN(date.getTime())) return raw
-
-  return [
-    `${date.getFullYear()}-${padDatePart(date.getMonth() + 1)}-${padDatePart(date.getDate())}`,
-    `${padDatePart(date.getHours())}:${padDatePart(date.getMinutes())}:${padDatePart(date.getSeconds())}`,
-  ].join(' ')
-}
+import { formatDate as formatPeriodBoundary } from '../../../shared/dateTime.ts'
 
 export const formatResellerOperationsPeriod = (from?: string, to?: string) =>
   `${formatPeriodBoundary(from)} - ${formatPeriodBoundary(to)}`

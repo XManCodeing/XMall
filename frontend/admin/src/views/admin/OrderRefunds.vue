@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { onMounted, reactive, ref, watch } from 'vue'
-import { useDebounceFn } from '@vueuse/core'
 import { useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { adminAPI } from '@/api/admin'
@@ -85,10 +84,18 @@ const fetchRefunds = async (page = 1, options: ListFetchOptions = {}) => {
   }
 }
 
-const handleSearch = () => {
-  fetchRefunds(1)
+/** 按当前筛选查询第一页，加载期间忽略重复操作。@returns 查询完成。 */
+const handleSearch = async (): Promise<void> => {
+  if (loading.value || refreshing.value) return
+  pagination.value.page = 1
+  await fetchRefunds(1)
 }
-const debouncedSearch = useDebounceFn(handleSearch, 300)
+/** 恢复查询默认值，保留路由用户上下文及分页尺寸。@returns 查询完成。 */
+const resetFilters = async (): Promise<void> => {
+  if (loading.value || refreshing.value) return
+  Object.assign(filters, { userId: String(route.query.user_id || ''), userKeyword: '', orderNo: '', guestEmail: '', productKeyword: '', createdFrom: '', createdTo: '' })
+  await handleSearch()
+}
 
 const refresh = () => {
   refreshList(() => fetchRefunds(pagination.value.page, { preserveRows: true }))
@@ -166,19 +173,19 @@ watch(
     <div class="rounded-xl border border-border bg-card p-4 shadow-sm">
       <div class="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
         <div class="w-full md:w-32">
-          <Input v-model="filters.userId" :placeholder="t('admin.orderRefunds.filterUserId')" @update:modelValue="debouncedSearch" />
+          <Input v-model="filters.userId" :placeholder="t('admin.orderRefunds.filterUserId')" @keydown.enter="handleSearch" />
         </div>
         <div class="w-full md:w-56">
-          <Input v-model="filters.userKeyword" :placeholder="t('admin.orderRefunds.filterUserKeyword')" @update:modelValue="debouncedSearch" />
+          <Input v-model="filters.userKeyword" :placeholder="t('admin.orderRefunds.filterUserKeyword')" @keydown.enter="handleSearch" />
         </div>
         <div class="w-full md:w-48">
-          <Input v-model="filters.orderNo" :placeholder="t('admin.orderRefunds.filterOrderNo')" @update:modelValue="debouncedSearch" />
+          <Input v-model="filters.orderNo" :placeholder="t('admin.orderRefunds.filterOrderNo')" @keydown.enter="handleSearch" />
         </div>
         <div class="w-full md:w-48">
-          <Input v-model="filters.guestEmail" :placeholder="t('admin.orderRefunds.filterGuestEmail')" @update:modelValue="debouncedSearch" />
+          <Input v-model="filters.guestEmail" :placeholder="t('admin.orderRefunds.filterGuestEmail')" @keydown.enter="handleSearch" />
         </div>
         <div class="w-full md:w-48">
-          <Input v-model="filters.productKeyword" :placeholder="t('admin.orderRefunds.filterProductKeyword')" @update:modelValue="debouncedSearch" />
+          <Input v-model="filters.productKeyword" :placeholder="t('admin.orderRefunds.filterProductKeyword')" @keydown.enter="handleSearch" />
         </div>
         <div class="flex w-full flex-col gap-2 md:w-auto md:flex-row md:flex-wrap md:items-center">
           <span class="text-xs text-muted-foreground whitespace-nowrap">{{ t('admin.orderRefunds.filterCreatedRange') }}</span>
@@ -187,7 +194,7 @@ watch(
             type="datetime-local"
             class="h-9 w-full md:w-auto"
             :placeholder="t('admin.orderRefunds.filterCreatedFrom')"
-            @update:modelValue="handleSearch"
+            @keydown.enter="handleSearch"
           />
           <span class="hidden text-muted-foreground md:inline">-</span>
           <Input
@@ -195,11 +202,13 @@ watch(
             type="datetime-local"
             class="h-9 w-full md:w-auto"
             :placeholder="t('admin.orderRefunds.filterCreatedTo')"
-            @update:modelValue="handleSearch"
+            @keydown.enter="handleSearch"
           />
         </div>
         <div class="hidden flex-1 sm:block"></div>
-        <Button size="sm" class="w-full sm:w-auto" :disabled="refreshing" @click="refresh">{{ t('admin.common.refresh') }}</Button>
+        <Button size="sm" variant="outline" :disabled="loading || refreshing" @click="handleSearch">{{ t('admin.common.search') }}</Button>
+        <Button size="sm" variant="outline" :disabled="loading || refreshing" @click="resetFilters">{{ t('admin.common.reset') }}</Button>
+        <Button size="sm" class="w-full sm:w-auto" :disabled="loading || refreshing" @click="refresh">{{ t('admin.common.refresh') }}</Button>
       </div>
     </div>
 

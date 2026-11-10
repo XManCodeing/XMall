@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import MembershipDisposition from './MembershipDisposition.vue'
 import { ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { notifyErrorOnce, notifySuccess } from '@/utils/notify'
@@ -224,6 +225,7 @@ watch(
             </Card>
           </div>
 
+          <MembershipDisposition :order-id="detailRefund.order_id" />
           <Card class="rounded-lg border-border bg-background shadow-none">
             <CardContent class="p-4">
               <div class="mb-3 text-xs text-muted-foreground">{{ t('admin.orderRefunds.detailRemark') }}</div>

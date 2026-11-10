@@ -169,10 +169,11 @@ func (s *Service) GetPublicBySlugForTenant(tenant reseller.TenantContext, resell
 	return item, nil
 }
 
-// ListAdmin 获取后台商品列表
+// ListAdmin 获取普通后台商品列表，会员群商品由专用列表管理。
 // isActive 为三态上架筛选：nil=不限，true=仅已上架，false=仅已下架。
 func (s *Service) ListAdmin(categoryID, search, fulfillmentType, stockStatus string, hasWholesalePrices, isActive *bool, lowStockThreshold int, page, pageSize int) ([]productdomain.Product, int64, error) {
 	filter := productcontract.ListFilter{
+		ExcludeMembership:  true,
 		Page:               page,
 		PageSize:           pageSize,
 		CategoryID:         categoryID,

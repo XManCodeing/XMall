@@ -14,12 +14,8 @@ export interface HomeAnnouncement {
   version: string
 }
 
-// 浏览器本地日期 YYYY-MM-DD
-const todayStr = (): string => {
-  const d = new Date()
-  const pad = (n: number) => String(n).padStart(2, '0')
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
-}
+// 按东八区日界线判断“今日”。
+import { businessDateKey as todayStr } from '../utils/format'
 
 const readDismiss = (): DismissRecord | null => {
   try {

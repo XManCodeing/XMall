@@ -2,12 +2,17 @@ package externalidentitystore
 
 import (
 	"errors"
+	"strconv"
 	"strings"
+
+	"github.com/XManCodeing/XMall/internal/constants"
+	userdomain "github.com/XManCodeing/XMall/internal/modules/identity/user/domain"
 
 	externalidentitycontract "github.com/XManCodeing/XMall/internal/modules/identity/externalidentity/contract"
 	externalidentitydomain "github.com/XManCodeing/XMall/internal/modules/identity/externalidentity/domain"
 
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 type Store struct {
@@ -139,6 +144,44 @@ func (r *Store) Update(identity *externalidentitydomain.Identity) error {
 		return nil
 	}
 	return r.db.Save(identity).Error
+}
+
+var _ externalidentitycontract.TransactionTelegramGuard = (*Store)(nil)
+
+// LockTelegramBinding 校验并锁定服务端已验证的 Telegram 绑定与有效账号。
+// userID 为可信商城账号，binding 为预检时捕获的数字身份和绑定代次。
+// 必须使用调用方事务创建本 Store；返回身份变化或底层数据库错误。
+// 锁顺序保持原交易路径的身份→账号顺序，不要求存在 Bot 联系人。
+func (r *Store) LockTelegramBinding(userID uint, binding externalidentitycontract.TelegramBinding) error {
+	if userID == 0 || binding.ID == 0 || binding.TelegramID <= 0 {
+		return externalidentitycontract.ErrTelegramIdentityChanged
+	}
+	var identity externalidentitydomain.Identity
+	err := r.db.Clauses(clause.Locking{Strength: "UPDATE"}).
+		Where("provider = ? AND provider_user_id = ?", constants.UserOAuthProviderTelegram, strconv.FormatInt(binding.TelegramID, 10)).
+		First(&identity).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return externalidentitycontract.ErrTelegramIdentityChanged
+	}
+	if err != nil {
+		return err
+	}
+	if identity.ID != binding.ID || identity.UserID != userID {
+		return externalidentitycontract.ErrTelegramIdentityChanged
+	}
+	var user userdomain.User
+	err = r.db.Clauses(clause.Locking{Strength: "UPDATE"}).
+		Where("id = ? AND deleted_at IS NULL", userID).First(&user).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return externalidentitycontract.ErrTelegramIdentityChanged
+	}
+	if err != nil {
+		return err
+	}
+	if strings.ToLower(strings.TrimSpace(user.Status)) != constants.UserStatusActive {
+		return externalidentitycontract.ErrTelegramIdentityChanged
+	}
+	return nil
 }
 
 // DeleteByID 删除绑定

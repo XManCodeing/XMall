@@ -136,6 +136,11 @@ func TestFiniteErrorKindsAndSendUncertainty(t *testing.T) {
 		description, kind string
 		code              int
 	}{
+		{"Bad Request: message thread not found", "topic_missing", 400},
+		{"Bad Request: TOPIC_DELETED", "topic_missing", 400},
+		{"Bad Request: TOPIC_ID_INVALID", "topic_missing", 400},
+		{"Bad Request: TOPIC_CLOSED", "unknown", 400},
+		{"Bad Request: message to forward not found", "unknown", 400},
 		{"Bad Request: message is not modified", "not_modified", 400},
 		{"Bad Request: message to edit not found", "target_missing", 400},
 		{"Bad Request: message can't be edited", "unknown", 400},

@@ -55,6 +55,7 @@ func setupExchangeTest(t *testing.T) (*paymentapp.PaymentService, *gorm.DB) {
 		&walletdomain.RechargeOrder{},
 		&paymentdomain.PaymentChannel{},
 		&paymentdomain.Payment{},
+		&paymentdomain.PaymentEvidenceClaim{}, &paymentdomain.PaymentReceiptAnomaly{}, &paymentdomain.ManualConfirmation{},
 	); err != nil {
 		t.Fatalf("auto migrate failed: %v", err)
 	}
@@ -389,8 +390,9 @@ func TestCallbackIdempotentSuccessWithConvertedAmount(t *testing.T) {
 	// Mark payment as already successful
 	paidAt := time.Now()
 	db.Model(payment).Updates(map[string]interface{}{
-		"status":  constants.PaymentStatusSuccess,
-		"paid_at": paidAt,
+		"status":       constants.PaymentStatusSuccess,
+		"paid_at":      paidAt,
+		"provider_ref": "ALIPAY-IDEM-001",
 	})
 
 	updated, err := svc.HandleCallback(paymentapp.PaymentCallbackInput{

@@ -5,9 +5,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	membership "github.com/XManCodeing/XMall/internal/modules/telegram/membership/contract"
 	"image"
 	"image/png"
-	"strings"
 	"testing"
 	"time"
 
@@ -53,64 +53,6 @@ import (
 	"github.com/shopspring/decimal"
 	"gorm.io/gorm"
 )
-
-type shopBrandSettings struct{ contentSettingsStub }
-
-func (shopBrandSettings) GetSiteBrand() (settingsapp.SiteBrand, error) {
-	return settingsapp.SiteBrand{SiteURL: "https://shop.example.test"}, nil
-}
-func TestShopProductMediaAndWebURL(t *testing.T) {
-	p := product.Product{Slug: "中文商品", Images: []string{"/uploads/image.png", "ignored"}, ContentJSON: jsonmap.JSON{"en-US": "Full markdown body"}, DescriptionJSON: jsonmap.JSON{"en-US": "Summary"}}
-	v := productView(p, "en-US", &ShopDependencies{ContentSettings: shopBrandSettings{}})
-	if v.Image != "/uploads/image.png" || v.URL != "https://shop.example.test/products/%E4%B8%AD%E6%96%87%E5%95%86%E5%93%81" || v.Description != "Full markdown body" || v.Summary != "Summary" {
-		t.Fatalf("product content: %+v", v)
-	}
-}
-
-func TestProductViewStructuredAvailabilityAndFullText(t *testing.T) {
-	full := strings.Repeat("中文详情", 600)
-	p := product.Product{DescriptionJSON: jsonmap.JSON{"en-US": full}, FulfillmentType: constants.FulfillmentTypeManual, MinPurchaseQuantity: 4,
-		SKUs: []product.ProductSKU{{ID: 1, IsActive: true, ManualStockTotal: 3}, {ID: 2, IsActive: true, ManualStockTotal: 8}}}
-	for _, mode := range []string{"exact", "range", "status", "hidden"} {
-		p.StockDisplayMode = mode
-		v := productView(p, "en-US")
-		if v.Description != full || len([]rune(v.Summary)) != 501 || !v.Available || v.SKUs[0].Available || !v.SKUs[1].Available || v.FulfillmentType != p.FulfillmentType {
-			t.Fatalf("structured product %s: %+v", mode, v)
-		}
-		if mode == "exact" {
-			if v.MaxQuantity == nil || *v.MaxQuantity != 11 || v.SKUs[1].MaxQuantity == nil || *v.SKUs[1].MaxQuantity != 8 {
-				t.Fatal("missing public exact bound")
-			}
-		} else if v.MaxQuantity != nil || v.SKUs[0].MaxQuantity != nil || v.SKUs[1].MaxQuantity != nil {
-			t.Fatalf("%s leaked quantity", mode)
-		}
-	}
-	p.StockDisplayMode = "exact"
-	p.SKUs[1].ManualStockTotal = -1
-	v := productView(p, "en-US")
-	if !v.Available || v.MaxQuantity != nil || v.SKUs[1].MaxQuantity != nil {
-		t.Fatal("unlimited bound")
-	}
-	p.FulfillmentType = constants.FulfillmentTypeUpstream
-	v = productView(p, "en-US")
-	if v.Available || v.MaxQuantity != nil || v.SKUs[1].Available {
-		t.Fatal("unknown upstream availability invented")
-	}
-}
-
-func TestOrderViewUsesSnapshotsWithoutDuplicatingAggregatedItems(t *testing.T) {
-	item := order.OrderItem{ProductID: 10, SKUID: 20, Quantity: 3, TitleJSON: jsonmap.JSON{"en-US": "Old title"}, SKUSnapshotJSON: jsonmap.JSON{"spec_values": map[string]interface{}{"en-US": "Old SKU"}, "sku_code": "fallback"}}
-	o := order.Order{CreatedAt: time.Now(), Children: []order.Order{{Items: []order.OrderItem{item}}}}
-	for _, aggregate := range []bool{false, true} {
-		if aggregate {
-			o.Items = []order.OrderItem{item}
-		}
-		v := orderView(&o, "en-US")
-		if len(v.Items) != 1 || v.Items[0].Title != "Old title" || v.Items[0].SKUName != "Old SKU" || v.Items[0].ProductID != 10 || v.Items[0].SKUID != 20 || v.Items[0].Quantity != 3 || !v.CreatedAt.Equal(o.CreatedAt) {
-			t.Fatalf("snapshot: %+v", v)
-		}
-	}
-}
 
 func TestShopEffectivePendingQueryBeforePagination(t *testing.T) {
 	db, err := gorm.Open(sqlite.Open(fmt.Sprintf("file:shop-pending-%d?mode=memory&cache=shared", time.Now().UnixNano())), &gorm.Config{})
@@ -207,7 +149,7 @@ func TestPaymentDeadlineUsesOrderNotExpirationEvent(t *testing.T) {
 func TestResolvePaymentRawPayloads(t *testing.T) {
 	for _, raw := range []string{"weixin://wxpay/bizpayurl?pr=test", "https://pay.example/scan", "https://pay.example/pay.png"} {
 		calls := 0
-		p, err := resolvePaymentMedia(context.Background(), &c.Payment{QRCode: raw}, func(context.Context, string) ([]byte, error) {
+		p, err := shopapp.ResolvePaymentMedia(context.Background(), &c.Payment{QRCode: raw}, func(context.Context, string) ([]byte, error) {
 			calls++
 			return nil, errors.New("403 / redirect / timeout must not affect raw payload")
 		})
@@ -223,7 +165,7 @@ func TestResolvePaymentRawPayloads(t *testing.T) {
 		}
 	}
 	for _, raw := range []string{"https://pay.example/scan", "http://pay.example/scan"} {
-		p, err := resolvePaymentMedia(context.Background(), &c.Payment{InteractionMode: "qr", PayURL: raw}, func(context.Context, string) ([]byte, error) { t.Fatal("raw PayURL fetched"); return nil, nil })
+		p, err := shopapp.ResolvePaymentMedia(context.Background(), &c.Payment{InteractionMode: "qr", PayURL: raw}, func(context.Context, string) ([]byte, error) { t.Fatal("raw PayURL fetched"); return nil, nil })
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -236,7 +178,7 @@ func TestResolvePaymentRawPayloads(t *testing.T) {
 
 func TestExplicitImageDoesNotFallBackToEncodingNonImage(t *testing.T) {
 	for _, body := range [][]byte{nil, {}} {
-		_, err := resolvePaymentMedia(context.Background(), &c.Payment{QRCodeKind: "image", QRCode: "https://pay.example/image"}, func(context.Context, string) ([]byte, error) { return body, nil })
+		_, err := shopapp.ResolvePaymentMedia(context.Background(), &c.Payment{QRCodeKind: "image", QRCode: "https://pay.example/image"}, func(context.Context, string) ([]byte, error) { return body, nil })
 		if !errors.Is(err, c.ErrUnavailable) {
 			t.Fatalf("non-image response accepted: %v", err)
 		}
@@ -264,7 +206,7 @@ func TestResolvePaymentMedia(t *testing.T) {
 			calls := 0
 			originalMode := tt.payment.InteractionMode
 			tt.payment.QRCodeKind = "image"
-			p, err := resolvePaymentMedia(context.Background(), &tt.payment, func(context.Context, string) ([]byte, error) {
+			p, err := shopapp.ResolvePaymentMedia(context.Background(), &tt.payment, func(context.Context, string) ([]byte, error) {
 				calls++
 				if tt.fetchErr {
 					return nil, errors.New("unavailable")
@@ -340,11 +282,37 @@ func TestShopProductUsesPublicVisibility(t *testing.T) {
 	repo := productgorm.NewProductStore(db)
 	auth := userauth.NewService(&config.Config{}, usergorm.New(db), identitygorm.New(db), nil, nil, nil, nil)
 	auth.SetAuthUnitOfWork(userauthgorm.New(db))
-	a := &shopAdapter{d: ShopDependencies{Auth: auth, Products: productapp.NewService(productapp.Options{Products: repo}), Currency: func(string) (string, error) { return "CNY", nil }}}
+	a := &shopAdapter{d: ShopDependencies{Membership: &membershipReaderStub{err: membership.ErrNotFound}, Auth: auth, Products: productapp.NewService(productapp.Options{Products: repo}), Currency: func(string) (string, error) { return "CNY", nil }}}
 	actor := c.Actor{BotID: 7, TelegramID: 123, UserID: u.ID, Locale: "en-US"}
 	v, err := a.Product(context.Background(), actor, p.ID)
 	if err != nil || v.Price != "10.00" || v.Currency != "CNY" || len(v.SKUs) != 1 || v.SKUs[0].Stock != "Stock: 6–20" {
 		t.Fatalf("detail: %+v %v", v, err)
+	}
+	// Exercise actual Preview/Create entry points, including an alternate order writer.
+	policy := &shopSalePolicy{err: membership.ErrSalesClosed}
+	a.d.ProductRepo = policy
+	writerCalls := 0
+	a.d.CreateOrder = func(context.Context, c.Actor, c.Selection, c.Quote, string) (*c.Order, error) {
+		writerCalls++
+		return nil, errors.New("must not reach writer")
+	}
+	actor.Generation, err = a.Generation(context.Background(), actor)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, quantity := range []int{1, 2, 1000} {
+		selection := c.Selection{ProductID: p.ID, SKUID: sku.ID, Quantity: quantity}
+		quote, previewErr := a.Preview(context.Background(), actor, selection)
+		if quote != nil || !errors.Is(previewErr, c.ErrUnavailable) {
+			t.Fatalf("closed quote: %+v %v", quote, previewErr)
+		}
+		created, createErr := a.Create(context.Background(), actor, selection, c.Quote{Amount: "10.00", Currency: "CNY", Fingerprint: "old"}, "old-operation")
+		if created != nil || !errors.Is(createErr, c.ErrUnavailable) {
+			t.Fatalf("closed create: %+v %v", created, createErr)
+		}
+	}
+	if writerCalls != 0 || len(policy.ids) != 6 {
+		t.Fatalf("sale gate bypassed: %d %+v", writerCalls, policy.ids)
 	}
 	if err = db.Model(&sku).Update("is_active", false).Error; err != nil {
 		t.Fatal(err)
@@ -424,6 +392,33 @@ type contentSettingsStub struct {
 func (s contentSettingsStub) GetTelegramBotConfig() (settings.TelegramBotConfigSetting, error) {
 	return s.cfg, nil
 }
+
+type bindingSettingsStub struct {
+	contentSettingsStub
+	siteURL string
+}
+
+func (s bindingSettingsStub) GetSiteBrand() (settingsapp.SiteBrand, error) {
+	return settingsapp.SiteBrand{SiteURL: s.siteURL}, nil
+}
+
+func TestContentBindingURLUsesTrustedSite(t *testing.T) {
+	for _, tc := range []struct{ site, want string }{
+		{"https://shop.example/", "https://shop.example/me/security"},
+		{"https://shop.example/store?next=evil#fragment", "https://shop.example/store/me/security"},
+		{"javascript:alert(1)", ""},
+		{"//shop.example", ""},
+		{"https://user:secret@shop.example", ""},
+		{"", ""},
+	} {
+		provider := shopContent{settings: bindingSettingsStub{contentSettingsStub{settings.DefaultTelegramBotConfig()}, tc.site}}
+		content, err := provider.Content(context.Background(), c.Actor{})
+		if err != nil || content.BindingURL != tc.want {
+			t.Fatalf("site %q: got %q, error %v", tc.site, content.BindingURL, err)
+		}
+	}
+}
+
 func TestContentOmitsUnsupportedMenuAndUsesLocale(t *testing.T) {
 	cfg := settings.DefaultTelegramBotConfig()
 	cfg.Welcome.Enabled = true
@@ -625,26 +620,6 @@ func TestShopIdentityLifetimeAndHistoryReadOnly(t *testing.T) {
 	}
 	if err := a.readOwner(context.Background(), actor, previous.ID); !errors.Is(err, c.ErrDenied) {
 		t.Fatalf("old history grant revived: %v", err)
-	}
-}
-
-func TestShopProductFormsAndInactiveSKUs(t *testing.T) {
-	p := product.Product{ID: 1, TitleJSON: jsonmap.JSON{"zh-CN": "商品", "en-US": "Product"}, ManualFormSchemaJSON: jsonmap.JSON{"fields": []interface{}{map[string]interface{}{"name": "email"}}}, SKUs: []product.ProductSKU{{ID: 1, IsActive: false}, {ID: 2, IsActive: true, SKUCode: "SKU"}}}
-	v := productView(p, "en-US")
-	if !v.Unsupported || v.Title != "Product" || v.Min != 1 || len(v.SKUs) != 1 || v.SKUs[0].ID != 2 {
-		t.Fatalf("unsafe product view: %+v", v)
-	}
-	p.ManualFormSchemaJSON = jsonmap.JSON{"fields": []interface{}{}}
-	if productView(p, "zh-CN").Unsupported {
-		t.Fatal("empty form blocked")
-	}
-}
-func TestShopOrderOnlyReadsDeliveredPayload(t *testing.T) {
-	expired := time.Now().Add(-time.Minute)
-	o := order.Order{ID: 1, UserID: 2, Status: "pending_payment", ExpiresAt: &expired, Fulfillment: &fulfillment.Fulfillment{Status: "pending", Payload: "NOT_DELIVERED"}, Children: []order.Order{{ID: 3, UserID: 2, Fulfillment: &fulfillment.Fulfillment{Status: "delivered", Payload: "EXISTING_SECRET"}}}}
-	v := orderView(&o)
-	if v.Pending || len(v.Delivered) != 1 || v.Delivered[0] != "EXISTING_SECRET" {
-		t.Fatalf("unsafe order view: %+v", v)
 	}
 }
 

@@ -127,6 +127,19 @@ const changePageSize = (size: number) => {
   fetchJobs(1)
 }
 
+/** 按当前筛选查询第一页，加载期间忽略重复操作。@returns 查询完成。 */
+const handleSearch = async (): Promise<void> => {
+  if (loading.value || refreshing.value) return
+  pagination.page = 1
+  await fetchJobs(1)
+}
+/** 恢复全部筛选默认值并保留分页尺寸。@returns 查询完成。 */
+const resetFilters = async (): Promise<void> => {
+  if (loading.value || refreshing.value) return
+  Object.assign(filters, { status: '__all__', type: '__all__', connection_id: '__all__' })
+  await handleSearch()
+}
+
 const refresh = () => {
   refreshList(() => fetchJobs(1, { preserveRows: true }))
 }
@@ -138,8 +151,8 @@ const handleNewJob = async () => {
     await adminAPI.runReconciliation({
       connection_id: Number(newJobForm.connection_id),
       type: newJobForm.type,
-      time_range_start: new Date(newJobForm.time_range_start).toISOString(),
-      time_range_end: new Date(newJobForm.time_range_end).toISOString(),
+      time_range_start: toISO(newJobForm.time_range_start),
+      time_range_end: toISO(newJobForm.time_range_end),
     })
     notifySuccess(t('reconciliation.form.submitSuccess'))
     showNewJob.value = false
@@ -228,12 +241,7 @@ const mismatchBadgeClass = (type: string) => type === 'both'
   ? 'text-destructive border-destructive/20 bg-destructive/10'
   : 'text-muted-foreground border-border bg-muted/30'
 
-const formatTime = (raw?: string) => {
-  if (!raw) return '-'
-  const d = new Date(raw)
-  if (Number.isNaN(d.getTime())) return '-'
-  return d.toLocaleString()
-}
+import { formatDate as formatTime, toISO } from '@/utils/format'
 
 onMounted(() => {
   fetchConnections()
@@ -290,7 +298,9 @@ onMounted(() => {
           </SelectContent>
         </Select>
       </div>
-      <Button size="sm" class="h-9 w-full sm:w-auto" :disabled="refreshing" @click="refresh">{{ t('admin.common.refresh') }}</Button>
+      <Button size="sm" variant="outline" :disabled="loading || refreshing" @click="handleSearch">{{ t('admin.common.search') }}</Button>
+      <Button size="sm" variant="outline" :disabled="loading || refreshing" @click="resetFilters">{{ t('admin.common.reset') }}</Button>
+      <Button size="sm" class="h-9 w-full sm:w-auto" :disabled="loading || refreshing" @click="refresh">{{ t('admin.common.refresh') }}</Button>
     </div>
 
     <!-- Table -->
@@ -355,7 +365,7 @@ onMounted(() => {
             </TableCell>
             <TableCell class="min-w-[80px] px-6 py-4 text-right" @click.stop>
               <Button size="sm" variant="outline" @click="openDetail(job)">
-                {{ t('reconciliation.detail.title') }}
+                <span :title="t('reconciliation.detail.title')" :aria-label="t('reconciliation.detail.title')">{{ t('tableAction.detail') }}</span>
               </Button>
             </TableCell>
           </TableRow>
@@ -533,7 +543,7 @@ onMounted(() => {
                         variant="outline"
                         @click="openResolve(item)"
                       >
-                        {{ t('reconciliation.items.resolve') }}
+                        <span :title="t('reconciliation.items.resolve')" :aria-label="t('reconciliation.items.resolve')">{{ t('tableAction.resolve') }}</span>
                       </Button>
                       <span v-else class="text-xs text-muted-foreground">{{ item.remark || '-' }}</span>
                     </TableCell>

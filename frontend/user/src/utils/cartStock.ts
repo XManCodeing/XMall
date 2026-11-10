@@ -79,13 +79,18 @@ const shouldEnforceSkuStock = (product: any, sku: any) => {
   return true
 }
 
-export const refreshCartStockSnapshots = async (cartStore: CartStoreLike) => {
+/** 刷新目录快照；strict 用于离站恢复，商品/SKU 失效或请求失败时拒绝恢复，不替换用户选择。
+ * isCurrent 在异步请求后校验调用方账号/页面仍有效；失效时不写入任何目录快照。
+ * 返回刷新完成的 Promise；严格校验或上下文失效时抛错，由调用方展示既有错误状态。
+ */
+export const refreshCartStockSnapshots = async (cartStore: CartStoreLike, strict = false, isCurrent: () => boolean = () => true) => {
   const items = Array.isArray(cartStore.items) ? cartStore.items : []
   if (items.length === 0) return
 
   const slugSet = new Set<string>()
   for (const item of items) {
     const slug = String(item.slug || '').trim()
+    if (!slug && strict) throw new Error('Purchase product is unavailable')
     if (slug) slugSet.add(slug)
   }
   if (slugSet.size === 0) return
@@ -99,23 +104,33 @@ export const refreshCartStockSnapshots = async (cartStore: CartStoreLike) => {
         productMap.set(slug, product)
       }
     } catch {
-      // 忽略单个商品刷新失败，避免影响整体页面可用性
+      if (strict) console.warn('Purchase product refresh failed')
+      // 常规购物车保留旧快照；严格恢复在下方拒绝缺失的目录响应。
     }
   })
 
   await Promise.all(requests)
+  // 先验证所有条目再统一提交，避免严格恢复失败时只更新混合购物车的一部分。
+  if (!isCurrent()) throw new Error('Purchase context changed')
+  const pendingPatches: Array<{ item: CartItem; patch: Partial<CartItem> }> = []
 
   for (const item of items) {
     const slug = String(item.slug || '').trim()
     if (!slug) continue
     const product = productMap.get(slug)
-    if (!product) continue
-
+    if (!product) {
+      if (strict) throw new Error('Purchase product refresh failed')
+      continue
+    }
+    if (strict && Number(product.id) !== item.productId) throw new Error('Purchase product changed')
     const activeSkus = resolveActiveSkus(product)
-    if (activeSkus.length === 0) continue
-
-    const matchedSku = resolveMatchedSku(item, activeSkus)
-    if (!matchedSku) continue
+    const matchedSku = strict
+      ? activeSkus.find((sku: any) => normalizeSkuId(sku.id) === item.skuId)
+      : resolveMatchedSku(item, activeSkus)
+    if (!matchedSku) {
+      if (strict) throw new Error('Purchase SKU is unavailable')
+      continue
+    }
 
     const manualStockTotal = normalizeManualStockTotal(matchedSku?.manual_stock_total)
     const manualStockLocked = normalizeStockNumber(matchedSku?.manual_stock_locked)
@@ -126,8 +141,15 @@ export const refreshCartStockSnapshots = async (cartStore: CartStoreLike) => {
     const stockRangeMin = normalizeStockNumber(matchedSku?.stock_range_min)
     const stockRangeMax = normalizeStockNumber(matchedSku?.stock_range_max)
 
-    cartStore.patchItem(item.productId, item.skuId, {
+    pendingPatches.push({ item, patch: {
+      membership: product.membership,
       ...resolveCartPricingSnapshot(product, matchedSku),
+      ...(strict ? {
+        title: product.title,
+        priceAmount: String(matchedSku.price_amount ?? ''),
+        purchaseType: String(product.purchase_type || ''),
+        paymentChannelIds: Array.isArray(product.payment_channel_ids) ? product.payment_channel_ids : undefined,
+      } : {}),
       skuCode: String(matchedSku?.sku_code || item.skuCode || ''),
       skuSpecValues: (matchedSku?.spec_values && typeof matchedSku.spec_values === 'object')
         ? matchedSku.spec_values
@@ -149,6 +171,10 @@ export const refreshCartStockSnapshots = async (cartStore: CartStoreLike) => {
       maxPurchaseQuantity: normalizeOptionalLimitNumber(product?.max_purchase_quantity),
       fulfillmentType: String(product?.fulfillment_type || item.fulfillmentType || ''),
       manualFormSchema: product?.manual_form_schema || {},
-    })
+    } })
+  }
+  if (!isCurrent()) throw new Error('Purchase context changed')
+  for (const { item, patch } of pendingPatches) {
+    cartStore.patchItem(item.productId, item.skuId, patch)
   }
 }

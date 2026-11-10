@@ -1,3 +1,4 @@
+import { formatDate } from '../utils/format'
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { guestOrderAPI } from '../api'
@@ -143,13 +144,6 @@ export function useGuestOrders() {
   const hasDiscount = (order: any) => {
     if (!order) return false
     return hasDiscountAmount(order.discount_amount) || hasDiscountAmount(order.promotion_discount_amount)
-  }
-
-  const formatDate = (raw?: string) => {
-    if (!raw) return ''
-    const date = new Date(raw)
-    if (Number.isNaN(date.getTime())) return raw
-    return date.toLocaleString()
   }
 
   onMounted(() => {

@@ -32,8 +32,10 @@ import (
 	settingsstore "github.com/XManCodeing/XMall/internal/modules/settings/infrastructure/gormstore"
 	siteconnectiongormstore "github.com/XManCodeing/XMall/internal/modules/siteconnection/infrastructure/gormstore"
 	broadcaststore "github.com/XManCodeing/XMall/internal/modules/telegram/broadcast/infrastructure/gormstore"
+	runtimestore "github.com/XManCodeing/XMall/internal/modules/telegram/runtime/infrastructure/gormstore"
 	walletgormstore "github.com/XManCodeing/XMall/internal/modules/wallet/infrastructure/gormstore"
 	"github.com/XManCodeing/XMall/internal/platform/database/gormdb"
+	"gorm.io/gorm"
 )
 
 func (c *Container) initRepositories() error {
@@ -78,7 +80,9 @@ func (c *Container) initRepositories() error {
 	c.ReconciliationJobRepo = reconciliationgormstore.NewJobStore(db)
 	c.ReconciliationItemRepo = reconciliationgormstore.NewItemStore(db)
 	c.ChannelClientStore = channelclientstore.New(db)
-	c.TelegramBroadcastRepo = broadcaststore.New(db)
+	c.TelegramBroadcastRepo = broadcaststore.New(db).WithBotRecoveryGuard(func(tx *gorm.DB, bot uint) error {
+		return runtimestore.New(tx).GuardRecoveryWrite(tx.Statement.Context, bot)
+	})
 	c.MemberLevelRepo = memberlevelgormstore.NewLevelStore(db)
 	c.MemberLevelPriceRepo = memberlevelgormstore.NewPriceStore(db)
 	c.MemberLevelUserRepo = memberlevelgormstore.NewUserStore(db)

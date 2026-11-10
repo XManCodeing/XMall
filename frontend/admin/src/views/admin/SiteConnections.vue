@@ -302,12 +302,7 @@ const statusLabel = (status?: string) => {
   return translated !== key ? translated : status
 }
 
-const formatTime = (raw?: string) => {
-  if (!raw) return '-'
-  const d = new Date(raw)
-  if (Number.isNaN(d.getTime())) return '-'
-  return d.toLocaleString()
-}
+import { formatDate as formatTime } from '@/utils/format'
 
 onMounted(() => {
   fetchConnections()
@@ -369,14 +364,14 @@ onMounted(() => {
             <TableCell class="min-w-[160px] px-6 py-4 text-right">
               <div class="flex flex-wrap items-center justify-end gap-2">
                 <Button size="sm" variant="outline" @click="openEditModal(conn)">{{ t('admin.common.edit') }}</Button>
-                <Button v-if="isGeneric(conn)" size="sm" variant="outline" @click="openHttpEditor(conn)">{{ t('httpIntegration.title') }}</Button>
+                <Button v-if="isGeneric(conn)" size="sm" variant="outline" @click="openHttpEditor(conn)" :title="t('httpIntegration.title')" :aria-label="t('httpIntegration.title')">{{ t('tableAction.configure') }}</Button>
                 <Button
                   size="sm"
                   variant="outline"
                   :disabled="isGeneric(conn) || pingingId === conn.id"
                   @click="handlePing(conn)"
                 >
-                  {{ pingingId === conn.id ? t('siteConnections.ping.loading') : 'Ping' }}
+                  {{ t(pingingId === conn.id ? 'tableAction.pinging' : 'tableAction.ping') }}
                 </Button>
                 <Button
                   v-if="!isGeneric(conn) && ((conn.price_markup_percent && Number(conn.price_markup_percent) !== 0) || (conn.exchange_rate != null && Number(conn.exchange_rate) !== 1))"
@@ -385,7 +380,7 @@ onMounted(() => {
                   :disabled="reapplyingId === conn.id"
                   @click="handleReapplyMarkup(conn)"
                 >
-                  {{ reapplyingId === conn.id ? '...' : t('siteConnections.actions.reapplyMarkup') }}
+                  <span :title="t('siteConnections.actions.reapplyMarkup')" :aria-label="t('siteConnections.actions.reapplyMarkup')">{{ t('tableAction.markup') }}</span>
                 </Button>
                 <Button size="sm" variant="outline" :disabled="isGeneric(conn) && conn.status !== 'active' && !connectionReady[conn.id]" :title="isGeneric(conn) && !connectionReady[conn.id] ? t('httpIntegration.notReady') : undefined" @click="handleToggleStatus(conn)">
                   {{ conn.status === 'active' ? t('siteConnections.actions.disable') : t('siteConnections.actions.enable') }}

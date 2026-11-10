@@ -1,12 +1,133 @@
 package httpserver
 
 import (
+	"encoding/json"
+	"errors"
+	"fmt"
+	"github.com/XManCodeing/XMall/internal/app/container"
+	"github.com/XManCodeing/XMall/internal/config"
+	"github.com/XManCodeing/XMall/internal/logger"
+	categorystore "github.com/XManCodeing/XMall/internal/modules/catalog/category/infrastructure/gormstore"
+	downstreamstore "github.com/XManCodeing/XMall/internal/modules/downstreamcallback/infrastructure/gormstore"
+	userstore "github.com/XManCodeing/XMall/internal/modules/identity/user/infrastructure/gormstore"
+	paymentapp "github.com/XManCodeing/XMall/internal/modules/payment/application"
+	paymentstore "github.com/XManCodeing/XMall/internal/modules/payment/infrastructure/gormstore"
+	siteconnectionstore "github.com/XManCodeing/XMall/internal/modules/siteconnection/infrastructure/gormstore"
+	groupsapp "github.com/XManCodeing/XMall/internal/modules/telegram/groups/application"
+	runtimeapp "github.com/XManCodeing/XMall/internal/modules/telegram/runtime/application"
+	"go.uber.org/zap"
+	"go.uber.org/zap/zaptest/observer"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"runtime"
 	"strings"
 	"testing"
+
+	"github.com/XManCodeing/XMall/internal/authz"
+	admincontract "github.com/XManCodeing/XMall/internal/modules/identity/admin/contract"
+	admindomain "github.com/XManCodeing/XMall/internal/modules/identity/admin/domain"
+	"github.com/XManCodeing/XMall/internal/platform/http/response"
+	"github.com/gin-gonic/gin"
 )
+
+// TestMembershipOrderReadAuthorizationFailsClosed checks all allow/error combinations and safe diagnostics.
+// t owns an in-memory logger; no real configuration, database or log files are used.
+func TestMembershipOrderReadAuthorizationFailsClosed(t *testing.T) {
+	core, logs := observer.New(zap.DebugLevel)
+	previous := logger.L
+	logger.L = zap.New(core)
+	t.Cleanup(func() { logger.L = previous })
+	const secret = "synthetic-private-error"
+	for _, scenario := range []struct {
+		allowed bool
+		err     error
+		want    bool
+	}{
+		{true, nil, true}, {false, nil, false}, {true, errors.New(secret), false}, {false, errors.New(secret), false},
+	} {
+		allowed := enforceMembershipOrderRead(func(id uint, resource, action string) (bool, error) {
+			if id != 7 || resource != "/admin/orders/9" || action != "GET" {
+				t.Fatal("permission target changed")
+			}
+			return scenario.allowed, scenario.err
+		}, 7, "/admin/orders/9")
+		if allowed != scenario.want {
+			t.Fatalf("allowed=%v want=%v", allowed, scenario.want)
+		}
+	}
+	entries := logs.All()
+	if len(entries) != 2 {
+		t.Fatalf("want two diagnostics, got %d", len(entries))
+	}
+	for _, entry := range entries {
+		fields := entry.ContextMap()
+		if entry.Message != "membership_order_read_authorization_failed" || fields["error_type"] != "*errors.errorString" {
+			t.Fatalf("missing safe diagnostic: %v", entry)
+		}
+		if strings.Contains(fmt.Sprint(fields), secret) {
+			t.Fatal("raw error leaked")
+		}
+	}
+}
+
+// TestManualConfirmationProductionRoutes 验证真实路由装配、权限目录及匿名鉴权边界；t 不启动服务或使用真实数据库。
+func TestManualConfirmationProductionRoutes(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	router := SetupRouter(&config.Config{}, &container.Container{
+		TelegramGroups: &groupsapp.Service{}, TelegramBotManager: &runtimeapp.Manager{},
+		PaymentService: &paymentapp.PaymentService{}, PaymentStore: &paymentstore.Store{}, PaymentChannelStore: &paymentstore.ChannelStore{},
+		CategoryRepo: categorystore.NewCategoryStore(nil), UserStore: userstore.New(nil),
+		SiteConnectionRepo: siteconnectionstore.New(nil), DownstreamOrderRefRepo: &downstreamstore.Store{},
+	})
+	catalog := buildAdminPermissionCatalog(router)
+	extracted, err := extractAdminRoutesFromSource()
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, method := range []string{http.MethodGet, http.MethodPost} {
+		path := "/api/v1/admin/payments/:id/manual-confirmation"
+		found := false
+		for _, route := range router.Routes() {
+			if route.Method == method && route.Path == path {
+				found = true
+				if !strings.Contains(route.Handler, "ManualConfirmationHandler") {
+					t.Fatalf("manual confirmation delegated to unexpected handler %q", route.Handler)
+				}
+			}
+		}
+		if !found {
+			t.Fatalf("production route missing: %s %s", method, path)
+		}
+		found = false
+		for _, permission := range catalog {
+			if permission.Object == "/admin/payments/:id/manual-confirmation" && permission.Method == method {
+				found = true
+			}
+		}
+		if !found {
+			t.Fatalf("manual confirmation permission missing from production catalog: %s", method)
+		}
+		found = false
+		for _, route := range extracted {
+			if route.object == "/admin/payments/:id/manual-confirmation" && route.method == method {
+				found = true
+			}
+		}
+		if !found {
+			t.Fatalf("manual confirmation escaped RBAC source coverage: %s", method)
+		}
+		recorder := httptest.NewRecorder()
+		router.ServeHTTP(recorder, httptest.NewRequest(method, strings.Replace(path, ":id", "91", 1), nil))
+		var envelope struct {
+			StatusCode int `json:"status_code"`
+		}
+		if err := json.Unmarshal(recorder.Body.Bytes(), &envelope); err != nil || envelope.StatusCode != response.CodeUnauthorized {
+			t.Fatalf("anonymous request crossed authentication: status=%d body=%s error=%v", recorder.Code, recorder.Body.String(), err)
+		}
+	}
+}
 
 func TestSetupRouterDelegatesRouteDomains(t *testing.T) {
 	routerDirectory := currentRouterDirectory(t)
@@ -52,6 +173,8 @@ func TestRouteDomainFilesPreserveTrustBoundaries(t *testing.T) {
 				`affiliatetransport.RegisterPublicRoutes(public, affiliateHandler)`,
 				`affiliatetransport.RegisterUserRoutes(user, affiliateHandler)`,
 				`user.Use(middleware.UserJWTAuthMiddleware(`,
+				`membershiptransport.RegisterUserRoutes(membershipRoutes, membershiptransport.NewUserHandler(c.MembershipUserAccess))`,
+				`Prefix: "user:membership-access"`,
 				`resellerConsole.Use(middleware.RequireMainTenantForResellerConsole())`,
 				`resellertransport.RegisterUserConsoleRoutes(resellerConsole, userResellerHandler)`,
 				`resellertransport.RegisterUserProductSettingRoutes(resellerConsole, userResellerProductSettingHandler)`,
@@ -228,6 +351,19 @@ func TestDashboardAdvertisingRemoved(t *testing.T) {
 	}
 }
 
+// TestMembershipShareEncryptionIsWired verifies the production router supplies the server-only key.
+// t inspects composition source only; no runtime configuration or secrets are read.
+func TestMembershipShareEncryptionIsWired(t *testing.T) {
+	source := readRouterSource(t, filepath.Join(currentRouterDirectory(t), "router.go"))
+	for _, required := range []string{
+		"WithMembershipShare(membershipstore.New(gormdb.DB), membershipstore.New(gormdb.DB))",
+	} {
+		if !strings.Contains(source, required) {
+			t.Fatalf("missing encrypted product-share wiring: %s", required)
+		}
+	}
+}
+
 func TestSystemUpdateRepositoryIsWired(t *testing.T) {
 	source := readRouterSource(t, filepath.Join(currentRouterDirectory(t), "routes_admin.go"))
 	if !strings.Contains(source, "systemtransport.NewAdminHandler(nil, cfg.Update.Repository)") {
@@ -251,4 +387,114 @@ func readRouterSource(t *testing.T, path string) string {
 		t.Fatalf("read router source %s: %v", path, err)
 	}
 	return string(raw)
+}
+
+// supportRouteContract is the explicit method/template inventory. Both runtime
+// registration and static RBAC discovery must match it, not merely a route count.
+var supportRouteContract = []string{
+	"GET /settings/:bot_id", "PUT /settings/:bot_id",
+	"GET /topic-operations", "GET /topic-operations/:id",
+	"POST /topic-operations/:id/resolve", "POST /topic-operations/:id/confirm-deleted",
+	"GET /upstreams", "GET /upstreams/:id", "POST /upstreams/:id/resolve",
+	"POST /upstreams/:id/reconcile", "POST /upstreams/:id/retry",
+	"GET /downstreams", "GET /downstreams/:id", "POST /downstreams/:id/resolve",
+	"POST /downstreams/:id/reconcile", "POST /downstreams/:id/retry",
+	"GET /sessions", "GET /sessions/:id", "GET /sessions/:id/messages",
+	"GET /sessions/:id/messages/:message_id/content",
+}
+
+// assertSupportRouteInventory requires each registered method/path exactly once.
+// router is the protected test router; any missing, duplicate or new route fails.
+func assertSupportRouteInventory(t *testing.T, router *gin.Engine) {
+	t.Helper()
+	actual := map[string]int{}
+	for _, route := range router.Routes() {
+		actual[route.Method+" "+strings.TrimPrefix(route.Path, "/api/v1/admin/telegram-bot/support")]++
+	}
+	assertSupportRouteSet(t, actual)
+}
+
+// assertSupportSourceInventory verifies static permission coverage sees all routes.
+// The scanner is the existing production-route discovery used by this package.
+func assertSupportSourceInventory(t *testing.T) {
+	t.Helper()
+	routes, err := extractAdminRoutesFromSource()
+	if err != nil {
+		t.Fatal(err)
+	}
+	actual := map[string]int{}
+	for _, route := range routes {
+		if strings.HasPrefix(route.object, "/admin/telegram-bot/support/") {
+			actual[route.method+" "+strings.TrimPrefix(route.object, "/admin/telegram-bot/support")]++
+		}
+	}
+	assertSupportRouteSet(t, actual)
+}
+
+// assertSupportRouteSet compares counts and individual identities to the contract.
+func assertSupportRouteSet(t *testing.T, actual map[string]int) {
+	t.Helper()
+	if len(actual) != len(supportRouteContract) {
+		t.Fatalf("support route contract changed: got %v", actual)
+	}
+	for _, route := range supportRouteContract {
+		if actual[route] != 1 {
+			t.Fatalf("support route missing or duplicated: %s (%d)", route, actual[route])
+		}
+	}
+}
+
+// assertSupportWriteRouteIsolation gives separate admins one exact write policy
+// each. Real JWT/RBAC must accept only that method/path, never another recovery
+// action. A read-only grant at every same path still cannot perform any write.
+// This tests middleware isolation; the real handlers' second exact-permission
+// checks are covered by container/application authorization tests, not bypassed.
+func assertSupportWriteRouteIsolation(t *testing.T, router *gin.Engine, repo admincontract.Store, auth *authz.Service) {
+	t.Helper()
+	var writes []string
+	for _, route := range supportRouteContract {
+		if strings.HasPrefix(route, "POST ") {
+			writes = append(writes, strings.TrimPrefix(route, "POST "))
+		}
+	}
+	for index, grant := range append(writes, "read-only") {
+		role := "support-exact-" + strings.ReplaceAll(grant, "/", "-")
+		admin := &admindomain.Admin{Username: role, PasswordHash: "hash"}
+		if err := repo.Create(admin); err != nil {
+			t.Fatal(err)
+		}
+		if grant == "read-only" {
+			for _, path := range writes {
+				if err := auth.GrantRolePolicy(role, "/admin/telegram-bot/support"+path, "GET"); err != nil {
+					t.Fatal(err)
+				}
+			}
+		} else if err := auth.GrantRolePolicy(role, "/admin/telegram-bot/support"+grant, "POST"); err != nil {
+			t.Fatal(err)
+		}
+		if err := auth.SetAdminRoles(admin.ID, []string{role}); err != nil {
+			t.Fatal(err)
+		}
+		token := signContentAdminToken(t, admin)
+		for _, path := range writes {
+			expected := response.CodeForbidden
+			if path == grant {
+				expected = response.CodeOK
+			}
+			request := httptest.NewRequest("POST", "/api/v1/admin/telegram-bot/support"+strings.ReplaceAll(path, ":id", "1"), nil)
+			request.Header.Set("Authorization", "Bearer "+token)
+			request.Header.Set("X-Admin-ID", "1")
+			result := httptest.NewRecorder()
+			router.ServeHTTP(result, request)
+			var body struct {
+				Status int `json:"status_code"`
+			}
+			if err := json.Unmarshal(result.Body.Bytes(), &body); err != nil {
+				t.Fatal(err)
+			}
+			if body.Status != expected {
+				t.Fatalf("grant %d %s must not authorize %s: %s", index, grant, path, result.Body.String())
+			}
+		}
+	}
 }

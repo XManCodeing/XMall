@@ -1,6 +1,7 @@
 package application
 
 import (
+	"context"
 	"github.com/XManCodeing/XMall/internal/constants"
 	productcontract "github.com/XManCodeing/XMall/internal/modules/catalog/product/contract"
 	productdomain "github.com/XManCodeing/XMall/internal/modules/catalog/product/domain"
@@ -10,6 +11,62 @@ import (
 	paymentdomain "github.com/XManCodeing/XMall/internal/modules/payment/domain"
 	"github.com/XManCodeing/XMall/internal/shared/money"
 )
+
+// checkOrderPublicSale 检查父单与所有子单，不信任下单时的旧商品分类。
+// repository 为当前事务商品仓储，order 为含子单的订单；返回拒绝或查询错误。
+func (s *PaymentService) checkOrderPublicSale(repository productcontract.Repository, order *orderdomain.Order) error {
+	if !s.enforcePublicSale {
+		return nil
+	}
+	if order == nil {
+		return ErrPaymentInvalid
+	}
+	var ids []uint
+	var collect func(*orderdomain.Order)
+	collect = func(current *orderdomain.Order) {
+		for _, item := range current.Items {
+			ids = append(ids, item.ProductID)
+		}
+		for index := range current.Children {
+			collect(&current.Children[index])
+		}
+	}
+	collect(order)
+	if err := productcontract.RequirePublicSale(repository, ids); err != nil {
+		paymentLogger("order_id", order.ID).Warnw("payment_public_sale_rejected", "error", err)
+		return err
+	}
+	return nil
+}
+
+// checkPaymentPublicSale 在主动网关收款前检查订单，充值（orderID=0）不受影响。
+// orderID 为支付所属订单，返回销售拒绝或订单查询错误。
+func (s *PaymentService) checkPaymentPublicSale(orderID uint) error {
+	if !s.enforcePublicSale || orderID == 0 {
+		return nil
+	}
+	if err := s.prepareMembershipPayment(context.Background(), orderID); err != nil {
+		return err
+	}
+	return s.paymentRepo.WithinTransaction(func(tx paymentcontract.Transaction) error {
+		if locker, ok := tx.Payments().(paymentcontract.CreationLocker); ok {
+			if err := locker.LockCreation(orderID); err != nil {
+				return err
+			}
+		}
+		order, err := tx.Orders().GetByIDForUpdateWithChildren(orderID)
+		if err != nil {
+			return err
+		}
+		if order == nil {
+			return ErrPaymentInvalid
+		}
+		if err := s.checkPaymentSnapshot(tx, order); err != nil {
+			return err
+		}
+		return s.checkOrderPublicSale(tx.Products(), order)
+	})
+}
 
 // computeProductChannelIntersection 计算多个商品允许支付渠道的交集
 // 空列表表示不限制（全部允许），不参与交集计算

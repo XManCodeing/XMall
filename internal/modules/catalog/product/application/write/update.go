@@ -16,6 +16,9 @@ import (
 
 // Update 更新商品
 func (s *WriteService) Update(id string, input CreateProductInput) (*productdomain.Product, error) {
+	if err := prepareMembership(&input); err != nil {
+		return nil, err
+	}
 	priceAmount := input.PriceAmount.Round(2)
 	if len(input.SKUs) == 0 && priceAmount.LessThanOrEqual(decimal.Zero) {
 		return nil, productcontract.ErrProductPriceInvalid
@@ -152,6 +155,20 @@ func (s *WriteService) Update(id string, input CreateProductInput) (*productdoma
 
 	if err := s.transactions.WithinTransaction(func(repositories TransactionRepositories) error {
 		productRepo := repositories.Products
+		if input.Membership != nil {
+			locker, ok := productRepo.(productcontract.ProductWriteLocker)
+			if !ok {
+				return productcontract.ErrSalePolicyUnavailable
+			}
+			if err := locker.LockProductForWrite(product.ID); err != nil {
+				return err
+			}
+		}
+		if s.enforcePublicSale && input.Membership == nil {
+			if err := productcontract.RequireOrdinaryWrite(productRepo, []uint{product.ID}); err != nil {
+				return err
+			}
+		}
 		skuRepo := repositories.SKUs
 		cardSecretRepo := repositories.CardSecrets
 		if len(normalizedSKUs) > 0 {
@@ -186,7 +203,7 @@ func (s *WriteService) Update(id string, input CreateProductInput) (*productdoma
 		if err := productRepo.Update(product); err != nil {
 			return err
 		}
-		return nil
+		return saveMembership(repositories, product.ID, input.Membership)
 	}); err != nil {
 		return nil, err
 	}

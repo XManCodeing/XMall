@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"mime"
@@ -16,11 +17,15 @@ import (
 	"time"
 
 	notifycontract "github.com/XManCodeing/XMall/internal/modules/telegram/notify/contract"
+	"github.com/XManCodeing/XMall/internal/platform/telegramapi"
 )
 
 type telegramSendMessageResponse struct {
-	OK          bool   `json:"ok"`
-	Description string `json:"description"`
+	OK         bool `json:"ok"`
+	ErrorCode  int  `json:"error_code"`
+	Parameters struct {
+		RetryAfter int `json:"retry_after"`
+	} `json:"parameters"`
 }
 
 // Client 通过 Telegram Bot API 发送消息。
@@ -40,7 +45,10 @@ func NewWithHTTPClient(client *http.Client) *Client {
 	if client == nil {
 		panic("telegram bot api: http client is nil")
 	}
-	return &Client{httpClient: client}
+	// Match the platform client: never follow redirects containing credentials.
+	clone := *client
+	clone.CheckRedirect = func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }
+	return &Client{httpClient: &clone}
 }
 
 // SendWithBotToken 使用显式 bot token 发送 Telegram 消息。
@@ -93,87 +101,110 @@ func (s *Client) SendWithBotToken(ctx context.Context, botToken string, options 
 	return s.sendJSONRequest(ctx, botToken, "sendMessage", payload)
 }
 
+// sendMultipartMedia sends a local attachment; errors contain only fixed stage names, never paths or content.
+// botToken and options are request credentials/content; the returned error retains ErrNotifySendFailed.
 func (s *Client) sendMultipartMedia(ctx context.Context, botToken, method, fieldName, filePath string, options notifycontract.SendOptions) error {
 	file, err := os.Open(filePath)
 	if err != nil {
-		return fmt.Errorf("%w: open attachment failed: %v", notifycontract.ErrNotifySendFailed, err)
+		return notifyFailure("open attachment failed")
 	}
 	defer file.Close()
 
 	var body bytes.Buffer
 	writer := multipart.NewWriter(&body)
-
 	if err := writer.WriteField("chat_id", strings.TrimSpace(options.ChatID)); err != nil {
-		return err
+		return notifyFailure("encode chat failed")
 	}
 	if caption := strings.TrimSpace(options.Message); caption != "" {
 		if err := writer.WriteField("caption", caption); err != nil {
-			return err
+			return notifyFailure("encode caption failed")
 		}
 	}
 	if parseMode := strings.TrimSpace(options.ParseMode); parseMode != "" {
 		if err := writer.WriteField("parse_mode", parseMode); err != nil {
-			return err
+			return notifyFailure("encode parse mode failed")
 		}
 	}
 	part, err := writer.CreateFormFile(fieldName, filepath.Base(filePath))
 	if err != nil {
-		return err
+		return notifyFailure("create attachment part failed")
 	}
 	if _, err := io.Copy(part, file); err != nil {
-		return err
+		return notifyFailure("read attachment failed")
 	}
 	if err := writer.Close(); err != nil {
-		return err
+		return notifyFailure("finalize attachment failed")
 	}
 
 	requestURL := fmt.Sprintf("https://api.telegram.org/bot%s/%s", botToken, method)
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, requestURL, &body)
 	if err != nil {
-		return err
+		return notifyFailure("build request failed")
 	}
 	req.Header.Set("Content-Type", writer.FormDataContentType())
 	return s.doRequest(req)
 }
 
+// sendJSONRequest encodes payload and sends it using botToken; errors exclude request values.
 func (s *Client) sendJSONRequest(ctx context.Context, botToken, method string, payload map[string]interface{}) error {
 	payloadBytes, err := json.Marshal(payload)
 	if err != nil {
-		return err
+		return notifyFailure("encode request failed")
 	}
-
 	requestURL := fmt.Sprintf("https://api.telegram.org/bot%s/%s", botToken, method)
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, requestURL, bytes.NewReader(payloadBytes))
 	if err != nil {
-		return err
+		return notifyFailure("build request failed")
 	}
 	req.Header.Set("Content-Type", "application/json")
 	return s.doRequest(req)
 }
 
+// doRequest executes req and returns only safe platform errors and fixed diagnostics.
+// Raw URLs, response descriptions and underlying transport errors never enter the error chain.
 func (s *Client) doRequest(req *http.Request) error {
 	resp, err := s.httpClient.Do(req)
 	if err != nil {
-		return fmt.Errorf("%w: %v", notifycontract.ErrNotifySendFailed, err)
+		return notifyTransportFailure(req.Context(), err)
 	}
 	defer resp.Body.Close()
-
-	body, err := io.ReadAll(resp.Body)
+	body, err := io.ReadAll(io.LimitReader(resp.Body, telegramapi.DefaultMaxResponseBytes+1))
 	if err != nil {
-		return fmt.Errorf("%w: %v", notifycontract.ErrNotifySendFailed, err)
+		return notifyTransportFailure(req.Context(), err)
 	}
-	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return fmt.Errorf("%w: telegram status=%d body=%s", notifycontract.ErrNotifySendFailed, resp.StatusCode, strings.TrimSpace(string(body)))
+	if int64(len(body)) > telegramapi.DefaultMaxResponseBytes {
+		return notifyFailure("response exceeds size limit")
 	}
-
 	var parsed telegramSendMessageResponse
-	if err := json.Unmarshal(body, &parsed); err != nil {
-		return fmt.Errorf("%w: parse telegram response failed", notifycontract.ErrNotifySendFailed)
+	decodeErr := json.Unmarshal(body, &parsed)
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 || (decodeErr == nil && !parsed.OK) {
+		return fmt.Errorf("%w: %w", notifycontract.ErrNotifySendFailed, &telegramapi.APIError{
+			HTTPStatus: resp.StatusCode, ErrorCode: parsed.ErrorCode, RetryAfter: parsed.Parameters.RetryAfter,
+		})
 	}
-	if !parsed.OK {
-		return fmt.Errorf("%w: %s", notifycontract.ErrNotifySendFailed, strings.TrimSpace(parsed.Description))
+	if decodeErr != nil {
+		return notifyFailure("parse telegram response failed")
 	}
 	return nil
+}
+
+// notifyFailure accepts a fixed internal stage name and returns the notification failure sentinel.
+func notifyFailure(stage string) error {
+	return fmt.Errorf("%w: %s", notifycontract.ErrNotifySendFailed, stage)
+}
+
+// notifyTransportFailure classifies err without retaining its text or cause; ctx cancellation remains detectable.
+func notifyTransportFailure(ctx context.Context, err error) error {
+	if errors.Is(ctx.Err(), context.Canceled) {
+		return fmt.Errorf("%w: %w", notifycontract.ErrNotifySendFailed, context.Canceled)
+	}
+	if errors.Is(ctx.Err(), context.DeadlineExceeded) {
+		return fmt.Errorf("%w: %w", notifycontract.ErrNotifySendFailed, context.DeadlineExceeded)
+	}
+	var timeout interface{ Timeout() bool }
+	return fmt.Errorf("%w: %w", notifycontract.ErrNotifySendFailed, &telegramapi.TransportError{
+		Timeout: errors.As(err, &timeout) && timeout.Timeout(),
+	})
 }
 
 func resolveTelegramAttachmentPath(raw string) (string, bool) {

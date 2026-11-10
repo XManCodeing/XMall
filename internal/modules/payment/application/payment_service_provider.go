@@ -107,6 +107,9 @@ func buildPaymentReturnQuery(input CreatePaymentInput, order *orderdomain.Order,
 }
 
 func (s *PaymentService) applyProviderPayment(input CreatePaymentInput, order *orderdomain.Order, channel *paymentdomain.PaymentChannel, payment *paymentdomain.Payment) (err error) {
+	if err := s.checkPaymentPublicSale(payment.OrderID); err != nil {
+		return paymentcontract.GatewayNotSubmitted(err)
+	}
 	providerType := strings.ToLower(strings.TrimSpace(channel.ProviderType))
 	channelType := strings.ToLower(strings.TrimSpace(channel.ChannelType))
 	gatewayCtx, cancel := detachOutboundRequestContext(input.Context)
@@ -244,27 +247,7 @@ func (s *PaymentService) applyProviderPayment(input CreatePaymentInput, order *o
 	payment.UpdatedAt = time.Now()
 
 	payment.CreationState = "ready"
-	if err := s.paymentRepo.WithinTransaction(func(tx paymentcontract.Transaction) error {
-		locked, err := tx.Payments().GetByIDForUpdate(payment.ID)
-		if err != nil {
-			return err
-		}
-		if locked == nil {
-			return ErrPaymentNotFound
-		}
-		// A callback may have completed while the gateway response was in flight.
-		if locked.Status != constants.PaymentStatusInitiated && locked.Status != constants.PaymentStatusPending {
-			payment.Status = locked.Status
-			payment.PaidAt = locked.PaidAt
-			payment.CallbackAt = locked.CallbackAt
-			payment.ExceptionCode = locked.ExceptionCode
-			payment.ExpiredAt = locked.ExpiredAt
-		}
-		payment.ProviderPayload = mergeProviderPayload(payment.ProviderPayload, locked.ProviderPayload)
-		payment.SupersededAt = locked.SupersededAt
-		payment.SupersededByPaymentID = locked.SupersededByPaymentID
-		return tx.Payments().Update(payment)
-	}); err != nil {
+	if err := s.persistProviderAttempt(payment); err != nil {
 		return ErrPaymentUpdateFailed
 	}
 	return nil

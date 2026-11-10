@@ -5,6 +5,34 @@ import (
 	"testing"
 )
 
+// TestJSONScanTextAndBytes covers MySQL bytes and migrated SQLite TEXT values.
+// t owns synthetic inputs; stale keys must not survive scanning a new row.
+func TestJSONScanTextAndBytes(t *testing.T) {
+	for _, source := range []any{`{"zh-CN":"开始购物","count":2}`, []byte(`{"zh-CN":"开始购物","count":2}`)} {
+		value := JSON{"stale": true}
+		if err := value.Scan(source); err != nil {
+			t.Fatal(err)
+		}
+		if !reflect.DeepEqual(value, JSON{"zh-CN": "开始购物", "count": float64(2)}) {
+			t.Fatalf("decoded value mismatch: %#v", value)
+		}
+	}
+}
+
+// TestJSONScanRejectsInvalidValues prevents silent missing labels and partial mutations.
+// t supplies malformed and unsupported values; errors must preserve the previous object.
+func TestJSONScanRejectsInvalidValues(t *testing.T) {
+	for _, source := range []any{42, true, `{`, `[]`, `"text"`} {
+		value := JSON{"previous": true}
+		if err := value.Scan(source); err == nil {
+			t.Fatalf("expected error for %T", source)
+		}
+		if !reflect.DeepEqual(value, JSON{"previous": true}) {
+			t.Fatal("failed scan changed previous object")
+		}
+	}
+}
+
 func TestJSONDatabaseRoundTrip(t *testing.T) {
 	original := JSON{
 		"enabled": true,

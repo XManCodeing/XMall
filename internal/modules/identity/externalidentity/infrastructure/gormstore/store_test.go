@@ -1,6 +1,7 @@
 package externalidentitystore
 
 import (
+	"errors"
 	"testing"
 	"time"
 
@@ -11,6 +12,132 @@ import (
 	"github.com/glebarez/sqlite"
 	"gorm.io/gorm"
 )
+
+// TestTelegramBindingGuardWithoutPrivateChat 验证网站购买不依赖 Bot 或联系人表。
+func TestTelegramBindingGuardWithoutPrivateChat(t *testing.T) {
+	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	sqlDB, err := db.DB()
+	if err != nil {
+		t.Fatal(err)
+	}
+	sqlDB.SetMaxOpenConns(1)
+	t.Cleanup(func() {
+		if err := sqlDB.Close(); err != nil {
+			t.Errorf("close database: %v", err)
+		}
+	})
+	if err := db.AutoMigrate(&userdomain.User{}, &externalidentitydomain.Identity{}); err != nil {
+		t.Fatal(err)
+	}
+	user := userdomain.User{Email: "binding@example.test", Status: "active"}
+	if err := db.Create(&user).Error; err != nil {
+		t.Fatal(err)
+	}
+	identity := externalidentitydomain.Identity{UserID: user.ID, Provider: "telegram", ProviderUserID: "9007199254740993"}
+	if err := db.Create(&identity).Error; err != nil {
+		t.Fatal(err)
+	}
+	binding := externalidentitycontract.TelegramBinding{ID: identity.ID, TelegramID: 9007199254740993}
+	cases := []struct {
+		name      string
+		userID    uint
+		binding   externalidentitycontract.TelegramBinding
+		wantError bool
+	}{
+		{"website without bot", user.ID, binding, false},
+		{"missing user", 0, binding, true},
+		{"other account", user.ID + 1, binding, true},
+		{"stale generation", user.ID, externalidentitycontract.TelegramBinding{ID: identity.ID + 1, TelegramID: binding.TelegramID}, true},
+		{"other telegram", user.ID, externalidentitycontract.TelegramBinding{ID: identity.ID, TelegramID: 123}, true},
+		{"missing generation", user.ID, externalidentitycontract.TelegramBinding{TelegramID: binding.TelegramID}, true},
+	}
+	for _, testCase := range cases {
+		t.Run(testCase.name, func(t *testing.T) {
+			err := db.Transaction(func(tx *gorm.DB) error {
+				return New(tx).LockTelegramBinding(testCase.userID, testCase.binding)
+			})
+			if testCase.wantError && !errors.Is(err, externalidentitycontract.ErrTelegramIdentityChanged) {
+				t.Fatalf("expected identity conflict, got %v", err)
+			}
+			if !testCase.wantError && err != nil {
+				t.Fatal(err)
+			}
+		})
+	}
+	for _, updates := range []map[string]any{{"status": "disabled"}, {"status": "active", "deleted_at": time.Now()}} {
+		if err := db.Model(&userdomain.User{}).Where("id = ?", user.ID).Updates(updates).Error; err != nil {
+			t.Fatal(err)
+		}
+		err := db.Transaction(func(tx *gorm.DB) error { return New(tx).LockTelegramBinding(user.ID, binding) })
+		if !errors.Is(err, externalidentitycontract.ErrTelegramIdentityChanged) {
+			t.Fatalf("inactive account accepted: %v", err)
+		}
+	}
+}
+
+// TestTelegramBindingGuardRejectsRebinding 验证同一 Telegram 解绑重绑后旧快照失效，事务错误不留下业务写入。
+func TestTelegramBindingGuardRejectsRebinding(t *testing.T) {
+	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	sqlDB, err := db.DB()
+	if err != nil {
+		t.Fatal(err)
+	}
+	sqlDB.SetMaxOpenConns(1)
+	t.Cleanup(func() {
+		if err := sqlDB.Close(); err != nil {
+			t.Errorf("close database: %v", err)
+		}
+	})
+	if err := db.AutoMigrate(&userdomain.User{}, &externalidentitydomain.Identity{}); err != nil {
+		t.Fatal(err)
+	}
+	user := userdomain.User{Email: "rebind@example.test", Status: "active", DisplayName: "original"}
+	if err := db.Create(&user).Error; err != nil {
+		t.Fatal(err)
+	}
+	identity := externalidentitydomain.Identity{UserID: user.ID, Provider: "telegram", ProviderUserID: "12345"}
+	if err := db.Create(&identity).Error; err != nil {
+		t.Fatal(err)
+	}
+	oldBinding := externalidentitycontract.TelegramBinding{ID: identity.ID, TelegramID: 12345}
+	if err := db.Delete(&identity).Error; err != nil {
+		t.Fatal(err)
+	}
+	identity.ID = 0
+	if err := db.Create(&identity).Error; err != nil {
+		t.Fatal(err)
+	}
+	if identity.ID == oldBinding.ID {
+		t.Fatal("rebinding reused identity generation")
+	}
+	err = db.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Model(&userdomain.User{}).Where("id = ?", user.ID).Update("display_name", "must rollback").Error; err != nil {
+			return err
+		}
+		return New(tx).LockTelegramBinding(user.ID, oldBinding)
+	})
+	if !errors.Is(err, externalidentitycontract.ErrTelegramIdentityChanged) {
+		t.Fatalf("stale binding accepted: %v", err)
+	}
+	var persisted userdomain.User
+	if err := db.First(&persisted, user.ID).Error; err != nil {
+		t.Fatal(err)
+	}
+	if persisted.DisplayName != "original" {
+		t.Fatal("identity conflict did not roll back transaction")
+	}
+	if err := db.Transaction(func(tx *gorm.DB) error {
+		return New(tx).LockTelegramBinding(user.ID, externalidentitycontract.TelegramBinding{ID: identity.ID, TelegramID: 12345})
+	}); err != nil {
+		t.Fatal(err)
+	}
+}
 
 func TestListTelegramUsers(t *testing.T) {
 	db, err := gorm.Open(sqlite.Open("file::memory:?cache=shared"), &gorm.Config{})

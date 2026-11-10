@@ -16,6 +16,9 @@ import (
 
 // Create 创建商品
 func (s *WriteService) Create(input CreateProductInput) (*productdomain.Product, error) {
+	if err := prepareMembership(&input); err != nil {
+		return nil, err
+	}
 	if err := productdomain.ValidateCategoryAssignment(s.categories, input.CategoryID, 0, productcontract.ErrProductCategoryInvalid); err != nil {
 		return nil, err
 	}
@@ -163,7 +166,7 @@ func (s *WriteService) Create(input CreateProductInput) (*productdomain.Product,
 				return err
 			}
 		}
-		return nil
+		return saveMembership(repositories, product.ID, input.Membership)
 	}); err != nil {
 		return nil, err
 	}

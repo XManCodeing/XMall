@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from 'vue'
-import { useDebounceFn } from '@vueuse/core'
 import { useI18n } from 'vue-i18n'
 import { adminAPI } from '@/api/admin'
 import type { AdminUser, AdminMemberLevel } from '@/api/types'
@@ -60,7 +59,9 @@ const nextSortState = (
   return { by: '', order: '' }
 }
 
+/** 切换排序并查询第一页；查询期间不并发排序。@param column 排序列。@returns 无返回值。 */
 const toggleSort = (column: SortColumn) => {
+  if (loading.value || refreshing.value) return
   const next = nextSortState(sort, column)
   sort.by = next.by
   sort.order = next.order
@@ -146,16 +147,20 @@ const getMemberLevelLabel = (user: AdminUser) => {
   return icon + getLocalizedText(level.name)
 }
 
-const handleSearch = () => {
-  fetchUsers(1)
+/** 按当前筛选查询第一页，加载期间忽略重复操作。@returns 查询完成。 */
+const handleSearch = async (): Promise<void> => {
+  if (loading.value || refreshing.value) return
+  pagination.value.page = 1
+  await fetchUsers(1)
 }
-const debouncedSearch = useDebounceFn(handleSearch, 300)
 
 const refresh = () => {
   refreshList(() => fetchUsers(pagination.value.page, { preserveRows: true }))
 }
 
-const resetFilters = () => {
+/** 恢复全部查询条件和排序，保留分页尺寸。@returns 查询完成。 */
+const resetFilters = async (): Promise<void> => {
+  if (loading.value || refreshing.value) return
   filters.userId = ''
   filters.keyword = ''
   filters.status = '__all__'
@@ -163,7 +168,9 @@ const resetFilters = () => {
   filters.createdTo = ''
   filters.lastLoginFrom = ''
   filters.lastLoginTo = ''
-  fetchUsers(1)
+  sort.by = ''
+  sort.order = ''
+  await handleSearch()
 }
 
 // router-link 的 :to 走 vue-router，base 前缀由 router 自己带上，这里不能再拼
@@ -285,13 +292,13 @@ onMounted(() => {
     <div class="rounded-xl border border-border bg-card p-4 shadow-sm">
       <div class="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
         <div class="w-full md:w-32">
-          <Input v-model="filters.userId" :placeholder="t('admin.users.filterUserId')" @update:modelValue="debouncedSearch" />
+          <Input v-model="filters.userId" :placeholder="t('admin.users.filterUserId')" @keydown.enter="handleSearch" />
         </div>
         <div class="w-full md:w-64">
-          <Input v-model="filters.keyword" :placeholder="t('admin.users.filterKeyword')" @update:modelValue="debouncedSearch" />
+          <Input v-model="filters.keyword" :placeholder="t('admin.users.filterKeyword')" @keydown.enter="handleSearch" />
         </div>
         <div class="w-full md:w-40">
-          <Select v-model="filters.status" @update:modelValue="handleSearch">
+          <Select v-model="filters.status" @keydown.enter="handleSearch">
             <SelectTrigger class="h-9 w-full">
             <SelectValue :placeholder="t('admin.users.filterStatusAll')" />
           </SelectTrigger>
@@ -309,7 +316,7 @@ onMounted(() => {
             type="datetime-local"
             class="h-9 w-full md:w-auto"
             :placeholder="t('admin.users.filterCreatedFrom')"
-            @update:modelValue="handleSearch"
+            @keydown.enter="handleSearch"
           />
           <span class="hidden text-muted-foreground md:inline">-</span>
           <Input
@@ -317,7 +324,7 @@ onMounted(() => {
             type="datetime-local"
             class="h-9 w-full md:w-auto"
             :placeholder="t('admin.users.filterCreatedTo')"
-            @update:modelValue="handleSearch"
+            @keydown.enter="handleSearch"
           />
         </div>
         <div class="flex w-full flex-col gap-2 md:w-auto md:flex-row md:flex-wrap md:items-center">
@@ -327,7 +334,7 @@ onMounted(() => {
             type="datetime-local"
             class="h-9 w-full md:w-auto"
             :placeholder="t('admin.users.filterLastLoginFrom')"
-            @update:modelValue="handleSearch"
+            @keydown.enter="handleSearch"
           />
           <span class="hidden text-muted-foreground md:inline">-</span>
           <Input
@@ -335,13 +342,14 @@ onMounted(() => {
             type="datetime-local"
             class="h-9 w-full md:w-auto"
             :placeholder="t('admin.users.filterLastLoginTo')"
-            @update:modelValue="handleSearch"
+            @keydown.enter="handleSearch"
           />
         </div>
         <div class="hidden flex-1 sm:block"></div>
         <div class="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
-          <Button size="sm" variant="outline" class="w-full sm:w-auto" @click="resetFilters">{{ t('admin.common.reset') }}</Button>
-          <Button size="sm" class="w-full sm:w-auto" :disabled="refreshing" @click="refresh">{{ t('admin.common.refresh') }}</Button>
+          <Button size="sm" variant="outline" class="w-full sm:w-auto" :disabled="loading || refreshing" @click="handleSearch">{{ t('admin.common.search') }}</Button>
+          <Button size="sm" variant="outline" class="w-full sm:w-auto" :disabled="loading || refreshing" @click="resetFilters">{{ t('admin.common.reset') }}</Button>
+          <Button size="sm" class="w-full sm:w-auto" :disabled="loading || refreshing" @click="refresh">{{ t('admin.common.refresh') }}</Button>
         </div>
       </div>
     </div>
@@ -451,7 +459,7 @@ onMounted(() => {
         </TableBody>
       </Table>
 
-      <ListPagination
+      <ListPagination :loading="loading || refreshing"
         :page="pagination.page"
         :total-page="pagination.total_page"
         :total="pagination.total"

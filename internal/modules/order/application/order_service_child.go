@@ -13,17 +13,15 @@ import (
 )
 
 // cancelOrderWithChildren 取消父订单并级联子订单
-func (s *OrderService) cancelOrderWithChildren(order *orderdomain.Order, rollbackCoupon bool) error {
+func (s *OrderService) cancelOrderWithChildren(order *orderdomain.Order, rollbackCoupon bool, cancellationReason ...string) error {
 	if order == nil {
 		return ErrOrderNotFound
 	}
 	now := time.Now()
 	err := s.orderStore.WithinTransaction(func(tx ordercontract.Transaction) error {
 		orderStore := tx.Orders()
-		productRepo := tx.Products()
-		productSKURepo := tx.ProductSKUs()
 		// 事务内加锁复核状态，避免与并发的支付回调竞争
-		locked, err := orderStore.GetByIDForUpdate(order.ID)
+		locked, err := orderStore.GetByIDForUpdateWithChildren(order.ID)
 		if err != nil {
 			return ErrOrderFetchFailed
 		}
@@ -31,12 +29,28 @@ func (s *OrderService) cancelOrderWithChildren(order *orderdomain.Order, rollbac
 			return ErrOrderNotFound
 		}
 		// 只有未支付订单可以取消：已支付订单取消会退回钱包、释放已消耗库存，必须走退款流程
-		if locked.Status != order.Status || locked.Status != constants.OrderStatusPendingPayment {
+		if locked.Status != order.Status || locked.Status != constants.OrderStatusPendingPayment || locked.PaidAt != nil {
 			return ErrOrderCancelNotAllowed
 		}
+		for _, child := range locked.Children {
+			if child.Status != constants.OrderStatusPendingPayment || child.PaidAt != nil {
+				return ErrOrderCancelNotAllowed
+			}
+		}
+		// Use locked wallet and inventory snapshots, not the pre-transaction read.
+		*order = *locked
+		reason := "manual"
+		if len(cancellationReason) == 1 && cancellationReason[0] == "timeout" {
+			// 超时证据必须在订单锁内核验，不能把过期后的手动取消当作超时任务。
+			if locked.ExpiresAt == nil || locked.ExpiresAt.After(now) {
+				return ErrOrderCancelNotAllowed
+			}
+			reason = "timeout"
+		}
 		updates := map[string]interface{}{
-			"canceled_at": now,
-			"updated_at":  now,
+			"cancellation_reason": reason,
+			"canceled_at":         now,
+			"updated_at":          now,
 		}
 		if err := orderStore.UpdateStatus(order.ID, constants.OrderStatusCanceled, updates); err != nil {
 			return ErrOrderUpdateFailed
@@ -46,54 +60,8 @@ func (s *OrderService) cancelOrderWithChildren(order *orderdomain.Order, rollbac
 				return ErrOrderUpdateFailed
 			}
 		}
-		secretRepo := tx.CardSecrets()
-		if len(order.Children) > 0 {
-			for _, child := range order.Children {
-				if _, err := secretRepo.ReleaseByOrder(child.ID); err != nil {
-					return err
-				}
-			}
-		} else {
-			if _, err := secretRepo.ReleaseByOrder(order.ID); err != nil {
-				return err
-			}
-		}
-		if len(order.Children) > 0 {
-			for _, child := range order.Children {
-				if err := releaseManualStockByItems(productRepo, productSKURepo, child.Items); err != nil {
-					return err
-				}
-			}
-		} else {
-			if err := releaseManualStockByItems(productRepo, productSKURepo, order.Items); err != nil {
-				return err
-			}
-		}
-
-		if rollbackCoupon {
-			couponRepo := tx.Coupons()
-			usageRepo := tx.CouponUsages()
-			usages, err := usageRepo.ListByOrderID(order.ID)
-			if err != nil {
-				return err
-			}
-			if len(usages) > 0 {
-				if err := usageRepo.DeleteByOrderID(order.ID); err != nil {
-					return err
-				}
-				counts := make(map[uint]int)
-				for _, usage := range usages {
-					counts[usage.CouponID]++
-				}
-				for couponID, count := range counts {
-					if count <= 0 {
-						continue
-					}
-					if err := couponRepo.DecrementUsedCount(couponID, count); err != nil {
-						return err
-					}
-				}
-			}
+		if err := releaseCanceledResources(tx, order, rollbackCoupon); err != nil {
+			return err
 		}
 		if s.walletService != nil {
 			if _, err := ReleaseWalletBalance(s.walletService, tx, order, constants.WalletTxnTypeOrderRefund, "订单取消退回余额"); err != nil {
@@ -440,7 +408,7 @@ func (s *OrderService) CancelExpiredOrder(orderID uint) (*orderdomain.Order, err
 	if order.ExpiresAt.After(now) {
 		return order, nil
 	}
-	if err := s.cancelOrderWithChildren(order, true); err != nil {
+	if err := s.cancelOrderWithChildren(order, true, "timeout"); err != nil {
 		return nil, err
 	}
 	if s.affiliateSvc != nil {

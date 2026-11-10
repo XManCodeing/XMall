@@ -1,6 +1,9 @@
 package productadmin
 
-import productdomain "github.com/XManCodeing/XMall/internal/modules/catalog/product/domain"
+import (
+	productdomain "github.com/XManCodeing/XMall/internal/modules/catalog/product/domain"
+	membership "github.com/XManCodeing/XMall/internal/modules/telegram/membership/contract"
+)
 
 // ProductRepository 是商品管理用例所需的最小商品端口。
 type ProductRepository interface {
@@ -55,6 +58,8 @@ type ProductMappingDeleteRepository interface {
 
 // DeleteRepositories 是一次商品级联删除事务中绑定的全部窄端口。
 type DeleteRepositories struct {
+	Membership        membership.AdminOperations
+	Stock             CardSecretStockRepository
 	Products          ProductDeleteRepository
 	CardSecrets       CardSecretDeleteRepository
 	CardSecretBatches CardSecretBatchDeleteRepository
@@ -70,28 +75,32 @@ type UnitOfWork interface {
 }
 
 type Options struct {
-	Products     ProductRepository
-	Categories   CategoryRepository
-	CardSecrets  CardSecretStockRepository
-	Orders       OrderHistoryRepository
-	Transactions UnitOfWork
+	// EnforcePublicSale is enabled by the production composition root.
+	EnforcePublicSale bool
+	Products          ProductRepository
+	Categories        CategoryRepository
+	CardSecrets       CardSecretStockRepository
+	Orders            OrderHistoryRepository
+	Transactions      UnitOfWork
 }
 
 // AdminService 承载商品删除、快速更新和批发价管理用例。
 type AdminService struct {
-	products     ProductRepository
-	categories   CategoryRepository
-	cardSecrets  CardSecretStockRepository
-	orders       OrderHistoryRepository
-	transactions UnitOfWork
+	enforcePublicSale bool
+	products          ProductRepository
+	categories        CategoryRepository
+	cardSecrets       CardSecretStockRepository
+	orders            OrderHistoryRepository
+	transactions      UnitOfWork
 }
 
 func NewAdminService(options Options) *AdminService {
 	return &AdminService{
-		products:     options.Products,
-		categories:   options.Categories,
-		cardSecrets:  options.CardSecrets,
-		orders:       options.Orders,
-		transactions: options.Transactions,
+		enforcePublicSale: options.EnforcePublicSale,
+		products:          options.Products,
+		categories:        options.Categories,
+		cardSecrets:       options.CardSecrets,
+		orders:            options.Orders,
+		transactions:      options.Transactions,
 	}
 }

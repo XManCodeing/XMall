@@ -186,6 +186,13 @@ const router = createRouter({
             meta: { requiresUserAuth: true }
         },
         {
+            path: '/me/membership-groups',
+            name: 'personal-center-membership-groups',
+            component: templateView('PersonalCenter', () => import('../views/PersonalCenter.vue')),
+            props: { section: 'membershipGroups' },
+            meta: { requiresUserAuth: true }
+        },
+        {
             path: '/me/wallet',
             name: 'personal-center-wallet',
             component: templateView('PersonalCenter', () => import('../views/PersonalCenter.vue')),

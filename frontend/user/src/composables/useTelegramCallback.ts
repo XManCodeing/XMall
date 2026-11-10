@@ -3,6 +3,9 @@ import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useUserAuthStore } from '../stores/userAuth'
 import { userProfileAPI } from '../api'
+import { getGoogleRedirectSessionStorage, normalizeGoogleRedirectReturnPath } from '../utils/googleRedirect'
+import { clearPurchaseContext } from '../utils/purchaseContext'
+import { usePurchaseReturn } from './usePurchaseReturn'
 
 /**
  * Telegram OIDC 回调页共享逻辑（classic + vault 双模板共用）。
@@ -13,6 +16,7 @@ export function useTelegramCallback() {
   const route = useRoute()
   const router = useRouter()
   const userAuthStore = useUserAuthStore()
+  const { finishPurchaseReturn } = usePurchaseReturn()
   const loading = ref(true)
   const errMsg = ref('')
   let savedRedirect = ''
@@ -37,12 +41,19 @@ export function useTelegramCallback() {
     const code = String(route.query.code || '')
     const state = String(route.query.state || '')
     const oauthErr = String(route.query.error || '')
-    const intent = sessionStorage.getItem('tg_oidc_intent') || 'login'
-    savedRedirect = sessionStorage.getItem('tg_oidc_redirect') || ''
-    sessionStorage.removeItem('tg_oidc_intent')
-    sessionStorage.removeItem('tg_oidc_redirect')
+    let intent = ''
+    try {
+      const storage = getGoogleRedirectSessionStorage()
+      intent = storage?.getItem('tg_oidc_intent') || ''
+      savedRedirect = normalizeGoogleRedirectReturnPath(storage?.getItem('tg_oidc_redirect'), '')
+      storage?.removeItem('tg_oidc_intent')
+      storage?.removeItem('tg_oidc_redirect')
+    } catch {
+      console.warn('Telegram callback intent unavailable')
+    }
 
-    if (oauthErr || !code || !state) {
+    if (oauthErr || !code || !state || !['login', 'bind'].includes(intent)) {
+      clearPurchaseContext()
       errMsg.value = t('auth.telegramCallback.failed')
       loading.value = false
       return
@@ -50,13 +61,16 @@ export function useTelegramCallback() {
 
     try {
       if (intent === 'bind') {
+        if (!userAuthStore.isAuthenticated) throw new Error(t('auth.telegramCallback.failed'))
         await userProfileAPI.telegramOidcBindCallback({ code, state })
+        if (await finishPurchaseReturn()) return
         await router.replace({ path: '/me/security', query: { tgBound: '1' } })
         return
       }
       const result = await userAuthStore.telegramOidcLogin({ code, state })
       await continueAfterLogin(result)
     } catch (err: any) {
+      if (intent === 'bind') clearPurchaseContext()
       errMsg.value = err?.message || t('auth.telegramCallback.failed')
       loading.value = false
     }

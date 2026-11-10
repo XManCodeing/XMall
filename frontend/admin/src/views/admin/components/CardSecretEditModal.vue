@@ -69,7 +69,7 @@ const submitEdit = async () => {
 </script>
 
 <template>
-  <Dialog :open="modelValue" @update:open="handleOpenChange">
+  <Dialog scope="page" :open="modelValue" @update:open="handleOpenChange">
     <DialogScrollContent class="w-[calc(100vw-1rem)] max-w-lg p-4 sm:p-6">
       <DialogHeader>
         <DialogTitle>{{ t('admin.cardSecrets.editTitle') }}</DialogTitle>

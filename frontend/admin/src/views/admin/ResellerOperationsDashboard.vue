@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { RefreshCw } from 'lucide-vue-next'
 import { adminAPI } from '@/api/admin'
+import { notifyErrorOnce } from '@/utils/notify'
 import type {
   AdminResellerOperationsAlert,
   AdminResellerOperationsFinance,
@@ -14,7 +14,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { formatDate, formatMoney, toRFC3339 } from '@/utils/format'
+import { BUSINESS_TIME_ZONE, formatDate, formatMoney, toRFC3339 } from '@/utils/format'
 import {
   buildResellerOperationsAlertClass,
   formatResellerOperationsPeriod,
@@ -30,8 +30,6 @@ const finance = ref<AdminResellerOperationsFinance | null>(null)
 const loadingOverview = ref(false)
 const loadingFinance = ref(false)
 const pageError = ref('')
-const browserTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'Asia/Shanghai'
-
 const filters = reactive({
   range: '7d',
   from: '',
@@ -73,7 +71,7 @@ const orderKpis = computed(() => {
 const buildParams = () => {
   const params: Record<string, unknown> = {
     range: filters.range,
-    tz: browserTimezone,
+    tz: BUSINESS_TIME_ZONE,
   }
   const from = toRFC3339(filters.from)
   const to = toRFC3339(filters.to)
@@ -89,19 +87,21 @@ const ensureCustomRange = () => {
   return false
 }
 
+/** 读取运营概览，请求失败仅发去重通知。@returns 查询完成。 */
 const loadOverview = async () => {
   loadingOverview.value = true
   try {
     const response = await adminAPI.getResellerOperationsOverview(buildParams())
     overview.value = response.data.data as AdminResellerOperationsOverview
   } catch (err: any) {
-    pageError.value = err?.message || t('admin.resellerOperations.errors.loadFailed')
+    notifyErrorOnce(err, t('admin.resellerOperations.errors.loadFailed'))
     overview.value = null
   } finally {
     loadingOverview.value = false
   }
 }
 
+/** 按权限读取财务数据，请求失败仅发去重通知。@returns 查询完成。 */
 const loadFinance = async () => {
   if (!canViewFinance.value) {
     finance.value = null
@@ -112,18 +112,25 @@ const loadFinance = async () => {
     const response = await adminAPI.getResellerOperationsFinance(buildParams())
     finance.value = response.data.data as AdminResellerOperationsFinance
   } catch (err: any) {
-    pageError.value = err?.message || t('admin.resellerOperations.errors.loadFailed')
+    notifyErrorOnce(err, t('admin.resellerOperations.errors.loadFailed'))
     finance.value = null
   } finally {
     loadingFinance.value = false
   }
 }
 
-const loadAll = async () => {
-  if (!ensureCustomRange()) return
+/** 按当前时间条件读取概览及财务表。@returns 查询完成。 */
+const loadAll = async (): Promise<void> => {
+  if (loadingOverview.value || loadingFinance.value || !ensureCustomRange()) return
   pageError.value = ''
   await loadOverview()
   await loadFinance()
+}
+/** 恢复默认七天范围，不修改其他业务配置。@returns 查询完成。 */
+const resetFilters = async (): Promise<void> => {
+  if (loadingOverview.value || loadingFinance.value) return
+  Object.assign(filters, { range: '7d', from: '', to: '' })
+  await loadAll()
 }
 
 const alertLabel = (item: AdminResellerOperationsAlert) =>
@@ -161,21 +168,21 @@ onMounted(() => {
           </div>
           <div>
             <div class="mb-1 text-xs text-muted-foreground">{{ t('admin.resellerOperations.filters.from') }}</div>
-            <Input v-model="filters.from" type="datetime-local" class="h-9" />
+            <Input v-model="filters.from" type="datetime-local" class="h-9" @keydown.enter="loadAll" />
           </div>
           <div>
             <div class="mb-1 text-xs text-muted-foreground">{{ t('admin.resellerOperations.filters.to') }}</div>
-            <Input v-model="filters.to" type="datetime-local" class="h-9" />
+            <Input v-model="filters.to" type="datetime-local" class="h-9" @keydown.enter="loadAll" />
           </div>
-          <Button size="sm" :disabled="loadingOverview || loadingFinance" @click="loadAll">
-            <RefreshCw class="size-4" :class="{ 'animate-spin': loadingOverview || loadingFinance }" />
-            {{ t('admin.resellerOperations.actions.refresh') }}
-          </Button>
+          <div class="flex gap-2">
+            <Button size="sm" :disabled="loadingOverview || loadingFinance" @click="loadAll">{{ t('admin.common.search') }}</Button>
+            <Button size="sm" variant="outline" :disabled="loadingOverview || loadingFinance" @click="resetFilters">{{ t('admin.common.reset') }}</Button>
+          </div>
         </div>
       </div>
     </div>
 
-    <div v-if="pageError" class="rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+    <div v-if="pageError" class="rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
       {{ pageError }}
     </div>
 

@@ -1,13 +1,13 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { computed, onActivated, onDeactivated, onMounted, onUnmounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { adminAPI } from '@/api/admin'
 import type { AdminTelegramBroadcast } from '@/api/types'
 import { useAdminAuthStore } from '@/stores/auth'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { formatDate } from '@/utils/format'
+import { notifyErrorOnce } from '@/utils/notify'
 import { Eye, Loader2, Send } from 'lucide-vue-next'
 
 const { t, te } = useI18n()
@@ -40,11 +40,13 @@ const fetchBroadcasts = async (page = pagination.value.page, options: { silent?:
   try {
     const res = await adminAPI.getTelegramBroadcasts({ page, page_size: pagination.value.page_size })
     if (request !== requestID) return
-    items.value = res.data?.data || []
+    if (!Array.isArray(res.data?.data)) throw new Error(t('common.api.responseMissing'))
+    items.value = res.data.data
     pagination.value = res.data?.pagination || pagination.value
     if (!silent) error.value = ''
-  } catch {
+  } catch (cause) {
     if (request !== requestID) return
+    notifyErrorOnce(cause, t('telegramBot.instances.failed'))
     if (!silent) {
       items.value = []
       error.value = t('telegramBot.instances.failed')
@@ -70,17 +72,25 @@ const poll = () => {
   void fetchBroadcasts(pagination.value.page, { silent: true })
 }
 
-onMounted(() => {
-  void fetchBroadcasts(1)
+/** Resume one visible-page poller without resetting cached pagination. @returns Nothing. */
+function startPolling() {
+  if (pollTimer !== undefined) return
+  poll()
   pollTimer = setInterval(poll, 8000)
   if (typeof document !== 'undefined') document.addEventListener('visibilitychange', poll)
-})
+}
 
-onUnmounted(() => {
-  ++requestID
+/** Suspend background work, retaining list state and any request already in flight. @returns Nothing. */
+function stopPolling() {
   if (pollTimer !== undefined) clearInterval(pollTimer)
+  pollTimer = undefined
   if (typeof document !== 'undefined') document.removeEventListener('visibilitychange', poll)
-})
+}
+
+onMounted(() => { void fetchBroadcasts(1); startPolling() })
+onActivated(startPolling)
+onDeactivated(stopPolling)
+onUnmounted(() => { ++requestID; stopPolling() })
 </script>
 
 <template>
@@ -92,8 +102,8 @@ onUnmounted(() => {
       </div>
       <div class="flex items-center gap-2">
         <Loader2 v-if="refreshing" class="h-4 w-4 animate-spin text-muted-foreground" />
-        <Button variant="outline" :disabled="loading || refreshing || !canList" @click="fetchBroadcasts(pagination.page, { silent: items.length > 0 })">
-          {{ t('telegramBot.instances.reload') }}
+        <Button variant="outline" :disabled="loading || refreshing || !canList" @click="fetchBroadcasts(1)">
+          {{ t('admin.common.search') }}
         </Button>
         <Button v-if="canCreate" as-child>
           <RouterLink to="/telegram-bot/broadcasts/create">
@@ -104,47 +114,46 @@ onUnmounted(() => {
       </div>
     </div>
     <p v-if="!canList" class="text-sm text-muted-foreground">{{ t('telegramBot.instances.forbidden') }}</p>
-    <p v-if="error" role="alert" class="text-sm text-destructive">{{ error }}</p>
-    <Card v-if="canList">
-      <CardContent class="p-4">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>ID</TableHead>
-              <TableHead>{{ t('telegramBot.instances.bot') }}</TableHead>
-              <TableHead>{{ t('telegramBot.broadcasts.tableTitle') }}</TableHead>
-              <TableHead>{{ t('telegramBot.broadcasts.tableStatus') }}</TableHead>
-              <TableHead>{{ t('telegramBot.broadcasts.tableRecipientCount') }}</TableHead>
-              <TableHead>{{ t('telegramBot.broadcasts.tableSuccessCount') }}</TableHead>
-              <TableHead>{{ t('telegramBot.broadcasts.tableFailedCount') }}</TableHead>
-              <TableHead>{{ t('telegramBot.instances.states.unknown') }}</TableHead>
-              <TableHead>{{ t('telegramBot.broadcasts.tableCreatedAt') }}</TableHead>
-              <TableHead class="text-right">{{ t('telegramBot.broadcasts.tableActions') }}</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            <TableRow v-if="loading && !items.length">
-              <TableCell :colspan="10" class="py-10 text-center">
-                <Loader2 class="mx-auto h-5 w-5 animate-spin text-muted-foreground" />
-              </TableCell>
-            </TableRow>
-            <TableRow v-else-if="!items.length">
-              <TableCell :colspan="10" class="py-10 text-center text-muted-foreground">{{ error || t('telegramBot.broadcasts.empty') }}</TableCell>
-            </TableRow>
-            <TableRow v-for="item in items" :key="item.id">
-              <TableCell>{{ item.id }}</TableCell>
-              <TableCell>{{ item.bot_id || '-' }}</TableCell>
-              <TableCell class="max-w-64 break-words">
-                <p class="font-medium">{{ item.title }}</p>
-                <p v-if="item.last_error" class="text-xs text-destructive">{{ item.last_error }}</p>
-              </TableCell>
-              <TableCell>{{ formatStatus(item.status) }}</TableCell>
-              <TableCell>{{ item.recipient_count }}</TableCell>
-              <TableCell>{{ item.success_count }}</TableCell>
-              <TableCell>{{ item.failed_count }}</TableCell>
-              <TableCell>{{ item.unknown_count ?? 0 }}</TableCell>
-              <TableCell>{{ formatDate(item.created_at) || '-' }}</TableCell>
-              <TableCell class="text-right">
+    <div v-if="canList" class="rounded-xl border border-border bg-card overflow-x-auto">
+      <Table>
+        <TableHeader class="border-b border-border bg-muted/40 text-xs uppercase text-muted-foreground">
+          <TableRow>
+            <TableHead class="px-6 py-3">ID</TableHead>
+            <TableHead class="px-6 py-3">{{ t('telegramBot.instances.bot') }}</TableHead>
+            <TableHead class="px-6 py-3">{{ t('telegramBot.broadcasts.tableTitle') }}</TableHead>
+            <TableHead class="px-6 py-3">{{ t('telegramBot.broadcasts.tableStatus') }}</TableHead>
+            <TableHead class="px-6 py-3">{{ t('telegramBot.broadcasts.tableRecipientCount') }}</TableHead>
+            <TableHead class="px-6 py-3">{{ t('telegramBot.broadcasts.tableSuccessCount') }}</TableHead>
+            <TableHead class="px-6 py-3">{{ t('telegramBot.broadcasts.tableFailedCount') }}</TableHead>
+            <TableHead class="px-6 py-3">{{ t('telegramBot.instances.states.unknown') }}</TableHead>
+            <TableHead class="px-6 py-3">{{ t('telegramBot.broadcasts.tableCreatedAt') }}</TableHead>
+            <TableHead class="px-6 py-3 text-right">{{ t('telegramBot.broadcasts.tableActions') }}</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody class="divide-y divide-border">
+          <TableRow v-if="loading && !items.length">
+            <TableCell :colspan="10" class="px-6 py-8 text-center">
+              <Loader2 class="mx-auto h-5 w-5 animate-spin text-muted-foreground" />
+            </TableCell>
+          </TableRow>
+          <TableRow v-else-if="!items.length && !error">
+            <TableCell :colspan="10" class="px-6 py-8 text-center text-muted-foreground">{{ t('telegramBot.broadcasts.empty') }}</TableCell>
+          </TableRow>
+          <TableRow v-for="item in items" :key="item.id" class="hover:bg-muted/30">
+            <TableCell class="px-6 py-4">{{ item.id }}</TableCell>
+            <TableCell class="px-6 py-4">{{ item.bot_id || '-' }}</TableCell>
+            <TableCell class="max-w-64 break-words px-6 py-4">
+              <p class="font-medium">{{ item.title }}</p>
+              <p v-if="item.last_error" class="text-xs text-destructive">{{ item.last_error }}</p>
+            </TableCell>
+            <TableCell class="px-6 py-4">{{ formatStatus(item.status) }}</TableCell>
+            <TableCell class="px-6 py-4">{{ item.recipient_count }}</TableCell>
+            <TableCell class="px-6 py-4">{{ item.success_count }}</TableCell>
+            <TableCell class="px-6 py-4">{{ item.failed_count }}</TableCell>
+            <TableCell class="px-6 py-4">{{ item.unknown_count ?? 0 }}</TableCell>
+            <TableCell class="px-6 py-4">{{ formatDate(item.created_at) || '-' }}</TableCell>
+            <TableCell class="px-6 py-4 text-right">
+              <div class="flex flex-wrap items-center justify-end gap-2">
                 <Button
                   v-if="auth.hasPermission(`GET:/admin/telegram-bot/broadcasts/${item.id}`)"
                   variant="outline"
@@ -156,12 +165,12 @@ onUnmounted(() => {
                     {{ t('telegramBot.broadcasts.detail') }}
                   </RouterLink>
                 </Button>
-              </TableCell>
-            </TableRow>
-          </TableBody>
-        </Table>
-      </CardContent>
-    </Card>
+              </div>
+            </TableCell>
+          </TableRow>
+        </TableBody>
+      </Table>
+    </div>
     <div v-if="canList" class="flex items-center justify-end gap-3">
       <Button variant="outline" size="sm" :disabled="loading || refreshing || pagination.page <= 1" @click="fetchBroadcasts(pagination.page - 1, { silent: items.length > 0 })">
         {{ t('telegramBot.broadcasts.prevPage') }}

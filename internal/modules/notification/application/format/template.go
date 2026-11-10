@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/XManCodeing/XMall/internal/constants"
 	settingsmessaging "github.com/XManCodeing/XMall/internal/modules/settings/schema/messaging"
 	"github.com/XManCodeing/XMall/internal/queue"
 	"github.com/XManCodeing/XMall/internal/shared/jsonmap"
@@ -21,7 +22,7 @@ func BuildTemplateVariables(payload queue.NotificationDispatchPayload) map[strin
 	data["event_type"] = strings.ToLower(strings.TrimSpace(payload.EventType))
 	data["biz_type"] = strings.TrimSpace(payload.BizType)
 	data["biz_id"] = fmt.Sprintf("%d", payload.BizID)
-	data["occurred_at"] = time.Now().Format("2006-01-02 15:04:05")
+	data["occurred_at"] = constants.DisplayTime(time.Now(), "2006-01-02 15:04:05")
 	return data
 }
 
@@ -38,6 +39,16 @@ func RenderTemplate(tmpl string, variables map[string]interface{}) string {
 		value, ok := variables[strings.TrimSpace(submatch[1])]
 		if !ok {
 			return ""
+		}
+		// 模板是人类展示边界；只转换明确的时间类型，不猜测业务字符串或更改队列载荷。
+		switch at := value.(type) {
+		case time.Time:
+			return constants.DisplayTime(at, "2006-01-02 15:04:05")
+		case *time.Time:
+			if at == nil {
+				return ""
+			}
+			return constants.DisplayTime(*at, "2006-01-02 15:04:05")
 		}
 		return strings.TrimSpace(fmt.Sprintf("%v", value))
 	})

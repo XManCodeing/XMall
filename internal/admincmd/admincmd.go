@@ -108,11 +108,11 @@ func listAdmins() {
 	for _, a := range admins {
 		enabled := "no"
 		if a.TOTPEnabledAt != nil {
-			enabled = "yes (" + a.TOTPEnabledAt.Format("2006-01-02") + ")"
+			enabled = "yes (" + constants.DisplayTime(*a.TOTPEnabledAt, "2006-01-02") + ")"
 		}
 		last := "-"
 		if a.LastLoginAt != nil {
-			last = a.LastLoginAt.Format("2006-01-02 15:04:05")
+			last = constants.DisplayTime(*a.LastLoginAt, "2006-01-02 15:04:05")
 		}
 		fmt.Fprintf(w, "%d\t%s\t%t\t%s\t%s\n", a.ID, a.Username, a.IsSuper, enabled, last)
 	}
@@ -147,7 +147,7 @@ func resetTOTP(username string) {
 		UserAgent: "admin-tool",
 		RequestID: rid,
 	})
-	fmt.Printf("OK: 2FA reset for admin id=%d username=%s at %s\n", admin.ID, admin.Username, time.Now().Format(time.RFC3339))
+	fmt.Printf("OK: 2FA reset for admin id=%d username=%s at %s\n", admin.ID, admin.Username, constants.DisplayTime(time.Now(), time.RFC3339))
 }
 
 func resetPassword(username, providedPassword string) {
@@ -192,7 +192,7 @@ func resetPassword(username, providedPassword string) {
 		UserAgent: "admin-tool",
 		RequestID: rid,
 	})
-	fmt.Printf("OK: password reset for admin id=%d username=%s at %s\n", admin.ID, admin.Username, time.Now().Format(time.RFC3339))
+	fmt.Printf("OK: password reset for admin id=%d username=%s at %s\n", admin.ID, admin.Username, constants.DisplayTime(time.Now(), time.RFC3339))
 	fmt.Println("提示: 该管理员所有现有会话已强制下线，请用新密码重新登录。")
 }
 

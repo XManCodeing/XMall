@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import ManualPaymentConfirmation from './ManualPaymentConfirmation.vue'
 import { reactive, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { Package } from 'lucide-vue-next'
@@ -1104,6 +1105,8 @@ watch(
               </div>
             </div>
           </div>
+
+          <ManualPaymentConfirmation :order="selectedOrder" @refresh="emit('refresh')" />
 
           <div class="rounded-xl border border-border bg-muted/20 p-4">
             <h3 class="text-sm font-semibold text-foreground mb-3">{{ t('admin.orders.detailPayments') }}</h3>

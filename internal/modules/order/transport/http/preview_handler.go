@@ -15,6 +15,8 @@ import (
 	couponcontract "github.com/XManCodeing/XMall/internal/modules/coupon/contract"
 	promotioncontract "github.com/XManCodeing/XMall/internal/modules/promotion/contract"
 	resellermodule "github.com/XManCodeing/XMall/internal/modules/reseller/contract"
+	membership "github.com/XManCodeing/XMall/internal/modules/telegram/membership/contract"
+	wallet "github.com/XManCodeing/XMall/internal/modules/wallet/contract"
 	"github.com/XManCodeing/XMall/internal/platform/http/ginutil"
 	"github.com/XManCodeing/XMall/internal/platform/http/response"
 	"github.com/XManCodeing/XMall/internal/shared/jsonmap"
@@ -260,7 +262,26 @@ type mappedError struct {
 	logErr bool
 }
 
+// membershipPurchaseErrorRules 统一登录与游客预览/创建的会员错误，不向顾客暴露内部配置或事务信息。
+var membershipPurchaseErrorRules = []mappedError{
+	{target: membership.ErrSalesClosed, code: response.CodeBadRequest, key: "error.membership_sales_closed"},
+	{target: membership.ErrUntrustedIdentity, code: response.CodeBadRequest, key: "error.membership_binding_required"},
+	{target: membership.ErrConflict, code: response.CodeBadRequest, key: "error.membership_purchase_changed"},
+	{target: membership.ErrProbeRetry, code: response.CodeBadRequest, key: "error.membership_purchase_unavailable"},
+	{target: membership.ErrCapability, code: response.CodeBadRequest, key: "error.membership_purchase_unavailable"},
+	{target: membership.ErrOverlapUnavailable, code: response.CodeBadRequest, key: "error.membership_purchase_unavailable"},
+	{target: membership.ErrPermanentFullyCovered, code: response.CodeBadRequest, key: "error.membership_permanent_covered"},
+	{target: membership.ErrPermanentPartiallyCovered, code: response.CodeBadRequest, key: "error.membership_permanent_partial"},
+	{target: membership.ErrInvalid, code: response.CodeBadRequest, key: "error.membership_purchase_invalid"},
+}
+
 func respondWithMappedError(c *gin.Context, err error, rules []mappedError, fallbackCode int, fallbackKey string) {
+	for _, rule := range membershipPurchaseErrorRules {
+		if errors.Is(err, rule.target) {
+			ginutil.RespondError(c, rule.code, rule.key, nil)
+			return
+		}
+	}
 	if retryAfter := retryAfterSeconds(err); retryAfter > 0 {
 		c.Header("Retry-After", strconv.FormatInt(retryAfter, 10))
 		locale := i18n.ResolveLocale(c)
@@ -319,6 +340,8 @@ func respondGuestOrderCreateError(c *gin.Context, err error) {
 }
 
 var orderRiskControlErrorRules = []mappedError{
+	{target: wallet.ErrOnlyPaymentRequired, code: response.CodeBadRequest, key: "error.wallet_only_payment_required"},
+	{target: wallet.ErrInsufficientBalance, code: response.CodeBadRequest, key: "error.wallet_insufficient_balance"},
 	{target: ErrRiskIPBlacklisted, code: response.CodeForbidden, key: "error.risk_ip_blacklisted"},
 	{target: ErrRiskClientIPUnavailable, code: response.CodeForbidden, key: "error.risk_client_ip_unavailable"},
 	{target: ErrRiskTooManyPendingOrders, code: response.CodeTooManyRequests, key: "error.risk_too_many_pending_orders"},

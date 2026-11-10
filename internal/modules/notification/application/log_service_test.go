@@ -5,6 +5,9 @@ import (
 	"errors"
 	"strings"
 	"testing"
+	"time"
+
+	notificationformat "github.com/XManCodeing/XMall/internal/modules/notification/application/format"
 
 	"github.com/XManCodeing/XMall/internal/constants"
 	"github.com/XManCodeing/XMall/internal/modules/notification/contract"
@@ -13,6 +16,18 @@ import (
 	settingsstorefront "github.com/XManCodeing/XMall/internal/modules/settings/schema/storefront"
 	"github.com/XManCodeing/XMall/internal/queue"
 )
+
+// TestNotificationTemplateTimeUsesEastEight 验证邮件和通知共用模板跨 UTC 日期，保留普通字符串。
+func TestNotificationTemplateTimeUsesEastEight(t *testing.T) {
+	instant := time.Date(2026, 12, 31, 20, 30, 0, 0, time.UTC)
+	var absent *time.Time
+	actual := notificationformat.RenderTemplate("{{at}}|{{pointer}}|{{absent}}|{{text}}", map[string]interface{}{
+		"at": instant, "pointer": &instant, "absent": absent, "text": "2026-12-31T20:30:00Z",
+	})
+	if actual != "2027-01-01 04:30:00|2027-01-01 04:30:00||2026-12-31T20:30:00Z" {
+		t.Fatalf("rendered time = %q", actual)
+	}
+}
 
 type notificationSettingsStub struct {
 	notification settingsmessaging.NotificationCenterSetting

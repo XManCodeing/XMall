@@ -1,6 +1,7 @@
 package application
 
 import (
+	"errors"
 	"fmt"
 	delivery "github.com/XManCodeing/XMall/internal/modules/telegram/delivery/contract"
 	"strings"
@@ -19,6 +20,226 @@ import (
 
 	"github.com/shopspring/decimal"
 )
+
+// GetManualConfirmation 获取安全财务复核数据，不触发网关查询或泄露支付载荷。
+func (s *PaymentService) GetManualConfirmation(paymentID uint) (*paymentcontract.ManualConfirmationReview, error) {
+	payment, err := s.paymentRepo.GetByID(paymentID)
+	if err != nil {
+		return nil, err
+	}
+	if payment == nil {
+		return nil, ErrPaymentNotFound
+	}
+	if payment.OrderID == 0 {
+		return nil, paymentcontract.ErrManualConfirmationInvalid
+	}
+	order, err := s.orderRepo.GetByID(payment.OrderID)
+	if err != nil {
+		return nil, err
+	}
+	if order == nil {
+		return nil, paymentcontract.ErrManualConfirmationConflict
+	}
+	store, ok := s.paymentRepo.(paymentcontract.ManualConfirmationStore)
+	if !ok {
+		return nil, paymentcontract.ErrManualConfirmationUnavailable
+	}
+	record, err := store.FindManualConfirmation(payment.ID)
+	if err != nil {
+		return nil, err
+	}
+	return manualReview(payment, order, record), nil
+}
+
+// manualReview 仅投影允许财务查看的字段；CanConfirm 是提示，写入时再次锁内复核。
+func manualReview(payment *paymentdomain.Payment, order *orderdomain.Order, record *paymentdomain.ManualConfirmation) *paymentcontract.ManualConfirmationReview {
+	now := time.Now()
+	canConfirm := order.ParentID == nil && manualOrderRecoverable(order, now) && manualAttemptRecoverable(payment, now)
+	// Wallet cancellation refunds reset the stored wallet contribution; an old partial attempt cannot cover the restored order.
+	canConfirm = canConfirm && paymentCoveredOrderAmount(payment, payment.Amount.Decimal).Equal(normalizeOrderAmount(order.TotalAmount.Decimal.Sub(order.WalletPaidAmount.Decimal)))
+	blocked := ""
+	if !canConfirm {
+		blocked = "state_not_confirmable"
+	}
+	return &paymentcontract.ManualConfirmationReview{PaymentID: payment.ID, OrderID: order.ID, OrderNo: order.OrderNo, ChannelID: payment.ChannelID, ProviderType: payment.ProviderType, PaymentStatus: payment.Status, OrderStatus: order.Status, Amount: payment.Amount.String(), Currency: payment.Currency, OrderAmount: order.TotalAmount.String(), WalletPaidAmount: order.WalletPaidAmount.String(), PaidAt: payment.PaidAt, CreatedAt: payment.CreatedAt, ExpiresAt: payment.ExpiredAt, TransactionID: payment.ProviderRef, ExceptionCode: payment.ExceptionCode, RequiresTimeoutConfirmation: manualTimedOut(payment, order, now), CanConfirm: canConfirm, BlockedReason: blocked, Confirmation: record}
+}
+
+// ConfirmManually 将人工复核事实与审计提交到原支付事务，提交后恢复既有履约队列。
+// paymentID 精确绑定尝试，input.AdminID 由认证入口注入；错误时全部回滚。
+func (s *PaymentService) ConfirmManually(paymentID uint, input paymentcontract.ManualConfirmationInput) (*paymentcontract.ManualConfirmationReview, error) {
+	now := time.Now()
+	input, digest, err := normalizeManualInput(input, now)
+	if err != nil {
+		return nil, err
+	}
+	initial, err := s.paymentRepo.GetByID(paymentID)
+	if err != nil {
+		return nil, err
+	}
+	if initial == nil {
+		return nil, ErrPaymentNotFound
+	}
+	if initial.OrderID == 0 {
+		return nil, paymentcontract.ErrManualConfirmationInvalid
+	}
+	var result *paymentcontract.ManualConfirmationReview
+	var completedPayment *paymentdomain.Payment
+	var completedOrder *orderdomain.Order
+	err = s.paymentRepo.WithinTransaction(func(tx paymentcontract.Transaction) error {
+		repo := tx.Payments()
+		if locker, ok := repo.(paymentcontract.CreationLocker); ok {
+			if err := locker.LockCreation(initial.OrderID); err != nil {
+				return err
+			}
+		}
+		order, err := tx.Orders().GetByIDForUpdateWithChildren(initial.OrderID)
+		if err != nil {
+			return err
+		}
+		payment, err := repo.GetByIDForUpdate(paymentID)
+		if err != nil {
+			return err
+		}
+		if order == nil || payment == nil || payment.OrderID != order.ID {
+			return paymentcontract.ErrManualConfirmationConflict
+		}
+		// Re-evaluate deadlines after waiting for the root lock; a pre-lock timestamp can bypass timeout consent.
+		now = time.Now()
+		result, err = s.confirmLockedManual(tx, payment, order, input, digest, now)
+		completedPayment, completedOrder = payment, order
+		return err
+	})
+	if err != nil {
+		paymentLogger("payment_id", paymentID, "admin_id", input.AdminID).Warnw("payment_manual_confirmation_failed", "error", err)
+		return nil, err
+	}
+	// 已成功的重放只补可靠 outbox；常规调度还包含非幂等累计消费，不能重复调用。
+	// 提交后丢失的履约由已有 RecoverPaidFulfillment 扫描恢复。
+	if !result.Replayed {
+		s.enqueueOrderPaidAsync(completedOrder, completedPayment, paymentLogger("payment_id", paymentID))
+	}
+	paymentLogger("payment_id", paymentID, "admin_id", input.AdminID).Infow("payment_manual_confirmation_committed", "replayed", result.Replayed)
+	return result, nil
+}
+
+// confirmLockedManual 在付款根和尝试锁下执行幂等核验，持久事实或恢复既有 outbox。
+func (s *PaymentService) confirmLockedManual(tx paymentcontract.Transaction, payment *paymentdomain.Payment, order *orderdomain.Order, input paymentcontract.ManualConfirmationInput, digest string, now time.Time) (*paymentcontract.ManualConfirmationReview, error) {
+	repo := tx.Payments()
+	store, ok := repo.(paymentcontract.ManualConfirmationStore)
+	if !ok {
+		return nil, paymentcontract.ErrManualConfirmationUnavailable
+	}
+	existing, err := store.FindManualRequest(input.RequestID)
+	if err != nil {
+		return nil, err
+	}
+	if existing != nil && (existing.PaymentID != payment.ID || existing.RequestHash != digest) {
+		return nil, paymentcontract.ErrManualConfirmationConflict
+	}
+	record, err := store.FindManualConfirmation(payment.ID)
+	if err != nil {
+		return nil, err
+	}
+	if payment.Status == constants.PaymentStatusSuccess {
+		if manualTimedOut(payment, order, now) && !input.ConfirmTimeout {
+			return nil, paymentcontract.ErrManualConfirmationConflict
+		}
+		if err := validateManualReplay(payment, order, input, record, existing); err != nil {
+			return nil, err
+		}
+		if err := claimManualEvidence(repo, store, payment, input); err != nil {
+			return nil, err
+		}
+		if err := s.appendMembershipPaid(tx, order.ID, payment.ID); err != nil {
+			return nil, err
+		}
+		result := manualReview(payment, order, record)
+		result.Replayed = true
+		return result, nil
+	}
+	if record != nil || existing != nil {
+		return nil, paymentcontract.ErrManualConfirmationConflict
+	}
+	if err := validateManualPayment(payment, order, input, now); err != nil {
+		return nil, err
+	}
+	if err := rejectOtherManualReceipts(tx, order, payment.ID); err != nil {
+		return nil, err
+	}
+	// This endpoint records money already received; do not run active-payment capability checks or initiate a debit.
+	if err := s.checkReceiptSale(tx, order); err != nil {
+		return nil, err
+	}
+	if err := claimManualEvidence(repo, store, payment, input); err != nil {
+		return nil, err
+	}
+	record, err = s.persistManualConfirmation(tx, store, payment, order, input, digest, now)
+	if err != nil {
+		return nil, err
+	}
+	return manualReview(payment, order, record), nil
+}
+
+// validateManualReplay 仅恢复已成功事实，拒绝改写原证据和退款后的再次推进。
+func validateManualReplay(payment *paymentdomain.Payment, order *orderdomain.Order, input paymentcontract.ManualConfirmationInput, record, request *paymentdomain.ManualConfirmation) error {
+	amount, err := decimal.NewFromString(input.Amount)
+	if err != nil || !amount.Equal(payment.Amount.Decimal) || input.Currency != payment.Currency || payment.ExceptionCode != "" || order.PaidAt == nil || order.RefundedAmount.Decimal.IsPositive() {
+		return paymentcontract.ErrManualConfirmationConflict
+	}
+	if order.Status != constants.OrderStatusPaid && order.Status != constants.OrderStatusFulfilling && order.Status != constants.OrderStatusCompleted {
+		return paymentcontract.ErrManualConfirmationConflict
+	}
+	if request != nil {
+		return nil
+	}
+	if record != nil {
+		if record.TransactionID != input.TransactionID || record.EvidenceReference != input.EvidenceReference || !record.PaidAt.Equal(input.PaidAt) {
+			return paymentcontract.ErrManualConfirmationConflict
+		}
+		return nil
+	}
+	if input.TransactionID == "" || payment.ProviderRef != input.TransactionID || payment.PaidAt == nil || !payment.PaidAt.Equal(input.PaidAt) {
+		return paymentcontract.ErrManualConfirmationConflict
+	}
+	return nil
+}
+
+// persistManualConfirmation 复用支付成功与订单完成函数；审计、库存、会员 outbox 在同一事务提交。
+func (s *PaymentService) persistManualConfirmation(tx paymentcontract.Transaction, store paymentcontract.ManualConfirmationStore, payment *paymentdomain.Payment, order *orderdomain.Order, input paymentcontract.ManualConfirmationInput, digest string, now time.Time) (*paymentdomain.ManualConfirmation, error) {
+	record := &paymentdomain.ManualConfirmation{PaymentID: payment.ID, OrderID: order.ID, AdminID: input.AdminID, RequestID: input.RequestID, RequestHash: digest, Amount: input.Amount, Currency: input.Currency, TransactionID: input.TransactionID, EvidenceReference: input.EvidenceReference, Reason: input.Reason, PreviousPaymentStatus: payment.Status, PreviousOrderStatus: order.Status, PaidAt: input.PaidAt, CreatedAt: now}
+	amount, err := decimal.NewFromString(input.Amount)
+	if err != nil {
+		return nil, err
+	}
+	if err := restoreManualTimeout(tx, order, now); err != nil {
+		return nil, err
+	}
+	callbackAt := payment.CallbackAt
+	facts := PaymentCallbackInput{Amount: money.FromDecimal(amount), Currency: input.Currency, ProviderRef: input.TransactionID, PaidAt: &input.PaidAt}
+	outcome, err := s.persistCallbackPaymentFacts(tx, payment, order, constants.PaymentStatusSuccess, facts, now)
+	if err != nil {
+		return nil, err
+	}
+	if !outcome.canFulfill {
+		return nil, paymentcontract.ErrManualConfirmationConflict
+	}
+	// 人工审核不是网关回调，绝不写伪造 ProviderPayload/CallbackAt。
+	payment.CallbackAt = callbackAt
+	if err := tx.Payments().Update(payment); err != nil {
+		return nil, err
+	}
+	if _, err := tx.Payments().ExpirePendingByOrderIDs([]uint{order.ID}, now); err != nil {
+		return nil, err
+	}
+	if err := s.completePaidOrder(tx, order, payment, now); err != nil {
+		return nil, err
+	}
+	record.PaymentStatus, record.OrderStatus = payment.Status, order.Status
+	if err := store.CreateManualConfirmation(record); err != nil {
+		return nil, err
+	}
+	return record, nil
+}
 
 // PaymentCallbackInput 支付回调输入
 type PaymentCallbackInput struct {
@@ -106,13 +327,16 @@ func (s *PaymentService) HandleCallback(input PaymentCallbackInput) (*paymentdom
 		log.Infow("payment_callback_idempotent_success",
 			"current_status", payment.Status,
 		)
-		return s.updateCallbackMeta(payment, constants.PaymentStatusSuccess, input)
+		updated, _, _, err := s.applyPaymentUpdate(payment, order, status, input, time.Now())
+		return updated, err
 	}
 	if payment.Status == status {
 		log.Infow("payment_callback_idempotent_same_status",
 			"current_status", payment.Status,
 		)
-		return s.updateCallbackMeta(payment, status, input)
+		// 同状态通知也必须锁付款根并重新读取，避免旧 pending/failed 快照覆盖并发补单。
+		updated, _, _, err := s.applyPaymentUpdate(payment, order, status, input, time.Now())
+		return updated, err
 	}
 
 	previousStatus := payment.Status
@@ -223,6 +447,13 @@ func updateCallbackMetaWithRepo(repo paymentcontract.Store, payment *paymentdoma
 		payment.ProviderPayload = mergeProviderPayload(payment.ProviderPayload, input.Payload)
 		updated = true
 	}
+	// 只有已验证的终态事实可以解除创建结果未知；pending 不能证明不会继续扣款。
+	if status == constants.PaymentStatusSuccess || status == constants.PaymentStatusFailed || status == constants.PaymentStatusExpired {
+		if payment.CreationState != "ready" {
+			payment.CreationState = "ready"
+			updated = true
+		}
+	}
 	if status != "" && payment.Status != status {
 		payment.Status = status
 		updated = true
@@ -249,12 +480,10 @@ func (s *PaymentService) applyPaymentUpdate(payment *paymentdomain.Payment, orde
 
 	err := s.paymentRepo.WithinTransaction(func(tx paymentcontract.Transaction) error {
 		paymentRepo := tx.Payments()
-		lockedPayment, err := paymentRepo.GetByIDForUpdate(payment.ID)
-		if err != nil {
-			return ErrPaymentUpdateFailed
-		}
-		if lockedPayment == nil {
-			return ErrPaymentNotFound
+		if locker, ok := paymentRepo.(paymentcontract.CreationLocker); ok {
+			if err := locker.LockCreation(order.ID); err != nil {
+				return err
+			}
 		}
 		lockedOrder, err := tx.Orders().GetByIDForUpdateWithChildren(order.ID)
 		if err != nil {
@@ -263,6 +492,13 @@ func (s *PaymentService) applyPaymentUpdate(payment *paymentdomain.Payment, orde
 		if lockedOrder == nil {
 			return orderapp.ErrOrderNotFound
 		}
+		lockedPayment, err := paymentRepo.GetByIDForUpdate(payment.ID)
+		if err != nil {
+			return ErrPaymentUpdateFailed
+		}
+		if lockedPayment == nil {
+			return ErrPaymentNotFound
+		}
 		if err := validateCallbackPaymentFacts(lockedPayment, lockedOrder.OrderNo, status, input); err != nil {
 			return err
 		}
@@ -270,60 +506,23 @@ func (s *PaymentService) applyPaymentUpdate(payment *paymentdomain.Payment, orde
 		returnVal = lockedPayment
 		processedOrder = lockedOrder
 
-		if lockedPayment.Status == constants.PaymentStatusSuccess {
-			_, err := updateCallbackMetaWithRepo(paymentRepo, lockedPayment, constants.PaymentStatusSuccess, input)
+		if blocked, err := guardCallbackEvidence(paymentRepo, lockedPayment, status, input, now); blocked || err != nil {
 			return err
+		}
+		if handled, err := preserveSuccessfulReceipt(paymentRepo, lockedPayment, status, input, now); handled {
+			if err != nil {
+				return err
+			}
+			return s.appendMembershipPaid(tx, lockedOrder.ID, lockedPayment.ID)
 		}
 		if lockedPayment.Status == status {
 			_, err := updateCallbackMetaWithRepo(paymentRepo, lockedPayment, status, input)
 			return err
 		}
 
-		orderOpen := lockedOrder.Status == constants.OrderStatusPendingPayment && lockedOrder.PaidAt == nil
-
-		// 金额守恒：一笔支付只有覆盖订单当前的在线应付额才允许履约。
-		// 混合支付切换渠道会退回余额并抬高在线应付额，而旧链接在网关侧依然可付，
-		// 缺少这道校验就能用旧链接的小额付款换到整单商品。
-		requiredOnlineAmount := normalizeOrderAmount(lockedOrder.TotalAmount.Decimal.Sub(lockedOrder.WalletPaidAmount.Decimal))
-		coveredOnlineAmount := paymentCoveredOrderAmount(lockedPayment, input.Amount.Decimal)
-		underpaid := status == constants.PaymentStatusSuccess && orderOpen &&
-			coveredOnlineAmount.LessThan(requiredOnlineAmount)
-
-		canFulfillOrder := status == constants.PaymentStatusSuccess && orderOpen && !underpaid
-		switch status {
-		case constants.PaymentStatusSuccess:
-			paidAt := now
-			if input.PaidAt != nil {
-				paidAt = *input.PaidAt
-			}
-			lockedPayment.PaidAt = &paidAt
-			switch {
-			case underpaid:
-				lockedPayment.ExceptionCode = constants.PaymentExceptionUnderpaidSucceeded
-			case lockedPayment.SupersededAt != nil:
-				lockedPayment.ExceptionCode = constants.PaymentExceptionSupersededSucceeded
-			case !canFulfillOrder:
-				if lockedOrder.PaidAt != nil {
-					lockedPayment.ExceptionCode = constants.PaymentExceptionDuplicateSucceeded
-				} else {
-					lockedPayment.ExceptionCode = constants.PaymentExceptionClosedOrderSucceeded
-				}
-			}
-		case constants.PaymentStatusExpired:
-			lockedPayment.ExpiredAt = &now
-		}
-
-		lockedPayment.Status = status
-		lockedPayment.CallbackAt = &now
-		lockedPayment.UpdatedAt = now
-		if input.ProviderRef != "" {
-			lockedPayment.ProviderRef = input.ProviderRef
-		}
-		if input.Payload != nil {
-			lockedPayment.ProviderPayload = mergeProviderPayload(lockedPayment.ProviderPayload, input.Payload)
-		}
-		if err := paymentRepo.Update(lockedPayment); err != nil {
-			return ErrPaymentUpdateFailed
+		outcome, err := s.persistCallbackPaymentFacts(tx, lockedPayment, lockedOrder, status, input, now)
+		if err != nil {
+			return err
 		}
 
 		if status == constants.PaymentStatusSuccess {
@@ -331,26 +530,28 @@ func (s *PaymentService) applyPaymentUpdate(payment *paymentdomain.Payment, orde
 				return ErrPaymentUpdateFailed
 			}
 		}
-		if canFulfillOrder {
-			if err := s.markOrderPaid(tx, lockedOrder, lockedPayment.ID, now); err != nil {
+		if outcome.canFulfill {
+			if err := s.completePaidOrder(tx, lockedOrder, lockedPayment, now); err != nil {
 				return err
-			}
-			if s.resellerAccounting != nil {
-				if err := s.resellerAccounting.PostOrderProfit(tx.ResellerAccounting(), lockedOrder, lockedPayment); err != nil {
-					return err
-				}
 			}
 			orderPaid = true
 		}
-		if underpaid {
+		if outcome.creditUnderpaid {
 			// 订单不履约，但用户的钱不能吞：转入余额，用户可用余额补齐后重新支付。
-			if err := s.creditUnderpaidToWallet(tx, lockedOrder, lockedPayment, coveredOnlineAmount, requiredOnlineAmount); err != nil {
+			if err := s.creditUnderpaidToWallet(tx, lockedOrder, lockedPayment, outcome.covered, outcome.required); err != nil {
 				return err
 			}
 		}
-		if (status == constants.PaymentStatusFailed || status == constants.PaymentStatusExpired) && lockedOrder.Status == constants.OrderStatusPendingPayment && s.walletSvc != nil {
-			if _, err := orderapp.ReleaseWalletBalance(s.walletSvc, tx, lockedOrder, constants.WalletTxnTypeOrderRefund, "在线支付失败，退回余额"); err != nil {
-				return err
+		// 已被替代或已有更新尝试时，钱包占款归更新的尝试所有，旧链接的失败/过期回调不能退还（同步上游 cb61a4d）。
+		if (status == constants.PaymentStatusFailed || status == constants.PaymentStatusExpired) && lockedOrder.Status == constants.OrderStatusPendingPayment && s.walletSvc != nil && lockedPayment.SupersededAt == nil {
+			payments, err := paymentRepo.ListByOrderID(lockedOrder.ID)
+			if err != nil {
+				return ErrPaymentUpdateFailed
+			}
+			if newerActivePaymentID(payments, lockedPayment.ID) == 0 {
+				if _, err := orderapp.ReleaseWalletBalance(s.walletSvc, tx, lockedOrder, constants.WalletTxnTypeOrderRefund, "在线支付失败，退回余额"); err != nil {
+					return err
+				}
 			}
 		}
 
@@ -360,6 +561,161 @@ func (s *PaymentService) applyPaymentUpdate(payment *paymentdomain.Payment, orde
 		return nil, nil, false, err
 	}
 	return returnVal, processedOrder, orderPaid, nil
+}
+
+// guardCallbackEvidence 在调用方已锁业务根/支付的事务内占用同一渠道流水槽位。
+// 返回 blocked=true 表示冲突事实已持久化，禁止本次履约/充值；存储失败必须回滚并要求回调重试。
+func guardCallbackEvidence(repo paymentcontract.Store, payment *paymentdomain.Payment, status string, input PaymentCallbackInput, now time.Time) (bool, error) {
+	if status != constants.PaymentStatusSuccess {
+		return false, nil
+	}
+	reference := strings.TrimSpace(input.ProviderRef)
+	if reference == "" {
+		reference = strings.TrimSpace(payment.ProviderRef)
+	}
+	if reference == "" {
+		return false, nil
+	} // 无流水网关只能沿 payment ID 幂等，不能猜测跨支付身份。
+	store, ok := repo.(paymentcontract.ManualConfirmationStore)
+	if !ok {
+		return false, paymentcontract.ErrManualConfirmationUnavailable
+	}
+	err := store.ClaimEvidence(payment.ChannelID, "transaction:"+reference, payment.ID)
+	if err == nil {
+		return false, nil
+	}
+	if !errors.Is(err, paymentcontract.ErrManualConfirmationConflict) {
+		return false, err
+	}
+	anomaly := &paymentdomain.PaymentReceiptAnomaly{PaymentID: payment.ID, TransactionID: reference, Amount: input.Amount.String(), Currency: input.Currency, PaidAt: input.PaidAt, ObservedAt: now}
+	if err := store.RecordReceiptAnomaly(anomaly); err != nil {
+		return false, err
+	}
+	paymentLogger("payment_id", payment.ID, "channel_id", payment.ChannelID).Warnw("payment_receipt_evidence_conflict")
+	return true, nil
+}
+
+// completePaidOrder 是网关及人工收款共用的库存、分销记账、会员 outbox 链路。
+// tx/order/payment 必须已锁定；付款起算沿用可信 PaidAt，失败由调用方整体回滚。
+func (s *PaymentService) completePaidOrder(tx paymentcontract.Transaction, order *orderdomain.Order, payment *paymentdomain.Payment, now time.Time) error {
+	paidAt := now
+	if payment.PaidAt != nil {
+		paidAt = *payment.PaidAt
+	}
+	if err := s.markOrderPaid(tx, order, payment.ID, paidAt); err != nil {
+		return err
+	}
+	if s.resellerAccounting != nil {
+		if err := s.resellerAccounting.PostOrderProfit(tx.ResellerAccounting(), order, payment); err != nil {
+			return err
+		}
+	}
+	return s.appendMembershipPaid(tx, order.ID, payment.ID)
+}
+
+// preserveSuccessfulReceipt 保留已成功支付证据；额外交易流水持久记录异常，不覆盖原流水或付款时刻。
+func preserveSuccessfulReceipt(repo paymentcontract.Store, payment *paymentdomain.Payment, status string, input PaymentCallbackInput, now time.Time) (bool, error) {
+	if payment.Status != constants.PaymentStatusSuccess {
+		return false, nil
+	}
+	if status != constants.PaymentStatusSuccess {
+		return true, nil
+	}
+	// 兼容历史网关成功未记录流水的情况；人工凭据确认则保守保存为待复核异常，不能猜测同笔。
+	if input.ProviderRef != "" && payment.ProviderRef == "" {
+		store, ok := repo.(paymentcontract.ManualConfirmationStore)
+		if !ok {
+			return true, paymentcontract.ErrManualConfirmationUnavailable
+		}
+		record, err := store.FindManualConfirmation(payment.ID)
+		if err != nil {
+			return true, err
+		}
+		if record == nil {
+			return true, nil
+		}
+	}
+	if input.ProviderRef != "" && input.ProviderRef != payment.ProviderRef {
+		store, ok := repo.(paymentcontract.ManualConfirmationStore)
+		if !ok {
+			return true, paymentcontract.ErrManualConfirmationUnavailable
+		}
+		anomaly := &paymentdomain.PaymentReceiptAnomaly{PaymentID: payment.ID, TransactionID: input.ProviderRef, Amount: input.Amount.String(), Currency: input.Currency, PaidAt: input.PaidAt, ObservedAt: now}
+		if err := store.RecordReceiptAnomaly(anomaly); err != nil {
+			return true, err
+		}
+		// 额外收款独立留痕，不把原先有效付款改为异常，否则待消费权益会被误阻断。
+		return true, nil
+	}
+	return true, nil
+}
+
+// callbackOutcome 将可信收款事实与是否允许履约/余额补偿分开。
+type callbackOutcome struct {
+	canFulfill, creditUnderpaid bool
+	covered, required           decimal.Decimal
+}
+
+// persistCallbackPaymentFacts 在调用方事务中保存已验签、金额校验后的支付事实。
+// tx/payment/order 必须已锁定；status/input 为可信回调，now 为处理时间。
+// 返回允许的后续动作；只有明确会员拒绝转为异常，数据库错误仍回滚待重试。
+func (s *PaymentService) persistCallbackPaymentFacts(tx paymentcontract.Transaction, payment *paymentdomain.Payment, order *orderdomain.Order, status string, input PaymentCallbackInput, now time.Time) (callbackOutcome, error) {
+	outcome := callbackOutcome{
+		required: normalizeOrderAmount(order.TotalAmount.Decimal.Sub(order.WalletPaidAmount.Decimal)),
+		covered:  paymentCoveredOrderAmount(payment, input.Amount.Decimal),
+	}
+	orderOpen := order.Status == constants.OrderStatusPendingPayment && order.PaidAt == nil
+	underpaid := status == constants.PaymentStatusSuccess && orderOpen && outcome.covered.LessThan(outcome.required)
+	membershipClosed := false
+	// 已支付订单属于历史事实，后来转换商品不能重新分类这笔付款。
+	if status == constants.PaymentStatusSuccess && order.PaidAt == nil && (orderOpen || order.Status == constants.OrderStatusCanceled) {
+		if err := s.checkReceiptSale(tx, order); err != nil {
+			if !errors.Is(err, productcontract.ErrMembershipSaleClosed) {
+				return outcome, err
+			}
+			membershipClosed = true
+		}
+	}
+	outcome.canFulfill = status == constants.PaymentStatusSuccess && orderOpen && !underpaid && !membershipClosed
+	outcome.creditUnderpaid = underpaid && !membershipClosed
+	switch status {
+	case constants.PaymentStatusSuccess:
+		paidAt := now
+		if input.PaidAt != nil {
+			paidAt = *input.PaidAt
+		}
+		payment.PaidAt = &paidAt
+		switch {
+		case membershipClosed:
+			payment.ExceptionCode = constants.PaymentExceptionMembershipSaleClosed
+		case underpaid:
+			payment.ExceptionCode = constants.PaymentExceptionUnderpaidSucceeded
+		case payment.SupersededAt != nil:
+			payment.ExceptionCode = constants.PaymentExceptionSupersededSucceeded
+		case !outcome.canFulfill:
+			if order.PaidAt != nil {
+				payment.ExceptionCode = constants.PaymentExceptionDuplicateSucceeded
+			} else {
+				payment.ExceptionCode = constants.PaymentExceptionClosedOrderSucceeded
+			}
+		}
+	case constants.PaymentStatusExpired:
+		payment.ExpiredAt = &now
+	}
+	payment.Status, payment.CallbackAt, payment.UpdatedAt = status, &now, now
+	if status == constants.PaymentStatusSuccess || status == constants.PaymentStatusFailed || status == constants.PaymentStatusExpired {
+		payment.CreationState = "ready"
+	}
+	if input.ProviderRef != "" {
+		payment.ProviderRef = input.ProviderRef
+	}
+	if input.Payload != nil {
+		payment.ProviderPayload = mergeProviderPayload(payment.ProviderPayload, input.Payload)
+	}
+	if err := tx.Payments().Update(payment); err != nil {
+		return outcome, ErrPaymentUpdateFailed
+	}
+	return outcome, nil
 }
 
 // creditUnderpaidToWallet 把"支付成功但金额不足以履约订单"的款项转入用户余额。
@@ -415,6 +771,10 @@ func mergeProviderPayload(existing jsonmap.JSON, incoming jsonmap.JSON) jsonmap.
 		merged[key] = value
 	}
 	for key, value := range incoming {
+		// 创建时的金额/汇率是资金核对依据，回调原文不能覆盖这些快照。
+		if key == "original_amount" || key == "original_currency" || key == "exchange_rate" {
+			continue
+		}
 		merged[key] = value
 	}
 	return merged
@@ -422,6 +782,9 @@ func mergeProviderPayload(existing jsonmap.JSON, incoming jsonmap.JSON) jsonmap.
 
 // markOrderPaid 在事务内将订单更新为已支付并处理库存
 func (s *PaymentService) markOrderPaid(tx paymentcontract.Transaction, order *orderdomain.Order, paymentID uint, now time.Time) error {
+	if err := s.checkReceiptSale(tx, order); err != nil {
+		return err
+	}
 	if order == nil {
 		return orderapp.ErrOrderNotFound
 	}

@@ -32,7 +32,7 @@ func setup(t *testing.T) (*Store, *gorm.DB, context.Context, *d.Instance) {
 	t.Cleanup(func() { pool.Close() })
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	t.Cleanup(cancel)
-	if err := db.WithContext(ctx).AutoMigrate(&d.Instance{}, &d.Contact{}, &d.Inbox{}, &d.Session{}, &d.Delivery{}); err != nil {
+	if err := db.WithContext(ctx).AutoMigrate(&d.Instance{}, &d.GenerationExit{}, &d.Contact{}, &d.Inbox{}, &d.Session{}, &d.Delivery{}); err != nil {
 		t.Fatal(err)
 	}
 	s := New(db)

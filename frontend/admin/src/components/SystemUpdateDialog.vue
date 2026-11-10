@@ -19,7 +19,7 @@ import { confirmAction } from '@/utils/confirm'
 import { notifyError, notifyErrorOnce, notifySuccess } from '@/utils/notify'
 
 const props = defineProps<{ open: boolean }>()
-const emit = defineEmits<{ 'update:open': [value: boolean] }>()
+const emit = defineEmits<{ 'update:open': [value: boolean]; checked: [result: UpdateCheckResult] }>()
 
 const { t } = useI18n()
 
@@ -177,12 +177,7 @@ const progressPercent = computed(() => {
   }
 })
 
-function formatPublishedAt(raw: string | null | undefined) {
-  if (!raw) return ''
-  const date = new Date(raw)
-  if (Number.isNaN(date.getTime())) return raw
-  return date.toLocaleString()
-}
+import { formatDate as formatPublishedAt } from '@/utils/format'
 
 function extractErrorMessage(err: any): string {
   return err?.response?.data?.msg || err?.message || ''
@@ -199,6 +194,7 @@ async function loadCheck() {
     const payload = res.data?.data as UpdateCheckResult | undefined
     if (payload) {
       checkResult.value = payload
+      emit('checked', payload)
     } else {
       checkError.value = t('admin.updateCheck.failedGeneric')
     }

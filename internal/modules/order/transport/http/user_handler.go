@@ -1,7 +1,10 @@
 package orderhttp
 
 import (
+	"context"
 	"errors"
+	"fmt"
+	"strconv"
 	"strings"
 
 	orderdomain "github.com/XManCodeing/XMall/internal/modules/order/domain"
@@ -12,6 +15,7 @@ import (
 	"github.com/XManCodeing/XMall/internal/logger"
 	orderpresenter "github.com/XManCodeing/XMall/internal/modules/order/transport/presenter"
 	reseller "github.com/XManCodeing/XMall/internal/modules/reseller/contract"
+	membership "github.com/XManCodeing/XMall/internal/modules/telegram/membership/contract"
 	"github.com/XManCodeing/XMall/internal/platform/http/ginutil"
 	"github.com/XManCodeing/XMall/internal/platform/http/response"
 	"github.com/XManCodeing/XMall/internal/shared/money"
@@ -70,10 +74,11 @@ type OrderPaymentChannelsRequest struct {
 
 // UserHandler 处理前台用户订单 HTTP（只读 + 取消 + 支付渠道查询）。
 type UserHandler struct {
-	orders   UserOrderQuery
-	payments PaymentChannelPolicy
-	refunds  RefundRecordDirectory
-	users    UserLookup
+	orders    UserOrderQuery
+	payments  PaymentChannelPolicy
+	refunds   RefundRecordDirectory
+	users     UserLookup
+	snapshots membership.SnapshotReader
 }
 
 func NewUserHandler(orders UserOrderQuery, payments PaymentChannelPolicy, refunds RefundRecordDirectory, users UserLookup) *UserHandler {
@@ -81,6 +86,46 @@ func NewUserHandler(orders UserOrderQuery, payments PaymentChannelPolicy, refund
 		panic("order user handler: orders is nil")
 	}
 	return &UserHandler{orders: orders, payments: payments, refunds: refunds, users: users}
+}
+
+// WithMembershipSnapshots 装配历史快照读取器；返回原 handler，不扩大订单查询授权范围。
+func (h *UserHandler) WithMembershipSnapshots(reader membership.SnapshotReader) *UserHandler {
+	h.snapshots = reader
+	return h
+}
+
+// enrichMembershipDetail 对已授权并裁剪的详情追加最小购买快照；ctx 传递取消，uid 为当前账号。
+// 缓存复用父聚合与子项读取；账户不一致、损坏快照或读取失败返回错误，不输出部分详情。
+func (h *UserHandler) enrichMembershipDetail(ctx context.Context, order *orderdomain.Order, detail *orderpresenter.OrderDetail, uid uint, cache map[uint]*membership.OrderItemSnapshot) error {
+	if h.snapshots == nil {
+		return nil
+	}
+	if order == nil || order.UserID != uid || len(order.Items) != len(detail.Items) || len(order.Children) != len(detail.Children) {
+		return fmt.Errorf("membership detail: authorized order shape mismatch")
+	}
+	items, err := membershipItems(ctx, h.snapshots, order.Items, cache)
+	if err != nil {
+		return err
+	}
+	for index, item := range items {
+		stored := item.Snapshot
+		if stored == nil {
+			continue
+		}
+		if stored.AccountID != uid || stored.OrderItemID != item.ID || stored.BeneficiaryTelegramID <= 0 {
+			return fmt.Errorf("membership detail: snapshot ownership mismatch")
+		}
+		detail.Items[index].MembershipSnapshot = &orderpresenter.MembershipSnapshot{
+			BeneficiaryTelegramID: strconv.FormatInt(stored.BeneficiaryTelegramID, 10),
+			ConfigVersion:         stored.ConfigVersion, Kind: stored.Kind, Months: stored.Months, Quantity: stored.Quantity,
+		}
+	}
+	for index := range order.Children {
+		if err := h.enrichMembershipDetail(ctx, &order.Children[index], &detail.Children[index], uid, cache); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func tenantFromRequest(c *gin.Context) reseller.TenantContext {
@@ -165,6 +210,10 @@ func (h *UserHandler) GetOrderByOrderNo(c *gin.Context) {
 	}
 
 	orderDetail := orderpresenter.NewOrderDetailTruncated(order)
+	if err := h.enrichMembershipDetail(c.Request.Context(), order, &orderDetail, uid, make(map[uint]*membership.OrderItemSnapshot)); err != nil {
+		ginutil.RespondError(c, response.CodeInternal, "error.order_fetch_failed", err)
+		return
+	}
 	enrichOrderWithAllowedChannels(h.payments, order, &orderDetail)
 	enrichOrderWithRefundRecords(h.refunds, order, &orderDetail)
 	response.Success(c, orderDetail)

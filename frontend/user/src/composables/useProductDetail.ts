@@ -1,3 +1,4 @@
+import { formatDate as formatRelatedPostDate } from '../utils/format'
 import { ref, onMounted, onUnmounted, computed, watch, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
@@ -13,6 +14,7 @@ import { debounceAsync } from '../utils/debounce'
 import { buildSkuDisplayText, normalizeSkuId } from '../utils/sku'
 import { resolveSkuAvailableStock, resolveSkuStockDisplay, type PublicStockDisplay } from '../utils/publicStock'
 import { useLocalized, useProductLabels } from './useProduct'
+import { isMembershipProduct, membershipTermLabel, membershipSalesBlocked } from '../utils/membershipPurchase'
 import { toast } from './useToast'
 
 /**
@@ -60,12 +62,8 @@ export function useProductDetail(options: { onLoaded?: () => void } = {}) {
 
   const loading = ref(true)
   const product = ref<any>(null)
+  const isMembership = computed(() => isMembershipProduct(product.value))
   const relatedPosts = computed<any[]>(() => product.value?.related_posts || [])
-  const formatRelatedPostDate = (dateString: string) => {
-    if (!dateString) return ''
-    const date = new Date(dateString)
-    return date.toLocaleDateString(appStore.locale, { year: 'numeric', month: 'long', day: 'numeric' })
-  }
   const currentImage = ref<string>('')
   const selectedSkuId = ref(0)
   const quantity = ref(1)
@@ -231,6 +229,7 @@ export function useProductDetail(options: { onLoaded?: () => void } = {}) {
   }
 
   const isSkuPurchasable = (sku: any) => {
+    if (isMembership.value) return true
     const available = skuAvailableStock(sku)
     if (available === null) return true
     return available > 0
@@ -272,6 +271,7 @@ export function useProductDetail(options: { onLoaded?: () => void } = {}) {
   }
 
   const quantityEffectiveLimit = computed(() => {
+    if (isMembership.value) return 1
     const sku = selectedSku.value
     const available = skuAvailableStock(sku)
     const productLimit = normalizeOptionalLimitNumber(product.value?.max_purchase_quantity)
@@ -283,6 +283,7 @@ export function useProductDetail(options: { onLoaded?: () => void } = {}) {
   })
 
   const quantityEffectiveMin = computed(() => {
+    if (isMembership.value) return 1
     const productMin = normalizeOptionalLimitNumber(product.value?.min_purchase_quantity)
     return productMin && productMin > 0 ? productMin : 1
   })
@@ -308,6 +309,7 @@ export function useProductDetail(options: { onLoaded?: () => void } = {}) {
     return limit < quantityEffectiveMin.value
   })
   const canPurchase = computed(() => {
+    if (membershipSalesBlocked(product.value)) return false
     if (!product.value) return false
     if (activeSkus.value.length === 0) return false
     if (product.value.is_sold_out) return false
@@ -318,6 +320,7 @@ export function useProductDetail(options: { onLoaded?: () => void } = {}) {
     return true
   })
   const cannotPurchaseReason = computed(() => {
+    if (membershipSalesBlocked(product.value)) return t('membershipPurchase.closed')
     if (!product.value) return ''
     if (requiresLogin.value) return ''
     if (requiresSKUSelection.value) return t('productDetail.skuRequired')
@@ -342,6 +345,7 @@ export function useProductDetail(options: { onLoaded?: () => void } = {}) {
   })
 
   const skuDisplayText = (sku: any) => {
+    if (isMembership.value) return membershipTermLabel(product.value, sku?.id, t)
     return buildSkuDisplayText({
       skuCode: sku?.sku_code,
       specValues: sku?.spec_values,
@@ -381,6 +385,7 @@ export function useProductDetail(options: { onLoaded?: () => void } = {}) {
   }
 
   const buildItemPayload = (sku: any) => ({
+    membership: product.value.membership,
     productId: product.value.id,
     skuId: normalizeSkuId(sku?.id),
     skuCode: String(sku?.sku_code || ''),
@@ -521,7 +526,8 @@ export function useProductDetail(options: { onLoaded?: () => void } = {}) {
   })
 
   const goLogin = () => {
-    router.push(`/auth/login?redirect=${encodeURIComponent(route.fullPath)}`)
+    const redirect = isMembership.value ? `${route.path}?sku_id=${selectedSkuId.value}` : route.fullPath
+    router.push({ path: '/auth/login', query: { redirect } })
   }
 
   const loadProduct = async () => {
@@ -533,6 +539,8 @@ export function useProductDetail(options: { onLoaded?: () => void } = {}) {
       if (images.value.length > 0) {
         currentImage.value = images.value[0] || ''
       }
+      const requestedSku = normalizeSkuId(route.query.sku_id)
+      if (activeSkus.value.some((sku: any) => normalizeSkuId(sku.id) === requestedSku)) selectedSkuId.value = requestedSku
       syncSelectedSku()
       await nextTick()
       options.onLoaded?.()
@@ -675,7 +683,7 @@ export function useProductDetail(options: { onLoaded?: () => void } = {}) {
     formatPromotionRule, formatWholesaleTier, formatRelatedPostDate,
     normalizeSkuId,
     // 状态
-    loading, product, relatedPosts, currentImage, selectedSkuId, quantity, purchaseWarning,
+    loading, product, isMembership, relatedPosts, currentImage, selectedSkuId, quantity, purchaseWarning,
     activeSkus, selectedSku,
     // 价格计算
     selectedSkuMemberPrice, hasMemberPrice,

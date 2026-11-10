@@ -9,6 +9,60 @@ import (
 	"time"
 )
 
+type invitePanelHandler struct {
+	acceptingPanelHandler
+	deny bool
+}
+
+// AuthorizeInviteDelivery supplies the isolated current-route guard used by these runtime tests.
+func (handler invitePanelHandler) AuthorizeInviteDelivery(context.Context, uint, c.Message) error {
+	if handler.deny {
+		return c.ErrStale
+	}
+	return nil
+}
+
+// TestInvitePanelNeverReplaysUncertainEdits covers the real delivery state classifier.
+func TestInvitePanelNeverReplaysUncertainEdits(t *testing.T) {
+	for _, scenario := range []struct {
+		name, operation, want string
+		failure               error
+		deny                  bool
+	}{
+		{"sent edit", "edit", "sent", nil, false},
+		{"empty send receipt", "send", "unknown", nil, false},
+		{"unknown edit", "edit", "unknown", applyingFailure{kind: "unknown", uncertain: true}, false},
+		{"failed", "edit", "failed", applyingFailure{kind: "invalid_content"}, false},
+		{"old route", "edit", "failed", nil, true},
+	} {
+		t.Run(scenario.name, func(t *testing.T) {
+			ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+			defer cancel()
+			store := &panelApplyStore{deliveryGuardStore: &deliveryGuardStore{cancel: cancel}}
+			api := &panelApplyAPI{err: scenario.failure}
+			manager := NewManager(store, api, "test-key")
+			message := c.Message{InviteDelivery: &c.InviteDeliveryRef{InviteID: 8}, Purpose: "panel", Operation: scenario.operation, TargetMessageID: 77}
+			raw, err := json.Marshal(message)
+			if err != nil {
+				t.Fatal(err)
+			}
+			cipher, err := manager.Seal(string(raw))
+			if err != nil {
+				t.Fatal(err)
+			}
+			store.item = &d.Delivery{ID: 1, BotID: 1, UserID: 7, ChatID: 12, TelegramUserID: 12, Purpose: "panel", PayloadCipher: cipher, Operation: scenario.operation}
+			NewRuntime(manager, nil, invitePanelHandler{deny: scenario.deny}).deliver(ctx, &d.Instance{ID: 1}, "test", &lifecycleLease{}, cancel)
+			calls := 1
+			if scenario.deny {
+				calls = 0
+			}
+			if store.status != scenario.want || api.calls != calls {
+				t.Fatalf("state=%s sends=%d", store.status, api.calls)
+			}
+		})
+	}
+}
+
 type applyingFailure struct {
 	kind      string
 	uncertain bool

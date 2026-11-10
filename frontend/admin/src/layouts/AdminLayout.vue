@@ -1,79 +1,28 @@
 <script setup lang="ts">
 import { parseNavExpansion, resolveNavExpansion } from '@/utils/navExpansion'
-import BrandMark from '@/components/BrandMark.vue'
-import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
-import { useRoute, RouterView, RouterLink } from 'vue-router'
-import {
-  LayoutDashboard,
-  LogOut,
-  ShoppingBag,
-  CreditCard,
-  Package,
-  Users,
-  FileText,
-  BadgePercent,
-  Settings,
-  FolderTree,
-  Boxes,
-  KeyRound,
-  Download,
-  ListOrdered,
-  WalletCards,
-  ReceiptText,
-  UserRound,
-  Wallet,
-  History,
-  Images,
-  Newspaper,
-  Ticket,
-  Gift,
-  UserPlus,
-  SlidersHorizontal,
-  ShieldCheck,
-  ScrollText,
-  ChevronDown,
-  ChevronRight,
-  ChevronsLeft,
-  ChevronsRight,
-  Home,
-  Sun,
-  Moon,
-  Link,
-  Truck,
-  ClipboardCheck,
-  Lock,
-  Bot,
-  Send,
-  Crown,
-  Bell,
-  ImageIcon,
-} from 'lucide-vue-next'
+import AdminBrandHeader from './AdminBrandHeader.vue'
+import { useSystemUpdateNotice } from '@/composables/useSystemUpdateNotice'
+import { computed, onBeforeUnmount, onMounted, provide, ref, watch } from 'vue'
+import { pageDialogTargetKey } from '@/components/ui/dialog/pageScope'
+import ConfirmDialogHost from '@/components/ConfirmDialogHost.vue'
+import { useRoute, RouterLink } from 'vue-router'
+import AdminTabs from './AdminTabs.vue'
+import AdminRouteCache from './AdminRouteCache.vue'
+import { LayoutDashboard, LogOut, ChevronDown, ChevronRight, ChevronsLeft, ChevronsRight, Home, Languages, CircleHelp } from 'lucide-vue-next'
+import MembershipGuideDialog from '@/components/telegram/MembershipGuideDialog.vue'
+import { useMembershipGuide } from '@/composables/useMembershipGuide'
+import { useAdminNavigation, type NavGroup } from '@/composables/useAdminNavigation'
 import { Menu } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet'
-import { RefreshCw } from 'lucide-vue-next'
 import SystemUpdateDialog from '@/components/SystemUpdateDialog.vue'
 import { useAdminAuthStore } from '@/stores/auth'
 import { useI18n } from 'vue-i18n'
 import { adminAPI } from '@/api/admin'
 import { applySiteIcon } from '@/utils/favicon'
 import { adminUrl } from '@/utils/adminBase'
-
-interface NavGroupItem {
-  label: string
-  to: string
-  permission?: string
-  icon?: any
-}
-
-interface NavGroup {
-  id: string
-  label: string
-  icon: any
-  items: NavGroupItem[]
-}
 
 const NAV_GROUP_EXPANDED_STORAGE_KEY = 'admin_nav_group_expanded_v2'
 const SIDEBAR_COLLAPSED_STORAGE_KEY = 'admin_sidebar_collapsed'
@@ -92,15 +41,21 @@ const readExpandedGroups = () => {
   }
 }
 
-const { t, locale } = useI18n()
+const { t, locale } = useI18n({ useScope: 'global' })
+const guide = useMembershipGuide()
+const guideDialog = ref<InstanceType<typeof MembershipGuideDialog> | null>(null)
 const route = useRoute()
+const contentElement = ref<HTMLElement | null>(null)
+const dialogTarget = ref<HTMLElement | null>(null)
+provide(pageDialogTargetKey, computed(() => dialogTarget.value))
 const authStore = useAdminAuthStore()
 const isDark = ref(false)
 const appVersion = ref('')
 const siteUrl = ref('')
 
-// 版本检测与一键升级的完整交互都在 SystemUpdateDialog 内，这里只负责开关
+// Manual upgrade actions remain in the dialog; background checks only update the badge.
 const updateCheckOpen = ref(false)
+const { hasUpdate, latestVersion, canCheck, accept: acceptUpdateCheck } = useSystemUpdateNotice(updateCheckOpen)
 
 const navSearch = ref('')
 const expandedGroups = ref<Record<string, boolean>>(readExpandedGroups())
@@ -113,418 +68,7 @@ watch(() => route.path, () => {
   mobileNavOpen.value = false
 })
 
-const navGroups = computed<NavGroup[]>(() => {
-  const groups: NavGroup[] = [
-    {
-      id: 'products',
-      label: t('admin.navGroups.productManagement'),
-      icon: Package,
-      items: [
-        {
-          label: t('admin.navItems.productCategories'),
-          to: '/categories',
-          icon: FolderTree,
-          permission: 'GET:/admin/categories',
-        },
-        {
-          label: t('admin.navItems.productList'),
-          to: '/products',
-          icon: Boxes,
-          permission: 'GET:/admin/products',
-        },
-        {
-          label: t('admin.navItems.cardSecrets'),
-          to: '/card-secrets',
-          icon: KeyRound,
-          permission: 'GET:/admin/card-secrets',
-        },
-        {
-          label: t('admin.navItems.cardSecretImports'),
-          to: '/card-secret-imports',
-          icon: KeyRound,
-          permission: 'GET:/admin/card-secrets',
-        },
-        {
-          label: t('admin.navItems.cardSecretExports'),
-          to: '/card-secret-exports',
-          icon: Download,
-          permission: 'GET:/admin/card-secrets',
-        },
-      ],
-    },
-    {
-      id: 'orders',
-      label: t('admin.navGroups.orderManagement'),
-      icon: ShoppingBag,
-      items: [
-        {
-          label: t('admin.navItems.orderList'),
-          to: '/orders',
-          icon: ListOrdered,
-          permission: 'GET:/admin/orders',
-        },
-        {
-          label: t('admin.navItems.orderRiskControl'),
-          to: '/order-risk-control',
-          icon: ShieldCheck,
-          permission: 'GET:/admin/settings',
-        },
-        {
-          label: t('admin.navItems.orderRefunds'),
-          to: '/order-refunds',
-          icon: ReceiptText,
-          permission: 'GET:/admin/order-refunds',
-        },
-      ],
-    },
-    {
-      id: 'payments',
-      label: t('admin.navGroups.paymentManagement'),
-      icon: CreditCard,
-      items: [
-        {
-          label: t('admin.navItems.paymentChannels'),
-          to: '/payment-channels',
-          icon: WalletCards,
-          permission: 'GET:/admin/payment-channels',
-        },
-        {
-          label: t('admin.navItems.payments'),
-          to: '/payments',
-          icon: ReceiptText,
-          permission: 'GET:/admin/payments',
-        },
-        {
-          label: t('admin.navItems.callbackRoutes'),
-          to: '/callback-routes',
-          icon: Link,
-          permission: 'GET:/admin/settings',
-        },
-      ],
-    },
-    {
-      id: 'users',
-      label: t('admin.navGroups.userManagement'),
-      icon: Users,
-      items: [
-        {
-          label: t('admin.navItems.userList'),
-          to: '/users',
-          icon: UserRound,
-          permission: 'GET:/admin/users',
-        },
-        {
-          label: t('admin.navItems.walletManagement'),
-          to: '/wallet-recharges',
-          icon: Wallet,
-          permission: 'GET:/admin/wallet/recharges',
-        },
-        {
-          label: t('admin.navItems.walletConfig'),
-          to: '/wallet-config',
-          icon: Wallet,
-          permission: 'GET:/admin/settings',
-        },
-        {
-          label: t('admin.navItems.userLoginLogs'),
-          to: '/user-login-logs',
-          icon: History,
-          permission: 'GET:/admin/user-login-logs',
-        },
-        {
-          label: t('admin.navItems.memberLevels'),
-          to: '/member-levels',
-          icon: Crown,
-          permission: 'GET:/admin/member-levels',
-        },
-      ],
-    },
-    {
-      id: 'articles',
-      label: t('admin.navGroups.articleManagement'),
-      icon: Newspaper,
-      items: [
-        {
-          label: t('admin.navItems.articleList'),
-          to: '/posts/blog',
-          icon: FileText,
-          permission: 'GET:/admin/posts',
-        },
-        {
-          label: t('admin.navItems.postCategories'),
-          to: '/posts/categories',
-          icon: FolderTree,
-          permission: 'GET:/admin/post-categories',
-        },
-      ],
-    },
-    {
-      id: 'content',
-      label: t('admin.navGroups.contentManagement'),
-      icon: FileText,
-      items: [
-        {
-          label: t('admin.navItems.banners'),
-          to: '/banners',
-          icon: Images,
-          permission: 'GET:/admin/banners',
-        },
-        {
-          label: t('admin.navItems.media'),
-          to: '/media',
-          icon: ImageIcon,
-          permission: 'GET:/admin/media',
-        },
-        {
-          label: t('admin.navItems.announcementList'),
-          to: '/posts/notice',
-          icon: Bell,
-          permission: 'GET:/admin/posts',
-        },
-      ],
-    },
-    {
-      id: 'marketing',
-      label: t('admin.navGroups.marketingManagement'),
-      icon: BadgePercent,
-      items: [
-        {
-          label: t('admin.navItems.coupons'),
-          to: '/coupons',
-          icon: Ticket,
-          permission: 'GET:/admin/coupons',
-        },
-        {
-          label: t('admin.navItems.promotions'),
-          to: '/promotions',
-          icon: BadgePercent,
-          permission: 'GET:/admin/promotions',
-        },
-        {
-          label: t('admin.navItems.wholesalePrices'),
-          to: '/wholesale-prices',
-          icon: BadgePercent,
-          permission: 'GET:/admin/products',
-        },
-        {
-          label: t('admin.navItems.giftCards'),
-          to: '/gift-cards',
-          icon: Gift,
-          permission: 'GET:/admin/gift-cards',
-        },
-        {
-          label: t('admin.navItems.inviteCodes'),
-          to: '/invite-codes',
-          icon: UserPlus,
-          permission: 'GET:/admin/invite-codes',
-        },
-      ],
-    },
-    {
-      id: 'affiliate',
-      label: t('admin.navGroups.affiliateManagement'),
-      icon: BadgePercent,
-      items: [
-        {
-          label: t('admin.navItems.affiliatesSettings'),
-          to: '/affiliates/settings',
-          icon: SlidersHorizontal,
-          permission: 'GET:/admin/settings/affiliate',
-        },
-        {
-          label: t('admin.navItems.affiliatesUsers'),
-          to: '/affiliates/users',
-          icon: Users,
-          permission: 'GET:/admin/affiliates/users',
-        },
-        {
-          label: t('admin.navItems.affiliatesCommissions'),
-          to: '/affiliates/commissions',
-          icon: ReceiptText,
-          permission: 'GET:/admin/affiliates/commissions',
-        },
-        {
-          label: t('admin.navItems.affiliatesWithdraws'),
-          to: '/affiliates/withdraws',
-          icon: WalletCards,
-          permission: 'GET:/admin/affiliates/withdraws',
-        },
-      ],
-    },
-    {
-      id: 'reseller',
-      label: t('admin.navGroups.resellerManagement'),
-      icon: Users,
-      items: [
-        {
-          label: t('admin.navItems.resellerOperations'),
-          to: '/resellers/operations',
-          icon: LayoutDashboard,
-          permission: 'GET:/admin/resellers/operations/overview',
-        },
-        {
-          label: t('admin.navItems.resellerProfiles'),
-          to: '/resellers/profiles',
-          icon: Users,
-          permission: 'GET:/admin/resellers/profiles',
-        },
-        {
-          label: t('admin.navItems.resellerDomains'),
-          to: '/resellers/domains',
-          icon: Link,
-          permission: 'GET:/admin/resellers/domains',
-        },
-        {
-          label: t('admin.navItems.resellerSiteConfigs'),
-          to: '/resellers/site-configs',
-          icon: Settings,
-          permission: 'GET:/admin/resellers/site-configs',
-        },
-        {
-          label: t('admin.navItems.resellerProductSettings'),
-          to: '/resellers/product-settings',
-          icon: SlidersHorizontal,
-          permission: 'GET:/admin/resellers/product-settings',
-        },
-        {
-          label: t('admin.navItems.resellerLedgerEntries'),
-          to: '/resellers/ledger-entries',
-          icon: ReceiptText,
-          permission: 'GET:/admin/resellers/ledger-entries',
-        },
-        {
-          label: t('admin.navItems.resellerBalanceAccounts'),
-          to: '/resellers/balance-accounts',
-          icon: Wallet,
-          permission: 'GET:/admin/resellers/balance-accounts',
-        },
-        {
-          label: t('admin.navItems.resellerWithdraws'),
-          to: '/resellers/withdraws',
-          icon: WalletCards,
-          permission: 'GET:/admin/resellers/withdraws',
-        },
-      ],
-    },
-    {
-      id: 'integration',
-      label: t('admin.navGroups.integrationManagement'),
-      icon: Link,
-      items: [
-        {
-          label: t('admin.navItems.siteConnections'),
-          to: '/site-connections',
-          icon: Link,
-          permission: 'GET:/admin/site-connections',
-        },
-        {
-          label: t('admin.navItems.productMappings'),
-          to: '/product-mappings',
-          icon: Boxes,
-          permission: 'GET:/admin/product-mappings',
-        },
-        {
-          label: t('admin.navItems.procurementOrders'),
-          to: '/procurement-orders',
-          icon: Truck,
-          permission: 'GET:/admin/procurement-orders',
-        },
-        {
-          label: t('admin.navItems.reconciliation'),
-          to: '/reconciliation',
-          icon: ClipboardCheck,
-          permission: 'GET:/admin/reconciliation/jobs',
-        },
-        {
-          label: t('admin.navItems.apiCredentials'),
-          to: '/api-credentials',
-          icon: KeyRound,
-          permission: 'GET:/admin/api-credentials',
-        },
-      ],
-    },
-    {
-      id: 'telegramBot',
-      label: t('admin.navGroups.telegramBot'),
-      icon: Bot,
-      items: [
-        {
-          label: t('admin.navItems.telegramBotOverview'),
-          to: '/telegram-bot',
-          icon: Bot,
-          permission: 'GET:/admin/telegram-bot/instances',
-        },
-        {
-          label: t('admin.navItems.telegramBotSettings'),
-          to: '/telegram-bot/settings',
-          icon: SlidersHorizontal,
-          permission: 'GET:/admin/settings/telegram-bot',
-        },
-        {
-          label: t('admin.navItems.telegramBotHelpCenter'),
-          to: '/telegram-bot/help-center',
-          icon: ScrollText,
-          permission: 'GET:/admin/settings/telegram-bot',
-        },
-        {
-          label: t('admin.navItems.telegramBotMenuSettings'),
-          to: '/telegram-bot/menu',
-          icon: ListOrdered,
-          permission: 'GET:/admin/settings/telegram-bot',
-        },
-        {
-          label: t('admin.navItems.telegramBotBroadcasts'),
-          to: '/telegram-bot/broadcasts',
-          icon: Send,
-          permission: 'GET:/admin/telegram-bot/broadcasts',
-        },
-      ],
-    },
-    {
-      id: 'system',
-      label: t('admin.navGroups.systemSettings'),
-      icon: Settings,
-      items: [
-        {
-          label: t('admin.navItems.siteSettings'),
-          to: '/settings',
-          icon: SlidersHorizontal,
-          permission: 'GET:/admin/settings',
-        },
-        {
-          label: t('admin.navItems.notificationCenter'),
-          to: '/settings/notifications',
-          icon: Bell,
-          permission: 'GET:/admin/settings/notification-center',
-        },
-        {
-          label: t('admin.navItems.authz'),
-          to: '/authz',
-          icon: ShieldCheck,
-          permission: 'GET:/admin/authz/roles',
-        },
-        {
-          label: t('admin.navItems.authzAudit'),
-          to: '/authz-audit-logs',
-          icon: ScrollText,
-          permission: 'GET:/admin/authz/audit-logs',
-        },
-        {
-          label: t('admin.navItems.security'),
-          to: '/security',
-          icon: Lock,
-        },
-      ],
-    },
-  ]
-
-  return groups
-    .map((group) => ({
-      ...group,
-      items: group.items.filter((item) => authStore.hasPermission(item.permission)),
-    }))
-    .filter((group) => group.items.length > 0)
-})
+const { navGroups } = useAdminNavigation()
 
 watch(
   expandedGroups,
@@ -601,6 +145,7 @@ const navQueryMatches = (query: string) => {
 
 const isItemActive = (to: string) => {
   const target = splitNavTarget(to)
+  if (target.path?.startsWith('/telegram-bot/support/') && route.path.startsWith('/telegram-bot/support/')) return true
   if (target.path === '/') {
     return route.path === '/'
   }
@@ -715,22 +260,13 @@ onBeforeUnmount(() => {
 
 <template>
   <div class="min-h-screen bg-background text-foreground">
-    <div class="flex min-h-screen">
+    <div class="flex min-h-screen md:h-screen md:overflow-hidden">
       <!-- Desktop sidebar -->
       <aside
         class="hidden md:flex border-r border-border bg-card flex-col sticky top-0 h-screen overflow-y-auto transition-all duration-300"
         :class="sidebarCollapsed ? 'w-16' : 'w-64'"
       >
-        <div class="py-6" :class="sidebarCollapsed ? 'px-2' : 'px-6'">
-          <div v-if="!sidebarCollapsed" class="flex items-center gap-2 text-xl font-semibold tracking-tight">
-            <BrandMark class="h-7 w-7" />
-            {{ t('admin.brand') }}
-          </div>
-          <div v-if="!sidebarCollapsed" class="text-xs text-muted-foreground mt-1">{{ t('admin.layout.controlRoom') }}</div>
-          <div v-if="sidebarCollapsed" class="flex justify-center" :title="t('admin.brand')">
-            <BrandMark class="h-7 w-7" />
-          </div>
-        </div>
+        <AdminBrandHeader :collapsed="sidebarCollapsed" :dark="isDark" :can-check="canCheck" :has-update="hasUpdate" :latest-version="latestVersion" @update="updateCheckOpen = true" @theme="toggleTheme" />
         <div v-if="!sidebarCollapsed" class="px-3 pb-2">
           <Input
             v-model="navSearch"
@@ -834,15 +370,10 @@ onBeforeUnmount(() => {
       </aside>
 
       <!-- Mobile sidebar (Sheet) -->
-      <Sheet v-model:open="mobileNavOpen">
+      <Sheet scope="global" v-model:open="mobileNavOpen">
         <SheetContent side="left" class="w-72 p-0 flex flex-col">
           <SheetTitle class="sr-only">{{ t('admin.layout.navigation') }}</SheetTitle>
-          <div class="px-6 py-6">
-            <div class="text-xl font-semibold tracking-tight">
-              {{ t('admin.brand') }}
-            </div>
-            <div class="text-xs text-muted-foreground mt-1">{{ t('admin.layout.controlRoom') }}</div>
-          </div>
+          <AdminBrandHeader class="mr-8" :dark="isDark" :can-check="canCheck" :has-update="hasUpdate" :latest-version="latestVersion" @update="updateCheckOpen = true; mobileNavOpen = false" @theme="toggleTheme" />
           <div class="px-3 pb-2">
             <Input
               v-model="navSearch"
@@ -903,30 +434,22 @@ onBeforeUnmount(() => {
       </Sheet>
 
       <div class="flex-1 flex flex-col min-w-0">
-        <header class="flex items-center justify-between border-b border-border bg-background px-4 md:px-8 py-3 md:py-4 gap-2">
-          <div class="flex items-center gap-3">
-            <Button size="icon-sm" variant="ghost" class="md:hidden" @click="mobileNavOpen = true">
-              <Menu class="h-5 w-5" />
+        <header class="shrink-0 flex min-w-0 items-center border-b border-border bg-background px-4 md:px-8 py-3 md:py-4 gap-2">
+          <Button size="icon-sm" variant="ghost" class="shrink-0 md:hidden" @click="mobileNavOpen = true">
+            <Menu class="h-5 w-5" />
+          </Button>
+          <AdminTabs :navigation="[{ label: dashboardNavLabel, to: '/' }, ...navGroups.flatMap(group => group.items)]" />
+          <div class="flex shrink-0 items-center gap-2">
+            <Button v-if="guide.visible.value" size="icon-sm" variant="outline" :title="t('membershipGuide.guide')" :aria-label="t('membershipGuide.guide')" @click="guideDialog?.showCurrent()">
+              <CircleHelp class="h-4 w-4" aria-hidden="true" />
             </Button>
-            <Button
-              size="icon-sm"
-              variant="ghost"
-              class="hidden md:inline-flex"
-              @click="toggleSidebar"
-              :title="sidebarCollapsed ? t('admin.layout.expandSidebar') : t('admin.layout.collapseSidebar')"
-            >
-              <ChevronsRight v-if="sidebarCollapsed" class="h-4 w-4" />
-              <ChevronsLeft v-else class="h-4 w-4" />
-            </Button>
-            <div class="text-sm text-muted-foreground hidden sm:block">{{ t('admin.layout.workspace') }}</div>
-          </div>
-          <div class="flex items-center gap-2">
             <Select
               :model-value="locale"
               @update:modelValue="(value) => { if (value) applyLocale(String(value)) }"
             >
-              <SelectTrigger class="h-8 w-[100px] md:w-[140px] text-xs">
-                <SelectValue :placeholder="t('admin.common.lang.zhCN')" />
+              <SelectTrigger hide-icon class="h-8 w-8 justify-center p-0" :title="t('membershipGuide.language')" :aria-label="t('membershipGuide.language')">
+                <Languages class="h-4 w-4" aria-hidden="true" />
+                <SelectValue class="sr-only" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="zh-CN">{{ t('admin.common.lang.zhCN') }}</SelectItem>
@@ -934,37 +457,29 @@ onBeforeUnmount(() => {
                 <SelectItem value="en-US">{{ t('admin.common.lang.enUS') }}</SelectItem>
               </SelectContent>
             </Select>
-            <Button
-              size="icon-sm"
-              variant="outline"
-              :title="t('admin.updateCheck.button')"
-              @click="updateCheckOpen = true"
-            >
-              <RefreshCw class="h-4 w-4" />
-            </Button>
-            <Button size="icon-sm" variant="outline" @click="toggleTheme">
-              <Sun v-if="isDark" class="h-4 w-4" />
-              <Moon v-else class="h-4 w-4" />
-            </Button>
             <a v-if="siteUrl" :href="siteUrl" target="_blank" rel="noopener noreferrer">
               <Button size="icon-sm" variant="outline" :title="t('admin.layout.homePage')">
                 <Home class="h-4 w-4" />
               </Button>
             </a>
-            <Button variant="outline" size="sm" class="gap-2" @click="handleLogout">
-              <LogOut class="h-4 w-4" />
-              <span class="hidden sm:inline">{{ t('admin.common.logout') }}</span>
+            <Button variant="outline" size="icon-sm" :title="t('admin.common.logout')" :aria-label="t('admin.common.logout')" @click="handleLogout">
+              <LogOut class="h-4 w-4" aria-hidden="true" />
             </Button>
           </div>
         </header>
-        <main class="min-w-0 flex-1 overflow-x-hidden px-4 py-4 md:px-8 md:py-6">
-          <div class="min-w-0">
-            <RouterView />
-          </div>
-        </main>
+        <div class="relative isolate flex min-h-0 flex-1 flex-col">
+          <main ref="contentElement" class="min-h-0 min-w-0 flex-1 overflow-x-hidden md:overflow-y-auto px-4 py-4 md:px-8 md:py-6">
+            <div class="min-w-0">
+              <AdminRouteCache :scroll-element="contentElement" :dialog-target="dialogTarget" />
+            </div>
+          </main>
+          <div ref="dialogTarget" class="pointer-events-none absolute inset-0 z-40 overflow-hidden" data-page-dialog-host />
+        </div>
       </div>
     </div>
 
-    <SystemUpdateDialog v-model:open="updateCheckOpen" />
+    <MembershipGuideDialog ref="guideDialog" v-model:open="guide.open.value" v-model:step="guide.step.value" />
+    <ConfirmDialogHost />
+    <SystemUpdateDialog v-model:open="updateCheckOpen" @checked="acceptUpdateCheck" />
   </div>
 </template>

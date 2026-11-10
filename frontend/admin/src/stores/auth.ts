@@ -1,3 +1,4 @@
+import { useAdminTabsStore } from './adminTabs'
 import { defineStore } from 'pinia'
 import {
   adminAPI,
@@ -86,6 +87,7 @@ export const useAdminAuthStore = defineStore('adminAuth', {
     isSuper: localStorage.getItem(IS_SUPER_KEY) === '1',
     roles: readArrayStorage(ROLES_KEY),
     permissions: readArrayStorage(PERMISSIONS_KEY),
+    adminId: 0,
     permissionsLoaded: false,
     challengeToken: '' as string,
     challengeExpiresAt: '' as string,
@@ -105,6 +107,7 @@ export const useAdminAuthStore = defineStore('adminAuth', {
           return { requiresTotp: true }
         }
         const ok = data as AdminLoginPasswordResponse
+        useAdminTabsStore().clear()
         this.token = ok.token
         localStorage.setItem(TOKEN_KEY, ok.token)
         this.requiresTotp = false
@@ -128,6 +131,7 @@ export const useAdminAuthStore = defineStore('adminAuth', {
           ...payload,
         })
         const data = response.data.data as AdminLoginPasswordResponse
+        useAdminTabsStore().clear()
         this.token = data.token
         localStorage.setItem(TOKEN_KEY, data.token)
         this.requiresTotp = false
@@ -152,6 +156,7 @@ export const useAdminAuthStore = defineStore('adminAuth', {
       }
       const response = await adminAPI.getAuthzMe()
       const payload = response.data.data
+      this.adminId = Number(payload?.admin_id) || 0
       this.isSuper = Boolean(payload?.is_super)
       this.roles = Array.isArray(payload?.roles) ? payload.roles : []
       this.permissions = Array.isArray(payload?.policies) ? buildPermissionKeys(payload.policies) : []
@@ -181,6 +186,7 @@ export const useAdminAuthStore = defineStore('adminAuth', {
     },
 
     clearAuthzCache() {
+      this.adminId = 0
       this.isSuper = false
       this.roles = []
       this.permissions = []
@@ -191,6 +197,7 @@ export const useAdminAuthStore = defineStore('adminAuth', {
     },
 
     logout() {
+      useAdminTabsStore().clear()
       this.token = ''
       localStorage.removeItem(TOKEN_KEY)
       this.clearAuthzCache()

@@ -2,6 +2,7 @@ package producthttp
 
 import (
 	"errors"
+	membership "github.com/XManCodeing/XMall/internal/modules/telegram/membership/contract"
 	"strconv"
 	"strings"
 
@@ -58,12 +59,16 @@ type SKUMappingLookup interface {
 
 // AdminProductHandler 处理后台商品管理请求。
 type AdminProductHandler struct {
-	products    ProductQueries
-	writer      ProductWriter
-	admin       ProductAdminCommands
-	settings    LowStockThresholdProvider
-	mappings    ProductMappingLookup
-	skuMappings SKUMappingLookup
+	membershipReader   membership.ConfigReader
+	membershipShare    membership.ShareReader
+	membershipWriter   membership.ShareWriter
+	membershipProducts productcontract.Repository
+	products           ProductQueries
+	writer             ProductWriter
+	admin              ProductAdminCommands
+	settings           LowStockThresholdProvider
+	mappings           ProductMappingLookup
+	skuMappings        SKUMappingLookup
 }
 
 // NewAdminProductHandler 创建后台商品 Handler。
@@ -169,6 +174,9 @@ func (h *AdminProductHandler) GetAdminProduct(c *gin.Context) {
 
 	product, err := h.products.GetAdminByID(id)
 	if err != nil {
+		if respondMembershipError(c, err) {
+			return
+		}
 		if errors.Is(err, productcontract.ErrNotFound) {
 			ginutil.RespondError(c, response.CodeNotFound, "error.product_not_found", nil)
 			return
@@ -187,7 +195,7 @@ func (h *AdminProductHandler) GetAdminProduct(c *gin.Context) {
 	h.applyUpstreamDisplayTypes(temp)
 	*product = temp[0]
 
-	response.Success(c, product)
+	h.respondProduct(c, product)
 }
 
 // ====================  商品管理  ====================
@@ -212,30 +220,31 @@ type WholesalePriceRequest struct {
 
 // CreateProductRequest 创建商品请求
 type CreateProductRequest struct {
-	CategoryID          uint                     `json:"category_id" binding:"required"`
-	Slug                string                   `json:"slug" binding:"required"`
-	SeoMetaJSON         map[string]interface{}   `json:"seo_meta"`
-	TitleJSON           map[string]interface{}   `json:"title" binding:"required"`
-	DescriptionJSON     map[string]interface{}   `json:"description"`
-	ContentJSON         map[string]interface{}   `json:"content"`
-	InstructionsJSON    map[string]interface{}   `json:"instructions"`
-	ManualFormSchema    map[string]interface{}   `json:"manual_form_schema"`
-	PriceAmount         float64                  `json:"price_amount" binding:"required"`
-	CostPriceAmount     float64                  `json:"cost_price_amount"`
-	WholesalePrices     *[]WholesalePriceRequest `json:"wholesale_prices"`
-	Images              []string                 `json:"images"`
-	Tags                []string                 `json:"tags"`
-	PurchaseType        string                   `json:"purchase_type"`
-	MinPurchaseQuantity *int                     `json:"min_purchase_quantity"`
-	MaxPurchaseQuantity *int                     `json:"max_purchase_quantity"`
-	StockDisplayMode    string                   `json:"stock_display_mode"`
-	FulfillmentType     string                   `json:"fulfillment_type"`
-	ManualStockTotal    *int                     `json:"manual_stock_total"`
-	SKUs                []ProductSKURequest      `json:"skus"`
-	PaymentChannelIDs   []uint                   `json:"payment_channel_ids"`
-	IsAffiliateEnabled  *bool                    `json:"is_affiliate_enabled"`
-	IsActive            *bool                    `json:"is_active"`
-	SortOrder           int                      `json:"sort_order"`
+	Membership          *membership.AdminConfigInput `json:"membership"`
+	CategoryID          uint                         `json:"category_id" binding:"required"`
+	Slug                string                       `json:"slug" binding:"required"`
+	SeoMetaJSON         map[string]interface{}       `json:"seo_meta"`
+	TitleJSON           map[string]interface{}       `json:"title" binding:"required"`
+	DescriptionJSON     map[string]interface{}       `json:"description"`
+	ContentJSON         map[string]interface{}       `json:"content"`
+	InstructionsJSON    map[string]interface{}       `json:"instructions"`
+	ManualFormSchema    map[string]interface{}       `json:"manual_form_schema"`
+	PriceAmount         float64                      `json:"price_amount" binding:"required"`
+	CostPriceAmount     float64                      `json:"cost_price_amount"`
+	WholesalePrices     *[]WholesalePriceRequest     `json:"wholesale_prices"`
+	Images              []string                     `json:"images"`
+	Tags                []string                     `json:"tags"`
+	PurchaseType        string                       `json:"purchase_type"`
+	MinPurchaseQuantity *int                         `json:"min_purchase_quantity"`
+	MaxPurchaseQuantity *int                         `json:"max_purchase_quantity"`
+	StockDisplayMode    string                       `json:"stock_display_mode"`
+	FulfillmentType     string                       `json:"fulfillment_type"`
+	ManualStockTotal    *int                         `json:"manual_stock_total"`
+	SKUs                []ProductSKURequest          `json:"skus"`
+	PaymentChannelIDs   []uint                       `json:"payment_channel_ids"`
+	IsAffiliateEnabled  *bool                        `json:"is_affiliate_enabled"`
+	IsActive            *bool                        `json:"is_active"`
+	SortOrder           int                          `json:"sort_order"`
 }
 
 // toWholesalePriceInputs 透传「是否提供」语义：请求未携带 wholesale_prices 时返回 nil
@@ -284,7 +293,11 @@ func (h *AdminProductHandler) CreateProduct(c *gin.Context) {
 		return
 	}
 
+	if !h.validateMembershipRequest(c, req.Membership) {
+		return
+	}
 	product, err := h.writer.Create(productwrite.CreateProductInput{
+		Membership:           req.Membership,
 		CategoryID:           req.CategoryID,
 		Slug:                 req.Slug,
 		SeoMetaJSON:          req.SeoMetaJSON,
@@ -311,6 +324,9 @@ func (h *AdminProductHandler) CreateProduct(c *gin.Context) {
 		SortOrder:            req.SortOrder,
 	})
 	if err != nil {
+		if respondMembershipError(c, err) {
+			return
+		}
 		if errors.Is(err, productcontract.ErrSlugExists) {
 			ginutil.RespondError(c, response.CodeBadRequest, "error.slug_exists", nil)
 			return
@@ -363,7 +379,7 @@ func (h *AdminProductHandler) CreateProduct(c *gin.Context) {
 		return
 	}
 
-	response.Success(c, product)
+	h.respondProduct(c, product)
 }
 
 // UpdateProduct 更新商品
@@ -376,7 +392,11 @@ func (h *AdminProductHandler) UpdateProduct(c *gin.Context) {
 		return
 	}
 
+	if !h.validateMembershipRequest(c, req.Membership) {
+		return
+	}
 	product, err := h.writer.Update(id, productwrite.CreateProductInput{
+		Membership:           req.Membership,
 		CategoryID:           req.CategoryID,
 		Slug:                 req.Slug,
 		SeoMetaJSON:          req.SeoMetaJSON,
@@ -403,6 +423,9 @@ func (h *AdminProductHandler) UpdateProduct(c *gin.Context) {
 		SortOrder:            req.SortOrder,
 	})
 	if err != nil {
+		if respondMembershipError(c, err) {
+			return
+		}
 		if errors.Is(err, productcontract.ErrNotFound) {
 			ginutil.RespondError(c, response.CodeNotFound, "error.product_not_found", nil)
 			return
@@ -459,7 +482,7 @@ func (h *AdminProductHandler) UpdateProduct(c *gin.Context) {
 		return
 	}
 
-	response.Success(c, product)
+	h.respondProduct(c, product)
 }
 
 // QuickUpdateProductRequest 快速更新商品请求
@@ -490,6 +513,9 @@ func (h *AdminProductHandler) UpdateProductWholesalePrices(c *gin.Context) {
 
 	product, err := h.admin.UpdateWholesalePrices(id, *inputs)
 	if err != nil {
+		if respondMembershipError(c, err) {
+			return
+		}
 		if errors.Is(err, productcontract.ErrNotFound) {
 			ginutil.RespondError(c, response.CodeNotFound, "error.product_not_found", nil)
 			return
@@ -502,7 +528,7 @@ func (h *AdminProductHandler) UpdateProductWholesalePrices(c *gin.Context) {
 		return
 	}
 
-	response.Success(c, product)
+	h.respondProduct(c, product)
 }
 
 // QuickUpdateProduct 快速更新商品（状态/排序/分类）
@@ -532,6 +558,9 @@ func (h *AdminProductHandler) QuickUpdateProduct(c *gin.Context) {
 
 	product, err := h.admin.QuickUpdate(id, fields)
 	if err != nil {
+		if respondMembershipError(c, err) {
+			return
+		}
 		if errors.Is(err, productcontract.ErrNotFound) {
 			ginutil.RespondError(c, response.CodeNotFound, "error.product_not_found", nil)
 			return
@@ -544,7 +573,7 @@ func (h *AdminProductHandler) QuickUpdateProduct(c *gin.Context) {
 		return
 	}
 
-	response.Success(c, product)
+	h.respondProduct(c, product)
 }
 
 // applyUpstreamDisplayTypes 将 upstream 类型商品的 FulfillmentType 替换为上游的实际交付类型，并填充库存字段

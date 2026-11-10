@@ -49,6 +49,7 @@
                       {{ getLocalizedText(item.title) }}
                     </router-link>
                     <div class="mt-1 text-xs text-muted-foreground">{{ t('checkout.quantityLabel') }}：{{ item.quantity }}</div>
+                    <MembershipPurchaseInfo :product="item" :sku-id="item.skuId" :items="cartItems" :return-path="isBuyNowMode ? '/checkout?mode=buynow' : '/checkout'" />
                     <div v-if="itemSkuDisplay(item)" class="mt-1 text-xs text-muted-foreground">{{ t('checkout.skuLabel') }}：{{ itemSkuDisplay(item) }}</div>
                     <div
                       v-if="itemStockHint(item)"
@@ -322,6 +323,7 @@ import CheckoutSteps from '../components/checkout/CheckoutSteps.vue'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Alert, AlertDescription } from '@/components/ui/alert'
+import MembershipPurchaseInfo from '@/components/product/MembershipPurchaseInfo.vue'
 import { useCheckout } from '../composables/useCheckout.ts'
 
 const { t } = useI18n()

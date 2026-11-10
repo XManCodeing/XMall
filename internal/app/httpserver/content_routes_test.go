@@ -22,12 +22,70 @@ import (
 	adminstore "github.com/XManCodeing/XMall/internal/modules/identity/admin/infrastructure/gormstore"
 	adminauthapp "github.com/XManCodeing/XMall/internal/modules/identity/adminauth/application"
 	"github.com/XManCodeing/XMall/internal/modules/identity/jwttoken"
+	paymenthttp "github.com/XManCodeing/XMall/internal/modules/payment/transport/http"
 	"github.com/XManCodeing/XMall/internal/platform/http/response"
 	"github.com/gin-gonic/gin"
 	"github.com/glebarez/sqlite"
 	"github.com/golang-jwt/jwt/v5"
 	"gorm.io/gorm"
 )
+
+// TestManualConfirmationJWTAndFinancialScope 验证补单使用真实 JWT/Casbin 门卫。
+// t 创建隔离管理员与策略库，终止探针避免触发付款、网关或真实数据写入。
+func TestManualConfirmationJWTAndFinancialScope(t *testing.T) {
+	repo, authority, deniedToken, _ := setupContentRouteAccessTest(t)
+	router := gin.New()
+	group := router.Group("/api/v1/admin")
+	group.Use(middleware.JWTAuthMiddleware(contentAdminJWTSecret, repo), middleware.AdminRBACMiddleware(authority))
+	group.Use(func(ctx *gin.Context) {
+		response.Success(ctx, gin.H{"reached": true})
+		ctx.Abort()
+	})
+	registerManualConfirmationRoutes(group, &paymenthttp.ManualConfirmationHandler{})
+	tests := []struct {
+		name, token string
+		want        int
+	}{
+		{"anonymous", "", response.CodeUnauthorized},
+		{"invalid", "invalid-jwt", response.CodeUnauthorized},
+		{"unprivileged", deniedToken, response.CodeForbidden},
+	}
+	for _, role := range []string{"finance", "support", "operations", "system_admin", "integration", "readonly_auditor"} {
+		admin := &admindomain.Admin{Username: "manual-" + role, PasswordHash: "synthetic"}
+		if err := repo.Create(admin); err != nil {
+			t.Fatal(err)
+		}
+		if err := authority.SetAdminRoles(admin.ID, []string{role}); err != nil {
+			t.Fatal(err)
+		}
+		want := response.CodeForbidden
+		if role == "finance" {
+			want = response.CodeOK
+		}
+		tests = append(tests, struct {
+			name, token string
+			want        int
+		}{role, signContentAdminToken(t, admin), want})
+	}
+	for _, method := range []string{"GET", "POST"} {
+		for _, test := range tests {
+			t.Run(method+"/"+test.name, func(t *testing.T) {
+				request := httptest.NewRequest(method, "/api/v1/admin/payments/42/manual-confirmation", nil)
+				if test.token != "" {
+					request.Header.Set("Authorization", "Bearer "+test.token)
+				}
+				recorder := httptest.NewRecorder()
+				router.ServeHTTP(recorder, request)
+				var result struct {
+					StatusCode int `json:"status_code"`
+				}
+				if err := json.Unmarshal(recorder.Body.Bytes(), &result); err != nil || result.StatusCode != test.want {
+					t.Fatalf("status=%d want=%d err=%v", result.StatusCode, test.want, err)
+				}
+			})
+		}
+	}
+}
 
 const contentAdminJWTSecret = "content-admin-route-contract-secret"
 

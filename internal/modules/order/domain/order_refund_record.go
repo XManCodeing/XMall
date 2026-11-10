@@ -7,6 +7,30 @@ import (
 	"github.com/shopspring/decimal"
 )
 
+// MembershipRefundRequest durably binds one idempotent money operation to explicit purchase termination.
+// ItemIDs are administrator selections, never inferred from the monetary amount.
+type MembershipRefundRequest struct {
+	ID               uint       `gorm:"primaryKey" json:"id,string"`
+	RequestKey       string     `gorm:"size:96;uniqueIndex;not null" json:"request_key"`
+	Fingerprint      string     `gorm:"size:64;not null" json:"-"`
+	ActorAdminID     uint       `json:"-"`
+	Method           string     `gorm:"size:16;not null" json:"method"`
+	Amount           string     `gorm:"size:64" json:"amount"`
+	Remark           string     `gorm:"type:text" json:"remark"`
+	ExistingRefundID uint       `json:"existing_refund_id,string"`
+	OrderID          uint       `gorm:"index;not null" json:"order_id,string"`
+	RefundID         uint       `gorm:"index;not null" json:"refund_id,string"`
+	ItemIDs          []uint     `gorm:"serializer:json;type:text;not null" json:"item_ids"`
+	FundsState       string     `gorm:"size:32;not null" json:"funds_state"`
+	RightsState      string     `gorm:"size:32;index;not null" json:"rights_state"`
+	RetryAttempts    uint       `gorm:"not null;default:0" json:"retry_attempts"`
+	RetryVersion     uint64     `gorm:"not null;default:0" json:"-"`
+	RetryAfter       *time.Time `gorm:"index" json:"retry_after,omitempty"`
+	RetryLeaseUntil  *time.Time `json:"-"`
+	CreatedAt        time.Time  `json:"created_at"`
+	UpdatedAt        time.Time  `json:"updated_at"`
+}
+
 // OrderRefundRecord 退款记录
 type OrderRefundRecord struct {
 	ID                       uint         `gorm:"primarykey" json:"id"`

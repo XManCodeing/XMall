@@ -119,11 +119,10 @@ func (s *Service) CreateManual(input CreateManualInput) (*fulfillmentdomain.Fulf
 	}
 
 	var created *fulfillmentdomain.Fulfillment
+	var completed bool
 	err = s.orderStore.WithinTransaction(func(tx ordercontract.Transaction) error {
-		if _, found, err := tx.Fulfillments().FindByOrderIDForUpdate(input.OrderID); err != nil {
+		if err := prepareOrdinary(tx, order, ftype); err != nil {
 			return err
-		} else if found {
-			return ErrFulfillmentExists
 		}
 
 		fulfillment := &fulfillmentdomain.Fulfillment{
@@ -138,16 +137,18 @@ func (s *Service) CreateManual(input CreateManualInput) (*fulfillmentdomain.Fulf
 			UpdatedAt:     now,
 		}
 
-		if err := tx.Fulfillments().Create(fulfillment); err != nil {
+		if err := saveOrdinary(tx, fulfillment); err != nil {
 			return ErrFulfillmentCreateFailed
 		}
-		if err := tx.Orders().UpdateFields(order.ID, map[string]interface{}{
-			"status":     constants.OrderStatusDelivered,
-			"updated_at": now,
-		}); err != nil {
-			return ErrOrderUpdateFailed
+		var finishErr error
+		completed, finishErr = completeOrdinary(tx, order, fulfillment)
+		if finishErr != nil {
+			return finishErr
 		}
 		created = fulfillment
+		if !completed {
+			return nil
+		}
 		return appendFulfilledEvent(tx, order, fulfillment)
 	})
 	if err != nil {
@@ -159,52 +160,10 @@ func (s *Service) CreateManual(input CreateManualInput) (*fulfillmentdomain.Fulf
 		}
 		return nil, ErrFulfillmentCreateFailed
 	}
-	if s.orderQueue != nil {
-		if order.ParentID != nil {
-			status, syncErr := orderapp.SyncParentStatus(s.orderStore, *order.ParentID, now)
-			if syncErr != nil {
-				logger.Warnw("fulfillment_sync_parent_status_failed",
-					"order_id", order.ID,
-					"parent_order_id", *order.ParentID,
-					"target_status", constants.OrderStatusDelivered,
-					"error", syncErr,
-				)
-			} else {
-				if status == "" {
-					status = constants.OrderStatusDelivered
-				}
-				if status != constants.OrderStatusCanceled {
-					if _, err := orderapp.EnqueueStatusEmailTaskIfEligible(s.orderStore, s.orderQueue, s.settingService, s.defaultEmailConfig, *order.ParentID, status); err != nil {
-						logger.Warnw("fulfillment_enqueue_status_email_failed",
-							"order_id", order.ID,
-							"target_order_id", *order.ParentID,
-							"status", status,
-							"error", err,
-						)
-					}
-				}
-			}
-		} else {
-			if _, err := orderapp.EnqueueStatusEmailTaskIfEligible(s.orderStore, s.orderQueue, s.settingService, s.defaultEmailConfig, input.OrderID, constants.OrderStatusDelivered); err != nil {
-				logger.Warnw("fulfillment_enqueue_status_email_failed",
-					"order_id", order.ID,
-					"target_order_id", input.OrderID,
-					"status", constants.OrderStatusDelivered,
-					"error", err,
-				)
-			}
-		}
+	if !completed {
+		return created, nil
 	}
-	// Telegram 通知：交付完成后推送给用户
-	notifyOrderID := input.OrderID
-	if order.ParentID != nil {
-		notifyOrderID = *order.ParentID
-	}
-	go s.NotifyBotOrderFulfilled(order.UserID, notifyOrderID)
-	// B 侧：人工交付完成后触发下游回调
-	if s.downstreamCallbackSvc != nil {
-		s.downstreamCallbackSvc.EnqueueCallback(input.OrderID)
-	}
+	s.notifyCompleted(order)
 	return created, nil
 }
 
@@ -224,67 +183,24 @@ func (s *Service) CreateAuto(orderID uint) (*fulfillmentdomain.Fulfillment, erro
 	if order.ParentID == nil && len(order.Children) > 0 {
 		return nil, ErrFulfillmentInvalid
 	}
-	if order.Status != constants.OrderStatusPaid {
+	if order.Status != constants.OrderStatusPaid && order.Status != constants.OrderStatusFulfilling {
 		return nil, ErrOrderStatusInvalid
 	}
 	if len(order.Items) == 0 {
 		return nil, ErrFulfillmentInvalid
 	}
 
-	for _, item := range order.Items {
-		if strings.TrimSpace(item.FulfillmentType) != constants.FulfillmentTypeAuto {
-			return nil, ErrFulfillmentNotAuto
-		}
-	}
-
 	now := time.Now()
 	var fulfillment *fulfillmentdomain.Fulfillment
+	var completed bool
 	err = s.orderStore.WithinTransaction(func(tx ordercontract.Transaction) error {
-		if _, found, err := tx.Fulfillments().FindByOrderIDForUpdate(orderID); err != nil {
+		if err := prepareOrdinary(tx, order, constants.FulfillmentTypeAuto); err != nil {
 			return err
-		} else if found {
-			return ErrFulfillmentExists
 		}
 
-		secretRepo := tx.CardSecrets()
-		reservedRows, err := secretRepo.ListByOrderAndStatus(orderID, cardsecretdomain.StatusReserved)
+		secrets, err := selectAutoSecrets(tx, order)
 		if err != nil {
 			return err
-		}
-		reservedByKey := make(map[string][]cardsecretdomain.Secret)
-		for _, reserved := range reservedRows {
-			key := orderdomain.ItemKey(reserved.ProductID, reserved.SKUID)
-			reservedByKey[key] = append(reservedByKey[key], reserved)
-		}
-		var secrets []cardsecretdomain.Secret
-		for _, item := range order.Items {
-			if item.ProductID == 0 || item.Quantity <= 0 {
-				return ErrFulfillmentInvalid
-			}
-			key := orderdomain.ItemKey(item.ProductID, item.SKUID)
-			cachedReserved := reservedByKey[key]
-			selected := make([]cardsecretdomain.Secret, 0, item.Quantity)
-			if len(cachedReserved) > 0 {
-				take := item.Quantity
-				if len(cachedReserved) < take {
-					take = len(cachedReserved)
-				}
-				selected = append(selected, cachedReserved[:take]...)
-				reservedByKey[key] = cachedReserved[take:]
-			}
-
-			if len(selected) < item.Quantity {
-				need := item.Quantity - len(selected)
-				availableRows, err := secretRepo.ListAvailableByProduct(item.ProductID, item.SKUID, need)
-				if err != nil {
-					return err
-				}
-				selected = append(selected, availableRows...)
-			}
-			if len(selected) < item.Quantity {
-				return ErrCardSecretInsufficient
-			}
-			secrets = append(secrets, selected...)
 		}
 
 		ids := make([]uint, 0, len(secrets))
@@ -294,7 +210,7 @@ func (s *Service) CreateAuto(orderID uint) (*fulfillmentdomain.Fulfillment, erro
 			secretLines = append(secretLines, secret.Secret)
 		}
 
-		affected, err := secretRepo.MarkUsed(ids, orderID, now)
+		affected, err := tx.CardSecrets().MarkUsed(ids, orderID, now)
 		if err != nil {
 			return err
 		}
@@ -312,14 +228,16 @@ func (s *Service) CreateAuto(orderID uint) (*fulfillmentdomain.Fulfillment, erro
 			CreatedAt:   now,
 			UpdatedAt:   now,
 		}
-		if err := tx.Fulfillments().Create(fulfillment); err != nil {
+		if err := saveOrdinary(tx, fulfillment); err != nil {
 			return ErrFulfillmentCreateFailed
 		}
-		if err := tx.Orders().UpdateFields(orderID, map[string]interface{}{
-			"status":     constants.OrderStatusCompleted,
-			"updated_at": now,
-		}); err != nil {
-			return ErrOrderUpdateFailed
+		var finishErr error
+		completed, finishErr = completeOrdinary(tx, order, fulfillment)
+		if finishErr != nil {
+			return finishErr
+		}
+		if !completed {
+			return nil
 		}
 		return appendFulfilledEvent(tx, order, fulfillment)
 	})
@@ -337,53 +255,71 @@ func (s *Service) CreateAuto(orderID uint) (*fulfillmentdomain.Fulfillment, erro
 			return nil, ErrFulfillmentCreateFailed
 		}
 	}
-	if s.orderQueue != nil {
-		if order.ParentID != nil {
-			status, syncErr := orderapp.SyncParentStatus(s.orderStore, *order.ParentID, now)
-			if syncErr != nil {
-				logger.Warnw("fulfillment_sync_parent_status_failed",
-					"order_id", order.ID,
-					"parent_order_id", *order.ParentID,
-					"target_status", constants.OrderStatusCompleted,
-					"error", syncErr,
-				)
-			} else {
-				if status == "" {
-					status = constants.OrderStatusCompleted
-				}
-				if status != constants.OrderStatusCanceled {
-					if _, err := orderapp.EnqueueStatusEmailTaskIfEligible(s.orderStore, s.orderQueue, s.settingService, s.defaultEmailConfig, *order.ParentID, status); err != nil {
-						logger.Warnw("fulfillment_enqueue_status_email_failed",
-							"order_id", order.ID,
-							"target_order_id", *order.ParentID,
-							"status", status,
-							"error", err,
-						)
-					}
-				}
-			}
-		} else {
-			if _, err := orderapp.EnqueueStatusEmailTaskIfEligible(s.orderStore, s.orderQueue, s.settingService, s.defaultEmailConfig, orderID, constants.OrderStatusCompleted); err != nil {
-				logger.Warnw("fulfillment_enqueue_status_email_failed",
-					"order_id", order.ID,
-					"target_order_id", orderID,
-					"status", constants.OrderStatusCompleted,
-					"error", err,
-				)
-			}
-		}
+	if !completed {
+		return fulfillment, nil
 	}
-	// Telegram 通知：交付完成后推送给用户
-	notifyOrderID := orderID
+	s.notifyCompleted(order)
+	return fulfillment, nil
+}
+
+// selectAutoSecrets 仅给已过滤的普通卡密项选卡；tx 为真实事务，返回预留/可用卡密或库存错误。
+func selectAutoSecrets(tx ordercontract.Transaction, order *orderdomain.Order) ([]cardsecretdomain.Secret, error) {
+	repo := tx.CardSecrets()
+	reserved, err := repo.ListByOrderAndStatus(order.ID, cardsecretdomain.StatusReserved)
+	if err != nil {
+		return nil, err
+	}
+	byKey := map[string][]cardsecretdomain.Secret{}
+	for _, secret := range reserved {
+		key := orderdomain.ItemKey(secret.ProductID, secret.SKUID)
+		byKey[key] = append(byKey[key], secret)
+	}
+	var secrets []cardsecretdomain.Secret
+	for _, item := range order.Items {
+		if item.ProductID == 0 || item.Quantity <= 0 {
+			return nil, ErrFulfillmentInvalid
+		}
+		key := orderdomain.ItemKey(item.ProductID, item.SKUID)
+		cached := byKey[key]
+		take := min(len(cached), item.Quantity)
+		selected := append([]cardsecretdomain.Secret(nil), cached[:take]...)
+		byKey[key] = cached[take:]
+		if len(selected) < item.Quantity {
+			rows, err := repo.ListAvailableByProduct(item.ProductID, item.SKUID, item.Quantity-len(selected))
+			if err != nil {
+				return nil, err
+			}
+			selected = append(selected, rows...)
+		}
+		if len(selected) < item.Quantity {
+			return nil, ErrCardSecretInsufficient
+		}
+		secrets = append(secrets, selected...)
+	}
+	return secrets, nil
+}
+
+// notifyCompleted 在提交后读取真实聚合状态并发送通知；失败只记日志，不回滚权益。
+// order 为刚完成的叶单，不在事务中调用本函数，也不猜测混合订单为 completed。
+func (s *Service) notifyCompleted(order *orderdomain.Order) {
+	notifyOrderID := order.ID
 	if order.ParentID != nil {
 		notifyOrderID = *order.ParentID
 	}
-	go s.NotifyBotOrderFulfilled(order.UserID, notifyOrderID)
-	// B 侧：自动交付完成后触发下游回调
-	if s.downstreamCallbackSvc != nil {
-		s.downstreamCallbackSvc.EnqueueCallback(orderID)
+	target, err := s.orderStore.GetByID(notifyOrderID)
+	if err != nil || target == nil {
+		logger.Warnw("fulfillment_notify_order_fetch_failed", "order_id", notifyOrderID, "error", err)
+		return
 	}
-	return fulfillment, nil
+	if s.orderQueue != nil {
+		if _, err := orderapp.EnqueueStatusEmailTaskIfEligible(s.orderStore, s.orderQueue, s.settingService, s.defaultEmailConfig, notifyOrderID, target.Status); err != nil {
+			logger.Warnw("fulfillment_enqueue_status_email_failed", "order_id", notifyOrderID, "status", target.Status, "error", err)
+		}
+	}
+	go s.NotifyBotOrderFulfilled(order.UserID, notifyOrderID)
+	if s.downstreamCallbackSvc != nil {
+		s.downstreamCallbackSvc.EnqueueCallback(order.ID)
+	}
 }
 
 // NotifyBotOrderFulfilled 查找用户 Telegram 绑定并入队通知任务。

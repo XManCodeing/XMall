@@ -255,8 +255,9 @@
                 </div>
               </div>
 
+              <MembershipPurchaseInfo :product="product" :sku-id="selectedSkuId" />
               <!-- Quantity Selector -->
-                <div class="mb-8">
+                <div v-if="!product.membership" class="mb-8">
                   <h2 class="mb-3 text-sm font-bold uppercase tracking-widest text-muted-foreground">
                     {{ t('productDetail.quantity') }}
                   </h2>
@@ -417,6 +418,7 @@ import { ArrowLeft, Lock, Minus, Pencil, Plus, RotateCw, Tag, UserPlus, Zap } fr
 import { getImageUrl } from '../utils/image.ts'
 import { processHtmlForDisplay } from '../utils/content.ts'
 import { useProductDetail } from '../composables/useProductDetail.ts'
+import MembershipPurchaseInfo from '@/components/product/MembershipPurchaseInfo.vue'
 import ProductImageGallery from '../components/product/ProductImageGallery.vue'
 import ProductMobileBar from '../components/product/ProductMobileBar.vue'
 import BreadcrumbNav from '../components/BreadcrumbNav.vue'

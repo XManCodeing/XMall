@@ -2,215 +2,141 @@ import i18n from '@/i18n'
 import type { ApiResponse } from './types'
 import { notifyError } from '@/utils/notify'
 import { adminUrl } from '@/utils/adminBase'
-
+import { productSaveMessages } from '@/i18n/productSave'
 export type { ApiResponse }
-
-const t = (key: string, params?: Record<string, unknown>) =>
-  (params ? i18n.global.t(key, params) : i18n.global.t(key)) as string
-
-interface NotifiedError extends Error {
-  __notified?: boolean
+export type RequestErrorKind = 'timeout' | 'network' | 'business' | 'http' | 'response'
+export interface RequestError extends Error {
+  __notified: boolean
+  kind: RequestErrorKind
+  resultUnknown: boolean
+  response?: { status: number; data: any }
 }
-
-const createNotifiedError = (message: string): NotifiedError => {
-  const error = new Error(message) as NotifiedError
-  error.__notified = true
-  return error
-}
-
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || ''
-const API_PREFIX = '/api/v1'
-
-const redirectToLogin = () => {
-  localStorage.removeItem('admin_token')
-  window.location.href = adminUrl('/login')
-}
-
-const isLoginEndpoint = (url: string) => /\/admin\/login\b/.test(url)
-
 interface RequestOptions {
   params?: Record<string, any>
   headers?: Record<string, string>
   blob?: boolean
   timeoutMs?: number
+  /** Suppress error toasts for background reads; authentication handling is unchanged. */
+  silent?: boolean
   data?: any
   [key: string]: any
 }
-
-function buildUrl(base: string, path: string, params?: Record<string, any>): string {
-  const url = `${base}${path}`
-  if (!params) return url
-  const searchParams = new URLSearchParams()
-  for (const [key, value] of Object.entries(params)) {
-    if (value !== undefined && value !== null) {
-      searchParams.append(key, String(value))
-    }
-  }
-  const qs = searchParams.toString()
-  return qs ? `${url}?${qs}` : url
+const t = (key: string, params?: Record<string, unknown>) =>
+  (params ? i18n.global.t(key, params) : i18n.global.t(key)) as string
+const baseURL = `${import.meta.env.VITE_API_BASE_URL || ''}/api/v1`
+/** @returns Current application locale string. */
+function getLocale(): string { return (i18n.global.locale as any).value || i18n.global.locale || '' }
+/** @param key Shared recovery message key. @returns Localized network outcome text. */
+function requestText(key: 'timeout' | 'unknown' | 'invalidResponse'): string {
+  return (productSaveMessages[getLocale() as keyof typeof productSaveMessages] || productSaveMessages['en-US'])[key]
 }
-
-function getLocale(): string {
-  return (i18n.global.locale as any).value || i18n.global.locale || ''
+/** @returns Nothing. Clear expired authentication and navigate to the existing login route. */
+function redirectToLogin(): void {
+  localStorage.removeItem('admin_token')
+  window.location.href = adminUrl('/login')
 }
-
+/** @param status HTTP status. @returns Existing localized fallback. */
 function getHttpErrorMessage(status: number): string {
-  switch (status) {
-    case 401: return t('common.api.unauthorized')
-    case 403: return t('common.api.forbidden')
-    case 404: return t('common.api.notFound')
-    case 500: return t('common.api.serverError')
-    case 502: return t('common.api.badGateway')
-    case 503: return t('common.api.serviceUnavailable')
-    default: return t('common.api.requestFailedStatus', { status })
-  }
+  const keys: Record<number, string> = { 401: 'unauthorized', 403: 'forbidden', 404: 'notFound', 500: 'serverError', 502: 'badGateway', 503: 'serviceUnavailable' }
+  return keys[status] ? t(`common.api.${keys[status]}`) : t('common.api.requestFailedStatus', { status })
 }
-
-const baseURL = `${API_BASE_URL}${API_PREFIX}`
-const timeout = 10000
-
-function responseHeadersToObject(headers: Headers): Record<string, string> {
-  const result: Record<string, string> = {}
-  headers.forEach((value, key) => {
-    result[key] = value
+/** @param path API path. @param params Query values. @returns Encoded URL preserving prior query behavior. */
+function buildUrl(path: string, params?: Record<string, any>): string {
+  const query = new URLSearchParams()
+  for (const [key, value] of Object.entries(params || {})) {
+    if (value !== undefined && value !== null) query.append(key, String(value))
+  }
+  return `${baseURL}${path}${query.size ? `?${query}` : ''}`
+}
+/** @param input Error metadata. @returns Typed, already-notified error without erasing server messages. */
+function failure(input: { message: string; kind: RequestErrorKind; unknown: boolean; status?: number; data?: any; silent?: boolean }): RequestError {
+  const error = Object.assign(new Error(input.message), {
+    __notified: true as const, kind: input.kind, resultUnknown: input.unknown,
+    ...(input.status === undefined ? {} : { response: { status: input.status, data: input.data } }),
   })
+  if (!input.silent) notifyError(input.unknown ? `${input.message} ${requestText('unknown')}` : input.message)
+  return error
+}
+/** @param value Any caught value. @returns Whether a write may have committed without reliable acknowledgement. */
+export function isResultUnknown(value: unknown): boolean { return (value as Partial<RequestError> | null)?.resultUnknown === true }
+/** @param data Parsed error payload. @param fallback Localized fallback. @returns Real business message when present. */
+function messageOf(data: any, fallback: string): string {
+  return typeof data?.msg === 'string' && data.msg ? data.msg : typeof data?.message === 'string' && data.message ? data.message : fallback
+}
+/** @param headers Response headers. @returns Existing flat header map for downloads. */
+function headerMap(headers: Headers): Record<string, string> {
+  const result: Record<string, string> = {}
+  headers.forEach((value, key) => { result[key] = value })
   return result
 }
-
-async function readBlobErrorMessage(blob: Blob, fallbackMessage: string): Promise<string> {
-  try {
-    const text = await blob.text()
-    const payload = JSON.parse(text)
-    return payload?.msg || fallbackMessage
-  } catch {
-    return fallbackMessage
+/**
+ * Decode response bodies while the caller's timeout remains active; plain JSON and envelopes remain supported.
+ * @param response Fetch response. @param options Existing blob options. @param write Whether request can mutate state.
+ * @param path API path for login redirect policy. @param signal Shared deadline signal. @returns Existing response wrapper.
+ */
+async function decode(response: Response, options: RequestOptions, write: boolean, path: string, signal: AbortSignal): Promise<{ data: any; headers?: Record<string, string> }> {
+  let data: any
+  const jsonBlob = options.blob && (response.headers.get('content-type') || '').includes('application/json')
+  if (options.blob && response.ok && !jsonBlob) return { data: await response.blob(), headers: headerMap(response.headers) }
+  try { data = await response.json(); signal.throwIfAborted() }
+  catch (error) {
+    signal.throwIfAborted()
+    if (!(error instanceof SyntaxError)) throw error
+    if (response.status === 401 && !/\/admin\/login\b/.test(path)) redirectToLogin()
+    throw failure({ silent: !write && options.silent, message: response.ok ? requestText('invalidResponse') : getHttpErrorMessage(response.status),
+      kind: response.ok ? 'response' : 'http', unknown: write && (response.ok || response.status >= 500), status: response.status })
   }
-}
-
-async function request(method: string, path: string, bodyOrOptions?: any, options?: RequestOptions): Promise<{ data: any; headers?: Record<string, string> }> {
-  let body: any = undefined
-  let opts: RequestOptions = {}
-
-  if (method === 'GET' || method === 'DELETE') {
-    opts = bodyOrOptions || {}
-    if (opts.data) {
-      body = opts.data
-    }
-  } else {
-    body = bodyOrOptions
-    opts = options || {}
+  const businessStatus = data && typeof data === 'object' ? data.status_code : undefined
+  if (!response.ok || (businessStatus !== undefined && businessStatus !== 0) || jsonBlob) {
+    const status = !response.ok ? response.status : businessStatus || response.status
+    if (status === 401 && !/\/admin\/login\b/.test(path)) redirectToLogin()
+    throw failure({ silent: !write && options.silent, message: messageOf(data, response.ok ? t('common.api.requestFailed') : getHttpErrorMessage(status)),
+      kind: response.ok ? 'business' : 'http', unknown: write && (response.status >= 500 || (businessStatus >= 500 && businessStatus <= 599)), status, data })
   }
-
-  const url = buildUrl(baseURL, path, opts.params)
-  const headers: Record<string, string> = { ...opts.headers }
-
-  const locale = getLocale()
-  if (locale) {
-    headers['X-Lang'] = locale
+  if (data === null || typeof data !== 'object') {
+    throw failure({ silent: !write && options.silent, message: requestText('invalidResponse'), kind: 'response', unknown: write, status: response.status, data })
   }
-
-  const token = localStorage.getItem('admin_token')
-  if (token) {
-    headers['Authorization'] = `Bearer ${token}`
-  }
-
-  if (body !== undefined && !(body instanceof FormData)) {
-    headers['Content-Type'] = 'application/json'
-  }
-
-  const controller = new AbortController()
-  const requestTimeout = typeof opts.timeoutMs === 'number' && Number.isFinite(opts.timeoutMs)
-    ? Math.min(30000, Math.max(1000, opts.timeoutMs))
-    : timeout
-  const timer = setTimeout(() => controller.abort(), requestTimeout)
-
-  let response: Response
-  try {
-    response = await fetch(url, {
-      method,
-      headers,
-      body: body instanceof FormData ? body : body !== undefined ? JSON.stringify(body) : undefined,
-      signal: controller.signal,
-    })
-  } catch (err: any) {
-    clearTimeout(timer)
-    const message = t('common.api.networkError')
-    notifyError(message)
-    return Promise.reject(createNotifiedError(message))
-  } finally {
-    clearTimeout(timer)
-  }
-
-  // Blob response
-  if (opts.blob) {
-    const contentType = response.headers.get('content-type') || ''
-    const blob = await response.blob()
-    if (!response.ok) {
-      const fallbackMessage = getHttpErrorMessage(response.status)
-      const message = contentType.includes('application/json')
-        ? await readBlobErrorMessage(blob, fallbackMessage)
-        : fallbackMessage
-      if (response.status === 401 && !isLoginEndpoint(path)) {
-        redirectToLogin()
-      }
-      notifyError(message)
-      return Promise.reject(createNotifiedError(message))
-    }
-    if (contentType.includes('application/json')) {
-      const fallbackMessage = t('common.api.requestFailed')
-      const message = await readBlobErrorMessage(blob, fallbackMessage)
-      notifyError(message)
-      return Promise.reject(createNotifiedError(message))
-    }
-    return { data: blob, headers: responseHeadersToObject(response.headers) }
-  }
-
-  // Parse JSON
-  let data: ApiResponse
-  try {
-    data = await response.json()
-  } catch {
-    if (!response.ok) {
-      const status = response.status
-      const message = getHttpErrorMessage(status)
-      if (status === 401 && !isLoginEndpoint(path)) {
-        redirectToLogin()
-      }
-      notifyError(message)
-      return Promise.reject(createNotifiedError(message))
-    }
-    const message = t('common.api.responseMissing')
-    notifyError(message)
-    return Promise.reject(createNotifiedError(message))
-  }
-
-  // HTTP error with JSON body
-  if (!response.ok) {
-    const status = response.status
-    const message = data?.msg || getHttpErrorMessage(status)
-    if (status === 401 && !isLoginEndpoint(path)) {
-      redirectToLogin()
-    }
-    notifyError(message)
-    return Promise.reject(Object.assign(createNotifiedError(message), { response: { status, data } }))
-  }
-
-  // Business error check
-  if (typeof data.status_code !== 'undefined' && data.status_code !== 0) {
-    const fallbackMessage = t('common.api.requestFailed')
-    const message = data.msg || fallbackMessage
-    if (data.status_code === 401 && !isLoginEndpoint(path)) {
-      notifyError(message)
-      redirectToLogin()
-      return Promise.reject(createNotifiedError(message))
-    }
-    notifyError(message)
-    return Promise.reject(Object.assign(createNotifiedError(message), { response: { status: data.status_code, data } }))
-  }
-
   return { data }
 }
-
+/**
+ * Execute one request; timeout covers headers and body. Never retries writes with unknown outcomes.
+ * @param method HTTP verb. @param path API path. @param bodyOrOptions Body or GET/DELETE options.
+ * @param options Write options. @returns Existing data/header response wrapper.
+ */
+async function request(method: string, path: string, bodyOrOptions?: any, options?: RequestOptions): Promise<{ data: any; headers?: Record<string, string> }> {
+  const readOptions = method === 'GET' || method === 'DELETE'
+  const opts: RequestOptions = (readOptions ? bodyOrOptions : options) || {}
+  const body = readOptions ? opts.data : bodyOrOptions
+  const write = method !== 'GET'
+  const headers: Record<string, string> = { ...opts.headers }
+  const locale = getLocale(), token = localStorage.getItem('admin_token')
+  if (locale) headers['X-Lang'] = locale
+  if (token) headers.Authorization = `Bearer ${token}`
+  if (body !== undefined && !(body instanceof FormData)) headers['Content-Type'] = 'application/json'
+  // Serialization happens before dispatch: a local validation/encoding error cannot have committed.
+  const serialized = body instanceof FormData ? body : body !== undefined ? JSON.stringify(body) : undefined
+  const controller = new AbortController()
+  const timeoutMs = typeof opts.timeoutMs === 'number' && Number.isFinite(opts.timeoutMs) ? Math.min(30000, Math.max(1000, opts.timeoutMs)) : 10000
+  let response: Response | undefined
+  let timedOut = false
+  let timer: ReturnType<typeof setTimeout> | undefined
+  const deadline = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => { timedOut = true; controller.abort(); reject(new DOMException('Request timed out', 'AbortError')) }, timeoutMs)
+  })
+  try {
+    const operation = async () => {
+      response = await fetch(buildUrl(path, opts.params), { method, headers, body: serialized, signal: controller.signal })
+      return decode(response, opts, write, path, controller.signal)
+    }
+    return await Promise.race([operation(), deadline])
+  } catch (error) {
+    if ((error as Partial<RequestError>)?.__notified) throw error
+    const timeout = timedOut || (error as Error)?.name === 'AbortError'
+    const definiteRejection = response && response.status >= 400 && response.status < 500
+    throw failure({ silent: !write && opts.silent, message: definiteRejection ? getHttpErrorMessage(response!.status) : timeout ? requestText('timeout') : t('common.api.networkError'),
+      kind: definiteRejection ? 'http' : timeout ? 'timeout' : 'network', unknown: write && !definiteRejection, status: response?.status })
+  } finally { clearTimeout(timer) }
+}
 export const api = {
   get: (path: string, options?: RequestOptions) => request('GET', path, options),
   post: (path: string, body?: any, options?: RequestOptions) => request('POST', path, body, options),

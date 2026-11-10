@@ -31,6 +31,20 @@ beforeEach(() => {
   mocks.putProfile.mockResolvedValue({ data: { data: { instance_id: 7, display_name: 'Draft', description: {}, cover_url: '', profile_version: 2 } } })
 })
 describe('bot content section saves', () => {
+  it('preserves membership builtin labels, disabled state and ordering', async () => {
+    const item = { key: 'custom-memberships', enabled: false, order: 42,
+      label: { 'zh-CN': '会员入口', 'zh-TW': '會員入口', 'en-US': 'Membership access' },
+      action: { type: 'builtin', value: 'memberships' } }
+    mocks.get.mockResolvedValueOnce({ data: { data: { config_version: 4, menu: { items: [item] } } } })
+    const model = useTelegramBotSettings(['menu'])
+    await model.fetchConfig()
+    expect(model.form.value.menu.items).toEqual([item])
+    expect(model.isBuiltinMenuItem(model.form.value.menu.items[0]!)).toBe(true)
+    expect(model.menuDroppedUnsupported.value).toBe(false)
+    expect(model.menuValidationError.value).toBe('')
+    await model.saveConfig()
+    expect(mocks.patch).toHaveBeenCalledWith('menu', 4, { items: [item] })
+  })
   it('saves only help with its loaded CAS version', async () => {
     const model = useTelegramBotSettings(['help'])
     await model.fetchConfig(); await model.saveConfig()

@@ -44,6 +44,11 @@ func BuildRunner(cfg *config.Config, mode string) (*Runner, error) {
 		}
 	}
 
+	// API-only 部署也必须补账；多个进程由数据库事件租约和来源唯一键互斥。
+	if (mode == ModeAll || mode == ModeAPI || mode == ModeWorker) && dependencies.MembershipRecovery != nil {
+		services = append(services, dependencies.MembershipRecovery)
+	}
+
 	// 如果没有服务被启动（例如模式错误或配置导致都没起），应该报错或至少打日志
 	if len(services) == 0 {
 		return nil, errors.New("no services initialized (check mode and config)")

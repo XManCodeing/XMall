@@ -5,12 +5,31 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	resellermodule "github.com/XManCodeing/XMall/internal/modules/reseller/contract"
 	"github.com/XManCodeing/XMall/internal/platform/http/response"
 
 	"github.com/gin-gonic/gin"
 )
+
+// TestOrderDateBoundariesUseEastEight 验证无偏移日期按东八区解释，带偏移 API 时间保留绝对时刻。
+func TestOrderDateBoundariesUseEastEight(t *testing.T) {
+	for _, scenario := range []struct {
+		raw  string
+		end  bool
+		want string
+	}{
+		{"2027-01-01", false, "2026-12-31T16:00:00Z"},
+		{"2027-01-01", true, "2027-01-01T15:59:59.999999999Z"},
+		{"2027-01-01T00:00:00Z", true, "2027-01-01T00:00:00Z"},
+	} {
+		actual, err := parseOrderTimeQuery(scenario.raw, scenario.end)
+		if err != nil || actual == nil || actual.UTC().Format(time.RFC3339Nano) != scenario.want {
+			t.Fatalf("parse %q end=%v: %v %v", scenario.raw, scenario.end, actual, err)
+		}
+	}
+}
 
 type orderServiceStub struct {
 	err error

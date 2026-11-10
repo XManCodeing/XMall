@@ -2,7 +2,7 @@
   <div class="space-y-5">
     <ResellerSectionHeader :title="t('resellerConsole.ledger.title')" :description="t('resellerConsole.ledger.description')" />
 
-    <ResellerFilterBar @search="reload" @reset="resetFilters">
+    <ResellerFilterBar :loading="ledgerLoading" @search="reload" @reset="resetFilters">
       <template #fields>
         <Select v-model="filters.type">
           <SelectTrigger>
@@ -98,13 +98,13 @@
       </div>
 
       <div v-if="ledgerPagination.total_page > 1" class="flex flex-wrap items-center justify-center gap-3">
-        <Button variant="outline" size="sm" :disabled="ledgerPagination.page <= 1" @click="goPage(ledgerPagination.page - 1)">
+        <Button variant="outline" size="sm" :disabled="ledgerLoading || ledgerPagination.page <= 1" @click="goPage(ledgerPagination.page - 1)">
           {{ t('orders.prevPage') }}
         </Button>
         <span class="rounded-full border bg-card px-4 py-1.5 text-sm text-muted-foreground">
           {{ t('orders.pageInfo', { page: ledgerPagination.page, total: ledgerPagination.total_page }) }}
         </span>
-        <Button variant="outline" size="sm" :disabled="ledgerPagination.page >= ledgerPagination.total_page" @click="goPage(ledgerPagination.page + 1)">
+        <Button variant="outline" size="sm" :disabled="ledgerLoading || ledgerPagination.page >= ledgerPagination.total_page" @click="goPage(ledgerPagination.page + 1)">
           {{ t('orders.nextPage') }}
         </Button>
       </div>
@@ -152,14 +152,25 @@ const currentParams = () => ({
   order_id: filters.order_id || undefined,
 })
 
-const reload = () => loadLedgerEntries({ ...currentParams(), page: 1 })
-const goPage = (page: number) => loadLedgerEntries({ ...currentParams(), page })
+/** 使用当前筛选查询第一页；加载期间不重复请求。@returns 查询完成或无操作。 */
+const reload = () => {
+  if (ledgerLoading.value) return
+  ledgerPagination.page = 1
+  return loadLedgerEntries({ ...currentParams(), page: 1 })
+}
+/** 翻页保留筛选上下文。@param page 目标页。@returns 查询完成或无操作。 */
+const goPage = (page: number) => {
+  if (ledgerLoading.value) return
+  return loadLedgerEntries({ ...currentParams(), page })
+}
 
+/** 将类型、状态、订单 ID 恢复默认值并查询一次第一页。@returns 查询完成或无操作。 */
 const resetFilters = () => {
+  if (ledgerLoading.value) return
   filters.type = 'all'
   filters.status = 'all'
   filters.order_id = undefined
-  void reload()
+  return reload()
 }
 
 const ledgerTypeLabel = (type?: string) => {

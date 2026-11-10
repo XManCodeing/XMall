@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge'
 import EmptyState from '@/components/EmptyState.vue'
 import SmartImage from '@/components/SmartImage.vue'
 import CheckoutSteps from '@/components/checkout/CheckoutSteps.vue'
+import MembershipPurchaseInfo from '@/components/product/MembershipPurchaseInfo.vue'
 import { useCart } from '@/composables/useCart'
 
 const { t } = useI18n()
@@ -42,11 +43,14 @@ const {
             </div>
           </div>
           <p v-if="itemStockHint(item)" class="mt-3 text-xs text-muted-foreground">{{ itemStockHint(item) }}</p>
+          <MembershipPurchaseInfo :product="item" :sku-id="item.skuId" :items="cartItems" return-path="/cart" />
           <div class="mt-4 flex flex-wrap items-center justify-between gap-3 border-t pt-4">
             <div class="flex items-center gap-1">
-              <Button variant="ghost" size="icon" class="h-11 w-11 rounded-xl" :disabled="item.quantity <= itemPurchaseMin(item)" :aria-label="`${t('checkout.quantityLabel')} −`" @click="updateQty(item, item.quantity - 1)"><Minus class="h-4 w-4" /></Button>
-              <input :id="`orbit-cart-qty-${cartItemKey(item)}`" :name="`orbit-cart-qty-${cartItemKey(item)}`" type="number" :value="item.quantity" :min="itemPurchaseMin(item)" :max="itemMaxQuantity(item)" :aria-label="t('checkout.quantityLabel')" class="orbit-quantity h-11 w-12 rounded-xl border bg-background text-center text-base tabular-nums" @change="handleQtyChange(item, $event)" />
-              <Button variant="ghost" size="icon" class="h-11 w-11 rounded-xl" :disabled="item.quantity >= itemMaxQuantity(item)" :aria-label="`${t('checkout.quantityLabel')} +`" @click="updateQty(item, item.quantity + 1)"><Plus class="h-4 w-4" /></Button>
+              <template v-if="!item.membership">
+                <Button variant="ghost" size="icon" class="h-11 w-11 rounded-xl" :disabled="item.quantity <= itemPurchaseMin(item)" :aria-label="`${t('checkout.quantityLabel')} −`" @click="updateQty(item, item.quantity - 1)"><Minus class="h-4 w-4" /></Button>
+                <input :id="`orbit-cart-qty-${cartItemKey(item)}`" :name="`orbit-cart-qty-${cartItemKey(item)}`" type="number" :value="item.quantity" :min="itemPurchaseMin(item)" :max="itemMaxQuantity(item)" :aria-label="t('checkout.quantityLabel')" class="orbit-quantity h-11 w-12 rounded-xl border bg-background text-center text-base tabular-nums" @change="handleQtyChange(item, $event)" />
+                <Button variant="ghost" size="icon" class="h-11 w-11 rounded-xl" :disabled="item.quantity >= itemMaxQuantity(item)" :aria-label="`${t('checkout.quantityLabel')} +`" @click="updateQty(item, item.quantity + 1)"><Plus class="h-4 w-4" /></Button>
+              </template>
               <Button variant="ghost" size="icon" class="h-11 w-11 rounded-xl text-muted-foreground" :aria-label="t('cart.remove')" @click="removeWithUndo(item)"><Trash2 class="h-4 w-4" /></Button>
             </div>
             <p class="text-base font-semibold tabular-nums">{{ itemSubtotal(item) }}</p>

@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
+import { confirmAction } from '@/utils/confirm'
 import { notifyError, notifySuccess } from '@/utils/notify'
 import { orderEmailSceneKeys } from '@/utils/orderEmailTemplates'
 
@@ -133,7 +134,7 @@ const save = async () => {
 }
 
 const resetToDefault = async () => {
-  if (!confirm(t('admin.settings.orderEmailTemplate.resetConfirm'))) return
+  if (!await confirmAction(t('admin.settings.orderEmailTemplate.resetConfirm'))) return
   resetting.value = true
   try {
     await adminAPI.resetOrderEmailTemplateSettings()

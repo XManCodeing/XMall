@@ -34,6 +34,11 @@ type LoginPayload struct {
 
 // IdentityVerified is the canonical verified Telegram identity.
 type IdentityVerified struct {
+	// PartialProfile marks channel input where omitted fields must not erase stored data.
+	// Verified website logins keep complete-profile semantics (the zero value).
+	PartialProfile        bool
+	UsernamePresent       bool
+	AvatarPresent         bool
 	Provider              string
 	ProviderUserID        string
 	ProviderUserIDAliases []string

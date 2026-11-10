@@ -12,6 +12,9 @@ import (
 	app "github.com/XManCodeing/XMall/internal/modules/telegram/broadcast/application"
 	broadcastcontract "github.com/XManCodeing/XMall/internal/modules/telegram/broadcast/contract"
 	broadcastdomain "github.com/XManCodeing/XMall/internal/modules/telegram/broadcast/domain"
+	runtimecontract "github.com/XManCodeing/XMall/internal/modules/telegram/runtime/contract"
+	runtimedomain "github.com/XManCodeing/XMall/internal/modules/telegram/runtime/domain"
+	runtimestore "github.com/XManCodeing/XMall/internal/modules/telegram/runtime/infrastructure/gormstore"
 	"github.com/glebarez/sqlite"
 	"gorm.io/gorm"
 )
@@ -32,6 +35,63 @@ func setupStoreTest(t *testing.T) *Store {
 	}
 	t.Cleanup(func() { _ = sqlDB.Close() })
 	return New(db)
+}
+
+// TestRecoveryFenceRejectsBroadcastWrites verifies the real transaction-bound guard.
+// It uses one connection and preserves existing jobs when create/update/retry are blocked.
+func TestRecoveryFenceRejectsBroadcastWrites(t *testing.T) {
+	repo := setupStoreTest(t)
+	if err := repo.db.AutoMigrate(&runtimedomain.Instance{}); err != nil {
+		t.Fatal(err)
+	}
+	connection, err := repo.db.DB()
+	if err != nil {
+		t.Fatal(err)
+	}
+	connection.SetMaxOpenConns(1)
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+	instance := runtimedomain.Instance{ID: 1, Version: 1, Mode: "internal", State: "stopped"}
+	if err := repo.db.Create(&instance).Error; err != nil {
+		t.Fatal(err)
+	}
+	repo.WithBotRecoveryGuard(func(tx *gorm.DB, bot uint) error {
+		return runtimestore.New(tx).GuardRecoveryWrite(ctx, bot)
+	})
+	job := &broadcastdomain.Broadcast{BotID: 1, Title: "original", Status: "pending"}
+	if err := repo.Create(ctx, job); err != nil {
+		t.Fatal(err)
+	}
+	if err := runtimestore.New(repo.db).BlockRecovery(ctx, runtimecontract.RecoveryFence{BotID: 1, TaskID: 91, Version: 1}); err != nil {
+		t.Fatal(err)
+	}
+	job.Title = "must not persist"
+	for name, operation := range map[string]func() error{
+		"create": func() error { return repo.Create(ctx, &broadcastdomain.Broadcast{BotID: 1}) },
+		"update": func() error { return repo.Update(ctx, job) },
+		"retry":  func() error { return repo.RetryBroadcastDelivery(ctx, 1, job.ID, 1) },
+	} {
+		if err := operation(); !errors.Is(err, runtimecontract.ErrRecoveryBlocked) {
+			t.Fatalf("%s bypassed fence: %v", name, err)
+		}
+	}
+	actual, err := repo.GetByID(ctx, job.ID)
+	if err != nil || actual == nil || actual.Title != "original" {
+		t.Fatalf("historical job changed: %+v %v", actual, err)
+	}
+	legacy := &broadcastdomain.Broadcast{Title: "legacy", Status: "pending"}
+	if err := repo.db.Create(legacy).Error; err != nil {
+		t.Fatal(err)
+	}
+	legacy.Status = "needs_review"
+	if err := repo.Update(ctx, legacy); err != nil {
+		t.Fatalf("legacy quarantine blocked: %v", err)
+	}
+	// Changing the request's owner cannot evade the original Bot's fence.
+	job.BotID = 0
+	if err := repo.Update(ctx, job); err == nil {
+		t.Fatal("broadcast ownership mutation accepted")
+	}
 }
 
 func TestStoreListPagination(t *testing.T) {

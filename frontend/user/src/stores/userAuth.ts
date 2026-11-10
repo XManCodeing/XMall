@@ -2,6 +2,7 @@ import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { userAuthAPI } from '../api'
+import { BUY_NOW_CONTEXT_KEY, clearPurchaseContext } from '../utils/purchaseContext'
 
 export const useUserAuthStore = defineStore('user-auth', () => {
     const router = useRouter()
@@ -34,11 +35,17 @@ export const useUserAuthStore = defineStore('user-auth', () => {
     }
 
     const setUser = (newUser: any) => {
+        if (user.value?.id !== newUser?.id) {
+            clearPurchaseContext()
+            clearPurchaseContext(BUY_NOW_CONTEXT_KEY)
+        }
         user.value = newUser
         localStorage.setItem('user_profile', JSON.stringify(newUser))
     }
 
     const clearAuth = () => {
+        clearPurchaseContext()
+        clearPurchaseContext(BUY_NOW_CONTEXT_KEY)
         token.value = ''
         user.value = null
         localStorage.removeItem('user_token')

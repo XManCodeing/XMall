@@ -3,14 +3,15 @@ import { computed, onMounted, ref, watch } from 'vue'
 import { RouterLink } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useDebounceFn } from '@vueuse/core'
-import { AlertTriangle, Copy, Download, PackageCheck, Upload, X } from 'lucide-vue-next'
+import { AlertTriangle, Copy, Download, PackageCheck, Upload } from 'lucide-vue-next'
 import { adminAPI } from '@/api/admin'
 import type { AdminCardSecretBatch, AdminProduct, AdminProductSKU } from '@/api/types'
+import { Dialog, DialogScrollContent, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { getLocalizedText } from '@/utils/format'
+import { formatDate, getLocalizedText } from '@/utils/format'
 import { adminUrl } from '@/utils/adminBase'
 import { notifyErrorOnce, notifySuccess } from '@/utils/notify'
 
@@ -293,7 +294,7 @@ const handleSkuSelectionChange = async () => {
 const resolveExportFilename = (response: any, format: 'txt' | 'csv') => {
   const contentDisposition = String(response?.headers?.['content-disposition'] || '')
   const filenameMatch = contentDisposition.match(/filename="?([^";]+)"?/i)
-  const fallbackName = `card-secrets-available-${new Date().toISOString().replace(/[:.]/g, '-')}.${format}`
+  const fallbackName = `card-secrets-available-${formatDate(new Date()).replace(/[ :]/g, '-')}.${format}`
   return filenameMatch?.[1] || fallbackName
 }
 
@@ -614,29 +615,17 @@ onMounted(async () => {
       </div>
     </div>
 
-    <div
-      v-if="confirmExportOpen"
-      class="fixed inset-0 z-50 flex items-center justify-center bg-black/45 px-4 py-6 backdrop-blur-sm"
-      role="dialog"
-      aria-modal="true"
-    >
-      <div class="w-full max-w-md overflow-hidden rounded-2xl border border-border bg-card shadow-2xl">
+    <Dialog v-model:open="confirmExportOpen">
+      <DialogScrollContent class="max-w-md p-0 gap-0" @interact-outside="event => event.preventDefault()">
+      <div class="w-full overflow-hidden">
         <div class="flex items-start gap-3 border-b border-border px-5 py-4">
           <div class="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-amber-100 text-amber-700 dark:bg-amber-950/50 dark:text-amber-300">
             <AlertTriangle class="h-5 w-5" />
           </div>
-          <div class="min-w-0 flex-1">
-            <h3 class="text-base font-semibold text-foreground">{{ t('admin.cardSecretExports.confirmTitle') }}</h3>
-            <p class="mt-1 text-sm leading-6 text-muted-foreground">{{ confirmExportMessage }}</p>
+          <div class="min-w-0 flex-1 pr-6">
+            <DialogTitle class="text-base font-semibold text-foreground">{{ t('admin.cardSecretExports.confirmTitle') }}</DialogTitle>
+            <DialogDescription class="mt-1 text-sm leading-6 text-muted-foreground">{{ confirmExportMessage }}</DialogDescription>
           </div>
-          <button
-            type="button"
-            class="rounded-full p-1 text-muted-foreground transition hover:bg-muted hover:text-foreground"
-            :aria-label="t('admin.common.cancel')"
-            @click="confirmExportOpen = false"
-          >
-            <X class="h-4 w-4" />
-          </button>
         </div>
         <div class="space-y-2 px-5 py-4 text-sm">
           <div class="flex justify-between gap-4">
@@ -661,25 +650,22 @@ onMounted(async () => {
           </Button>
         </div>
       </div>
-    </div>
+      </DialogScrollContent>
+    </Dialog>
 
-    <div
-      v-if="exportResult"
-      class="fixed inset-0 z-50 flex items-center justify-center bg-black/45 px-4 py-6 backdrop-blur-sm"
-      role="dialog"
-      aria-modal="true"
-    >
-      <div class="flex max-h-[92vh] w-full max-w-5xl flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-2xl">
-        <div class="flex items-start justify-between gap-4 border-b border-border px-5 py-4">
+    <Dialog :open="!!exportResult" @update:open="value => { if (!value) closeExportResult() }">
+      <DialogScrollContent class="max-w-5xl p-0 gap-0" @interact-outside="event => event.preventDefault()" @escape-key-down="event => event.preventDefault()">
+      <div v-if="exportResult" class="flex w-full flex-col overflow-hidden">
+        <div class="flex items-start justify-between gap-4 border-b border-border px-5 py-4 pr-12">
           <div class="min-w-0">
-            <h3 class="text-base font-semibold text-foreground">{{ t('admin.cardSecretExports.result.title') }}</h3>
-            <p class="mt-1 text-sm text-muted-foreground">
+            <DialogTitle class="text-base font-semibold text-foreground">{{ t('admin.cardSecretExports.result.title') }}</DialogTitle>
+            <DialogDescription class="mt-1 text-sm text-muted-foreground">
               {{
                 exportResult.deleted
                   ? t('admin.cardSecretExports.success.deleted', { count: exportResult.count })
                   : t('admin.cardSecretExports.success.used', { count: exportResult.count })
               }}
-            </p>
+            </DialogDescription>
           </div>
           <div class="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-medium text-emerald-700 dark:border-emerald-900/60 dark:bg-emerald-950/30 dark:text-emerald-300">
             {{ exportResult.format.toUpperCase() }}
@@ -732,6 +718,7 @@ onMounted(async () => {
           </div>
         </div>
       </div>
-    </div>
+      </DialogScrollContent>
+    </Dialog>
   </div>
 </template>

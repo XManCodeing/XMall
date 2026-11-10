@@ -4,6 +4,7 @@ import (
 	crand "crypto/rand"
 	"encoding/hex"
 	"fmt"
+	"github.com/XManCodeing/XMall/internal/constants"
 	"strings"
 	"time"
 )
@@ -44,7 +45,7 @@ func formatNullableTime(raw *time.Time) string {
 	if raw == nil || raw.IsZero() {
 		return ""
 	}
-	return raw.Format(time.RFC3339)
+	return constants.DisplayTime(*raw, time.RFC3339)
 }
 
 func generateBatchNo(now time.Time) string {

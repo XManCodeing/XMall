@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from 'vue'
-import { useDebounceFn } from '@vueuse/core'
 import { useI18n } from 'vue-i18n'
 import { adminAPI } from '@/api/admin'
 import type { AdminNotificationLog } from '@/api/types'
@@ -244,20 +243,23 @@ const fetchNotificationLogs = async (page = 1) => {
   }
 }
 
-const handleNotificationLogSearch = () => {
-  fetchNotificationLogs(1)
+/** 按当前日志筛选查询第一页。@returns 查询完成。 */
+const handleNotificationLogSearch = async (): Promise<void> => {
+  if (notificationLogsLoading.value) return
+  notificationLogPagination.value.page = 1
+  await fetchNotificationLogs(1)
 }
 
-const debouncedNotificationLogSearch = useDebounceFn(handleNotificationLogSearch, 300)
-
-const resetNotificationLogFilters = () => {
+/** 恢复日志筛选默认值，保留分页尺寸及通知设置。@returns 查询完成。 */
+const resetNotificationLogFilters = async (): Promise<void> => {
+  if (notificationLogsLoading.value) return
   notificationLogFilters.channel = '__all__'
   notificationLogFilters.status = '__all__'
   notificationLogFilters.eventType = '__all__'
   notificationLogFilters.isTest = '__all__'
   notificationLogFilters.createdFrom = ''
   notificationLogFilters.createdTo = ''
-  fetchNotificationLogs(1)
+  await handleNotificationLogSearch()
 }
 
 const changeNotificationLogPage = (page: number) => {
@@ -424,7 +426,7 @@ onMounted(async () => {
       </div>
 
       <div class="mt-6 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-        <Select v-model="notificationLogFilters.channel" @update:modelValue="handleNotificationLogSearch">
+        <Select v-model="notificationLogFilters.channel">
           <SelectTrigger class="h-10">
             <SelectValue />
           </SelectTrigger>
@@ -435,7 +437,7 @@ onMounted(async () => {
             <SelectItem value="feishu">{{ t('admin.settings.notification.channels.feishu.title') }}</SelectItem>
           </SelectContent>
         </Select>
-        <Select v-model="notificationLogFilters.status" @update:modelValue="handleNotificationLogSearch">
+        <Select v-model="notificationLogFilters.status">
           <SelectTrigger class="h-10">
             <SelectValue />
           </SelectTrigger>
@@ -445,7 +447,7 @@ onMounted(async () => {
             <SelectItem value="failed">{{ t('admin.settings.notification.logs.status.failed') }}</SelectItem>
           </SelectContent>
         </Select>
-        <Select v-model="notificationLogFilters.eventType" @update:modelValue="handleNotificationLogSearch">
+        <Select v-model="notificationLogFilters.eventType">
           <SelectTrigger class="h-10">
             <SelectValue />
           </SelectTrigger>
@@ -454,7 +456,7 @@ onMounted(async () => {
             <SelectItem v-for="scene in testScenes" :key="scene.value" :value="scene.value">{{ scene.label }}</SelectItem>
           </SelectContent>
         </Select>
-        <Select v-model="notificationLogFilters.isTest" @update:modelValue="handleNotificationLogSearch">
+        <Select v-model="notificationLogFilters.isTest">
           <SelectTrigger class="h-10">
             <SelectValue />
           </SelectTrigger>
@@ -472,25 +474,25 @@ onMounted(async () => {
           type="datetime-local"
           class="h-10"
           :placeholder="t('admin.settings.notification.logs.filters.createdFrom')"
-          @update:modelValue="debouncedNotificationLogSearch"
+          @keydown.enter="handleNotificationLogSearch"
         />
         <Input
           v-model="notificationLogFilters.createdTo"
           type="datetime-local"
           class="h-10"
           :placeholder="t('admin.settings.notification.logs.filters.createdTo')"
-          @update:modelValue="debouncedNotificationLogSearch"
+          @keydown.enter="handleNotificationLogSearch"
         />
       </div>
 
       <div class="mt-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-end">
-        <Button size="sm" variant="outline" class="w-full sm:w-auto" @click="resetNotificationLogFilters">
+        <Button size="sm" variant="outline" class="w-full sm:w-auto" :disabled="notificationLogsLoading" @click="resetNotificationLogFilters">
           {{ t('admin.settings.notification.logs.actions.reset') }}
         </Button>
-        <Button size="sm" variant="outline" class="w-full sm:w-auto" @click="fetchNotificationLogs(notificationLogPagination.page)">
+        <Button size="sm" variant="outline" class="w-full sm:w-auto" :disabled="notificationLogsLoading" @click="fetchNotificationLogs(notificationLogPagination.page)">
           {{ t('admin.settings.notification.logs.actions.refresh') }}
         </Button>
-        <Button size="sm" class="w-full sm:w-auto" @click="handleNotificationLogSearch">
+        <Button size="sm" class="w-full sm:w-auto" :disabled="notificationLogsLoading" @click="handleNotificationLogSearch">
           {{ t('admin.settings.notification.logs.actions.search') }}
         </Button>
       </div>

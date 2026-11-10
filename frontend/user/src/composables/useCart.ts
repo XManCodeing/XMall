@@ -11,6 +11,7 @@ import {
 } from '../utils/cartStock'
 import { getImageUrl } from '../utils/image'
 import { useLocalized } from './useProduct'
+import { isMembershipProduct, membershipSalesBlocked, membershipTermLabel } from '../utils/membershipPurchase'
 import { toast } from './useToast'
 
 /**
@@ -63,6 +64,7 @@ export function useCart() {
   }
 
   const updateQty = (item: CartItem, qty: number) => {
+    if (isMembershipProduct(item)) return
     const key = cartItemKey(item)
     quantityWarnings.value[key] = ''
     const max = itemMaxQuantity(item)
@@ -102,7 +104,7 @@ export function useCart() {
 
   const cartItemKey = (item: CartItem) => `${item.productId}:${normalizeSkuId(item.skuId)}`
 
-  const itemSkuDisplay = (item: CartItem) => buildSkuDisplayText({
+  const itemSkuDisplay = (item: CartItem) => isMembershipProduct(item) ? membershipTermLabel(item, item.skuId, t) : buildSkuDisplayText({
     skuCode: item.skuCode,
     specValues: item.skuSpecValues,
     fallback: t('productDetail.skuFallback'),
@@ -172,6 +174,7 @@ export function useCart() {
   }
 
   const itemStockHint = (item: CartItem) => {
+    if (membershipSalesBlocked(item)) return t('membershipPurchase.closed')
     const available = itemAvailableStock(item)
     const purchaseLimit = itemPurchaseLimit(item)
     const maxQuantity = itemMaxQuantity(item)

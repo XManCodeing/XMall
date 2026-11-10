@@ -41,6 +41,7 @@
               <div class="min-w-0 flex-1">
                 <RouterLink :to="`/products/${item.slug}`" class="block font-bold hover:text-primary">{{ getLocalizedText(item.title) }}</RouterLink>
                 <div class="mt-0.5 text-[12.5px] text-muted-foreground">{{ t('checkout.quantityLabel') }}：{{ item.quantity }}</div>
+                <MembershipPurchaseInfo :product="item" :sku-id="item.skuId" :items="cartItems" :return-path="isBuyNowMode ? '/checkout?mode=buynow' : '/checkout'" />
                 <div v-if="itemSkuDisplay(item)" class="mt-0.5 text-[12.5px] text-muted-foreground">{{ t('checkout.skuLabel') }}：{{ itemSkuDisplay(item) }}</div>
                 <div v-if="itemStockHint(item)" class="mt-0.5 text-[12.5px]" :class="itemStockExceeded(item) ? 'text-warning' : 'text-muted-foreground'">{{ itemStockHint(item) }}</div>
               </div>
@@ -207,6 +208,7 @@ import ImageCaptcha from '../../components/captcha/ImageCaptcha.vue'
 import TurnstileCaptcha from '../../components/captcha/TurnstileCaptcha.vue'
 import CheckoutManualForm from '../../components/checkout/CheckoutManualForm.vue'
 import VaultCheckoutSteps from './components/VaultCheckoutSteps.vue'
+import MembershipPurchaseInfo from '@/components/product/MembershipPurchaseInfo.vue'
 import { useCheckout } from '../../composables/useCheckout.ts'
 
 const { t } = useI18n()

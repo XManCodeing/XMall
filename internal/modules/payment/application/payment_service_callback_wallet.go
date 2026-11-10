@@ -42,27 +42,7 @@ func (s *PaymentService) handleWalletRechargeCallback(payment *paymentdomain.Pay
 		return nil, err
 	}
 
-	// 幂等处理：已成功状态仅更新回调元信息。
-	if payment.Status == constants.PaymentStatusSuccess {
-		log.Infow("wallet_recharge_callback_idempotent_success",
-			"current_status", payment.Status,
-		)
-		return s.updateCallbackMeta(payment, constants.PaymentStatusSuccess, input)
-	}
-	if payment.Status == status {
-		log.Infow("wallet_recharge_callback_idempotent_same_status",
-			"current_status", payment.Status,
-		)
-		return s.updateCallbackMeta(payment, status, input)
-	}
-	if !canApplyWalletRechargeCallback(payment.Status, recharge.Status, status) {
-		log.Infow("wallet_recharge_callback_ignored_terminal_transition",
-			"current_payment_status", payment.Status,
-			"current_recharge_status", recharge.Status,
-			"target_status", status,
-		)
-		return s.updateCallbackMeta(payment, payment.Status, input)
-	}
+	// 所有通知均在同一事务重读，不能用锁外快照绕过流水占位或覆盖已成功付款。
 
 	now := time.Now()
 	updated, newlySucceeded, err := s.applyWalletRechargePaymentUpdate(payment, status, input, now)
@@ -115,6 +95,11 @@ func (s *PaymentService) applyWalletRechargePaymentUpdate(payment *paymentdomain
 		walletTx := tx.Wallets()
 		rechargeRepo := walletTx.Wallets()
 
+		if locker, ok := paymentRepo.(paymentcontract.CreationLocker); ok {
+			if err := locker.LockCreation(0); err != nil {
+				return err
+			}
+		}
 		lockedPayment, err := paymentRepo.GetByIDForUpdate(payment.ID)
 		if err != nil {
 			return ErrPaymentUpdateFailed
@@ -131,8 +116,10 @@ func (s *PaymentService) applyWalletRechargePaymentUpdate(payment *paymentdomain
 		}
 		adoptVerifiedLegacyDujiaoPayCurrency(lockedPayment, status, input)
 		paymentVal = lockedPayment
-		if lockedPayment.Status == constants.PaymentStatusSuccess {
-			_, err := updateCallbackMetaWithRepo(paymentRepo, lockedPayment, constants.PaymentStatusSuccess, input)
+		if blocked, err := guardCallbackEvidence(paymentRepo, lockedPayment, status, input, now); blocked || err != nil {
+			return err
+		}
+		if handled, err := preserveSuccessfulReceipt(paymentRepo, lockedPayment, status, input, now); handled {
 			return err
 		}
 		if lockedPayment.Status == status {

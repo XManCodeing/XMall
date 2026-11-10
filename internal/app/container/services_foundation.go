@@ -44,7 +44,8 @@ func (c *Container) initPolicyAndSettingServices() {
 		panic(err)
 	}
 
-	c.SettingService = settingsapp.NewService(c.SettingRepo, c.Config.Order)
+	c.SettingService = settingsapp.NewService(c.SettingRepo, c.Config.Order).
+		WithNotificationDefaults(c.Config.Email, c.Config.TelegramAuth)
 	c.EmailBrandResolver = mailbrandwiring.New(c.SettingService, c.ResellerStore)
 	c.ResellerDomainResolver = reseller.NewDomainResolver(c.ResellerStore, c.Config.Reseller)
 	c.ResellerPricingResolver = orderapp.NewResellerPricingResolver(c.ResellerStore)
@@ -125,6 +126,7 @@ func (c *Container) initIdentityAndCatalogServices() {
 	}, uploadlocal.New(uploadlocal.DefaultRoot))
 	c.AffiliateService = affiliateapp.NewService(c.AffiliateRepo, c.UserStore, c.OrderStore, c.ProductRepo, c.SettingService)
 	productServices := catalogproductbootstrap.New(catalogproductbootstrap.Dependencies{
+		EnforcePublicSale: true,
 		Products:          c.ProductRepo,
 		SKUs:              c.ProductSKURepo,
 		CardSecrets:       c.CardSecretRepo,

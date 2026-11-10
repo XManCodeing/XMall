@@ -16,6 +16,7 @@ import (
 
 	userdomain "github.com/XManCodeing/XMall/internal/modules/identity/user/domain"
 
+	membership "github.com/XManCodeing/XMall/internal/modules/telegram/membership/contract"
 	"github.com/XManCodeing/XMall/internal/platform/http/ginutil"
 	"github.com/XManCodeing/XMall/internal/platform/http/response"
 
@@ -31,18 +32,20 @@ var (
 
 // OrderListFilter 管理端订单列表过滤。
 type OrderListFilter struct {
-	Page           int
-	PageSize       int
-	UserID         uint
-	UserKeyword    string
-	Status         string
-	OrderNo        string
-	GuestEmail     string
-	ProductKeyword string
-	CreatedFrom    *time.Time
-	CreatedTo      *time.Time
-	SortBy         string
-	SortOrder      string
+	MembershipItemIDs       []uint
+	MembershipStateFiltered bool
+	Page                    int
+	PageSize                int
+	UserID                  uint
+	UserKeyword             string
+	Status                  string
+	OrderNo                 string
+	GuestEmail              string
+	ProductKeyword          string
+	CreatedFrom             *time.Time
+	CreatedTo               *time.Time
+	SortBy                  string
+	SortOrder               string
 }
 
 // OrderQuery 管理端订单查询与状态更新端口。
@@ -80,12 +83,16 @@ type PaymentChannelDirectory interface {
 
 // AdminHandler 处理后台订单 HTTP。
 type AdminHandler struct {
-	orders     OrderQuery
-	users      UserDirectory
-	coupons    CouponLookup
-	promotions PromotionLookup
-	payments   PaymentDirectory
-	channels   PaymentChannelDirectory
+	membershipOrders    OrderQuery
+	membershipSnapshots membership.SnapshotReader
+	detailSnapshots     membership.SnapshotReader
+	membershipLedger    membership.AdminLedgerReader
+	orders              OrderQuery
+	users               UserDirectory
+	coupons             CouponLookup
+	promotions          PromotionLookup
+	payments            PaymentDirectory
+	channels            PaymentChannelDirectory
 }
 
 func NewAdminHandler(
@@ -112,8 +119,9 @@ func NewAdminHandler(
 // AdminOrderListItem 管理端订单列表返回
 type AdminOrderListItem struct {
 	orderdomain.Order
-	UserEmail       string `json:"user_email,omitempty"`
-	UserDisplayName string `json:"user_display_name,omitempty"`
+	UserEmail        string                            `json:"user_email,omitempty"`
+	UserDisplayName  string                            `json:"user_display_name,omitempty"`
+	MembershipGroups []membership.AdminOrderGroupState `json:"membership_groups,omitempty"`
 }
 
 // AdminOrderPaymentItem 管理端订单详情中的支付项
@@ -155,19 +163,25 @@ func (h *AdminHandler) AdminListOrders(c *gin.Context) {
 	sortBy := strings.TrimSpace(c.Query("sort_by"))
 	sortOrder := strings.TrimSpace(c.Query("sort_order"))
 
+	memberIDs, filtered, ok := h.membershipListConstraint(c)
+	if !ok {
+		return
+	}
 	orders, total, err := h.orders.ListOrdersForAdmin(OrderListFilter{
-		Page:           page,
-		PageSize:       pageSize,
-		UserID:         userID,
-		UserKeyword:    userKeyword,
-		Status:         status,
-		OrderNo:        orderNo,
-		GuestEmail:     guestEmail,
-		ProductKeyword: productKeyword,
-		CreatedFrom:    createdFrom,
-		CreatedTo:      createdTo,
-		SortBy:         sortBy,
-		SortOrder:      sortOrder,
+		MembershipItemIDs:       memberIDs,
+		MembershipStateFiltered: filtered,
+		Page:                    page,
+		PageSize:                pageSize,
+		UserID:                  userID,
+		UserKeyword:             userKeyword,
+		Status:                  status,
+		OrderNo:                 orderNo,
+		GuestEmail:              guestEmail,
+		ProductKeyword:          productKeyword,
+		CreatedFrom:             createdFrom,
+		CreatedTo:               createdTo,
+		SortBy:                  sortBy,
+		SortOrder:               sortOrder,
 	})
 	if err != nil {
 		ginutil.RespondError(c, response.CodeInternal, "error.order_fetch_failed", err)
@@ -213,6 +227,10 @@ func (h *AdminHandler) AdminListOrders(c *gin.Context) {
 		})
 	}
 
+	if err := h.enrichMembershipList(c.Request.Context(), items); err != nil {
+		ginutil.RespondError(c, response.CodeInternal, "error.order_fetch_failed", nil)
+		return
+	}
 	response.SuccessWithPage(c, items, pagination)
 }
 
@@ -350,7 +368,7 @@ func (h *AdminHandler) AdminGetOrder(c *gin.Context) {
 	}
 
 	order.TruncateFulfillmentPayload()
-	response.Success(c, AdminOrderDetail{
+	h.respondAdminOrderDetail(c, AdminOrderDetail{
 		Order:           *order,
 		UserEmail:       email,
 		UserDisplayName: displayName,

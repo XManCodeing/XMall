@@ -61,10 +61,13 @@ func TestDeliveryServiceUsesPersistedBotAndOptionalCapabilities(t *testing.T) {
 	}
 }
 
-func TestReconcileRepairsStaleTerminalSnapshotAfterRetry(t *testing.T) {
+func TestReconcileProcessesExplicitlyReopenedJobs(t *testing.T) {
 	for _, status := range []string{"failed", "needs_review"} {
 		t.Run(status, func(t *testing.T) {
 			store := &broadcastStoreStub{items: map[uint]*b.Broadcast{1: {ID: 1, BotID: 7, DeliveryVersion: 1, PayloadCipher: "cipher", RecipientCount: 2, Status: status}}}
+			// The atomic retry store reopens terminal jobs; reconciliation no longer
+			// scans terminal history to compensate for stale writes.
+			store.items[1].Status = "running"
 			bridge := &bridgeStub{keys: map[uint]bool{}, progress: Progress{Total: 2, Pending: 1, Unknown: 1}}
 			s := NewRuntimeService(store, nil, bridge, nil)
 			if err := s.Reconcile(context.Background()); err != nil {

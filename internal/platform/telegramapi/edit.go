@@ -38,6 +38,8 @@ func classifyFailure(method string, status, code int, description string) string
 	}
 	d := strings.ToLower(description)
 	switch {
+	case d == "bad request: message thread not found", d == "bad request: topic_deleted", d == "bad request: topic_id_invalid":
+		return "topic_missing"
 	case strings.Contains(d, "message is not modified"):
 		return "not_modified"
 	case strings.Contains(d, "message to edit not found"), strings.Contains(d, "message to delete not found"):

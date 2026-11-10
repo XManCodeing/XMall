@@ -9,13 +9,14 @@ import (
 // Handlers is the complete payment HTTP entrypoint set assembled at the
 // application boundary.
 type Handlers struct {
-	Latest       *paymenttransport.LatestHandler
-	Write        *paymenttransport.WriteHandler
-	Admin        *paymenttransport.AdminHandler
-	AdminChannel *paymenttransport.AdminChannelHandler
-	Webhook      *paymenttransport.WebhookHandler
-	Callback     *paymentcallbacktransport.Handler
-	EpayRedirect *paymenttransport.EpayRedirectHandler
+	Latest             *paymenttransport.LatestHandler
+	Write              *paymenttransport.WriteHandler
+	Admin              *paymenttransport.AdminHandler
+	ManualConfirmation *paymenttransport.ManualConfirmationHandler
+	AdminChannel       *paymenttransport.AdminChannelHandler
+	Webhook            *paymenttransport.WebhookHandler
+	Callback           *paymentcallbacktransport.Handler
+	EpayRedirect       *paymenttransport.EpayRedirectHandler
 }
 
 // New assembles payment transports from application services and HTTP handlers.
@@ -41,6 +42,7 @@ func New(c *container.Container) Handlers {
 			adminOrderLookupAdapter{orders: c.OrderStore},
 			adminRechargeLookupAdapter{wallets: c.WalletRepo},
 		),
+		ManualConfirmation: paymenttransport.NewManualConfirmationHandler(manualConfirmationAdapter{payments: c.PaymentService}),
 		AdminChannel: paymenttransport.NewAdminChannelHandler(
 			adminChannelCatalogAdapter{payments: c.PaymentService, channels: c.PaymentChannelStore},
 		),

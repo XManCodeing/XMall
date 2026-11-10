@@ -1,12 +1,88 @@
 package settingsapp
 
 import (
+	"errors"
 	"reflect"
 	"testing"
 
+	"github.com/XManCodeing/XMall/internal/config"
 	"github.com/XManCodeing/XMall/internal/constants"
+	settingsmessaging "github.com/XManCodeing/XMall/internal/modules/settings/schema/messaging"
 	"github.com/XManCodeing/XMall/internal/shared/jsonmap"
 )
+
+// TestNotificationPrerequisitesBlockPersistence 验证参数表中的各渠道前提，失败不落库且关闭可保存。
+func TestNotificationPrerequisitesBlockPersistence(t *testing.T) {
+	for _, channel := range []string{"email", "telegram", "feishu"} {
+		t.Run(channel, func(t *testing.T) {
+			repo := newMockSettingRepo()
+			service := NewService(repo)
+			setting := settingsmessaging.NotificationCenterDefaultSetting()
+			switch channel {
+			case "email":
+				setting.Channels.Email = settingsmessaging.NotificationChannelSetting{Enabled: true, Recipients: []string{"admin@example.com"}}
+			case "telegram":
+				setting.Channels.Telegram = settingsmessaging.NotificationChannelSetting{Enabled: true, Recipients: []string{"123456"}}
+			case "feishu":
+				setting.Channels.Feishu.Enabled = true
+				setting.Channels.Feishu.Recipients = []string{"chat-test"}
+			}
+			_, err := service.Update(constants.SettingKeyNotificationCenterConfig, settingsmessaging.NotificationCenterSettingToMap(setting))
+			if !errors.Is(err, settingsmessaging.ErrNotificationConfigInvalid) {
+				t.Fatalf("expected prerequisite validation error, got %v", err)
+			}
+			if _, found := repo.store[constants.SettingKeyNotificationCenterConfig]; found {
+				t.Fatal("invalid notification settings were persisted")
+			}
+			setting.Channels.Email.Enabled = false
+			setting.Channels.Telegram.Enabled = false
+			setting.Channels.Feishu.Enabled = false
+			if _, err := service.Update(constants.SettingKeyNotificationCenterConfig, settingsmessaging.NotificationCenterSettingToMap(setting)); err != nil {
+				t.Fatalf("disabling must be allowed: %v", err)
+			}
+		})
+	}
+}
+
+// TestNotificationPrerequisitesUseEffectiveSettings 验证静态回退、数据库覆盖和关闭登录仍可推送。
+func TestNotificationPrerequisitesUseEffectiveSettings(t *testing.T) {
+	repo := newMockSettingRepo()
+	service := NewService(repo).WithNotificationDefaults(
+		config.EmailConfig{Enabled: true, Host: "smtp.example.com", Port: 587, From: "sender@example.com"},
+		config.TelegramAuthConfig{Enabled: false, BotToken: "test-only-placeholder"},
+	)
+	state, err := service.GetNotificationPrerequisites()
+	if err != nil || !state["email"] || !state["telegram"] {
+		t.Fatalf("static defaults should be configured: %v, %v", state, err)
+	}
+	setting := settingsmessaging.NotificationCenterDefaultSetting()
+	setting.Channels.Email = settingsmessaging.NotificationChannelSetting{Enabled: true, Recipients: []string{"admin@example.com"}}
+	setting.Channels.Telegram = settingsmessaging.NotificationChannelSetting{Enabled: true, Recipients: []string{"123456"}}
+	if _, err := service.Update(constants.SettingKeyNotificationCenterConfig, settingsmessaging.NotificationCenterSettingToMap(setting)); err != nil {
+		t.Fatalf("complete configuration should save without contacting providers: %v", err)
+	}
+	repo.store[constants.SettingKeySMTPConfig] = jsonmap.JSON{"enabled": false}
+	repo.store[constants.SettingKeyTelegramAuthConfig] = jsonmap.JSON{"enabled": false, "bot_token": "  "}
+	state, err = service.GetNotificationPrerequisites()
+	if err != nil || state["email"] || state["telegram"] {
+		t.Fatalf("database overrides must take precedence: %v, %v", state, err)
+	}
+}
+
+// TestNotificationPatchCannotBypassPrerequisites 验证补丁保存入口同样拒绝缺少 Token 的启用请求。
+func TestNotificationPatchCannotBypassPrerequisites(t *testing.T) {
+	service := NewService(newMockSettingRepo())
+	enabled := true
+	recipients := []string{"123456"}
+	_, err := service.PatchNotificationCenterSetting(settingsmessaging.NotificationCenterSettingPatch{
+		Channels: &settingsmessaging.NotificationChannelsPatch{
+			Telegram: &settingsmessaging.NotificationChannelPatch{Enabled: &enabled, Recipients: &recipients},
+		},
+	})
+	if !errors.Is(err, settingsmessaging.ErrNotificationConfigInvalid) {
+		t.Fatalf("patch must reject missing token: %v", err)
+	}
+}
 
 func TestDefaultSettingRegistryCoversLegacyNormalizedKeys(t *testing.T) {
 	want := []string{

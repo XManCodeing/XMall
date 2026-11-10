@@ -10,12 +10,14 @@ import { debounceAsync } from '../utils/debounce.ts'
 import { type PageAlert } from '../utils/alerts.ts'
 import { amountToCents, basisPointsToPercent, centsToAmount, parseInteger, rateToBasisPoints } from '../utils/money.ts'
 import { buildSkuDisplayText, normalizeSkuId } from '../utils/sku.ts'
-import { refreshCartStockSnapshots, cartItemPurchaseLimit as itemPurchaseLimit, cartItemPurchaseMin as itemPurchaseMin } from '../utils/cartStock.ts'
+import { cartItemPurchaseLimit as itemPurchaseLimit, cartItemPurchaseMin as itemPurchaseMin } from '../utils/cartStock.ts'
 import { getImageUrl } from '../utils/image.ts'
 import { getAffiliateCode, getAffiliateVisitorKey } from '../utils/affiliate.ts'
 import { saveGuestOrderAuth } from '../utils/guestOrderAuth.ts'
 import ImageCaptcha from '../components/captcha/ImageCaptcha.vue'
 import TurnstileCaptcha from '../components/captcha/TurnstileCaptcha.vue'
+import { useMembershipCheckout } from './useMembershipCheckout'
+import { useCheckoutPurchaseContext } from './useCheckoutPurchaseContext'
 import { useLocalized, useProductLabels } from './useProduct.ts'
 
 interface ManualFormField {
@@ -62,6 +64,8 @@ export function useCheckout() {
     }
     return cartStore.items
   })
+  useCheckoutPurchaseContext(() => cartItems.value)
+  const membershipCheckout = useMembershipCheckout(() => cartItems.value)
   const totalItems = computed(() => cartItems.value.reduce((sum, item) => sum + item.quantity, 0))
   const couponCode = ref('')
   const normalizedCouponCode = computed(() => couponCode.value.trim())
@@ -577,6 +581,8 @@ export function useCheckout() {
   }
 
   const canSubmit = computed(() => {
+    if (membershipCheckout.blocked.value) return false
+    if (!preview.value || previewLoading.value || previewError.value) return false
     if (syncingStock.value) return false
     if (submitting.value) return false
     if (cartItems.value.length === 0) return false
@@ -600,6 +606,9 @@ export function useCheckout() {
   })
 
   const submitBlockedReason = computed(() => {
+    if (membershipCheckout.checking.value) return t('checkout.stockSyncing')
+    if (membershipCheckout.failed.value) return t('checkout.previewFailed')
+    if (membershipCheckout.blocked.value) return t('membershipPurchase.closed')
     if (syncingStock.value) return t('checkout.stockSyncing')
     if (cartItems.value.length === 0) return t('checkout.errors.emptyCart')
     if (!manualFormValidation.value.valid) {
@@ -696,11 +705,15 @@ export function useCheckout() {
   const debouncedLoadOrderPaymentChannels = debounceAsync(loadOrderPaymentChannels, 250)
 
   const syncCartStockSnapshots = async () => {
-    if (isBuyNowMode.value) return
     if (syncingStock.value) return
     syncingStock.value = true
     try {
-      await refreshCartStockSnapshots(cartStore)
+      if (isBuyNowMode.value) {
+        await buyNowStore.restore()
+      }
+      await membershipCheckout.refresh()
+    } catch (err: any) {
+      error.value = err?.message || t('checkout.previewFailed')
     } finally {
       syncingStock.value = false
     }
@@ -745,10 +758,17 @@ export function useCheckout() {
     }
 
     const requestId = ++previewRequestId.value
+    const accountId = userAuthStore.user?.id
+    const authenticated = userAuthStore.isAuthenticated
     previewLoading.value = true
     previewError.value = ''
 
     try {
+      if (!await membershipCheckout.refresh()) {
+        if (requestId === previewRequestId.value) preview.value = null
+        return
+      }
+      if (accountId !== userAuthStore.user?.id || authenticated !== userAuthStore.isAuthenticated) return
       const payload: any = buildOrderPayload()
 
       let response
@@ -762,7 +782,7 @@ export function useCheckout() {
         })
       }
 
-      if (requestId !== previewRequestId.value) return
+      if (requestId !== previewRequestId.value || accountId !== userAuthStore.user?.id || authenticated !== userAuthStore.isAuthenticated) return
       preview.value = response.data.data
       if (userAuthStore.isAuthenticated) {
         debouncedLoadOrderPaymentChannels()
@@ -770,7 +790,7 @@ export function useCheckout() {
         orderPaymentChannels.value = []
       }
     } catch (err: any) {
-      if (requestId !== previewRequestId.value) return
+      if (requestId !== previewRequestId.value || accountId !== userAuthStore.user?.id || authenticated !== userAuthStore.isAuthenticated) return
       preview.value = null
       orderPaymentChannels.value = []
       previewError.value = err.message || t('checkout.previewFailed')
@@ -808,10 +828,14 @@ export function useCheckout() {
     }
 
     submitting.value = true
+    const submittingAccount = userAuthStore.user?.id
+    const submittingAuthenticated = userAuthStore.isAuthenticated
     try {
       await loadPreviewNow()
-      if (previewError.value) {
-        error.value = previewError.value
+      if (submittingAccount !== userAuthStore.user?.id || submittingAuthenticated !== userAuthStore.isAuthenticated) return
+      if (membershipCheckout.blocked.value) { error.value = submitBlockedReason.value; return }
+      if (previewError.value || !preview.value) {
+        error.value = previewError.value || submitBlockedReason.value || t('checkout.previewFailed')
         return
       }
 
@@ -840,6 +864,7 @@ export function useCheckout() {
         responseData = response.data.data
       }
 
+      if (submittingAccount !== userAuthStore.user?.id || submittingAuthenticated !== userAuthStore.isAuthenticated) return
       if (!responseData?.order_no) {
         throw new Error(t('checkout.errors.submitFailed'))
       }
@@ -866,11 +891,15 @@ export function useCheckout() {
   }
 
   watch(
-    () => [cartItems.value, manualFormFingerprint.value, normalizedCouponCode.value, checkoutMode.value, guestEmail.value, guestPassword.value, userAuthStore.isAuthenticated],
+    () => [JSON.stringify(cartItems.value.map(({ productId, skuId, quantity }) => [productId, skuId, quantity])), manualFormFingerprint.value, normalizedCouponCode.value, checkoutMode.value, guestEmail.value, guestPassword.value, userAuthStore.isAuthenticated, userAuthStore.user?.id],
     () => {
+      previewRequestId.value += 1
+      preview.value = null
+      orderPaymentChannelsRequestId.value += 1
+      orderPaymentChannels.value = []
       debouncedLoadPreview()
     },
-    { deep: true }
+    { flush: 'sync' }
   )
 
   watch(walletOnlyPayment, (v) => {

@@ -85,12 +85,7 @@ export const canRenderResellerConsoleModule = (
   return state.modules[module]?.enabled === true
 }
 
-export const formatResellerConsoleDate = (raw?: string | null) => {
-  if (!raw) return '-'
-  const date = new Date(raw)
-  if (Number.isNaN(date.getTime())) return raw
-  return date.toLocaleString()
-}
+export { formatDate as formatResellerConsoleDate } from './format.ts'
 
 export const formatResellerConsoleAmount = (amount?: string | number | null, currency?: string | null) => {
   if (amount === undefined || amount === null || amount === '') return '-'

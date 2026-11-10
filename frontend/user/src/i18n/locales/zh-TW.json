@@ -1,4 +1,27 @@
 {
+  "membershipGroups": {
+    "title": "我的會員群",
+    "description": "查看各群權益與目前入群入口。申請連結不代表已入群，審批時仍會核驗受益身分。",
+    "refresh": "重新整理狀態", "renew": "選購 / 續費", "loading": "正在查詢會員群…",
+    "loadFailed": "會員群查詢失敗，請重新整理或聯絡客服。", "empty": "暫無會員群權益。",
+    "group": "會員群", "expiry": "權益期限", "status": "目前狀態", "action": "入群入口",
+    "identity": "受益 Telegram ID：{id}", "permanent": "永久權益", "expiresAt": "截至 {date}",
+    "expiryUnknown": "期限待確認", "apply": "申請入群", "getInvitation": "取得入群入口", "requesting": "正在取得…",
+    "loadMore": "載入更多", "support": "需要協助？", "contactPage": "聯絡商家", "supportUnavailable": "商家尚未設定獨立客服管道，請在聯絡頁面核實聯絡方式。",
+    "states": { "processing": "正在開通", "available": "入口可申請", "recovering": "入口正在恢復", "unknown": "結果待核對", "expired": "權益已到期", "revoked": "權益已撤銷", "identity_mismatch": "綁定身分異常", "unavailable": "入口暫不可用", "member": "已觀察到群成員" },
+    "hints": { "processing": "權益正在處理，請稍後重新整理，無需再次付款。", "recovering": "入群入口正在恢復，原權益期限不變。", "unknown": "結果尚未確認，請重新整理查詢或聯絡客服，不要重複申請。", "identity_mismatch": "目前綁定與受益身分不一致，請聯絡客服核對；換綁不會遷移權益。" }
+  },
+  "membershipPurchase": {
+    "groups": "包含群組",
+    "selectPlan": "請選擇會員方案",
+    "permanent": "永久會員",
+    "months": "{months} 個月（{days} 天）",
+    "fixedMonth": "會員方案固定按每月 30 天計算，數量為 1。",
+    "closed": "會員方案暫未開放銷售，目前無法提交購買；已選商品將保留。",
+    "binding": "前往安全設定綁定 Telegram",
+    "login": "登入並保留所選方案",
+    "contextFailed": "無法儲存購買選擇，請重試。"
+  },
   "common": {
     "siteName": "X商城",
     "loading": "載入中...",
@@ -1651,6 +1674,14 @@
     "timeTitle": "時間資訊",
     "remarkLabel": "備註",
     "paymentTitle": "支付資訊"
+  },
+  "membershipOrder": {
+    "title": "會員購買資訊",
+    "beneficiary": "受益 Telegram ID",
+    "duration": "購買期限",
+    "months": "{months} 個月（每月固定 30 天，共 {days} 天）",
+    "permanent": "永久",
+    "snapshotHint": "僅記錄本次購買，不代表目前會員權益或開通狀態。"
   },
   "orderDetail": {
     "title": "訂單詳情",

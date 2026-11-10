@@ -174,7 +174,18 @@ type OrderItemResp struct {
 	// Instructions 交付使用说明（多语言 raw JSON，与 Title 字段契约一致，由前端按 locale 解析）。
 	// 仅在订单已付款时填充，未付款订单会在 NewOrderDetail 中置 nil；列表场景（NewOrderSummary）永远为 nil。
 	// 注意：渠道 API（channel_order.go）为服务端消费者（如 Telegram Bot），那里返回已按 locale 解析的字符串而非 raw JSON。
-	Instructions jsonmap.JSON `json:"instructions,omitempty"`
+	MembershipSnapshot *MembershipSnapshot `json:"membership_snapshot,omitempty"`
+	Instructions       jsonmap.JSON        `json:"instructions,omitempty"`
+}
+
+// MembershipSnapshot 仅向订单所属账号展示购买时身份和期限，不表示当前权益已开通。
+// 不公开群路由、Bot、身份代次及任何邀请信息；Telegram ID 使用十进制字符串。
+type MembershipSnapshot struct {
+	BeneficiaryTelegramID string `json:"beneficiary_telegram_id"`
+	ConfigVersion         uint64 `json:"config_version"`
+	Kind                  string `json:"kind"`
+	Months                int64  `json:"months"`
+	Quantity              int    `json:"quantity"`
 }
 
 func newOrderItemResp(item *orderdomain.OrderItem) OrderItemResp {

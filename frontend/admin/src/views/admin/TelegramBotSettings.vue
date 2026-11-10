@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import TelegramBotRegistrationSettings from './components/TelegramBotRegistrationSettings.vue'
 import { onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useTelegramBotSettings } from '@/composables/useTelegramBotSettings'
@@ -21,7 +22,7 @@ const {
   languages,
   loading,
   saveConfig,
-  canSave, canListInstances, loadError, needsReload, loaded, profileLoaded, profileSyncError,
+  canSave, canListInstances, loadError, loadForbidden, needsReload, loaded, profileLoaded, profileSyncError,
   saving, selectedInstanceId, selectInstance,
 } = useTelegramBotSettings()
 
@@ -32,7 +33,7 @@ onMounted(() => {
 
 <template>
   <div class="space-y-6">
-    <p v-if="loadError" role="alert" class="text-sm text-destructive">{{ loadError }}</p>
+    <p v-if="loadForbidden" role="alert" class="text-sm text-destructive">{{ t('telegramBot.instances.forbidden') }}</p>
     <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
       <div>
         <h2 class="text-2xl font-bold tracking-tight">{{ t('telegramBot.settings.title') }}</h2>
@@ -58,6 +59,8 @@ onMounted(() => {
         </Button>
       </div>
     </div>
+
+    <TelegramBotRegistrationSettings />
 
     <Card>
       <CardHeader>
@@ -118,7 +121,7 @@ onMounted(() => {
               </SelectItem>
             </SelectContent>
           </Select>
-          <p v-if="!loading && canListInstances && !instances.length" class="text-sm text-muted-foreground">{{ t('telegramBot.instances.empty') }}</p>
+          <p v-if="!loading && loaded && !loadError && canListInstances && !instances.length" class="text-sm text-muted-foreground">{{ t('telegramBot.instances.empty') }}</p>
           <p v-if="profileSyncError" class="text-sm text-destructive">{{ t('telegramBot.settings.profileSyncFailed') }}</p>
         </div>
         <fieldset class="space-y-4 border-0 p-0" :disabled="!profileLoaded">

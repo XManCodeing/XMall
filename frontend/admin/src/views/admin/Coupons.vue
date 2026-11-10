@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref, watch } from 'vue'
-import { useDebounceFn } from '@vueuse/core'
 import { useI18n } from 'vue-i18n'
 import { useRoute } from 'vue-router'
 import { adminAPI } from '@/api/admin'
@@ -144,21 +143,7 @@ const resetForm = () => {
   isEditing.value = false
 }
 
-const toISO = (raw: string) => {
-  if (!raw) return ''
-  const date = new Date(raw)
-  if (Number.isNaN(date.getTime())) return raw
-  return date.toISOString()
-}
-
-const toLocalInput = (raw?: string) => {
-  if (!raw) return ''
-  const date = new Date(raw)
-  if (Number.isNaN(date.getTime())) return ''
-  const offset = date.getTimezoneOffset()
-  const local = new Date(date.getTime() - offset * 60000)
-  return local.toISOString().slice(0, 16)
-}
+import { toISO, toLocalInput } from '@/utils/format'
 
 const normalizeScopeIDs = (raw: unknown) => {
   if (Array.isArray(raw)) {
@@ -366,13 +351,21 @@ const fetchCoupons = async (page = 1, options: ListFetchOptions = {}) => {
   }
 }
 
-const handleSearch = () => {
-  fetchCoupons(1)
+/** 按当前筛选查询第一页。@returns 查询完成。 */
+const handleSearch = async (): Promise<void> => {
+  if (loading.value || refreshing.value) return
+  pagination.value.page = 1
+  await fetchCoupons(1)
 }
-const debouncedSearch = useDebounceFn(handleSearch, 300)
-
-const handleScopeFilterChange = () => {
-  fetchCoupons(1)
+/** 清空查询筛选，保留路由商品及详情上下文和分页尺寸。@returns 查询完成。 */
+const resetFilters = async (): Promise<void> => {
+  if (loading.value || refreshing.value || productOptionsLoading.value) return
+  filters.code = ''
+  filters.isActive = '__all__'
+  const scopeId = Number(route.query.scope_ref_id)
+  filters.scopeRefId = Number.isFinite(scopeId) && scopeId > 0 ? String(Math.floor(scopeId)) : '__all__'
+  scopeFilterKeyword.value = ''
+  await handleSearch()
 }
 
 const refresh = () => {
@@ -579,7 +572,7 @@ watch(
     <div class="rounded-xl border border-border bg-card p-4 shadow-sm">
       <div class="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
         <div class="w-full md:w-48">
-          <Input v-model="filters.code" :placeholder="t('admin.coupons.filterCode')" @update:modelValue="debouncedSearch" />
+          <Input v-model="filters.code" :placeholder="t('admin.coupons.filterCode')" @keydown.enter="handleSearch" />
         </div>
         <div class="flex w-full flex-col gap-2 md:w-72 sm:flex-row sm:items-center">
           <Input
@@ -598,7 +591,7 @@ watch(
           </Button>
         </div>
         <div class="w-full md:w-60">
-          <Select v-model="filters.scopeRefId" @update:modelValue="handleScopeFilterChange">
+          <Select v-model="filters.scopeRefId">
             <SelectTrigger class="h-9 w-full">
               <SelectValue :placeholder="t('admin.coupons.filterScope')" />
             </SelectTrigger>
@@ -615,7 +608,7 @@ watch(
           </Select>
         </div>
         <div class="w-full md:w-48">
-          <Select v-model="filters.isActive" @update:modelValue="handleSearch">
+          <Select v-model="filters.isActive">
             <SelectTrigger class="h-9 w-full">
             <SelectValue :placeholder="t('admin.coupons.filterStatusAll')" />
             </SelectTrigger>
@@ -627,7 +620,9 @@ watch(
           </Select>
         </div>
         <div class="hidden flex-1 sm:block"></div>
-        <Button size="sm" class="w-full sm:w-auto" :disabled="refreshing" @click="refresh">{{ t('admin.common.refresh') }}</Button>
+        <Button size="sm" variant="outline" :disabled="loading || refreshing" @click="handleSearch">{{ t('admin.common.search') }}</Button>
+        <Button size="sm" variant="outline" :disabled="loading || refreshing || productOptionsLoading" @click="resetFilters">{{ t('admin.common.reset') }}</Button>
+        <Button size="sm" class="w-full sm:w-auto" :disabled="loading || refreshing" @click="refresh">{{ t('admin.common.refresh') }}</Button>
       </div>
     </div>
 
@@ -708,7 +703,7 @@ watch(
       />
     </div>
 
-    <Dialog v-model:open="showModal" @update:open="(value) => { if (!value) closeModal() }">
+    <Dialog scope="page" v-model:open="showModal" @update:open="(value) => { if (!value) closeModal() }">
       <DialogScrollContent class="w-[calc(100vw-1rem)] max-w-3xl p-4 sm:p-6" @interact-outside="(e) => e.preventDefault()">
         <DialogHeader>
           <DialogTitle>{{ isEditing ? t('admin.coupons.modal.editTitle') : t('admin.coupons.modal.title') }}</DialogTitle>

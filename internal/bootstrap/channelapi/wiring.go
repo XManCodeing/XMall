@@ -184,6 +184,9 @@ func mapError(err error) error {
 	if err == nil {
 		return nil
 	}
+	if errors.Is(err, paymentcontract.ErrPaymentCreationUncertain) {
+		return paymentcontract.ErrPaymentCreationUncertain
+	}
 	for _, mapping := range []struct {
 		source error
 		target error
@@ -222,6 +225,7 @@ func mapError(err error) error {
 		{paymentapp.ErrPaymentGatewayResponseInvalid, channeltransport.ErrPaymentGatewayResponseInvalid},
 		{paymentapp.ErrPaymentCurrencyMismatch, channeltransport.ErrPaymentCurrencyMismatch},
 		{walletcontract.ErrOnlyPaymentRequired, channeltransport.ErrWalletOnlyPaymentRequired},
+		{walletcontract.ErrInsufficientBalance, channeltransport.ErrWalletInsufficientBalance},
 	} {
 		if errors.Is(err, mapping.source) {
 			mapped := fmt.Errorf("%w: %v", mapping.target, err)

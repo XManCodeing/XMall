@@ -22,9 +22,11 @@ import (
 // AdminRefundToWalletInput describes an order refund whose settlement target
 // is the registered user's wallet.
 type AdminRefundToWalletInput struct {
-	OrderID uint
-	Amount  money.Amount
-	Remark  string
+	// MembershipRequest persists termination intent atomically with wallet credit.
+	MembershipRequest *ordercontract.MembershipRefundRequest
+	OrderID           uint
+	Amount            money.Amount
+	Remark            string
 }
 
 // AdminRefundToWallet executes the order refund workflow and delegates only
@@ -71,6 +73,9 @@ func (s *Service) AdminRefundToWallet(
 			return ordercontract.ErrProcurementRefundBlocked
 		}
 		if err := guard.LockRefundScope(input.OrderID); err != nil {
+			return err
+		}
+		if err := beginMembershipRefund(orderRepository, input.MembershipRequest); err != nil {
 			return err
 		}
 		locked, err := orderRepository.GetByIDForUpdate(input.OrderID)
@@ -180,6 +185,9 @@ func (s *Service) AdminRefundToWallet(
 			if err := s.resellerAccounting.HandleRefundDeduct(tx.ResellerAccounting(), &order, record, refundedBefore); err != nil {
 				return err
 			}
+		}
+		if err := bindMembershipRefund(orderRepository, input.MembershipRequest, record.ID); err != nil {
+			return err
 		}
 		transactionResult = transaction
 		refundRecordResult = record

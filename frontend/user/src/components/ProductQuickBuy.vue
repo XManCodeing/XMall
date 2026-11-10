@@ -243,8 +243,9 @@
               </span>
             </div>
 
+            <MembershipPurchaseInfo :product="product" :sku-id="selectedSkuId" />
             <!-- Quantity -->
-            <div class="mb-4 flex items-center gap-3">
+            <div v-if="!product.membership" class="mb-4 flex items-center gap-3">
               <span class="text-xs font-medium text-muted-foreground">{{ t('quickBuy.quantity') }}</span>
               <div class="flex items-center rounded-lg border overflow-hidden">
                 <button
@@ -340,6 +341,8 @@ import { getFirstImageUrl, getImageUrl } from '../utils/image'
 import { normalizeSkuId, buildSkuDisplayText } from '../utils/sku'
 import { resolveSkuAvailableStock, resolveSkuStockDisplay, type PublicStockDisplay } from '../utils/publicStock'
 import { useLocalized, useProductLabels } from '../composables/useProduct'
+import MembershipPurchaseInfo from './product/MembershipPurchaseInfo.vue'
+import { isMembershipProduct, membershipTermLabel, membershipSalesBlocked } from '../utils/membershipPurchase'
 import { toast } from '../composables/useToast'
 import { X, Image as ImageIcon, Tag, Minus, Plus, ShoppingCart } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
@@ -380,6 +383,7 @@ const {
   resolveMemberPriceAmount,
 } = useProductLabels()
 
+const isMembership = computed(() => isMembershipProduct(props.product))
 const selectedSkuId = ref(0)
 const quantity = ref(1)
 const purchaseWarning = ref('')
@@ -547,6 +551,7 @@ const normalizeOptionalLimitNumber = (value: unknown) => {
 }
 
 const effectiveMin = computed(() => {
+  if (isMembership.value) return 1
   const productMin = normalizeOptionalLimitNumber(props.product?.min_purchase_quantity)
   return productMin && productMin > 0 ? productMin : 1
 })
@@ -568,6 +573,7 @@ const skuAvailableStock = (sku: any) => {
 }
 
 const isSkuPurchasable = (sku: any) => {
+  if (isMembership.value) return true
   const available = skuAvailableStock(sku)
   if (available === null) return true
   return available > 0
@@ -635,7 +641,7 @@ const skuStockDotClass = (sku: any) => {
   return 'bg-emerald-500 dark:bg-emerald-400'
 }
 
-const skuDisplayText = (sku: any) => buildSkuDisplayText({
+const skuDisplayText = (sku: any) => isMembership.value ? membershipTermLabel(props.product, sku?.id, t) : buildSkuDisplayText({
   skuCode: sku?.sku_code,
   specValues: sku?.spec_values,
   fallback: t('productDetail.skuFallback'),
@@ -643,6 +649,7 @@ const skuDisplayText = (sku: any) => buildSkuDisplayText({
 })
 
 const effectiveLimit = computed(() => {
+  if (isMembership.value) return 1
   const sku = selectedSku.value
   const available = skuAvailableStock(sku)
   const productLimit = normalizeOptionalLimitNumber(props.product?.max_purchase_quantity)
@@ -662,6 +669,7 @@ const stockBelowMinPurchase = computed(() => {
   return limit < effectiveMin.value
 })
 const canPurchase = computed(() => {
+  if (membershipSalesBlocked(props.product)) return false
   if (!props.product) return false
   if (activeSkus.value.length === 0) return false
   if (props.product.is_sold_out) return false
@@ -733,6 +741,7 @@ const handleAddToCart = () => {
 
   const images = getProductImages()
   cartStore.addItem({
+    membership: props.product.membership,
     productId: props.product.id,
     skuId: normalizeSkuId(sku?.id),
     skuCode: String(sku?.sku_code || ''),
@@ -787,6 +796,7 @@ const handleBuyNow = () => {
 
   const images = getProductImages()
   buyNowStore.setItem({
+    membership: props.product.membership,
     productId: props.product.id,
     skuId: normalizeSkuId(sku?.id),
     skuCode: String(sku?.sku_code || ''),
@@ -822,7 +832,8 @@ const handleBuyNow = () => {
 
 const goLogin = () => {
   close()
-  router.push(`/auth/login?redirect=${encodeURIComponent(route.fullPath)}`)
+  const redirect = isMembership.value ? `/products/${props.product.slug}?sku_id=${selectedSkuId.value}` : route.fullPath
+  router.push({ path: '/auth/login', query: { redirect } })
 }
 
 const goToDetail = () => {

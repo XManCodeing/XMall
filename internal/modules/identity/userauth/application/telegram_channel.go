@@ -16,11 +16,15 @@ import (
 
 // TelegramChannelIdentityInput Telegram 渠道身份输入
 type TelegramChannelIdentityInput struct {
-	ChannelUserID string
-	Username      string
-	FirstName     string
-	LastName      string
-	AvatarURL     string
+	// UsernamePresent/AvatarPresent distinguish an observed empty value from omitted profile data.
+	// Nonempty fields remain implicitly present for existing channel callers.
+	UsernamePresent bool
+	AvatarPresent   bool
+	ChannelUserID   string
+	Username        string
+	FirstName       string
+	LastName        string
+	AvatarURL       string
 	// InviteCode 邀请注册模式下 Bot 新用户建号所需的邀请码。
 	InviteCode string
 }
@@ -92,7 +96,7 @@ func (s *Service) bindTelegramChannelByEmailCode(botID uint, input BindTelegramC
 		return nil, nil, 0, ErrUserDisabled
 	}
 
-	return s.bindTelegramIdentityToUser(botID, targetUser, verified)
+	return s.bindTelegramIdentityToUser(botID, targetUser, verified, false)
 }
 
 func (s *Service) resolveTelegramChannelIdentity(verified *telegramauthapp.IdentityVerified) (*userdomain.User, *externalidentitydomain.Identity, error) {
@@ -203,7 +207,7 @@ func (s *Service) provisionTelegramChannelIdentity(verified *telegramauthapp.Ide
 	return user, identity, created, nil
 }
 
-func (s *Service) bindTelegramIdentityToUser(botID uint, targetUser *userdomain.User, verified *telegramauthapp.IdentityVerified) (user *userdomain.User, identity *externalidentitydomain.Identity, previousUserID uint, err error) {
+func (s *Service) bindTelegramIdentityToUser(botID uint, targetUser *userdomain.User, verified *telegramauthapp.IdentityVerified, website bool) (user *userdomain.User, identity *externalidentitydomain.Identity, previousUserID uint, err error) {
 	if targetUser == nil || verified == nil {
 		return nil, nil, 0, ErrNotFound
 	}
@@ -224,12 +228,33 @@ func (s *Service) bindTelegramIdentityToUser(botID uint, targetUser *userdomain.
 		if txErr != nil {
 			return txErr
 		}
-		if current != nil && current.ProviderUserID != verified.ProviderUserID {
+		if current != nil && !telegramProviderUserIDMatchesVerified(current.ProviderUserID, verified) {
 			return ErrUserOAuthAlreadyBound
 		}
 		occupied, txErr := tx.GetIdentityByProviderUserID(verified.Provider, verified.ProviderUserID)
 		if txErr != nil {
 			return txErr
+		}
+		// Resolve verified OIDC aliases on the same transaction. Conflicting
+		// canonical/alias lifetimes must not be silently combined.
+		for _, alias := range verified.ProviderUserIDAliases {
+			alias = strings.TrimSpace(alias)
+			if alias == "" || alias == verified.ProviderUserID {
+				continue
+			}
+			legacy, lookupErr := tx.GetIdentityByProviderUserID(verified.Provider, alias)
+			if lookupErr != nil {
+				return lookupErr
+			}
+			if legacy != nil {
+				if occupied != nil && occupied.ID != legacy.ID {
+					return ErrUserOAuthIdentityExists
+				}
+				occupied = legacy
+			}
+		}
+		if current != nil && occupied != nil && current.ID != occupied.ID {
+			return ErrUserOAuthIdentityExists
 		}
 		now := time.Now()
 		if occupied != nil && occupied.UserID != lockedTarget.ID {
@@ -243,6 +268,17 @@ func (s *Service) bindTelegramIdentityToUser(botID uint, targetUser *userdomain.
 				return ErrUserOAuthIdentityExists
 			}
 			previousUserID = previous.ID
+			var historyBotIDs []uint
+			if website {
+				// No bot_id from a URL/payload participates in authorization.
+				historyBotIDs, txErr = tx.TrustedTelegramHistoryBotIDs(previous.ID, verified.ProviderUserID)
+				if txErr != nil {
+					return txErr
+				}
+			} else if botID != 0 {
+				// Existing authenticated Bot-update binding path.
+				historyBotIDs = []uint{botID}
+			}
 			// A transfer starts a new binding lifetime. Never reuse the old
 			// identity ID: queued actions from B must fail even after a rebind.
 			if txErr := tx.RevokeTelegramHistoryGrants(occupied.ID, now); txErr != nil {
@@ -257,8 +293,8 @@ func (s *Service) bindTelegramIdentityToUser(botID uint, targetUser *userdomain.
 			if txErr := tx.CreateIdentity(occupied); txErr != nil {
 				return txErr
 			}
-			if botID != 0 {
-				grant := &userauthdomain.TelegramHistoryGrant{BotID: botID, TelegramUserID: verified.ProviderUserID, PreviousUserID: previous.ID, CurrentUserID: lockedTarget.ID, IdentityID: occupied.ID, Status: userauthdomain.TelegramHistoryActive, CreatedAt: now, UpdatedAt: now}
+			for _, historyBotID := range historyBotIDs {
+				grant := &userauthdomain.TelegramHistoryGrant{BotID: historyBotID, TelegramUserID: verified.ProviderUserID, PreviousUserID: previous.ID, CurrentUserID: lockedTarget.ID, IdentityID: occupied.ID, Status: userauthdomain.TelegramHistoryActive, CreatedAt: now, UpdatedAt: now}
 				if txErr := tx.CreateTelegramHistoryGrant(grant); txErr != nil {
 					return txErr
 				}
@@ -272,6 +308,7 @@ func (s *Service) bindTelegramIdentityToUser(botID uint, targetUser *userdomain.
 				return txErr
 			}
 		} else {
+			occupied.ProviderUserID = verified.ProviderUserID
 			applyTelegramIdentity(verified, occupied)
 			occupied.UpdatedAt = now
 			if txErr := tx.UpdateIdentity(occupied); txErr != nil {
@@ -293,13 +330,16 @@ func normalizeTelegramChannelIdentityInput(input TelegramChannelIdentityInput) (
 		return nil, telegramauthapp.ErrTelegramAuthPayloadInvalid
 	}
 	return &telegramauthapp.IdentityVerified{
-		Provider:       constants.UserOAuthProviderTelegram,
-		ProviderUserID: providerUserID,
-		Username:       strings.TrimSpace(input.Username),
-		AvatarURL:      strings.TrimSpace(input.AvatarURL),
-		FirstName:      strings.TrimSpace(input.FirstName),
-		LastName:       strings.TrimSpace(input.LastName),
-		AuthAt:         time.Now(),
+		PartialProfile:  true,
+		UsernamePresent: input.UsernamePresent || strings.TrimSpace(input.Username) != "",
+		AvatarPresent:   input.AvatarPresent || strings.TrimSpace(input.AvatarURL) != "",
+		Provider:        constants.UserOAuthProviderTelegram,
+		ProviderUserID:  providerUserID,
+		Username:        strings.TrimSpace(input.Username),
+		AvatarURL:       strings.TrimSpace(input.AvatarURL),
+		FirstName:       strings.TrimSpace(input.FirstName),
+		LastName:        strings.TrimSpace(input.LastName),
+		AuthAt:          time.Now(),
 	}, nil
 }
 

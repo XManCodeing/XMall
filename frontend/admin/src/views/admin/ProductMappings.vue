@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { useDebounceFn } from '@vueuse/core'
 import { adminAPI } from '@/api/admin'
 import type { AdminProductMapping, AdminSiteConnection, AdminCategory, AdminProduct, AdminProductSKU } from '@/api/types'
 import { Button } from '@/components/ui/button'
@@ -145,11 +144,7 @@ const getLocalPriceRange = (mapping: AdminProductMapping & { product?: AdminProd
 
 const getLocalSkuCount = (mapping: AdminProductMapping & { product?: AdminProduct }) => mapping.product?.skus?.length || 0
 
-const formatTime = (raw?: string) => {
-  if (!raw) return '-'
-  const d = new Date(raw)
-  return Number.isNaN(d.getTime()) ? '-' : d.toLocaleString()
-}
+import { formatDate as formatTime } from '@/utils/format'
 
 const formatSpecValues = (specValues: Record<string, string> | undefined | null) => {
   if (!specValues || typeof specValues !== 'object') return '-'
@@ -271,8 +266,18 @@ const changePageSize = (size: number) => {
   fetchMappings(1)
 }
 
-const handleFilterChange = () => fetchMappings(1)
-const debouncedSearch = useDebounceFn(() => fetchMappings(1), 300)
+/** 按当前筛选查询第一页。@returns 查询完成。 */
+const handleFilterChange = async (): Promise<void> => {
+  if (loading.value || refreshing.value) return
+  pagination.page = 1
+  await fetchMappings(1)
+}
+/** 恢复全部筛选默认值并保留分页尺寸。@returns 查询完成。 */
+const resetFilters = async (): Promise<void> => {
+  if (loading.value || refreshing.value) return
+  Object.assign(filters, { connection_id: '__all__', upstream_status: '__all__', product_status: '__all__', search: '' })
+  await handleFilterChange()
+}
 
 // --- Batch selection ---
 const selectedMappingIds = ref<Set<number>>(new Set())
@@ -767,7 +772,7 @@ onMounted(() => { fetchConnections(); fetchCategories(); fetchMappings() })
     <!-- Filter -->
     <div class="rounded-xl border border-border bg-card p-4 shadow-sm">
       <div class="flex flex-wrap items-center gap-3">
-        <Select v-model="filters.connection_id" @update:modelValue="handleFilterChange">
+        <Select v-model="filters.connection_id">
           <SelectTrigger class="h-9 w-full sm:w-[220px]">
             <SelectValue :placeholder="t('productMappings.filter.connectionPlaceholder')" />
           </SelectTrigger>
@@ -786,10 +791,10 @@ onMounted(() => { fetchConnections(); fetchCategories(); fetchMappings() })
             v-model="filters.search"
             :placeholder="t('productMappings.filter.searchPlaceholder')"
             class="pl-9 h-9"
-            @update:modelValue="debouncedSearch"
+            @keydown.enter="handleFilterChange"
           />
         </div>
-        <Select v-model="filters.upstream_status" @update:modelValue="handleFilterChange">
+        <Select v-model="filters.upstream_status">
           <SelectTrigger class="h-9 w-full sm:w-[180px]">
             <SelectValue :placeholder="t('productMappings.filter.upstreamStatusPlaceholder')" />
           </SelectTrigger>
@@ -799,7 +804,7 @@ onMounted(() => { fetchConnections(); fetchCategories(); fetchMappings() })
             <SelectItem value="deleted">{{ t('productMappings.filter.upstreamDeleted') }}</SelectItem>
           </SelectContent>
         </Select>
-        <Select v-model="filters.product_status" @update:modelValue="handleFilterChange">
+        <Select v-model="filters.product_status">
           <SelectTrigger class="h-9 w-full sm:w-[180px]">
             <SelectValue :placeholder="t('productMappings.filter.productStatusPlaceholder')" />
           </SelectTrigger>
@@ -809,6 +814,8 @@ onMounted(() => { fetchConnections(); fetchCategories(); fetchMappings() })
             <SelectItem value="inactive">{{ t('productMappings.filter.productInactive') }}</SelectItem>
           </SelectContent>
         </Select>
+        <Button size="sm" variant="outline" :disabled="loading || refreshing" @click="handleFilterChange">{{ t('admin.common.search') }}</Button>
+        <Button size="sm" variant="outline" :disabled="loading || refreshing" @click="resetFilters">{{ t('admin.common.reset') }}</Button>
       </div>
     </div>
 

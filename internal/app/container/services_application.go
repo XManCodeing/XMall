@@ -89,6 +89,7 @@ func (c *Container) initApplicationServices() {
 	})
 	orderQueue := orderqueue.New(c.QueueClient)
 	c.OrderService = orderapp.NewOrderService(orderapp.OrderServiceOptions{
+		EnforcePublicSale:       true,
 		OrderStore:              c.OrderStore,
 		UserStore:               c.UserStore,
 		ProductStore:            c.ProductRepo,

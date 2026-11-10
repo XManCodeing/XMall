@@ -2,6 +2,8 @@ package container
 
 import (
 	"github.com/XManCodeing/XMall/internal/authz"
+	grouprecovery "github.com/XManCodeing/XMall/internal/bootstrap/telegramgrouprecovery"
+	telegrammembership "github.com/XManCodeing/XMall/internal/bootstrap/telegrammembership"
 	"github.com/XManCodeing/XMall/internal/config"
 	affiliateapp "github.com/XManCodeing/XMall/internal/modules/affiliate/application"
 	affiliatecontract "github.com/XManCodeing/XMall/internal/modules/affiliate/contract"
@@ -74,8 +76,14 @@ import (
 	sitemapapp "github.com/XManCodeing/XMall/internal/modules/sitemap/application"
 	broadcastapp "github.com/XManCodeing/XMall/internal/modules/telegram/broadcast/application"
 	broadcastcontract "github.com/XManCodeing/XMall/internal/modules/telegram/broadcast/contract"
+	groupsapp "github.com/XManCodeing/XMall/internal/modules/telegram/groups/application"
+	membershipcontract "github.com/XManCodeing/XMall/internal/modules/telegram/membership/contract"
+	membershiphttp "github.com/XManCodeing/XMall/internal/modules/telegram/membership/transport/http"
+	recoveryapp "github.com/XManCodeing/XMall/internal/modules/telegram/recovery/application"
+	recoverycontract "github.com/XManCodeing/XMall/internal/modules/telegram/recovery/contract"
 	runtimeapp "github.com/XManCodeing/XMall/internal/modules/telegram/runtime/application"
 	runtimecontract "github.com/XManCodeing/XMall/internal/modules/telegram/runtime/contract"
+	supportapp "github.com/XManCodeing/XMall/internal/modules/telegram/support/application"
 	uploadapp "github.com/XManCodeing/XMall/internal/modules/upload/application"
 	walletapp "github.com/XManCodeing/XMall/internal/modules/wallet/application"
 	walletgormstore "github.com/XManCodeing/XMall/internal/modules/wallet/infrastructure/gormstore"
@@ -86,12 +94,22 @@ import (
 
 // Container 声明应用运行期共享的依赖表面；具体构造过程按职责拆分在同包装配文件中。
 type Container struct {
-	Config                 *config.Config
-	QueueClient            *queue.Client
-	TelegramBotManager     *runtimeapp.Manager
-	TelegramBotRuntime     *runtimeapp.Runtime
-	TelegramBotStore       runtimecontract.Store
-	TelegramBotLeaseClient *redis.Client
+	Config                  *config.Config
+	QueueClient             *queue.Client
+	TelegramSupportAdmin    *supportapp.AdminService
+	TelegramGroups          *groupsapp.Service
+	TelegramRecovery        *recoveryapp.Service
+	TelegramSupportRecovery recoverycontract.SupportManagement
+	TelegramGroupRecovery   *grouprecovery.Executor
+	TelegramBotManager      *runtimeapp.Manager
+	TelegramBotRuntime      *runtimeapp.Runtime
+	MembershipRecovery      *telegrammembership.RecoveryService
+	MembershipAdminAccess   membershipcontract.AccessAdmin
+	MembershipRefundAdmin   membershipcontract.RefundAdmin
+	MembershipLifecycle     membershipcontract.LifecycleAdmin
+	MembershipUserAccess    membershiphttp.UserAccess
+	TelegramBotStore        runtimecontract.Store
+	TelegramBotLeaseClient  *redis.Client
 
 	// Repositories
 	AdminStore             admincontract.Store

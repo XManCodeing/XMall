@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { onMounted, reactive, ref, watch } from 'vue'
-import { useDebounceFn } from '@vueuse/core'
 import { useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { notifyErrorOnce, notifySuccess } from '@/utils/notify'
@@ -22,6 +21,7 @@ import {
 } from '@/utils/status'
 import { formatDate, formatMoney, getLocalizedText, toRFC3339 } from '@/utils/format'
 import { formatSkuDisplayLabel } from '@/utils/sku'
+import ManualPaymentAction from './components/ManualPaymentAction.vue'
 import OrderDetailDialog from './components/OrderDetailDialog.vue'
 import OrderFulfillmentModal from './components/OrderFulfillmentModal.vue'
 import { adminUrl } from '@/utils/adminBase'
@@ -136,10 +136,18 @@ const fetchRefundConfig = async () => {
   }
 }
 
-const handleSearch = () => {
-  fetchOrders(1)
+/** 按当前筛选查询第一页，加载期间忽略重复操作。@returns 查询完成。 */
+const handleSearch = async (): Promise<void> => {
+  if (loading.value || refreshing.value) return
+  pagination.value.page = 1
+  await fetchOrders(1)
 }
-const debouncedSearch = useDebounceFn(handleSearch, 300)
+/** 清空查询筛选并保留路由用户上下文及分页尺寸。@returns 查询完成。 */
+const resetFilters = async (): Promise<void> => {
+  if (loading.value || refreshing.value) return
+  Object.assign(filters, { orderNo: '', guestEmail: '', createdFrom: '', createdTo: '', status: '', userId: toQueryText(route.query.user_id), userKeyword: '', productKeyword: '', sortBy: '', sortOrder: '' })
+  await handleSearch()
+}
 
 const refresh = () => {
   refreshList(() => fetchOrders(pagination.value.page, { preserveRows: true }))
@@ -284,19 +292,19 @@ watch(
     <div class="rounded-xl border border-border bg-card p-4 shadow-sm">
       <div class="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
         <div class="w-full md:w-32">
-          <Input v-model="filters.userId" :placeholder="t('admin.orders.filterUserId')" @update:modelValue="debouncedSearch" />
+          <Input v-model="filters.userId" :placeholder="t('admin.orders.filterUserId')" @keydown.enter="handleSearch" />
         </div>
         <div class="w-full md:w-56">
-          <Input v-model="filters.userKeyword" :placeholder="t('admin.orders.filterUserKeyword')" @update:modelValue="debouncedSearch" />
+          <Input v-model="filters.userKeyword" :placeholder="t('admin.orders.filterUserKeyword')" @keydown.enter="handleSearch" />
         </div>
         <div class="w-full md:w-48">
-          <Input v-model="filters.orderNo" :placeholder="t('admin.orders.filterOrderNo')" @update:modelValue="debouncedSearch" />
+          <Input v-model="filters.orderNo" :placeholder="t('admin.orders.filterOrderNo')" @keydown.enter="handleSearch" />
         </div>
         <div class="w-full md:w-48">
-          <Input v-model="filters.guestEmail" :placeholder="t('admin.orders.filterGuestEmail')" @update:modelValue="debouncedSearch" />
+          <Input v-model="filters.guestEmail" :placeholder="t('admin.orders.filterGuestEmail')" @keydown.enter="handleSearch" />
         </div>
         <div class="w-full md:w-48">
-          <Input v-model="filters.productKeyword" :placeholder="t('admin.orders.filterProductKeyword')" @update:modelValue="debouncedSearch" />
+          <Input v-model="filters.productKeyword" :placeholder="t('admin.orders.filterProductKeyword')" @keydown.enter="handleSearch" />
         </div>
         <div class="flex w-full flex-col gap-2 md:w-auto md:flex-row md:flex-wrap md:items-center">
           <span class="text-xs text-muted-foreground whitespace-nowrap">{{ t('admin.orders.filterCreatedRange') }}</span>
@@ -305,7 +313,7 @@ watch(
             type="datetime-local"
             class="h-9 w-full md:w-auto"
             :placeholder="t('admin.orders.filterCreatedFrom')"
-            @update:modelValue="handleSearch"
+            @keydown.enter="handleSearch"
           />
           <span class="hidden text-muted-foreground md:inline">-</span>
           <Input
@@ -313,11 +321,11 @@ watch(
             type="datetime-local"
             class="h-9 w-full md:w-auto"
             :placeholder="t('admin.orders.filterCreatedTo')"
-            @update:modelValue="handleSearch"
+            @keydown.enter="handleSearch"
           />
         </div>
         <div class="w-full md:w-40">
-          <Select v-model="filters.status" @update:modelValue="handleSearch">
+          <Select v-model="filters.status" @keydown.enter="handleSearch">
             <SelectTrigger class="h-9 w-full">
               <SelectValue :placeholder="t('admin.orders.filterStatusAll')" />
             </SelectTrigger>
@@ -336,7 +344,7 @@ watch(
           </Select>
         </div>
         <div class="w-full md:w-48">
-          <Select v-model="filters.sortBy" @update:modelValue="handleSearch">
+          <Select v-model="filters.sortBy" @keydown.enter="handleSearch">
             <SelectTrigger class="h-9 w-full">
               <SelectValue :placeholder="t('admin.orders.sortDefault')" />
             </SelectTrigger>
@@ -352,7 +360,9 @@ watch(
           </Select>
         </div>
         <div class="hidden flex-1 sm:block"></div>
-        <Button size="sm" class="w-full sm:w-auto" :disabled="refreshing" @click="refresh">{{ t('admin.common.refresh') }}</Button>
+        <Button size="sm" variant="outline" :disabled="loading || refreshing" @click="handleSearch">{{ t('admin.common.search') }}</Button>
+        <Button size="sm" variant="outline" :disabled="loading || refreshing" @click="resetFilters">{{ t('admin.common.reset') }}</Button>
+        <Button size="sm" class="w-full sm:w-auto" :disabled="loading || refreshing" @click="refresh">{{ t('admin.common.refresh') }}</Button>
       </div>
     </div>
 
@@ -445,14 +455,15 @@ watch(
                   </SelectContent>
                 </Select>
                 <Button v-if="canUpdateStatus(order)" size="xs" variant="outline" @click="updateStatus(order)">
-                  {{ t('admin.orders.update') }}
+                  <span :title="t('admin.orders.update')" :aria-label="t('admin.orders.update')">{{ t('tableAction.update') }}</span>
                 </Button>
                 <Button v-if="canCreateFulfillment(order)" size="xs" variant="secondary" @click="openFulfillment(order)">
-                  {{ t('admin.orders.fulfillmentCreate') }}
+                  <span :title="t('admin.orders.fulfillmentCreate')" :aria-label="t('admin.orders.fulfillmentCreate')">{{ t('tableAction.fulfill') }}</span>
                 </Button>
                 <Button v-if="order.status === 'delivered'" size="xs" variant="outline" @click="markCompleted(order)">
-                  {{ t('admin.orders.markCompleted') }}
+                  <span :title="t('admin.orders.markCompleted')" :aria-label="t('admin.orders.markCompleted')">{{ t('tableAction.complete') }}</span>
                 </Button>
+                <ManualPaymentAction :order="order" @refresh="refresh" />
                 <Button size="xs" variant="outline" @click="openDetail(order)">
                   {{ t('admin.orders.view') }}
                 </Button>
@@ -462,7 +473,7 @@ watch(
         </TableBody>
       </Table>
 
-      <ListPagination
+      <ListPagination :loading="loading || refreshing"
         :page="pagination.page"
         :total-page="pagination.total_page"
         :total="pagination.total"

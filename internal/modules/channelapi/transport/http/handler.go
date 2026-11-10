@@ -6,6 +6,7 @@ import (
 	"time"
 
 	paymentdomain "github.com/XManCodeing/XMall/internal/modules/payment/domain"
+	walletcontract "github.com/XManCodeing/XMall/internal/modules/wallet/contract"
 
 	orderdomain "github.com/XManCodeing/XMall/internal/modules/order/domain"
 
@@ -59,6 +60,7 @@ var (
 	ErrPaymentGatewayResponseInvalid = errors.New("payment gateway response invalid")
 	ErrPaymentCurrencyMismatch       = errors.New("payment currency mismatch")
 	ErrWalletOnlyPaymentRequired     = errors.New("wallet only payment required")
+	ErrWalletInsufficientBalance     = walletcontract.ErrInsufficientBalance
 )
 
 type TelegramIdentityInput struct {

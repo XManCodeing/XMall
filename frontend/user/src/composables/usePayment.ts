@@ -1,3 +1,4 @@
+import { formatDate } from '../utils/format'
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { NavigationFailureType, isNavigationFailure, useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
@@ -1137,13 +1138,6 @@ export function usePayment() {
 
   const handleChangePaymentMethod = () => {
     resetPayment('change_payment_method')
-  }
-
-  const formatDate = (raw?: string) => {
-    if (!raw) return ''
-    const date = new Date(raw)
-    if (Number.isNaN(date.getTime())) return raw
-    return date.toLocaleString()
   }
 
   const statusLabel = (status: string) => orderStatusLabel(t, status)

@@ -48,6 +48,9 @@ type bridgeStub struct {
 	progress Progress
 }
 
+func (*bridgeStub) ReadContent(string) (BroadcastContent, error) {
+	return BroadcastContent{MessageHTML: "hello"}, nil
+}
 func (*bridgeStub) Prepare(context.Context, CreateInput) (string, int, error) {
 	return "encrypted", 2, nil
 }
@@ -61,7 +64,7 @@ func (b *bridgeStub) Enqueue(_ context.Context, job *broadcastdomain.Broadcast) 
 func (b *bridgeStub) Progress(context.Context, uint, uint) (Progress, error) { return b.progress, nil }
 func TestResumeUsesLedgerAndQuarantinesUnknown(t *testing.T) {
 	store := &broadcastStoreStub{}
-	bridge := &bridgeStub{fail: true, keys: map[uint]bool{}, progress: Progress{Total: 2, Sent: 1, Unknown: 1}}
+	bridge := &bridgeStub{fail: true, keys: map[uint]bool{}, progress: Progress{Total: 1, Sent: 1}}
 	s := NewRuntimeService(store, nil, bridge, nil)
 	ctx := context.Background()
 	job, err := s.CreateBroadcast(ctx, CreateInput{BotID: 7, Title: "demo", MessageHTML: "hello", RecipientType: "all"})
@@ -69,6 +72,7 @@ func TestResumeUsesLedgerAndQuarantinesUnknown(t *testing.T) {
 		t.Fatal("expected accepted durable interrupted job")
 	}
 	bridge.fail = false
+	bridge.progress = Progress{Total: 2, Sent: 1, Unknown: 1}
 	if err = s.Reconcile(ctx); err != nil {
 		t.Fatal(err)
 	}

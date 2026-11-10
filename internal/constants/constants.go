@@ -1,5 +1,16 @@
 package constants
 
+import "time"
+
+// displayLocation 固定用户展示及业务自然日为东八区，不依赖宿主机时区或时区数据库。
+var displayLocation = time.FixedZone("Asia/Shanghai", 8*60*60)
+
+// DisplayLocation 返回用于用户展示和自然日边界的固定东八区；不得用于修改绝对时刻存储。
+func DisplayLocation() *time.Location { return displayLocation }
+
+// DisplayTime 按 layout 将 at 格式化为东八区文本，返回值仅用于人类展示，不改变输入时刻。
+func DisplayTime(at time.Time, layout string) string { return at.In(displayLocation).Format(layout) }
+
 // 订单状态常量
 const (
 	OrderStatusPendingPayment     = "pending_payment"
@@ -52,6 +63,8 @@ const (
 	PaymentExceptionDuplicateSucceeded   = "duplicate_payment_succeeded"
 	PaymentExceptionClosedOrderSucceeded = "closed_order_payment_succeeded"
 	PaymentExceptionUnderpaidSucceeded   = "underpaid_payment_succeeded"
+	// PaymentExceptionMembershipSaleClosed 保留真实收款，禁止会员商品通用履约，等待人工处理。
+	PaymentExceptionMembershipSaleClosed = "membership_sale_closed_succeeded"
 )
 
 // 支付提供方常量

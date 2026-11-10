@@ -3,6 +3,7 @@ package giftcardhttp
 import (
 	"errors"
 	"fmt"
+	"github.com/XManCodeing/XMall/internal/constants"
 	"net/http"
 	"strings"
 	"time"
@@ -311,7 +312,7 @@ func (h *AdminHandler) Export(c *gin.Context) {
 		}
 		return
 	}
-	filename := fmt.Sprintf("gift_cards_%s.%s", time.Now().Format("20060102_150405"), strings.ToLower(strings.TrimSpace(req.Format)))
+	filename := fmt.Sprintf("gift_cards_%s.%s", constants.DisplayTime(time.Now(), "20060102_150405"), strings.ToLower(strings.TrimSpace(req.Format)))
 	c.Header("Content-Type", contentType)
 	c.Header("Content-Disposition", fmt.Sprintf("attachment; filename=\"%s\"", filename))
 	c.Data(http.StatusOK, contentType, content)

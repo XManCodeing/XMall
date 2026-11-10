@@ -13,13 +13,19 @@ type LocalizedText map[string]string
 
 // TelegramBotConfigSetting Telegram Bot 配置实体（嵌套分组）
 type TelegramBotConfigSetting struct {
-	Enabled       bool                     `json:"enabled"`
-	DefaultLocale string                   `json:"default_locale"`
-	ConfigVersion int                      `json:"config_version"`
-	Basic         TelegramBotBasicConfig   `json:"basic"`
-	Welcome       TelegramBotWelcomeConfig `json:"welcome"`
-	Help          TelegramBotHelpConfig    `json:"help"`
-	Menu          TelegramBotMenuConfig    `json:"menu"`
+	Registration  TelegramBotRegistrationConfig `json:"registration"`
+	Enabled       bool                          `json:"enabled"`
+	DefaultLocale string                        `json:"default_locale"`
+	ConfigVersion int                           `json:"config_version"`
+	Basic         TelegramBotBasicConfig        `json:"basic"`
+	Welcome       TelegramBotWelcomeConfig      `json:"welcome"`
+	Help          TelegramBotHelpConfig         `json:"help"`
+	Menu          TelegramBotMenuConfig         `json:"menu"`
+}
+
+// TelegramBotRegistrationConfig controls implicit account creation by trusted built-in bots.
+type TelegramBotRegistrationConfig struct {
+	Enabled bool `json:"enabled"`
 }
 
 // TelegramBotBasicConfig 基本信息分组
@@ -83,9 +89,6 @@ type TelegramBotRuntimeStatusSetting struct {
 	LastSeenAt       string   `json:"last_seen_at"`
 	BotVersion       string   `json:"bot_version"`
 	WebhookStatus    string   `json:"webhook_status"`
-	MachineCode      string   `json:"machine_code"`
-	LicenseStatus    string   `json:"license_status"`
-	LicenseExpiresAt string   `json:"license_expires_at"`
 	Warnings         []string `json:"warnings"`
 	ConfigVersion    int      `json:"config_version"`
 	LastConfigSyncAt string   `json:"last_config_sync_at"`
@@ -196,6 +199,7 @@ func DefaultTelegramBotRuntimeStatus() TelegramBotRuntimeStatusSetting {
 // TelegramBotConfigToMap 转换为 settings 存储结构
 func EncodeTelegramBotConfig(setting TelegramBotConfigSetting) map[string]interface{} {
 	return map[string]interface{}{
+		"registration":   map[string]interface{}{"enabled": setting.Registration.Enabled},
 		"enabled":        setting.Enabled,
 		"default_locale": strings.TrimSpace(setting.DefaultLocale),
 		"config_version": setting.ConfigVersion,
@@ -226,6 +230,7 @@ func EncodeTelegramBotConfig(setting TelegramBotConfigSetting) map[string]interf
 // MaskTelegramBotConfigForAdmin 返回管理端配置
 func MaskTelegramBotConfigForAdmin(setting TelegramBotConfigSetting) jsonmap.JSON {
 	return jsonmap.JSON{
+		"registration":   map[string]interface{}{"enabled": setting.Registration.Enabled},
 		"enabled":        setting.Enabled,
 		"default_locale": setting.DefaultLocale,
 		"config_version": setting.ConfigVersion,
@@ -256,6 +261,7 @@ func MaskTelegramBotConfigForAdmin(setting TelegramBotConfigSetting) jsonmap.JSO
 // SerializeTelegramBotConfigForChannel 返回 Channel API 配置（bot_token 由调用方注入）
 func SerializeTelegramBotConfigForChannel(setting TelegramBotConfigSetting, botToken string) jsonmap.JSON {
 	return jsonmap.JSON{
+		"registration":   map[string]interface{}{"enabled": setting.Registration.Enabled},
 		"enabled":        setting.Enabled,
 		"bot_token":      botToken,
 		"default_locale": setting.DefaultLocale,
@@ -291,9 +297,6 @@ func EncodeTelegramBotRuntimeStatus(status TelegramBotRuntimeStatusSetting) map[
 		"last_seen_at":        status.LastSeenAt,
 		"bot_version":         status.BotVersion,
 		"webhook_status":      status.WebhookStatus,
-		"machine_code":        status.MachineCode,
-		"license_status":      status.LicenseStatus,
-		"license_expires_at":  status.LicenseExpiresAt,
 		"warnings":            append([]string(nil), status.Warnings...),
 		"config_version":      status.ConfigVersion,
 		"last_config_sync_at": status.LastConfigSyncAt,
@@ -303,15 +306,19 @@ func EncodeTelegramBotRuntimeStatus(status TelegramBotRuntimeStatusSetting) map[
 // telegramBotConfigFromJSON 从 JSON 读取嵌套结构，兼容旧扁平格式
 func DecodeTelegramBotConfig(raw jsonmap.JSON, fallback TelegramBotConfigSetting) TelegramBotConfigSetting {
 	next := fallback
+	next.Registration = TelegramBotRegistrationConfig{}
 	if raw == nil {
 		return next
 	}
 
 	// 兼容旧扁平格式：检测 bot_display_name 字段自动迁移
 	if _, hasOldField := raw["bot_display_name"]; hasOldField {
-		return migrateOldTelegramBotConfig(raw, fallback)
+		return migrateOldTelegramBotConfig(raw, next)
 	}
 
+	if registration, ok := raw["registration"].(map[string]interface{}); ok {
+		next.Registration.Enabled, _ = registration["enabled"].(bool)
+	}
 	next.Enabled = settingsvalue.ReadBool(raw, "enabled", next.Enabled)
 	next.DefaultLocale = settingsvalue.ReadString(raw, "default_locale", next.DefaultLocale)
 	next.ConfigVersion = settingsvalue.ReadInt(raw, "config_version", next.ConfigVersion)
@@ -377,9 +384,6 @@ func DecodeTelegramBotRuntimeStatus(raw jsonmap.JSON, fallback TelegramBotRuntim
 	next.LastSeenAt = settingsvalue.ReadString(raw, "last_seen_at", next.LastSeenAt)
 	next.BotVersion = settingsvalue.ReadString(raw, "bot_version", next.BotVersion)
 	next.WebhookStatus = settingsvalue.ReadString(raw, "webhook_status", next.WebhookStatus)
-	next.MachineCode = settingsvalue.ReadString(raw, "machine_code", next.MachineCode)
-	next.LicenseStatus = settingsvalue.ReadString(raw, "license_status", next.LicenseStatus)
-	next.LicenseExpiresAt = settingsvalue.ReadString(raw, "license_expires_at", next.LicenseExpiresAt)
 	next.Warnings = settingsvalue.ReadStringList(raw, "warnings", next.Warnings)
 	next.ConfigVersion = settingsvalue.ReadInt(raw, "config_version", next.ConfigVersion)
 	next.LastConfigSyncAt = settingsvalue.ReadString(raw, "last_config_sync_at", next.LastConfigSyncAt)
@@ -513,21 +517,22 @@ func NormalizeHelpItems(items []TelegramBotHelpItem) []TelegramBotHelpItem {
 // BuiltinTelegramBotMenuKeysOrder 内置菜单 key 显示顺序，必须与 telegram-bot 端 builtinMenuButtons 保持一致。
 // 后台 default seed、补齐缺失项时均按该顺序生成。
 var BuiltinTelegramBotMenuKeysOrder = []string{
-	"shop", "orders", "wallet", "language", "help",
+	"shop", "orders", "memberships", "wallet", "language", "help",
 }
 
 // builtinMenuLabels 内置菜单的多语言默认 label（与 telegram-bot 的 i18n 默认值一致）。
 var builtinMenuLabels = map[string]LocalizedText{
-	"shop":      {"zh-CN": "🛍️ 开始购物", "zh-TW": "🛍️ 開始購物", "en-US": "🛍️ Shop Now"},
-	"orders":    {"zh-CN": "📦 我的订单", "zh-TW": "📦 我的訂單", "en-US": "📦 My Orders"},
-	"wallet":    {"zh-CN": "💰 我的钱包", "zh-TW": "💰 我的錢包", "en-US": "💰 My Wallet"},
-	"affiliate": {"zh-CN": "📣 推广返利", "zh-TW": "📣 推廣返利", "en-US": "📣 Affiliate"},
-	"gift_card": {"zh-CN": "🎁 礼品卡兑换", "zh-TW": "🎁 禮品卡兌換", "en-US": "🎁 Redeem Gift Card"},
-	"language":  {"zh-CN": "🌐 切换语言", "zh-TW": "🌐 切換語言", "en-US": "🌐 Language"},
-	"help":      {"zh-CN": "❓ 帮助中心", "zh-TW": "❓ 幫助中心", "en-US": "❓ Help"},
+	"memberships": {"zh-CN": "我的会员", "zh-TW": "我的會員", "en-US": "My memberships"},
+	"shop":        {"zh-CN": "🛍️ 开始购物", "zh-TW": "🛍️ 開始購物", "en-US": "🛍️ Shop Now"},
+	"orders":      {"zh-CN": "📦 我的订单", "zh-TW": "📦 我的訂單", "en-US": "📦 My Orders"},
+	"wallet":      {"zh-CN": "💰 我的钱包", "zh-TW": "💰 我的錢包", "en-US": "💰 My Wallet"},
+	"affiliate":   {"zh-CN": "📣 推广返利", "zh-TW": "📣 推廣返利", "en-US": "📣 Affiliate"},
+	"gift_card":   {"zh-CN": "🎁 礼品卡兑换", "zh-TW": "🎁 禮品卡兌換", "en-US": "🎁 Redeem Gift Card"},
+	"language":    {"zh-CN": "🌐 切换语言", "zh-TW": "🌐 切換語言", "en-US": "🌐 Language"},
+	"help":        {"zh-CN": "❓ 帮助中心", "zh-TW": "❓ 幫助中心", "en-US": "❓ Help"},
 }
 
-// defaultBuiltinMenuItems 返回 5 项内置菜单的默认配置（用于 default seed 与缺失补齐）。
+// defaultBuiltinMenuItems 返回内置菜单的默认配置（用于 default seed 与缺失补齐）。
 func defaultBuiltinMenuItems() []TelegramBotMenuItem {
 	items := make([]TelegramBotMenuItem, 0, len(BuiltinTelegramBotMenuKeysOrder))
 	for i, key := range BuiltinTelegramBotMenuKeysOrder {
@@ -548,7 +553,7 @@ func defaultBuiltinMenuItems() []TelegramBotMenuItem {
 }
 
 // EnsureBuiltinMenuItems 补齐缺失的内置菜单 key（保留已有项的 enabled/label/order）。
-// 这样后台 UI 总能看到 5 个内置菜单的开关，避免老库数据缺项导致管理员误以为某些菜单"无法配置"。
+// 后台始终可配置全部内置菜单；补齐时不覆盖历史禁用状态、自定义标签和排序。
 func EnsureBuiltinMenuItems(items []TelegramBotMenuItem) []TelegramBotMenuItem {
 	filtered := make([]TelegramBotMenuItem, 0, len(items))
 	aliases := map[string]string{"shop_home": "shop", "my_orders": "orders", "my_wallet": "wallet", "switch_language": "language", "contact_support": "help"}

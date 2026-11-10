@@ -10,9 +10,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Switch } from '@/components/ui/switch'
 import { Textarea } from '@/components/ui/textarea'
 import { getLocalizedText } from '@/utils/format'
+import { notificationPrerequisiteMessages } from '@/i18n/notificationPrerequisites'
 import { notifyError, notifySuccess } from '@/utils/notify'
 
 const { t } = useI18n()
+const { t: prerequisiteText } = useI18n({ useScope: 'local', messages: notificationPrerequisiteMessages })
 
 const supportedLanguages = ['zh-CN', 'zh-TW', 'en-US'] as const
 type SupportedLanguage = (typeof supportedLanguages)[number]
@@ -261,7 +263,48 @@ watch(() => props.data, () => {
   void syncIgnoredProductsFromText()
 }, { deep: true })
 
+type NotificationChannel = 'email' | 'telegram' | 'feishu'
+const checkingChannel = ref<NotificationChannel | null>(null)
+
+/**
+ * 检查启用前提；关闭操作直接放行，不进行网络可用性探测或测试发送。
+ * @param channel 需要修改的通知渠道。
+ * @param enabled 用户希望设置的开关状态。
+ * @returns 配置齐全时更新本地开关；缺失或读取失败时保持关闭并提示。
+ */
+const toggleChannel = async (channel: NotificationChannel, enabled: boolean) => {
+  if (!enabled) {
+    form.channels[channel].enabled = false
+    return
+  }
+  if (checkingChannel.value || submitting.value) return
+  if (channel === 'feishu') {
+    const config = form.channels.feishu
+    if (!config.app_id.trim() || (!config.app_secret.trim() && !config.has_app_secret)) {
+      notifyError(prerequisiteText('feishu'))
+      return
+    }
+    config.enabled = true
+    return
+  }
+  checkingChannel.value = channel
+  try {
+    // 每次启用读取服务端有效配置，避免页面缓存或其他页未保存的输入被误认为可用。
+    const response = await adminAPI.getNotificationCenterSettings()
+    if (response.data?.data?.prerequisites?.[channel] !== true) {
+      notifyError(prerequisiteText(channel))
+      return
+    }
+    form.channels[channel].enabled = true
+  } catch (error) {
+    notifyErrorIfNeeded(error, prerequisiteText('loadFailed'))
+  } finally {
+    checkingChannel.value = null
+  }
+}
+
 const save = async () => {
+  if (checkingChannel.value || submitting.value) return
   submitting.value = true
   try {
     syncIgnoredProductIDsText()
@@ -316,6 +359,7 @@ defineExpose({ save, submitting })
       <div class="border-b border-border bg-muted/40 px-6 py-4">
         <h2 class="text-lg font-semibold">{{ t('admin.settings.notification.title') }}</h2>
         <p class="mt-1 text-xs text-muted-foreground">{{ t('admin.settings.notification.subtitle') }}</p>
+        <p class="mt-1 text-xs text-muted-foreground">{{ prerequisiteText('verify') }}</p>
       </div>
 
       <div class="space-y-6 p-6">
@@ -419,9 +463,10 @@ defineExpose({ save, submitting })
             </div>
             <div class="space-y-3 p-4">
               <div class="flex items-center gap-2">
-                <Switch v-model="form.channels.email.enabled" />
+                <Switch :model-value="form.channels.email.enabled" :disabled="!!checkingChannel || submitting" @update:model-value="toggleChannel('email', $event)" />
                 <Label class="text-sm">{{ t('admin.settings.notification.channels.email.enabled') }}</Label>
               </div>
+              <p class="text-xs text-muted-foreground">{{ prerequisiteText('email') }}</p>
               <div class="space-y-2">
                 <label class="text-xs font-medium text-muted-foreground">{{ t('admin.settings.notification.channels.email.recipients') }}</label>
                 <Textarea
@@ -439,9 +484,10 @@ defineExpose({ save, submitting })
             </div>
             <div class="space-y-3 p-4">
               <div class="flex items-center gap-2">
-                <Switch v-model="form.channels.telegram.enabled" />
+                <Switch :model-value="form.channels.telegram.enabled" :disabled="!!checkingChannel || submitting" @update:model-value="toggleChannel('telegram', $event)" />
                 <Label class="text-sm">{{ t('admin.settings.notification.channels.telegram.enabled') }}</Label>
               </div>
+              <p class="text-xs text-muted-foreground">{{ prerequisiteText('telegram') }}</p>
               <div class="space-y-2">
                 <label class="text-xs font-medium text-muted-foreground">{{ t('admin.settings.notification.channels.telegram.recipients') }}</label>
                 <Textarea
@@ -460,7 +506,7 @@ defineExpose({ save, submitting })
             </div>
             <div class="space-y-4 p-4">
               <div class="flex items-center gap-2">
-                <Switch v-model="form.channels.feishu.enabled" />
+                <Switch :model-value="form.channels.feishu.enabled" :disabled="!!checkingChannel || submitting" @update:model-value="toggleChannel('feishu', $event)" />
                 <Label class="text-sm">{{ t('admin.settings.notification.channels.feishu.enabled') }}</Label>
               </div>
               <div class="grid grid-cols-1 gap-4 md:grid-cols-2">

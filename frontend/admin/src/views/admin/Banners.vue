@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref, watch } from 'vue'
-import { useDebounceFn } from '@vueuse/core'
 import { useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { adminAPI } from '@/api/admin'
@@ -104,21 +103,7 @@ const getLinkTypeLabel = (value: string) => {
   return linkTypes.value.find((item) => item.value === value)?.label || value
 }
 
-const toISO = (raw: string) => {
-  if (!raw) return ''
-  const date = new Date(raw)
-  if (Number.isNaN(date.getTime())) return ''
-  return date.toISOString()
-}
-
-const toLocalInput = (raw?: string) => {
-  if (!raw) return ''
-  const date = new Date(raw)
-  if (Number.isNaN(date.getTime())) return ''
-  const offset = date.getTimezoneOffset()
-  const local = new Date(date.getTime() - offset * 60000)
-  return local.toISOString().slice(0, 16)
-}
+import { toISO, toLocalInput } from '@/utils/format'
 
 const normalizeFilterValue = (value: string) => (value === '__all__' ? '' : value)
 
@@ -149,10 +134,18 @@ const fetchBanners = async (page = 1) => {
   }
 }
 
-const handleSearch = () => {
-  fetchBanners(1)
+/** 按当前筛选查询第一页，加载期间忽略重复操作。@returns 查询完成。 */
+const handleSearch = async (): Promise<void> => {
+  if (loading.value) return
+  pagination.page = 1
+  await fetchBanners(1)
 }
-const debouncedSearch = useDebounceFn(handleSearch, 300)
+/** 恢复全部筛选默认值并保留分页尺寸。@returns 查询完成。 */
+const resetFilters = async (): Promise<void> => {
+  if (loading.value) return
+  Object.assign(filters, { search: '', position: 'home_hero', isActive: '__all__' })
+  await handleSearch()
+}
 
 const changePage = (page: number) => {
   if (page < 1 || page > pagination.total_page) return
@@ -317,9 +310,9 @@ watch(
     <div class="rounded-xl border border-border bg-card p-4 shadow-sm">
       <div class="flex flex-wrap items-center gap-3">
         <div class="w-full md:w-72">
-          <Input v-model="filters.search" :placeholder="t('admin.banners.searchPlaceholder')" @update:modelValue="debouncedSearch" />
+          <Input v-model="filters.search" :placeholder="t('admin.banners.searchPlaceholder')" @keydown.enter="handleSearch" />
         </div>
-        <Select v-model="filters.position" @update:modelValue="handleSearch">
+        <Select v-model="filters.position">
           <SelectTrigger class="h-9 w-full md:w-[220px]">
             <SelectValue :placeholder="t('admin.banners.filters.positionPlaceholder')" />
           </SelectTrigger>
@@ -327,7 +320,7 @@ watch(
             <SelectItem v-for="item in positionOptions" :key="item.value" :value="item.value">{{ item.label }}</SelectItem>
           </SelectContent>
         </Select>
-        <Select v-model="filters.isActive" @update:modelValue="handleSearch">
+        <Select v-model="filters.isActive">
           <SelectTrigger class="h-9 w-full md:w-[180px]">
             <SelectValue :placeholder="t('admin.banners.filters.statusPlaceholder')" />
           </SelectTrigger>
@@ -335,6 +328,8 @@ watch(
             <SelectItem v-for="item in activeFilterOptions" :key="item.value" :value="item.value">{{ item.label }}</SelectItem>
           </SelectContent>
         </Select>
+        <Button size="sm" variant="outline" :disabled="loading" @click="handleSearch">{{ t('admin.common.search') }}</Button>
+        <Button size="sm" variant="outline" :disabled="loading" @click="resetFilters">{{ t('admin.common.reset') }}</Button>
       </div>
     </div>
 
@@ -401,7 +396,7 @@ watch(
       />
     </div>
 
-    <Dialog v-model:open="showModal" @update:open="(value) => { if (!value) closeModal() }">
+    <Dialog scope="page" v-model:open="showModal" @update:open="(value) => { if (!value) closeModal() }">
       <DialogScrollContent class="w-[calc(100vw-1rem)] max-w-4xl p-4 sm:p-6" @interact-outside="(e) => e.preventDefault()">
         <DialogHeader>
           <DialogTitle>{{ isEditing ? t('admin.banners.modal.editTitle') : t('admin.banners.modal.createTitle') }}</DialogTitle>

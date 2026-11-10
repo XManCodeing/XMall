@@ -21,6 +21,7 @@ import (
 	paymentcallbacktransport "github.com/XManCodeing/XMall/internal/modules/payment/transport/http/callback"
 	resellertransport "github.com/XManCodeing/XMall/internal/modules/reseller/transport/http/user"
 	publicconfigtransport "github.com/XManCodeing/XMall/internal/modules/settings/transport/http/public"
+	membershiptransport "github.com/XManCodeing/XMall/internal/modules/telegram/membership/transport/http"
 	wallettransport "github.com/XManCodeing/XMall/internal/modules/wallet/transport/http"
 
 	"github.com/gin-gonic/gin"
@@ -130,6 +131,10 @@ func registerStorefrontRoutes(
 	user.Use(middleware.UserJWTAuthMiddleware(cfg.UserJWT.SecretKey, c.UserStore))
 	{
 		userauthtransport.RegisterUserProfileRoutes(user, userProfileHandler)
+		membershipRoutes := user.Group("", middleware.RateLimitMiddleware(redisClient, middleware.RateLimitRule{
+			Prefix: "user:membership-access", WindowSeconds: 60, MaxRequests: 30, BlockSeconds: 60, MessageKey: "error.rate_limited",
+		}, middleware.KeyByUserIDAndIP))
+		membershiptransport.RegisterUserRoutes(membershipRoutes, membershiptransport.NewUserHandler(c.MembershipUserAccess))
 		auditlogtransport.RegisterUserRoutes(user, userAuditLogHandler)
 		userauthtransport.RegisterUserPasswordRoutes(user, userPasswordHandler)
 		userauthtransport.RegisterUserTelegramRoutes(user, userTelegramHandler)

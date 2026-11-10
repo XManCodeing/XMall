@@ -38,32 +38,55 @@ import (
 )
 
 type orderAdminQueryAdapter struct {
-	orders *orderapp.OrderService
+	readonly ordercontract.Store
+	orders   *orderapp.OrderService
 }
 
 func (a orderAdminQueryAdapter) ListOrdersForAdmin(filter ordertransport.OrderListFilter) ([]orderdomain.Order, int64, error) {
-	return a.orders.ListOrdersForAdmin(ordercontract.ListFilter{
-		Page:           filter.Page,
-		PageSize:       filter.PageSize,
-		UserID:         filter.UserID,
-		UserKeyword:    filter.UserKeyword,
-		Status:         filter.Status,
-		OrderNo:        filter.OrderNo,
-		GuestEmail:     filter.GuestEmail,
-		ProductKeyword: filter.ProductKeyword,
-		CreatedFrom:    filter.CreatedFrom,
-		CreatedTo:      filter.CreatedTo,
-		SortBy:         filter.SortBy,
-		SortOrder:      filter.SortOrder,
-	})
+	query := ordercontract.ListFilter{
+		MembershipItemIDs:       filter.MembershipItemIDs,
+		MembershipStateFiltered: filter.MembershipStateFiltered,
+		Page:                    filter.Page,
+		PageSize:                filter.PageSize,
+		UserID:                  filter.UserID,
+		UserKeyword:             filter.UserKeyword,
+		Status:                  filter.Status,
+		OrderNo:                 filter.OrderNo,
+		GuestEmail:              filter.GuestEmail,
+		ProductKeyword:          filter.ProductKeyword,
+		CreatedFrom:             filter.CreatedFrom,
+		CreatedTo:               filter.CreatedTo,
+		SortBy:                  filter.SortBy,
+		SortOrder:               filter.SortOrder,
+	}
+	if a.readonly != nil {
+		orders, total, err := a.readonly.ListAdmin(query)
+		orderapp.FillOrdersItemsFromChildren(orders)
+		return orders, total, err
+	}
+	return a.orders.ListOrdersForAdmin(query)
 }
 
 func (a orderAdminQueryAdapter) GetOrderForAdmin(orderID uint) (*orderdomain.Order, error) {
+	if a.readonly != nil {
+		order, err := a.readonly.GetByID(orderID)
+		if err != nil {
+			return nil, err
+		}
+		if order == nil {
+			return nil, ordertransport.ErrOrderNotFound
+		}
+		orderapp.FillOrderItemsFromChildren(order)
+		return order, nil
+	}
 	order, err := a.orders.GetOrderForAdmin(orderID)
 	return order, mapOrderTransportError(err)
 }
 
 func (a orderAdminQueryAdapter) UpdateOrderStatus(orderID uint, status string) (*orderdomain.Order, error) {
+	if a.readonly != nil {
+		return nil, ordertransport.ErrOrderStatusInvalid
+	}
 	order, err := a.orders.UpdateOrderStatus(orderID, status)
 	return order, mapOrderTransportError(err)
 }

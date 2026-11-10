@@ -4,6 +4,7 @@ import { onBeforeRouteLeave, onBeforeRouteUpdate } from 'vue-router'
 import { useMediaQuery } from '@vueuse/core'
 import { useConfirmDialog } from '@/composables/useConfirmDialog'
 import { useI18n } from 'vue-i18n'
+import MembershipPurchaseInfo from '@/components/product/MembershipPurchaseInfo.vue'
 import { useCheckout } from '@/composables/useCheckout'
 import { pageAlertVariant, pageAlertToneClass } from '@/utils/alerts'
 import { Button } from '@/components/ui/button'
@@ -86,6 +87,7 @@ void guestTurnstileRef
               </div>
               <div class="min-w-0 flex-1">
                 <router-link :to="`/products/${item.slug}`" class="break-words text-sm font-semibold hover:text-primary">{{ getLocalizedText(item.title) }}</router-link>
+                <MembershipPurchaseInfo :product="item" :sku-id="item.skuId" :items="cartItems" :return-path="isBuyNowMode ? '/checkout?mode=buynow' : '/checkout'" />
                 <p v-if="itemSkuDisplay(item)" class="mt-1 break-words text-xs text-muted-foreground">{{ itemSkuDisplay(item) }}</p>
                 <p class="mt-1 text-xs text-muted-foreground">{{ t('checkout.quantityLabel') }}：{{ item.quantity }}</p>
                 <p v-if="itemStockHint(item)" class="mt-2 text-xs" :class="itemStockExceeded(item) ? 'text-warning' : 'text-muted-foreground'">{{ itemStockHint(item) }}</p>

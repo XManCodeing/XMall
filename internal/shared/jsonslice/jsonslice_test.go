@@ -5,6 +5,31 @@ import (
 	"testing"
 )
 
+// TestTextScans covers migrated SQLite TEXT arrays and rejects unsupported driver values.
+// t uses synthetic image/tag and identifier lists without accessing external storage.
+func TestTextScans(t *testing.T) {
+	var stringsValue Strings
+	if err := stringsValue.Scan(`["image.png","tag"]`); err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(stringsValue, Strings{"image.png", "tag"}) {
+		t.Fatal("text strings lost")
+	}
+	var uintsValue Uints
+	if err := uintsValue.Scan(`[1,2]`); err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(uintsValue, Uints{1, 2}) {
+		t.Fatal("text identifiers lost")
+	}
+	if err := stringsValue.Scan(12); err == nil {
+		t.Fatal("unsupported strings input accepted")
+	}
+	if err := uintsValue.Scan(true); err == nil {
+		t.Fatal("unsupported identifiers input accepted")
+	}
+}
+
 func TestStringsValueAndScan(t *testing.T) {
 	value, err := (Strings{"alpha", "beta"}).Value()
 	if err != nil {

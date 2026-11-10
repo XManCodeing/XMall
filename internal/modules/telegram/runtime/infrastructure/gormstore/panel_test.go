@@ -98,7 +98,7 @@ func TestPanelUnknownFreezesCreationAndTrustedCallbackClaims(t *testing.T) {
 	}
 	must(t, s.FinishPanel(ctx, second, "sent", c.DeliveryResult{MessageID: 55}, "", time.Now()))
 	// Expiry removes sensitive data, never the physical panel.
-	must(t, db.Model(session).Updates(map[string]interface{}{"expires_at": time.Now().Add(-time.Hour), "data_cipher": "secret"}).Error)
+	must(t, db.Model(session).Updates(map[string]interface{}{"expires_at": time.Now().UTC().Add(-time.Hour), "data_cipher": "secret"}).Error)
 	must(t, s.Cleanup(ctx, bot.ID))
 	got, err := s.GetSession(ctx, bot.ID, 9, 9)
 	must(t, err)

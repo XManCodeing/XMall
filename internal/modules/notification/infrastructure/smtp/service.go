@@ -25,7 +25,7 @@ import (
 
 // writeStandardHeaders 写入 RFC 5322 要求的通用邮件头（Date、Message-ID、From、To、Subject、MIME-Version）。
 func writeStandardHeaders(buf *bytes.Buffer, from, to, subject, replyTo string) {
-	buf.WriteString(fmt.Sprintf("Date: %s\r\n", time.Now().Format(time.RFC1123Z)))
+	buf.WriteString(fmt.Sprintf("Date: %s\r\n", constants.DisplayTime(time.Now(), time.RFC1123Z)))
 	buf.WriteString(fmt.Sprintf("Message-ID: %s\r\n", generateMessageID(from)))
 	buf.WriteString(fmt.Sprintf("From: %s\r\n", from))
 	buf.WriteString(fmt.Sprintf("To: %s\r\n", to))

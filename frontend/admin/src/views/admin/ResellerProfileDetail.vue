@@ -404,7 +404,7 @@ onMounted(fetchDetail)
                   <TableCell class="px-4 py-3 text-xs text-muted-foreground">{{ formatDate(domain.verified_at) || '-' }}</TableCell>
                   <TableCell class="px-4 py-3 text-right">
                     <Button size="sm" variant="outline" :disabled="operatingDomainId === domain.id || !canSetPrimary(domain)" @click="setPrimaryDomain(domain)">
-                      {{ t('admin.resellerProfileDetail.domainTable.setPrimary') }}
+                      <span :title="t('admin.resellerProfileDetail.domainTable.setPrimary')" :aria-label="t('admin.resellerProfileDetail.domainTable.setPrimary')">{{ t('tableAction.primary') }}</span>
                     </Button>
                   </TableCell>
                 </TableRow>
@@ -560,7 +560,7 @@ onMounted(fetchDetail)
       </Tabs>
     </template>
 
-    <Dialog v-model:open="showEditDialog">
+    <Dialog scope="page" v-model:open="showEditDialog">
       <DialogScrollContent class="w-[calc(100vw-1rem)] max-w-lg p-4 sm:p-6">
         <DialogHeader>
           <DialogTitle>{{ t('admin.resellerProfiles.actions.editDialogTitle', { id: profile?.id || '-' }) }}</DialogTitle>

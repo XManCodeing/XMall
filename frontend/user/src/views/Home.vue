@@ -463,10 +463,7 @@ usePageSeo({
 })
 
 // ==================== Card Mode ====================
-const formatDate = (dateString: string) => {
-  if (!dateString) return ''
-  return new Date(dateString).toLocaleDateString()
-}
+import { formatDate } from '@/utils/format'
 
 const goToProduct = (slug: string) => {
   router.push(`/products/${slug}`)

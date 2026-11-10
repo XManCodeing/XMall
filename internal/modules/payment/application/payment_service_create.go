@@ -56,7 +56,7 @@ func hasProviderResult(payment *paymentdomain.Payment) bool {
 	return strings.TrimSpace(payment.PayURL) != "" || strings.TrimSpace(payment.QRCode) != ""
 }
 
-var ErrPaymentCreationUncertain = errors.New("payment creation in progress or outcome unknown; query existing payment before retry")
+var ErrPaymentCreationUncertain = paymentcontract.ErrPaymentCreationUncertain
 var ErrPaymentOperationConflict = errors.New("payment operation key reused with different request")
 
 // CreatePayment 创建支付单
@@ -97,6 +97,9 @@ func (s *PaymentService) CreatePayment(input CreatePaymentInput) (*CreatePayment
 		}
 	}
 
+	if err := s.prepareMembershipPayment(input.Context, input.OrderID); err != nil {
+		return nil, err
+	}
 	err := s.paymentRepo.WithinTransaction(func(tx paymentcontract.Transaction) error {
 		if locker, ok := tx.Payments().(paymentcontract.CreationLocker); ok {
 			if err := locker.LockCreation(input.OrderID); err != nil {
@@ -131,14 +134,22 @@ func (s *PaymentService) CreatePayment(input CreatePaymentInput) (*CreatePayment
 				if previous.OperationHash != operationHash {
 					return ErrPaymentOperationConflict
 				}
-				// A proven local failure is terminal for this operation key. A new
-				// key may retry/switch channels; replay never dispatches twice.
-				if previous.CreationState == "not_submitted" && previous.Status != constants.PaymentStatusSuccess {
-					return ErrPaymentCreateFailed
+				if previous.Status != constants.PaymentStatusSuccess {
+					if err := s.checkPaymentSnapshot(tx, &lockedOrder); err != nil {
+						return err
+					}
+					if err := s.checkOrderPublicSale(tx.Products(), &lockedOrder); err != nil {
+						return err
+					}
 				}
-				if previous.CreationState != "ready" && previous.Status != constants.PaymentStatusSuccess {
-					return ErrPaymentCreationUncertain
+				resolved, err := paymentcontract.ResolvePaymentReplay(&lockedOrder, previous, existingPayments, time.Now())
+				if err != nil {
+					if errors.Is(err, paymentcontract.ErrReplayOrderInvalid) {
+						return orderapp.ErrOrderStatusInvalid
+					}
+					return err
 				}
+				previous = resolved
 				payment = previous
 				order = &lockedOrder
 				replayedOperation = true
@@ -148,8 +159,14 @@ func (s *PaymentService) CreatePayment(input CreatePaymentInput) (*CreatePayment
 						return err
 					}
 				}
-				return nil
+				return s.appendMembershipPaid(tx, lockedOrder.ID, previous.ID)
 			}
+		}
+		if err := s.checkPaymentSnapshot(tx, &lockedOrder); err != nil {
+			return err
+		}
+		if err := s.checkOrderPublicSale(tx.Products(), &lockedOrder); err != nil {
+			return err
 		}
 		for _, previous := range existingPayments {
 			if (previous.CreationState == "processing" || previous.CreationState == "unknown") && previous.Status != constants.PaymentStatusSuccess {
@@ -209,6 +226,10 @@ func (s *PaymentService) CreatePayment(input CreatePaymentInput) (*CreatePayment
 				legacyFeePayment := existing.FeeAmount.Decimal.IsPositive() &&
 					(existing.FeePolicy == "" || existing.FeePolicy == constants.PaymentFeePolicyLegacyCustomerSurcharge)
 				if !legacyFeePayment || feeConfig.ReuseLegacyOrderFeePayment {
+					// 在持有订单锁的事务内作废其他未完成尝试，避免与并发创建交错（同步上游 cb61a4d）。
+					if _, err := paymentRepo.SupersedePendingByOrderID(lockedOrder.ID, existing.ID, time.Now()); err != nil {
+						return ErrPaymentCreateFailed
+					}
 					reusedPending = true
 					payment = existing
 					order = &lockedOrder
@@ -272,13 +293,20 @@ func (s *PaymentService) CreatePayment(input CreatePaymentInput) (*CreatePayment
 					return err
 				}
 			}
+			if err := s.appendMembershipPaid(tx, lockedOrder.ID, payment.ID); err != nil {
+				return err
+			}
 			orderPaidByWallet = true
 			order = &lockedOrder
 			return nil
 		}
 		if channel == nil {
+			// Wallet-only policy takes precedence over the implied UseBalance flag.
 			if walletOnly {
 				return walletcontract.ErrOnlyPaymentRequired
+			}
+			if input.UseBalance {
+				return walletcontract.ErrInsufficientBalance
 			}
 			return ErrPaymentInvalid
 		}
@@ -344,7 +372,7 @@ func (s *PaymentService) CreatePayment(input CreatePaymentInput) (*CreatePayment
 	}
 
 	if replayedOperation {
-		result := &CreatePaymentResult{Payment: payment, Channel: channel, OrderPaid: payment.Status == constants.PaymentStatusSuccess, WalletPaidAmount: order.WalletPaidAmount, OnlinePayAmount: order.OnlinePaidAmount}
+		result := &CreatePaymentResult{Payment: payment, Channel: channel, OrderPaid: payment.Status == constants.PaymentStatusSuccess && order.PaidAt != nil, WalletPaidAmount: order.WalletPaidAmount, OnlinePayAmount: order.OnlinePaidAmount}
 		if payment.ProviderType == constants.PaymentProviderWallet {
 			result.Payment = nil
 			result.Channel = nil
@@ -352,9 +380,6 @@ func (s *PaymentService) CreatePayment(input CreatePaymentInput) (*CreatePayment
 		return result, nil
 	}
 	if reusedPending {
-		if _, err := s.paymentRepo.SupersedePendingByOrderID(order.ID, payment.ID, time.Now()); err != nil {
-			return nil, ErrPaymentCreateFailed
-		}
 		log.Infow("payment_create_reuse_pending",
 			"payment_id", payment.ID,
 			"provider_type", payment.ProviderType,
@@ -397,32 +422,28 @@ func (s *PaymentService) CreatePayment(input CreatePaymentInput) (*CreatePayment
 		// Only explicit execution-boundary evidence permits releasing the intent.
 		// A category such as config/auth/request alone is never sufficient.
 		notSubmitted := errors.Is(err, paymentcontract.ErrGatewayNotSubmitted)
+		terminalFailure := false
 		markErr := s.paymentRepo.WithinTransaction(func(tx paymentcontract.Transaction) error {
-			locked, lockErr := tx.Payments().GetByIDForUpdate(payment.ID)
+			// 与回调、创建同序：先订单后支付，避免 PostgreSQL/MySQL 死锁（同步上游 cb61a4d）。
+			// 不退还被回调消费的资金，也不覆盖回调写入的权威状态。
+			lockedOrder, locked, newerID, lockErr := lockPaymentAttempt(tx, order.ID, payment.ID)
 			if lockErr != nil {
 				return lockErr
-			}
-			if locked == nil {
-				return ErrPaymentNotFound
-			}
-			// Match callback lock order (payment then order). Never refund funds
-			// consumed by a callback, nor overwrite its authoritative state.
-			lockedOrder, lockErr := tx.Orders().GetByIDForUpdateWithChildren(order.ID)
-			if lockErr != nil {
-				return lockErr
-			}
-			if lockedOrder == nil {
-				return orderapp.ErrOrderNotFound
 			}
 			if locked.Status == constants.PaymentStatusSuccess || locked.CallbackAt != nil {
 				notSubmitted = false // callback evidence overrides a provider's local classification
+				terminalFailure = locked.CreationState == "ready" && (locked.Status == constants.PaymentStatusFailed || locked.Status == constants.PaymentStatusExpired)
 				return nil
 			}
 			locked.CreationState = "unknown"
 			if notSubmitted {
 				locked.CreationState = "not_submitted"
-				locked.Status = constants.PaymentStatusFailed
-				if lockedOrder.Status == constants.OrderStatusPendingPayment && lockedOrder.PaidAt == nil {
+				// 只改写仍属本尝试的状态；已被替代/过期的记录保留原状态。
+				if locked.Status == constants.PaymentStatusInitiated || locked.Status == constants.PaymentStatusPending {
+					locked.Status = constants.PaymentStatusFailed
+				}
+				// 已有更新的有效尝试时，钱包占款归新尝试所有，不能退还。
+				if newerID == 0 && lockedOrder.Status == constants.OrderStatusPendingPayment && lockedOrder.PaidAt == nil {
 					if _, releaseErr := orderapp.ReleaseWalletBalance(s.walletSvc, tx, lockedOrder, constants.WalletTxnTypeOrderRefund, "支付请求未提交，退回余额"); releaseErr != nil {
 						return releaseErr
 					}
@@ -441,18 +462,30 @@ func (s *PaymentService) CreatePayment(input CreatePaymentInput) (*CreatePayment
 			log.Errorw("payment_creation_failure_persist_failed", "payment_id", payment.ID, "error", markErr)
 			return nil, ErrPaymentCreationUncertain
 		}
+		if terminalFailure {
+			return nil, paymentcontract.PaymentAttemptRetry(payment)
+		}
 		if notSubmitted {
+			if payment.OperationKey != nil {
+				return nil, errors.Join(err, paymentcontract.PaymentAttemptRetry(payment))
+			}
 			return nil, err
 		}
 		return nil, ErrPaymentCreationUncertain
 	}
-	if _, err := s.paymentRepo.SupersedePendingByOrderID(order.ID, payment.ID, time.Now()); err != nil {
-		log.Errorw("payment_create_supersede_previous_failed",
-			"payment_id", payment.ID,
-			"order_id", order.ID,
-			"error", err,
-		)
-		return nil, ErrPaymentCreateFailed
+	if payment.Status == constants.PaymentStatusFailed {
+		return nil, paymentcontract.PaymentAttemptRetry(payment)
+	}
+	if payment.Status == constants.PaymentStatusExpired || payment.SupersededAt != nil {
+		currentOrder, err := s.orderRepo.GetByID(order.ID)
+		if err != nil {
+			return nil, orderapp.ErrOrderFetchFailed
+		}
+		if currentOrder == nil {
+			return nil, orderapp.ErrOrderNotFound
+		}
+		log.Warnw("payment_create_stale_provider_success", "payment_id", payment.ID, "order_id", order.ID)
+		return takenOverResult(currentOrder)
 	}
 
 	log.Infow("payment_create_success",
@@ -472,4 +505,47 @@ func (s *PaymentService) CreatePayment(input CreatePaymentInput) (*CreatePayment
 		WalletPaidAmount: order.WalletPaidAmount,
 		OnlinePayAmount:  order.OnlinePaidAmount,
 	}, nil
+}
+
+// lockPaymentAttempt 网关返回后按“先订单后支付”重新加锁读取（与创建、钱包支付、回调同序）。
+// 参数 orderID/paymentID：要锁定的订单与支付尝试。
+// 返回：锁定的订单、支付，以及同订单上比该尝试更新且仍有效的支付 ID（非零说明钱包占款已归新尝试）。
+func lockPaymentAttempt(tx paymentcontract.Transaction, orderID, paymentID uint) (*orderdomain.Order, *paymentdomain.Payment, uint, error) {
+	order, err := tx.Orders().GetByIDForUpdateWithChildren(orderID)
+	if err != nil {
+		return nil, nil, 0, orderapp.ErrOrderFetchFailed
+	}
+	if order == nil {
+		return nil, nil, 0, orderapp.ErrOrderNotFound
+	}
+	current, err := tx.Payments().GetByIDForUpdate(paymentID)
+	if err != nil {
+		return nil, nil, 0, ErrPaymentUpdateFailed
+	}
+	if current == nil {
+		return nil, nil, 0, ErrPaymentNotFound
+	}
+	payments, err := tx.Payments().ListByOrderID(orderID)
+	if err != nil {
+		return nil, nil, 0, ErrPaymentUpdateFailed
+	}
+	return order, current, newerActivePaymentID(payments, paymentID), nil
+}
+
+// newerActivePaymentID 返回同订单上比 paymentID 更新且仍有效的支付 ID；没有则返回 0。
+func newerActivePaymentID(payments []paymentdomain.Payment, paymentID uint) uint {
+	for _, p := range payments {
+		if p.ID > paymentID && (p.Status == constants.PaymentStatusInitiated || p.Status == constants.PaymentStatusPending || p.Status == constants.PaymentStatusSuccess) {
+			return p.ID
+		}
+	}
+	return 0
+}
+
+// takenOverResult 旧尝试被并发支付接管：订单已付清则如实返回已支付，否则返回订单状态错误提示刷新。
+func takenOverResult(order *orderdomain.Order) (*CreatePaymentResult, error) {
+	if order.PaidAt != nil {
+		return &CreatePaymentResult{OrderPaid: true, WalletPaidAmount: order.WalletPaidAmount, OnlinePayAmount: order.OnlinePaidAmount}, nil
+	}
+	return nil, orderapp.ErrOrderStatusInvalid
 }

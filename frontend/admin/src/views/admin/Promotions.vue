@@ -153,21 +153,7 @@ const resetForm = () => {
   modalScopeValue.value = '__none__'
 }
 
-const toISO = (raw: string) => {
-  if (!raw) return ''
-  const date = new Date(raw)
-  if (Number.isNaN(date.getTime())) return raw
-  return date.toISOString()
-}
-
-const toLocalInput = (raw?: string) => {
-  if (!raw) return ''
-  const date = new Date(raw)
-  if (Number.isNaN(date.getTime())) return ''
-  const offset = date.getTimezoneOffset()
-  const local = new Date(date.getTime() - offset * 60000)
-  return local.toISOString().slice(0, 16)
-}
+import { toISO, toLocalInput } from '@/utils/format'
 
 const parseScopeFilterID = () => {
   const normalized = normalizeScopeFilterValue(filters.scopeRefId)
@@ -293,8 +279,18 @@ const fetchPromotions = async (page = 1, options: ListFetchOptions = {}) => {
   }
 }
 
-const handleSearch = () => {
-  fetchPromotions(1)
+/** 按当前筛选查询第一页。@returns 查询完成。 */
+const handleSearch = async (): Promise<void> => {
+  if (loading.value || refreshing.value) return
+  pagination.value.page = 1
+  await fetchPromotions(1)
+}
+/** 清空查询与商品筛选，保留路由详情上下文及分页尺寸。@returns 查询完成。 */
+const resetFilters = async (): Promise<void> => {
+  if (loading.value || refreshing.value || productOptionsLoading.value) return
+  Object.assign(filters, { name: '', scopeRefId: '__all__', isActive: '__all__' })
+  productKeyword.value = ''
+  await handleSearch()
 }
 
 const refresh = () => {
@@ -394,10 +390,6 @@ const handleDelete = async (promo: AdminPromotion) => {
   }
 }
 
-const handleScopeFilterChange = () => {
-  fetchPromotions(1)
-}
-
 const handleModalScopeChange = (value: unknown) => {
   const normalized = String(value ?? '')
   modalScopeValue.value = normalized
@@ -470,7 +462,7 @@ watch(
           </Button>
         </div>
         <div class="w-full md:w-60">
-          <Select v-model="filters.scopeRefId" @update:modelValue="handleScopeFilterChange">
+          <Select v-model="filters.scopeRefId">
             <SelectTrigger class="h-9 w-full">
               <SelectValue :placeholder="t('admin.promotions.filterScope')" />
             </SelectTrigger>
@@ -483,7 +475,7 @@ watch(
           </Select>
         </div>
         <div class="w-full md:w-48">
-          <Select v-model="filters.isActive" @update:modelValue="handleSearch">
+          <Select v-model="filters.isActive">
             <SelectTrigger class="h-9 w-full">
             <SelectValue :placeholder="t('admin.promotions.filterStatusAll')" />
             </SelectTrigger>
@@ -495,7 +487,9 @@ watch(
           </Select>
         </div>
         <div class="hidden flex-1 sm:block"></div>
-        <Button size="sm" class="w-full sm:w-auto" :disabled="refreshing" @click="refresh">{{ t('admin.common.refresh') }}</Button>
+        <Button size="sm" variant="outline" :disabled="loading || refreshing" @click="handleSearch">{{ t('admin.common.search') }}</Button>
+        <Button size="sm" variant="outline" :disabled="loading || refreshing || productOptionsLoading" @click="resetFilters">{{ t('admin.common.reset') }}</Button>
+        <Button size="sm" class="w-full sm:w-auto" :disabled="loading || refreshing" @click="refresh">{{ t('admin.common.refresh') }}</Button>
       </div>
     </div>
 
@@ -569,7 +563,7 @@ watch(
       />
     </div>
 
-    <Dialog v-model:open="showModal" @update:open="(value) => { if (!value) closeModal() }">
+    <Dialog scope="page" v-model:open="showModal" @update:open="(value) => { if (!value) closeModal() }">
       <DialogScrollContent class="w-[calc(100vw-1rem)] max-w-3xl p-4 sm:p-6" @interact-outside="(e) => e.preventDefault()">
         <DialogHeader>
           <DialogTitle>{{ isEditing ? t('admin.promotions.modal.editTitle') : t('admin.promotions.modal.title') }}</DialogTitle>

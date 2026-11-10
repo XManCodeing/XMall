@@ -206,7 +206,7 @@ watch(() => route.query.category_id, (v) => { if (v) openEditById(v) })
       </Table>
     </div>
 
-    <Dialog v-model:open="showModal" @update:open="(v) => { if (!v) closeModal() }">
+    <Dialog scope="page" v-model:open="showModal" @update:open="(v) => { if (!v) closeModal() }">
       <DialogScrollContent class="w-[calc(100vw-1rem)] max-w-lg p-4 sm:p-6" @interact-outside="(e) => e.preventDefault()">
         <DialogHeader><DialogTitle>{{ isEditing ? t('admin.postCategories.modal.editTitle') : t('admin.postCategories.modal.createTitle') }}</DialogTitle></DialogHeader>
         <form class="space-y-6" @submit.prevent="submit">

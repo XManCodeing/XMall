@@ -1,3 +1,4 @@
+import { formatDate } from '../utils/format'
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
@@ -123,13 +124,6 @@ export function useRechargeOrderDetail() {
     if (amount === null || amount === undefined || amount === '') return '-'
     if (currency === null || currency === undefined || currency === '') return String(amount)
     return `${amount} ${currency}`
-  }
-
-  const formatDate = (raw?: string) => {
-    if (!raw) return ''
-    const date = new Date(raw)
-    if (Number.isNaN(date.getTime())) return raw
-    return date.toLocaleString()
   }
 
   const syncPayload = (payload: any) => {

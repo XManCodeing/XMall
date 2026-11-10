@@ -89,8 +89,17 @@ const fetchChannels = async (page = 1, options: ListFetchOptions = {}) => {
   }
 }
 
-const handleSearch = () => {
-  fetchChannels(1)
+/** 按当前筛选查询第一页，加载期间忽略重复操作。@returns 查询完成。 */
+const handleSearch = async (): Promise<void> => {
+  if (loading.value || refreshing.value) return
+  pagination.value.page = 1
+  await fetchChannels(1)
+}
+/** 恢复全部筛选默认值并保留分页尺寸。@returns 查询完成。 */
+const resetFilters = async (): Promise<void> => {
+  if (loading.value || refreshing.value) return
+  Object.assign(filters, { providerType: '__all__', channelType: '__all__' })
+  await handleSearch()
 }
 
 const refresh = () => {
@@ -319,7 +328,7 @@ watch(
     <div class="rounded-xl border border-border bg-card p-4 shadow-sm">
       <div class="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
         <div class="w-full md:w-56">
-          <Select v-model="filters.providerType" @update:modelValue="handleSearch">
+          <Select v-model="filters.providerType">
             <SelectTrigger class="h-9 w-full">
               <SelectValue :placeholder="t('admin.paymentChannels.filterProviderAll')" />
             </SelectTrigger>
@@ -343,7 +352,7 @@ watch(
           </Select>
         </div>
         <div class="w-full md:w-56">
-          <Select v-model="filters.channelType" @update:modelValue="handleSearch">
+          <Select v-model="filters.channelType">
             <SelectTrigger class="h-9 w-full">
             <SelectValue :placeholder="t('admin.paymentChannels.filterChannelAll')" />
             </SelectTrigger>
@@ -369,7 +378,9 @@ watch(
           </Select>
         </div>
         <div class="hidden flex-1 sm:block"></div>
-        <Button size="sm" variant="outline" class="w-full sm:w-auto" :disabled="refreshing" @click="refresh">{{ t('admin.common.refresh') }}</Button>
+        <Button size="sm" variant="outline" :disabled="loading || refreshing" @click="handleSearch">{{ t('admin.common.search') }}</Button>
+        <Button size="sm" variant="outline" :disabled="loading || refreshing" @click="resetFilters">{{ t('admin.common.reset') }}</Button>
+        <Button size="sm" variant="outline" class="w-full sm:w-auto" :disabled="loading || refreshing" @click="refresh">{{ t('admin.common.refresh') }}</Button>
       </div>
     </div>
 

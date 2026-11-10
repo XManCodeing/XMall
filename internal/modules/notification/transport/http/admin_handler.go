@@ -16,6 +16,7 @@ import (
 )
 
 type SettingsService interface {
+	GetNotificationPrerequisites() (map[string]bool, error)
 	GetNotificationCenterSetting() (settingsmessaging.NotificationCenterSetting, error)
 	PatchNotificationCenterSetting(settingsmessaging.NotificationCenterSettingPatch) (settingsmessaging.NotificationCenterSetting, error)
 }
@@ -48,7 +49,14 @@ func (h *AdminHandler) GetNotificationCenterSettings(c *gin.Context) {
 		ginutil.RespondError(c, response.CodeInternal, "error.settings_fetch_failed", err)
 		return
 	}
-	response.Success(c, settingsmessaging.MaskNotificationCenterSettingForAdmin(setting))
+	prerequisites, err := h.settings.GetNotificationPrerequisites()
+	if err != nil {
+		ginutil.RespondError(c, response.CodeInternal, "error.settings_fetch_failed", err)
+		return
+	}
+	payload := settingsmessaging.MaskNotificationCenterSettingForAdmin(setting)
+	payload["prerequisites"] = prerequisites
+	response.Success(c, payload)
 }
 
 // UpdateNotificationCenterSettings 更新通知中心配置

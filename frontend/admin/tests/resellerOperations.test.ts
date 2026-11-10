@@ -30,4 +30,8 @@ test('reseller operations period formats RFC3339 range for display', () => {
     formatResellerOperationsPeriod('2026-06-12T00:00:00+08:00', '2026-06-18T23:59:59+08:00'),
     '2026-06-12 00:00:00 - 2026-06-18 23:59:59',
   )
+  assert.equal(
+    formatResellerOperationsPeriod('2026-06-11T16:00:00Z', '2026-06-18T15:59:59Z'),
+    '2026-06-12 00:00:00 - 2026-06-18 23:59:59',
+  )
 })

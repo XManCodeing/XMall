@@ -28,9 +28,11 @@ import (
 	od "github.com/XManCodeing/XMall/internal/modules/order/domain"
 	orderrisk "github.com/XManCodeing/XMall/internal/modules/orderrisk/contract"
 	paymentapp "github.com/XManCodeing/XMall/internal/modules/payment/application"
+	paymentcontract "github.com/XManCodeing/XMall/internal/modules/payment/contract"
 	paymentdomain "github.com/XManCodeing/XMall/internal/modules/payment/domain"
 	settingsapp "github.com/XManCodeing/XMall/internal/modules/settings/application"
 	delivery "github.com/XManCodeing/XMall/internal/modules/telegram/delivery/contract"
+	membership "github.com/XManCodeing/XMall/internal/modules/telegram/membership/contract"
 	shopapp "github.com/XManCodeing/XMall/internal/modules/telegram/shop/application"
 	c "github.com/XManCodeing/XMall/internal/modules/telegram/shop/contract"
 	walletcontract "github.com/XManCodeing/XMall/internal/modules/wallet/contract"
@@ -44,15 +46,20 @@ import (
 // Implementations must preserve atomic expected-price, operation-key and source.
 type ShopOrderWriter func(context.Context, c.Actor, c.Selection, c.Quote, string) (*c.Order, error)
 type ShopDependencies struct {
-	Content         c.ContentProvider
-	ContentSettings ContentSettings
-	Store           shopapp.SessionStore
-	Secret          string
-	Auth            *userapp.Service
-	Users           usercontract.Store
-	Categories      *categoryapp.Service
-	Products        *productapp.Service
-	ProductRepo     productcontract.Repository
+	// ProductLinks must validate live membership target-to-bot relations before deep-link browsing.
+	ProductLinks c.ProductLinkAccess
+	// Membership reads the same product/SKU configuration as the website and admin.
+	Membership       membership.DisplayReader
+	OrderMemberships c.OrderMembershipReader
+	Content          c.ContentProvider
+	ContentSettings  ContentSettings
+	Store            shopapp.SessionStore
+	Secret           string
+	Auth             *userapp.Service
+	Users            usercontract.Store
+	Categories       *categoryapp.Service
+	Products         *productapp.Service
+	ProductRepo      productcontract.Repository
 	// Cached mapping reads only: browsing must never trigger upstream HTTP.
 	ProductMappings interface {
 		GetByLocalProductID(uint) (*mappingdomain.Mapping, error)
@@ -73,10 +80,25 @@ func NewShop(d ShopDependencies) *shopapp.Service {
 	if content == nil && d.ContentSettings != nil {
 		content = shopContent{settings: d.ContentSettings}
 	}
-	return shopapp.New(shopapp.Dependencies{Content: content, Store: d.Store, Secret: d.Secret, Identity: a, Catalog: a, Orders: a, Payments: a, Accounts: a})
+	return shopapp.New(shopapp.Dependencies{ProductLinks: d.ProductLinks, Content: content, Store: d.Store, Secret: d.Secret, Identity: a, Catalog: a, Orders: a, Payments: a, Accounts: a})
 }
 
 type shopAdapter struct{ d ShopDependencies }
+
+// Targets delegates immutable order-target reads after adapter identity authorization.
+// Missing optional wiring omits membership enrichment without broadening scope.
+func (a *shopAdapter) Targets(ctx context.Context, actor c.Actor, orderID, owner uint) ([]c.MembershipGroup, error) {
+	if owner != actor.UserID || owner == 0 {
+		return nil, c.ErrDenied
+	}
+	if a.d.OrderMemberships == nil {
+		return nil, nil
+	}
+	if _, err := a.Detail(ctx, actor, orderID, owner); err != nil {
+		return nil, err
+	}
+	return a.d.OrderMemberships.Targets(ctx, actor, orderID, owner)
+}
 
 type ContentSettings interface {
 	GetTelegramBotConfig() (settings.TelegramBotConfigSetting, error)
@@ -111,6 +133,20 @@ func (p shopContent) Content(_ context.Context, a c.Actor) (c.Content, error) {
 		// (per-instance) and are no longer mirrored into the shop home panel.
 		SupportURL:    strings.TrimSpace(cfg.Basic.SupportURL),
 		DefaultLocale: fallback,
+	}
+	if brand, ok := p.settings.(interface {
+		GetSiteBrand() (settingsapp.SiteBrand, error)
+	}); ok {
+		site, err := brand.GetSiteBrand()
+		if err != nil {
+			return c.Content{}, err
+		}
+		base, err := url.Parse(strings.TrimSpace(site.SiteURL))
+		if err == nil && (base.Scheme == "https" || base.Scheme == "http") && base.Host != "" && base.User == nil {
+			base.Path = strings.TrimRight(base.Path, "/") + "/me/security"
+			base.RawPath, base.RawQuery, base.Fragment = "", "", ""
+			out.BindingURL = base.String()
+		}
 	}
 	if cfg.Welcome.Enabled {
 		out.Welcome = localizedContent(cfg.Welcome.Message, a.Locale, fallback)
@@ -151,7 +187,7 @@ func (p shopContent) Content(_ context.Context, a c.Actor) (c.Content, error) {
 		out.Menu = []c.MenuItem{}
 		items := append([]settings.TelegramBotMenuItem(nil), cfg.Menu.Items...)
 		sort.SliceStable(items, func(i, j int) bool { return items[i].Order < items[j].Order })
-		actions := map[string]string{"shop": "catalog", "orders": "orders", "wallet": "account", "language": "language", "help": "help"}
+		actions := map[string]string{"shop": "catalog", "orders": "orders", "memberships": "memberships", "wallet": "account", "language": "language", "help": "help"}
 		for _, item := range items {
 			if !item.Enabled {
 				continue
@@ -172,104 +208,6 @@ func (p shopContent) Content(_ context.Context, a c.Actor) (c.Content, error) {
 	return out, nil
 }
 
-func (a *shopAdapter) Resolve(ctx context.Context, x c.Actor, provision bool) (uint, error) {
-	in := userapp.TelegramChannelIdentityInput{ChannelUserID: strconv.FormatInt(x.TelegramID, 10), Username: x.Username}
-	u, _, e := a.d.Auth.ResolveTelegramChannelIdentity(in)
-	if e != nil {
-		return 0, e
-	}
-	if u == nil && provision {
-		u, _, _, e = a.d.Auth.ProvisionTelegramChannelIdentity(in)
-	}
-	if e != nil {
-		return 0, e
-	}
-	if u == nil {
-		return 0, c.ErrDenied
-	}
-	return u.ID, nil
-}
-func (a *shopAdapter) Generation(ctx context.Context, x c.Actor) (string, error) {
-	u, identity, e := a.d.Auth.ResolveTelegramChannelIdentity(userapp.TelegramChannelIdentityInput{ChannelUserID: strconv.FormatInt(x.TelegramID, 10)})
-	if e != nil {
-		return "", e
-	}
-	if u == nil || identity == nil || u.ID != x.UserID {
-		return "", c.ErrDenied
-	}
-	return fmt.Sprintf("%d:%d", identity.ID, u.ID), nil
-}
-func (a *shopAdapter) authorize(ctx context.Context, x c.Actor) error {
-	if x.BotID == 0 || x.TelegramID <= 0 || x.UserID == 0 {
-		return c.ErrDenied
-	}
-	uid, e := a.Resolve(ctx, x, false)
-	if e != nil {
-		return e
-	}
-	if uid == 0 || uid != x.UserID {
-		return c.ErrDenied
-	}
-	if x.Generation != "" {
-		generation, e := a.Generation(ctx, x)
-		if e != nil {
-			return e
-		}
-		if generation != x.Generation {
-			return c.ErrDenied
-		}
-	}
-	return nil
-}
-func (a *shopAdapter) SendBindCode(ctx context.Context, x c.Actor, email string) error {
-	if e := a.authorize(ctx, x); e != nil {
-		return e
-	}
-	return shopIdentityError(a.d.Auth.SendVerifyCode(ctx, email, constants.VerifyPurposeTelegramBind, x.Locale, ""))
-}
-func (a *shopAdapter) Bind(ctx context.Context, x c.Actor, email, code string) (uint, error) {
-	if e := a.authorize(ctx, x); e != nil {
-		return 0, e
-	}
-	u, _, _, e := a.d.Auth.BindTelegramBotByEmailCode(x.BotID, userapp.BindTelegramChannelByEmailCodeInput{Identity: userapp.TelegramChannelIdentityInput{ChannelUserID: strconv.FormatInt(x.TelegramID, 10)}, Email: email, Code: code})
-	if e != nil {
-		return 0, shopIdentityError(e)
-	}
-	if u == nil {
-		return 0, c.ErrDenied
-	}
-	return u.ID, nil
-}
-func shopIdentityError(err error) error {
-	for _, target := range []error{userapp.ErrNotFound, userapp.ErrUserDisabled, userapp.ErrInvalidEmail, userapp.ErrVerifyCodeInvalid, userapp.ErrVerifyCodeExpired, userapp.ErrVerifyCodeTooFrequent, userapp.ErrVerifyCodeAttemptsExceeded, userapp.ErrUserOAuthIdentityExists, userapp.ErrUserOAuthAlreadyBound} {
-		if errors.Is(err, target) {
-			return c.ErrDenied
-		}
-	}
-	return err
-}
-func (a *shopAdapter) HistoryUsers(ctx context.Context, x c.Actor) ([]uint, error) {
-	if e := a.authorize(ctx, x); e != nil {
-		return nil, e
-	}
-	return a.d.Auth.AllowedTelegramHistoryUserIDs(ctx, x.BotID, strconv.FormatInt(x.TelegramID, 10), x.UserID)
-}
-func (a *shopAdapter) readOwner(ctx context.Context, x c.Actor, owner uint) error {
-	if e := a.authorize(ctx, x); e != nil {
-		return e
-	}
-	if x.UserID == owner {
-		return nil
-	}
-	ok, e := a.d.Auth.CanReadTelegramHistory(ctx, x.BotID, strconv.FormatInt(x.TelegramID, 10), x.UserID, owner)
-	if e != nil {
-		return e
-	}
-	if !ok {
-		return c.ErrDenied
-	}
-	return nil
-}
 func localized(j jsonmap.JSON, l string) string {
 	for _, k := range []string{l, "zh-CN", "en-US", "zh-TW"} {
 		if v, ok := j[k].(string); ok && v != "" {
@@ -279,7 +217,7 @@ func localized(j jsonmap.JSON, l string) string {
 	return ""
 }
 func (a *shopAdapter) Categories(ctx context.Context, x c.Actor) ([]c.Category, error) {
-	if e := a.authorize(ctx, x); e != nil {
+	if e := a.authorizeCatalog(ctx, x); e != nil {
 		return nil, e
 	}
 	cats, e := a.d.Categories.ListActive()
@@ -316,7 +254,7 @@ func (a *shopAdapter) Categories(ctx context.Context, x c.Actor) ([]c.Category, 
 	return out, nil
 }
 func (a *shopAdapter) Products(ctx context.Context, x c.Actor, id uint, page int) ([]c.Product, bool, error) {
-	if e := a.authorize(ctx, x); e != nil {
+	if e := a.authorizeCatalog(ctx, x); e != nil {
 		return nil, false, e
 	}
 	if page < 1 || page > 10000 {
@@ -337,6 +275,9 @@ func (a *shopAdapter) Products(ctx context.Context, x c.Actor, id uint, page int
 	for _, p := range items {
 		if p.IsActive && p.Category.IsActive {
 			v := productView(p, x.Locale, &a.d)
+			if err := a.membershipProduct(ctx, &v); err != nil {
+				return nil, false, err
+			}
 			v.Currency = currency
 			out = append(out, v)
 		}
@@ -483,7 +424,7 @@ func productView(p pd.Product, l string, deps ...*ShopDependencies) c.Product {
 	return out
 }
 func (a *shopAdapter) Product(ctx context.Context, x c.Actor, id uint) (*c.Product, error) {
-	if e := a.authorize(ctx, x); e != nil {
+	if e := a.authorizeCatalog(ctx, x); e != nil {
 		return nil, e
 	}
 	if id == 0 || a.d.Products == nil {
@@ -520,6 +461,9 @@ func (a *shopAdapter) Product(ctx context.Context, x c.Actor, id uint) (*c.Produ
 		return nil, e
 	}
 	v := productView(items[0], x.Locale, &a.d)
+	if err := a.membershipProduct(ctx, &v); err != nil {
+		return nil, err
+	}
 	v.Currency = currency
 	return &v, nil
 }
@@ -530,9 +474,15 @@ func (a *shopAdapter) Preview(ctx context.Context, x c.Actor, s c.Selection) (*c
 	if e := a.authorize(ctx, x); e != nil {
 		return nil, e
 	}
+	if err := a.checkShopPublicSale(s.ProductID); err != nil {
+		return nil, err
+	}
 	p, e := a.Product(ctx, x, s.ProductID)
 	if e != nil {
 		return nil, e
+	}
+	if p.Membership && (!p.Available || s.Quantity != 1) {
+		return nil, c.ErrUnavailable
 	}
 	if p.Unsupported || s.Quantity < p.Min || (p.Max > 0 && s.Quantity > p.Max) {
 		return nil, c.ErrDenied
@@ -568,6 +518,9 @@ func (a *shopAdapter) Create(ctx context.Context, x c.Actor, s c.Selection, q c.
 	}
 	if q.Fingerprint == "" || key == "" || x.Generation == "" || x.BotID == 0 || x.TelegramID <= 0 {
 		return nil, c.ErrDenied
+	}
+	if err := a.checkShopPublicSale(s.ProductID); err != nil {
+		return nil, err
 	}
 	if a.d.CreateOrder != nil {
 		out, err := a.d.CreateOrder(ctx, x, s, q, key)
@@ -917,14 +870,8 @@ func (a *shopAdapter) Pay(ctx context.Context, x c.Actor, id, channel uint, key 
 		return nil, e
 	}
 	result, e := a.d.Payments.CreatePayment(paymentapp.CreatePaymentInput{OperationKey: key, OrderID: id, ChannelID: channel, UseBalance: useBalance, Context: ctx, UserID: x.UserID, Source: source})
-	if errors.Is(e, delivery.ErrIdentityChanged) {
-		return nil, c.ErrDenied
-	}
-	if errors.Is(e, paymentapp.ErrPaymentCreationUncertain) {
-		return nil, c.ErrPaymentUncertain
-	}
-	if e != nil {
-		return nil, e
+	if err := shopPaymentError(e); err != nil {
+		return nil, err
 	}
 	if result == nil {
 		return nil, c.ErrUnavailable
@@ -936,6 +883,11 @@ func (a *shopAdapter) Pay(ctx context.Context, x c.Actor, id, channel uint, key 
 		return nil, c.ErrUnavailable
 	}
 	p := result.Payment
+	// A received but anomalous payment is not an unpaid checkout. Keep its
+	// accounting replay intact while refusing to offer the old entry again.
+	if p.Status == constants.PaymentStatusSuccess {
+		return nil, c.ErrPaymentUncertain
+	}
 	// Gateways which explicitly return qrcode_type can declare image media
 	// without a channel override; untyped qrcode is always scan content.
 	if kind, _ := p.ProviderPayload["qrcode_type"].(string); kind == "image" || kind == "text" {
@@ -947,38 +899,35 @@ func (a *shopAdapter) Pay(ctx context.Context, x c.Actor, id, channel uint, key 
 		return nil, fmt.Errorf("%w: malformed payment URL", c.ErrUnavailable)
 	}
 	out := shopPayment(p, order, qrKind)
-	return resolvePaymentMedia(ctx, out, httpintegration.FetchPaymentImage)
+	return shopapp.ResolvePaymentMedia(ctx, out, httpintegration.FetchPaymentImage)
 }
 
+// shopPaymentError maps payment err into existing shop feedback; unknown outcomes keep priority.
+// Returns nil on success and preserves unexpected errors for runtime diagnostics.
+func shopPaymentError(err error) error {
+	if errors.Is(err, delivery.ErrIdentityChanged) {
+		return c.ErrDenied
+	}
+	if errors.Is(err, paymentapp.ErrPaymentCreationUncertain) {
+		return c.ErrPaymentUncertain
+	}
+	var retry *paymentcontract.PaymentAttemptRetryError
+	if errors.As(err, &retry) {
+		return &c.PaymentRetryError{OperationKey: retry.OperationKey}
+	}
+	if errors.Is(err, walletcontract.ErrOnlyPaymentRequired) {
+		return c.ErrWalletOnlyPaymentRequired
+	}
+	if errors.Is(err, walletcontract.ErrInsufficientBalance) {
+		return c.ErrInsufficientBalance
+	}
+	return err
+}
+
+// shopPayment projects a validated attempt into bot media. ExpiredAt records an
+// expiration event, not a deadline; payable state is checked by the payment service.
 func shopPayment(p *paymentdomain.Payment, order *od.Order, qrKind string) *c.Payment {
 	return &c.Payment{Amount: p.Amount.String(), Currency: p.Currency, PayURL: p.PayURL, QRCode: p.QRCode, QRCodeKind: qrKind, OrderNumber: order.OrderNo, InteractionMode: p.InteractionMode, ExpiresAt: order.ExpiresAt}
-}
-
-func resolvePaymentMedia(ctx context.Context, out *c.Payment, fetch func(context.Context, string) ([]byte, error)) (*c.Payment, error) {
-	p := *out
-	if p.InteractionMode != constants.PaymentInteractionRedirect && p.QRCodeKind == "image" {
-		raw := strings.TrimSpace(p.QRCode)
-		if raw == "" && p.InteractionMode == constants.PaymentInteractionQR {
-			raw = strings.TrimSpace(p.PayURL)
-		}
-		if parsed, err := url.Parse(raw); err == nil && (parsed.Scheme == "https" || parsed.Scheme == "http") {
-			photo, e := fetch(ctx, raw)
-			out.QRImage = photo
-			if e != nil || len(photo) == 0 {
-				// A separate checkout remains usable. Never turn an unverified
-				// image endpoint into QR text, or offer that same endpoint as checkout.
-				if strings.TrimSpace(p.PayURL) == "" || strings.TrimSpace(p.PayURL) == raw {
-					return nil, c.ErrUnavailable
-				}
-				out.QRCode = ""
-				out.InteractionMode = constants.PaymentInteractionRedirect
-			}
-			if len(out.QRImage) > 0 && strings.TrimSpace(out.PayURL) == raw {
-				out.PayURL = ""
-			}
-		}
-	}
-	return out, nil
 }
 
 // HistoryAccount is a pure read; even a missing wallet must not create an account.

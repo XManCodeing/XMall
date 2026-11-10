@@ -1,4 +1,4 @@
-import { computed, getCurrentScope, onScopeDispose, ref } from 'vue'
+import { computed, getCurrentInstance, getCurrentScope, onActivated, onDeactivated, onScopeDispose, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { adminAPI } from '@/api/admin'
 import { useAdminAuthStore } from '@/stores/auth'
@@ -75,14 +75,20 @@ export function useTelegramBotInstances() {
             try {
               const status = await adminAPI.getTelegramBotInstanceStatus(item.id)
               Object.assign(item, status.data.data)
-            } catch { failed = true }
+            } catch (cause) {
+              failed = true
+              if (!disposed) notifyErrorOnce(cause, t('telegramBot.instances.failed'))
+            }
           }
         }))
         if (!disposed) {
           instances.value = items
           hasLoaded = true
         }
-      } catch { failed = true } finally {
+      } catch (cause) {
+        failed = true
+        if (!disposed) notifyErrorOnce(cause, t('telegramBot.instances.failed'))
+      } finally {
         if (!disposed) {
           refreshError.value = failed ? t('telegramBot.instances.failed') : ''
           now.value = Date.now()
@@ -98,17 +104,27 @@ export function useTelegramBotInstances() {
     now.value = Date.now()
     if (!busy.value) void refresh()
   }
+  let pollingRequested = false
+  let active = true
+  /** Start the requested poller once; activation never enables polling for read-only consumers. @returns Nothing. */
   const startPolling = () => {
-    if (disposed || timer !== undefined) return
+    pollingRequested = true
+    if (disposed || !active || timer !== undefined) return
     poll()
     timer = setInterval(poll, 10000)
     if (typeof document !== 'undefined') document.addEventListener('visibilitychange', poll)
   }
-  if (getCurrentScope()) onScopeDispose(() => {
-    disposed = true
+  /** Stop the interval and document subscription without changing editor state. @returns Nothing. */
+  const stopPolling = () => {
     if (timer !== undefined) clearInterval(timer)
+    timer = undefined
     if (typeof document !== 'undefined') document.removeEventListener('visibilitychange', poll)
-  })
+  }
+  if (getCurrentInstance()) {
+    onActivated(() => { active = true; if (pollingRequested) startPolling() })
+    onDeactivated(() => { active = false; stopPolling() })
+  }
+  if (getCurrentScope()) onScopeDispose(() => { disposed = true; stopPolling() })
   const run = async (action: () => Promise<unknown>) => {
     if (disposed || busy.value) return false
     busy.value = true

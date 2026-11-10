@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { formatDate } from '@/utils/format'
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useMediaQuery } from '@vueuse/core'
 import { useI18n } from 'vue-i18n'
@@ -100,7 +101,7 @@ const changeBanner = (direction: number) => { direction > 0 ? handleNextHeroBann
 
     <section v-if="posts.length" class="border-t border-border pt-10">
       <h2 class="mb-6 text-xl font-semibold tracking-tight">{{ t('home.latest.title') }}</h2>
-      <div class="grid grid-cols-1 gap-4 lg:grid-cols-3"><RouterLink v-for="post in posts" :key="post.id" :to="`/blog/${post.slug}`" class="rounded-[20px] bg-card p-6"><p v-if="post.published_at" class="text-xs text-muted-foreground">{{ new Date(post.published_at).toLocaleDateString(app.locale) }}</p><h3 class="mt-3 line-clamp-2 text-lg font-semibold tracking-tight">{{ getLocalizedText(post.title) }}</h3><p class="mt-3 line-clamp-2 text-sm leading-relaxed text-muted-foreground">{{ getLocalizedText(post.summary) }}</p><span class="mt-5 inline-flex min-h-11 items-center gap-2 text-sm text-primary">{{ t('blog.readMore') }}<ArrowUpRight class="h-4 w-4" /></span></RouterLink></div>
+      <div class="grid grid-cols-1 gap-4 lg:grid-cols-3"><RouterLink v-for="post in posts" :key="post.id" :to="`/blog/${post.slug}`" class="rounded-[20px] bg-card p-6"><p v-if="post.published_at" class="text-xs text-muted-foreground">{{ formatDate(post.published_at) }}</p><h3 class="mt-3 line-clamp-2 text-lg font-semibold tracking-tight">{{ getLocalizedText(post.title) }}</h3><p class="mt-3 line-clamp-2 text-sm leading-relaxed text-muted-foreground">{{ getLocalizedText(post.summary) }}</p><span class="mt-5 inline-flex min-h-11 items-center gap-2 text-sm text-primary">{{ t('blog.readMore') }}<ArrowUpRight class="h-4 w-4" /></span></RouterLink></div>
     </section>
     <AnnouncementModal v-if="activeAnnouncement" :announcement="activeAnnouncement" :visible="announcementVisible" @update:visible="announcementVisible = $event" />
   </div>

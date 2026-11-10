@@ -116,7 +116,7 @@ func (h *ChannelHandler) GetWalletTransactions(c *gin.Context) {
 			Amount:       t.Amount.StringFixed(2),
 			BalanceAfter: t.BalanceAfter.StringFixed(2),
 			Remark:       t.Remark,
-			CreatedAt:    t.CreatedAt.Format("2006-01-02 15:04"),
+			CreatedAt:    constants.DisplayTime(t.CreatedAt, "2006-01-02 15:04"),
 		})
 	}
 

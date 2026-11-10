@@ -18,6 +18,7 @@ import (
 	runtimecontract "github.com/XManCodeing/XMall/internal/modules/telegram/runtime/contract"
 	runtimedomain "github.com/XManCodeing/XMall/internal/modules/telegram/runtime/domain"
 	"github.com/XManCodeing/XMall/internal/modules/telegram/runtime/infrastructure/productmedia"
+	shopcontract "github.com/XManCodeing/XMall/internal/modules/telegram/shop/contract"
 	"github.com/XManCodeing/XMall/internal/shared/jsonmap"
 )
 
@@ -46,7 +47,15 @@ func (s ShopIdentity) IdentityStamp(ctx context.Context, bot uint, tg int64, use
 	if err := s.Shop.AuthorizeDelivery(ctx, bot, tg, user); err != nil {
 		return "", err
 	}
-	return s.Shop.DeliveryStamp(ctx, bot, tg)
+	stamp, err := s.Shop.DeliveryStamp(ctx, bot, tg)
+	if err != nil {
+		return "", err
+	}
+	parts := strings.Split(stamp, ":")
+	if len(parts) != 2 || parts[0] == "" || parts[1] != strconv.FormatUint(uint64(user), 10) {
+		return "", shopcontract.ErrDenied
+	}
+	return stamp, nil
 }
 
 type RuntimeBridge struct {
@@ -62,15 +71,19 @@ type recipient struct {
 	Stamp              string
 }
 type snapshot struct {
-	Recipients []recipient
-	Message    runtimecontract.Message
+	Recipients     []recipient
+	Message        runtimecontract.Message
+	AttachmentName string `json:",omitempty"`
 }
 
 func (b *RuntimeBridge) ListTelegramUsers(q broadcastapp.UserQuery) ([]broadcastapp.UserItem, int64, error) {
+	return b.listTelegramUsers(context.Background(), q)
+}
+
+func (b *RuntimeBridge) listTelegramUsers(ctx context.Context, q broadcastapp.UserQuery) ([]broadcastapp.UserItem, int64, error) {
 	if q.BotID == 0 || b.Store == nil || b.Users == nil {
 		return nil, 0, broadcastapp.ErrInvalid
 	}
-	ctx := context.Background()
 	bot, err := b.Store.Get(ctx, q.BotID)
 	if err != nil {
 		return nil, 0, err
@@ -181,11 +194,11 @@ func (b *RuntimeBridge) Prepare(ctx context.Context, input broadcastapp.CreateIn
 	if input.RecipientType != "specific" && broadcastFiltersActive(input.Filters) {
 		return "", 0, broadcastapp.ErrInvalid
 	}
-	if b.Cipher == nil || b.Identity == nil {
+	if b.Cipher == nil || b.Identity == nil || input.BotID == 0 || (input.RecipientType != "all" && input.RecipientType != "specific") {
 		return "", 0, broadcastapp.ErrInvalid
 	}
 	text := strings.TrimSpace(input.MessageHTML)
-	if text == "" || len(utf16.Encode([]rune(text))) > 4096 {
+	if text == "" || len(utf16.Encode([]rune(text))) > 4096 || broadcastapp.ValidateMessageHTML(text) != nil {
 		return "", 0, broadcastapp.ErrInvalid
 	}
 	message := runtimecontract.Message{Text: text, ParseMode: "HTML", Purpose: "broadcast"}
@@ -221,13 +234,20 @@ func (b *RuntimeBridge) Prepare(ctx context.Context, input broadcastapp.CreateIn
 	if input.RecipientType == "specific" {
 		q.UserIDs = input.UserIDs
 	}
-	items, _, err := b.ListTelegramUsers(q)
+	items, _, err := b.listTelegramUsers(ctx, q)
 	if err != nil {
 		return "", 0, err
 	}
-	snap := snapshot{Message: message}
+	snap := snapshot{Message: message, AttachmentName: attachmentName}
+	selected := make(map[uint]bool, len(input.UserIDs))
+	for _, id := range input.UserIDs {
+		selected[id] = true
+	}
 	seen := map[int64]bool{}
 	for _, item := range items {
+		if input.RecipientType == "specific" && !selected[item.UserID] {
+			continue
+		}
 		id, err := strconv.ParseInt(item.TelegramUserID, 10, 64)
 		if err != nil {
 			return "", 0, err
@@ -240,6 +260,9 @@ func (b *RuntimeBridge) Prepare(ctx context.Context, input broadcastapp.CreateIn
 			continue
 		}
 		stamp, err := b.Identity.IdentityStamp(ctx, input.BotID, id, item.UserID)
+		if errors.Is(err, shopcontract.ErrDenied) {
+			continue
+		}
 		if err != nil {
 			return "", 0, err
 		}
@@ -256,6 +279,35 @@ func (b *RuntimeBridge) Prepare(ctx context.Context, input broadcastapp.CreateIn
 	cipher, err := b.Cipher.Seal(string(raw))
 	return cipher, len(snap.Recipients), err
 }
+
+// ReadContent exposes only administrator-visible content, not recipient identity
+// stamps, media bytes, credentials or ciphertext. Cipher errors stay private.
+func (b *RuntimeBridge) ReadContent(cipher string) (broadcastapp.BroadcastContent, error) {
+	if b.Cipher == nil || cipher == "" {
+		return broadcastapp.BroadcastContent{}, broadcastapp.ErrInvalid
+	}
+	raw, err := b.Cipher.Open(cipher)
+	if err != nil {
+		return broadcastapp.BroadcastContent{}, broadcastapp.ErrInvalid
+	}
+	var snap snapshot
+	if json.Unmarshal([]byte(raw), &snap) != nil || strings.TrimSpace(snap.Message.Text) == "" || snap.Message.Purpose != "broadcast" {
+		return broadcastapp.BroadcastContent{}, broadcastapp.ErrInvalid
+	}
+	content := broadcastapp.BroadcastContent{MessageHTML: snap.Message.Text, AttachmentURL: snap.Message.PhotoURL, AttachmentName: snap.AttachmentName, Buttons: [][]broadcastapp.Button{}}
+	if content.AttachmentName == "" {
+		content.AttachmentName = snap.Message.MediaName
+	}
+	for _, row := range snap.Message.Buttons {
+		buttons := make([]broadcastapp.Button, 0, len(row))
+		for _, button := range row {
+			buttons = append(buttons, broadcastapp.Button{Text: button.Text, URL: button.URL})
+		}
+		content.Buttons = append(content.Buttons, buttons)
+	}
+	return content, nil
+}
+
 func (b *RuntimeBridge) Enqueue(ctx context.Context, job *broadcastdomain.Broadcast) error {
 	bot, err := b.Store.Get(ctx, job.BotID)
 	if err != nil {
@@ -297,7 +349,7 @@ func (b *RuntimeBridge) Enqueue(ctx context.Context, job *broadcastdomain.Broadc
 		if err != nil {
 			return err
 		}
-		err = b.Store.Enqueue(ctx, &runtimedomain.Delivery{BotID: job.BotID, Key: fmt.Sprintf("broadcast:%d:chat:%d", job.ID, r.ChatID), ChatID: r.ChatID, TelegramUserID: r.TelegramID, UserID: r.UserID, BroadcastID: job.ID, PayloadCipher: cipher, Priority: 1, Status: "pending", AvailableAt: time.Now()})
+		err = b.Store.Enqueue(ctx, &runtimedomain.Delivery{BotID: job.BotID, Key: fmt.Sprintf("broadcast:%d:chat:%d", job.ID, r.ChatID), ChatID: r.ChatID, TelegramUserID: r.TelegramID, UserID: r.UserID, BroadcastID: job.ID, PayloadCipher: cipher, Priority: runtimecontract.PriorityMarketing, Status: "pending", AvailableAt: time.Now()})
 		if err != nil {
 			return err
 		}

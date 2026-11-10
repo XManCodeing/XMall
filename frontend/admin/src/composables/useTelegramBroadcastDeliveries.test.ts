@@ -35,6 +35,20 @@ beforeEach(() => {
 afterEach(() => { scopes.splice(0).forEach(scope => scope.stop()) })
 
 describe('broadcast recipient deliveries', () => {
+  it.each([true, false])('retains failed reads and notifies only unhandled failures (notified=%s)', async notified => {
+    const failure = Object.assign(new Error('offline'), { __notified: notified })
+    mocks.list.mockRejectedValue(failure)
+    const { model } = setup(); await nextTick()
+    expect(model.error.value).toBe('telegramBot.instances.recipientLoadFailed')
+    expect(model.items.value).toEqual([])
+    expect(mocks.error).toHaveBeenCalledTimes(notified ? 0 : 1)
+  })
+  it('notifies malformed list responses once and retains failure state', async () => {
+    mocks.list.mockResolvedValue({ data: { data: {} } })
+    const { model } = setup(); await nextTick()
+    expect(model.error.value).toBe('telegramBot.instances.recipientLoadFailed')
+    expect(mocks.error).toHaveBeenCalledExactlyOnceWith('telegramBot.instances.recipientLoadFailed')
+  })
   it('loads the paginated DTO and requests the selected page', async () => {
     const { model } = setup(); await nextTick()
     expect(mocks.list).toHaveBeenCalledWith(1, { page: 1, page_size: 20 })
@@ -43,6 +57,15 @@ describe('broadcast recipient deliveries', () => {
     expect(mocks.list).toHaveBeenLastCalledWith(1, { page: 2, page_size: 20 })
     expect(model.pagination.value.page).toBe(2)
     expect(model.items.value).toEqual([])
+  })
+  it('repeats first-page searches after pagination without changing the broadcast scope', async () => {
+    const { model } = setup(); await nextTick()
+    mocks.list.mockResolvedValueOnce(response([], 2)); await model.fetchPage(2)
+    await model.fetchPage(1); await model.fetchPage(1)
+    expect(mocks.list.mock.calls.slice(-2)).toEqual([
+      [1, { page: 1, page_size: 20 }], [1, { page: 1, page_size: 20 }],
+    ])
+    expect(model.pagination.value.page).toBe(1)
   })
   it('does not query legacy broadcasts or without read permission', async () => {
     const { model } = setup(false); await model.fetchPage()

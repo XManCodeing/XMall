@@ -454,6 +454,52 @@ func TestNormalizeMySQLDSNRequiresDatabaseAndRedactsErrors(t *testing.T) {
 	}
 }
 
+// TestMySQLZeroTimeBinding checks the production dialector without network I/O.
+// t verifies parameter isolation, typed nils and unchanged values across query forms.
+func TestMySQLZeroTimeBinding(t *testing.T) {
+	db, _ := mysqlIndexTestDB(t)
+	db = db.Session(&gorm.Session{DryRun: true})
+	zero := time.Time{}
+	now := time.Date(2026, 11, 10, 1, 2, 3, 123000000, time.UTC)
+	nullZero := sql.NullTime{Time: zero, Valid: true}
+	for _, sample := range []struct {
+		name  string
+		value any
+		want  any
+	}{
+		{"zero", zero, "0001-01-01 00:00:00"},
+		{"zero pointer", &zero, "0001-01-01 00:00:00"},
+		{"nullable zero", nullZero, "0001-01-01 00:00:00"},
+		{"nullable zero pointer", &nullZero, "0001-01-01 00:00:00"},
+		{"current time", now, now},
+		{"current pointer", &now, &now},
+		{"nil pointer", (*time.Time)(nil), (*time.Time)(nil)},
+		{"invalid nullable", sql.NullTime{}, sql.NullTime{}},
+		{"nil nullable pointer", (*sql.NullTime)(nil), (*sql.NullTime)(nil)},
+		{"plain string", "unchanged", "unchanged"},
+	} {
+		t.Run(sample.name, func(t *testing.T) {
+			query := db.Raw("SELECT ?, ?, ?", "before", sample.value, "after")
+			if query.Error != nil || query.Statement.SQL.String() != "SELECT ?, ?, ?" ||
+				!reflect.DeepEqual(query.Statement.Vars, []any{"before", sample.want, "after"}) {
+				t.Fatalf("binding mismatch: vars=%#v err=%v", query.Statement.Vars, query.Error)
+			}
+		})
+	}
+	for _, query := range []*gorm.DB{
+		db.Raw("SELECT @at", sql.Named("at", zero)),
+		db.Raw("SELECT ?", db.Session(&gorm.Session{}).Raw("SELECT ?", zero)),
+		db.Table("time_probe").Where("value IN ?", []time.Time{zero}).Find(&[]struct{ Value time.Time }{}),
+	} {
+		if query.Error != nil || !reflect.DeepEqual(query.Statement.Vars, []any{"0001-01-01 00:00:00"}) {
+			t.Fatalf("composed query lost zero-time binding: vars=%#v err=%v", query.Statement.Vars, query.Error)
+		}
+	}
+	if !zero.IsZero() || !nullZero.Time.IsZero() {
+		t.Fatal("binding mutated the original timestamp")
+	}
+}
+
 type gormLogRecorder struct {
 	bytes.Buffer
 }

@@ -9,6 +9,7 @@ import (
 
 	productcontract "github.com/XManCodeing/XMall/internal/modules/catalog/product/contract"
 	productdomain "github.com/XManCodeing/XMall/internal/modules/catalog/product/domain"
+	membershipdomain "github.com/XManCodeing/XMall/internal/modules/telegram/membership/domain"
 
 	"github.com/XManCodeing/XMall/internal/persistence/gormutil"
 
@@ -22,6 +23,62 @@ type ProductStore struct {
 }
 
 var _ productcontract.Repository = (*ProductStore)(nil)
+var _ productcontract.PublicSaleChecker = (*ProductStore)(nil)
+
+// LockProductForWrite 在当前事务锁定 productID，防止 SKU 写先于配置聚合锁造成锁顺序倒置。
+func (r *ProductStore) LockProductForWrite(productID uint) error {
+	var product productdomain.Product
+	return r.db.Select("id").Clauses(clause.Locking{Strength: "UPDATE"}).Where("id = ? AND deleted_at IS NULL", productID).First(&product).Error
+}
+
+// CheckPublicSale 检查商品交易状态；已启用会员仍须通过订单/付款身份及快照复核。
+// productIDs 为交易商品集合；禁用配置、失效商品或分类均关闭会员销售。
+func (r *ProductStore) CheckPublicSale(productIDs []uint) error {
+	return r.checkMembershipPolicy(productIDs, false)
+}
+
+// CheckOrdinaryWrite 拒绝全部会员配置，避免通用更新/删除绕过会员 CAS。
+// productIDs 是通用写入目标，查询失败时返回错误且不得继续写入。
+func (r *ProductStore) CheckOrdinaryWrite(productIDs []uint) error {
+	return r.checkMembershipPolicy(productIDs, true)
+}
+
+// checkMembershipPolicy 在当前连接按商品、配置加锁；writing 区分通用写入与交易。
+// 返回门控错误或数据库错误；无会员配置不影响普通商品行为。
+func (r *ProductStore) checkMembershipPolicy(productIDs []uint, writing bool) error {
+	if len(productIDs) == 0 {
+		return nil
+	}
+	// 与会员配置写入共用商品行锁，避免检查通过后在订单/余额事务内被转换。
+	// 按主键固定顺序加锁，降低多商品订单之间死锁概率。
+	var products []productdomain.Product
+	if err := r.db.Select("id, is_active, category_id").Clauses(clause.Locking{Strength: "UPDATE"}).Where("id IN ? AND deleted_at IS NULL", productIDs).Order("id").Find(&products).Error; err != nil {
+		return fmt.Errorf("lock products for sales: %w", err)
+	}
+	var configs []membershipdomain.ProductConfig
+	if err := r.db.Select("product_id, enabled").Clauses(clause.Locking{Strength: "UPDATE"}).Where("product_id IN ?", productIDs).Order("product_id").Find(&configs).Error; err != nil {
+		return fmt.Errorf("check membership sales: %w", err)
+	}
+	for _, config := range configs {
+		if writing || !config.Enabled {
+			return productcontract.ErrMembershipSaleClosed
+		}
+		var categoryID uint
+		for _, row := range products {
+			if row.ID == config.ProductID && row.IsActive {
+				categoryID = row.CategoryID
+			}
+		}
+		var count int64
+		if err := r.db.Table("categories").Where("id = ? AND is_active = ? AND deleted_at IS NULL", categoryID, true).Count(&count).Error; err != nil {
+			return err
+		}
+		if count != 1 {
+			return productcontract.ErrMembershipSaleClosed
+		}
+	}
+	return nil
+}
 
 func NewProductStore(db *gorm.DB) *ProductStore {
 	return &ProductStore{db: db}
@@ -47,6 +104,13 @@ func (r *ProductStore) List(filter productcontract.ListFilter) ([]productdomain.
 	var products []productdomain.Product
 
 	query := r.db.Model(&productdomain.Product{}).Where("products.deleted_at IS NULL")
+	if filter.OnlyMembership {
+		query = query.Where("EXISTS (SELECT 1 FROM telegram_membership_product_configs mc WHERE mc.product_id = products.id)")
+	}
+	// 在 Count 和分页之前划分后台商品类型，禁用配置也仍属于会员群商品。
+	if filter.ExcludeMembership {
+		query = query.Where("NOT EXISTS (SELECT 1 FROM telegram_membership_product_configs mc WHERE mc.product_id = products.id)")
+	}
 	if filter.WithCategory {
 		query = query.Preload("Category", "deleted_at IS NULL")
 	}
@@ -279,6 +343,21 @@ func (r *ProductStore) Create(product *productdomain.Product) error {
 // SKU 一律由 SKURepository 独占管理。
 func (r *ProductStore) Update(product *productdomain.Product) error {
 	return r.db.Omit(clause.Associations).Save(product).Error
+}
+
+// QuickUpdatePublicSale 在同事务锁定商品与会员配置后开售，关闭检查与更新之间的竞态。
+func (r *ProductStore) QuickUpdatePublicSale(id string, fields map[string]interface{}) error {
+	parsed, err := strconv.ParseUint(id, 10, 64)
+	if err != nil || parsed == 0 {
+		return productcontract.ErrNotFound
+	}
+	return r.db.Transaction(func(tx *gorm.DB) error {
+		scoped := NewProductStore(tx)
+		if err := scoped.CheckOrdinaryWrite([]uint{uint(parsed)}); err != nil {
+			return err
+		}
+		return scoped.QuickUpdate(id, fields)
+	})
 }
 
 // QuickUpdate 快速更新商品指定字段

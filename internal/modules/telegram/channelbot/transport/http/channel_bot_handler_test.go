@@ -10,48 +10,62 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-type channelSettingsFake struct {
-	status settingsmessaging.TelegramBotRuntimeStatusSetting
+// retiredSettingsFake fails immediately if retired routes access legacy state.
+type retiredSettingsFake struct{}
+
+// GetTelegramBotConfig must never be called by a retired endpoint.
+func (retiredSettingsFake) GetTelegramBotConfig() (settingsmessaging.TelegramBotConfigSetting, error) {
+	panic("retired endpoint read legacy config")
 }
 
-func (s *channelSettingsFake) GetTelegramBotConfig() (settingsmessaging.TelegramBotConfigSetting, error) {
-	return settingsmessaging.TelegramBotConfigSetting{}, nil
-}
-func (s *channelSettingsFake) GetTelegramBotRuntimeStatus() (settingsmessaging.TelegramBotRuntimeStatusSetting, error) {
-	return s.status, nil
-}
-func (s *channelSettingsFake) UpdateTelegramBotRuntimeStatus(status settingsmessaging.TelegramBotRuntimeStatusSetting) error {
-	s.status = status
-	return nil
+// GetTelegramBotRuntimeStatus must never be called by a retired endpoint.
+func (retiredSettingsFake) GetTelegramBotRuntimeStatus() (settingsmessaging.TelegramBotRuntimeStatusSetting, error) {
+	panic("retired endpoint read legacy runtime")
 }
 
-type channelTokensFake struct{ id uint }
-
-func (s *channelTokensFake) DecryptBotTokenByClientID(id uint) (string, error) {
-	s.id = id
-	return "123:test-only", nil
+// UpdateTelegramBotRuntimeStatus must never mutate the supplied status after retirement.
+func (retiredSettingsFake) UpdateTelegramBotRuntimeStatus(settingsmessaging.TelegramBotRuntimeStatusSetting) error {
+	panic("retired endpoint changed legacy runtime")
 }
 
-func TestChannelConfigAndHeartbeatWithoutCutoverDependency(t *testing.T) {
+// retiredTokensFake catches accidental credential access, including suppressed errors.
+type retiredTokensFake struct{}
+
+// DecryptBotTokenByClientID must never decrypt credentials for any supplied client ID.
+func (retiredTokensFake) DecryptBotTokenByClientID(uint) (string, error) {
+	panic("retired endpoint decrypted credentials")
+}
+
+// TestChannelBotRetirement verifies both endpoints return 410 without touching dependencies.
+func TestChannelBotRetirement(t *testing.T) {
 	gin.SetMode(gin.TestMode)
-	settings := &channelSettingsFake{}
-	tokens := &channelTokensFake{}
-	h := NewChannelBotHandler(settings, tokens)
-	r := gin.New()
-	// Production routes populate this only after signature authentication.
-	r.Use(func(c *gin.Context) { c.Set("channel_client_id", uint(7)) })
-	r.GET("/config", h.GetBotConfig)
-	r.POST("/heartbeat", h.ReportHeartbeat)
-	w := httptest.NewRecorder()
-	r.ServeHTTP(w, httptest.NewRequest(http.MethodGet, "/config", nil))
-	if w.Code != http.StatusOK || tokens.id != 7 {
-		t.Fatal(w.Code, tokens.id, w.Body.String())
-	}
-	w = httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodPost, "/heartbeat", strings.NewReader(`{"bot_version":"test"}`))
-	req.Header.Set("Content-Type", "application/json")
-	r.ServeHTTP(w, req)
-	if w.Code != http.StatusOK || !settings.status.Connected || settings.status.BotVersion != "test" || settings.status.LastSeenAt == "" {
-		t.Fatal(w.Code, settings.status, w.Body.String())
+	handler := NewChannelBotHandler(retiredSettingsFake{}, retiredTokensFake{})
+	router := gin.New()
+	// Production still requires channel signature authentication before these handlers.
+	router.Use(func(ctx *gin.Context) { ctx.Set("channel_client_id", uint(7)) })
+	router.GET("/config", handler.GetBotConfig)
+	router.POST("/heartbeat", handler.ReportHeartbeat)
+	for _, scenario := range []struct {
+		method string
+		path   string
+		body   string
+	}{
+		{http.MethodGet, "/config", ""},
+		{http.MethodPost, "/heartbeat", `{"bot_version":"test"}`},
+		{http.MethodPost, "/heartbeat", "invalid json"},
+	} {
+		t.Run(scenario.path+scenario.body, func(t *testing.T) {
+			recorder := httptest.NewRecorder()
+			request := httptest.NewRequest(scenario.method, scenario.path, strings.NewReader(scenario.body))
+			request.Header.Set("Content-Type", "application/json")
+			router.ServeHTTP(recorder, request)
+			body := recorder.Body.String()
+			if recorder.Code != http.StatusGone || !strings.Contains(body, "telegram_channel_retired") {
+				t.Fatalf("retirement response: status=%d body=%s", recorder.Code, body)
+			}
+			if strings.Contains(body, "bot_token") || strings.Contains(body, "config_version") {
+				t.Fatalf("retired response exposed legacy config: %s", body)
+			}
+		})
 	}
 }

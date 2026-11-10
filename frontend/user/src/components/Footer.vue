@@ -163,5 +163,6 @@ const footerLinks = computed(() => {
     .filter((item) => item.name)
 })
 
-const currentYear = new Date().getFullYear()
+import { businessDateKey } from '@/utils/format'
+const currentYear = businessDateKey().slice(0, 4)
 </script>

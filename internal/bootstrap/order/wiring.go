@@ -2,7 +2,10 @@ package orderwiring
 
 import (
 	"github.com/XManCodeing/XMall/internal/app/container"
+	orderstore "github.com/XManCodeing/XMall/internal/modules/order/infrastructure/gormstore"
 	ordertransport "github.com/XManCodeing/XMall/internal/modules/order/transport/http"
+	membershipstore "github.com/XManCodeing/XMall/internal/modules/telegram/membership/infrastructure/gormstore"
+	"github.com/XManCodeing/XMall/internal/platform/database/gormdb"
 )
 
 // Handlers contains every order HTTP entrypoint required by the router.
@@ -25,14 +28,14 @@ func New(c *container.Container) Handlers {
 			orderAdminPromotionAdapter{promotions: c.PromotionRepo},
 			orderAdminPaymentAdapter{payments: c.PaymentStore},
 			orderAdminPaymentChannelAdapter{channels: c.PaymentChannelStore},
-		),
+		).WithMembership(membershipQuery(c), membershipstore.New(gormdb.DB)).WithMembershipLedger(membershipstore.New(gormdb.DB)),
 		AdminRefund: NewAdminRefundHandler(c),
 		User: ordertransport.NewUserHandler(
 			orderUserQueryAdapter{orders: c.OrderService},
 			orderUserPaymentChannelAdapter{payments: c.PaymentService},
 			orderUserRefundRecordAdapter{records: c.OrderStore},
 			orderUserLookupAdapter{users: c.UserStore},
-		),
+		).WithMembershipSnapshots(membershipstore.New(gormdb.DB)),
 		Guest: ordertransport.NewGuestHandler(
 			orderGuestQueryAdapter{orders: c.OrderService},
 			orderUserPaymentChannelAdapter{payments: c.PaymentService},
@@ -48,6 +51,14 @@ func New(c *container.Container) Handlers {
 			orderPaymentCreatorAdapter{payments: c.PaymentService},
 		),
 	}
+}
+
+// membershipQuery 构造只读快照范围；缺少生产仓储时保持拒绝，测试容器可不装配。
+func membershipQuery(c *container.Container) ordertransport.OrderQuery {
+	if store, ok := c.OrderStore.(*orderstore.Store); ok {
+		return orderAdminQueryAdapter{readonly: store.MembershipOnly()}
+	}
+	return nil
 }
 
 // NewAdminRefundHandler exposes the focused refund composition for integration

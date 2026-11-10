@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import type { DialogRootEmits, DialogRootProps } from "reka-ui"
-import { DialogRoot, useForwardPropsEmits } from "reka-ui"
+import { useForwardPropsEmits } from "reka-ui"
+import DialogRoot from '../dialog/Dialog.vue'
 
-const props = defineProps<DialogRootProps>()
+const props = withDefaults(defineProps<DialogRootProps & { scope?: 'auto' | 'page' | 'global' }>(), { open: undefined, modal: true })
 const emits = defineEmits<DialogRootEmits>()
 
 const forwarded = useForwardPropsEmits(props, emits)

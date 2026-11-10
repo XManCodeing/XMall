@@ -1,8 +1,16 @@
 package application
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
+	"encoding/json"
 	"fmt"
+	paymentcontract "github.com/XManCodeing/XMall/internal/modules/payment/contract"
+	"regexp"
 	"strings"
+	"time"
+	"unicode"
+	"unicode/utf8"
 
 	paymentdomain "github.com/XManCodeing/XMall/internal/modules/payment/domain"
 
@@ -14,6 +22,210 @@ import (
 
 	"github.com/shopspring/decimal"
 )
+
+// manualTimedOut reports deadline expiry for the attempt or any order in its tree.
+// Canceled orders require explicit confirmation even when their historical provenance is unknown.
+func manualTimedOut(payment *paymentdomain.Payment, order *orderdomain.Order, now time.Time) bool {
+	if payment.Status == constants.PaymentStatusExpired || (payment.ExpiredAt != nil && !payment.ExpiredAt.After(now)) {
+		return true
+	}
+	return manualOrderTimedOut(order, now)
+}
+
+// manualOrderTimedOut checks order-tree deadlines without changing lifecycle state.
+func manualOrderTimedOut(order *orderdomain.Order, now time.Time) bool {
+	if order.Status == constants.OrderStatusCanceled || (order.ExpiresAt != nil && !order.ExpiresAt.After(now)) {
+		return true
+	}
+	for index := range order.Children {
+		if manualOrderTimedOut(&order.Children[index], now) {
+			return true
+		}
+	}
+	return false
+}
+
+// manualOrderRecoverable validates unpaid state and durable timeout provenance recursively.
+// Historical canceled orders without a reason, coupons and already fulfilled orders fail closed.
+func manualOrderRecoverable(order *orderdomain.Order, now time.Time) bool {
+	if order == nil || order.PaidAt != nil || order.DeletedAt != nil || order.RefundedAmount.Decimal.IsPositive() || order.Fulfillment != nil {
+		return false
+	}
+	switch order.Status {
+	case constants.OrderStatusPendingPayment:
+		if order.CanceledAt != nil {
+			return false
+		}
+	case constants.OrderStatusCanceled:
+		if order.CancellationReason != "timeout" || order.CanceledAt == nil || order.ExpiresAt == nil || order.ExpiresAt.After(*order.CanceledAt) || order.CanceledAt.After(now) || order.CouponID != nil || order.WalletPaidAmount.Decimal.IsPositive() {
+			return false
+		}
+		for _, item := range order.Items {
+			if item.FulfillmentType != constants.FulfillmentTypeManual && item.FulfillmentType != constants.FulfillmentTypeAuto {
+				return false
+			}
+		}
+	default:
+		return false
+	}
+	for index := range order.Children {
+		child := &order.Children[index]
+		if child.Status != order.Status || !manualOrderRecoverable(child, now) {
+			return false
+		}
+	}
+	return true
+}
+
+// manualAttemptRecoverable permits only active attempts and genuinely expired attempts.
+// Superseded, failed, successful and anomalous attempts must never be reactivated.
+func manualAttemptRecoverable(payment *paymentdomain.Payment, now time.Time) bool {
+	if payment.SupersededAt != nil || payment.ExceptionCode != "" || payment.ChannelID == 0 || payment.PaidAt != nil {
+		return false
+	}
+	switch payment.Status {
+	case constants.PaymentStatusPending, constants.PaymentStatusInitiated:
+		return true
+	case constants.PaymentStatusExpired:
+		return payment.ExpiredAt != nil && !payment.ExpiredAt.After(now)
+	default:
+		return false
+	}
+}
+
+// rejectOtherManualReceipts checks the locked order tree for previous external receipts.
+// confirmingPaymentID may itself be unknown: evidence-based manual recovery must remain possible.
+// Other unknown attempts fail closed; wallet contributions remain compatible.
+func rejectOtherManualReceipts(tx paymentcontract.Transaction, order *orderdomain.Order, confirmingPaymentID uint) error {
+	payments, err := tx.Payments().ListByOrderID(order.ID)
+	if err != nil {
+		return err
+	}
+	for _, payment := range payments {
+		if payment.ChannelID != 0 && (payment.Status == constants.PaymentStatusSuccess ||
+			(payment.ID != confirmingPaymentID && (payment.CreationState == "processing" || payment.CreationState == "unknown"))) {
+			return paymentcontract.ErrManualConfirmationConflict
+		}
+	}
+	for index := range order.Children {
+		if err := rejectOtherManualReceipts(tx, &order.Children[index], confirmingPaymentID); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// restoreManualTimeout restores canceled resources and states inside the original payment transaction.
+// order must pass provenance and amount validation first; no wallet debit or gateway call occurs.
+func restoreManualTimeout(tx paymentcontract.Transaction, order *orderdomain.Order, now time.Time) error {
+	if order.Status != constants.OrderStatusCanceled {
+		return nil
+	}
+	if len(order.Children) == 0 {
+		if err := orderapp.RestoreCanceledOrderResources(tx, order, now); err != nil {
+			return err
+		}
+	}
+	for index := range order.Children {
+		if err := restoreManualTimeout(tx, &order.Children[index], now); err != nil {
+			return err
+		}
+	}
+	if err := tx.Orders().UpdateStatus(order.ID, constants.OrderStatusPendingPayment, map[string]interface{}{"canceled_at": nil, "updated_at": now}); err != nil {
+		return err
+	}
+	order.Status, order.CanceledAt = constants.OrderStatusPendingPayment, nil
+	return nil
+}
+
+var manualRequestPattern = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9_.:-]{7,79}$`)
+var manualAmountPattern = regexp.MustCompile(`^[0-9]{1,18}(\.[0-9]{1,2})?$`)
+
+// normalizeManualInput 校验外部实收边界，返回规范化输入及幂等摘要；不记录敏感正文到日志。
+func normalizeManualInput(input paymentcontract.ManualConfirmationInput, now time.Time) (paymentcontract.ManualConfirmationInput, string, error) {
+	input.RequestID = strings.TrimSpace(input.RequestID)
+	input.Currency = strings.ToUpper(strings.TrimSpace(input.Currency))
+	input.TransactionID = strings.TrimSpace(input.TransactionID)
+	input.EvidenceReference = strings.TrimSpace(input.EvidenceReference)
+	input.Reason = strings.TrimSpace(input.Reason)
+	input.Amount = strings.TrimSpace(input.Amount)
+	input.PaidAt = input.PaidAt.UTC()
+	if input.AdminID == 0 || !manualRequestPattern.MatchString(input.RequestID) || !manualAmountPattern.MatchString(input.Amount) || input.ExpectedStatus == "" || len(input.Currency) < 3 || len(input.Currency) > 12 || input.PaidAt.IsZero() || input.PaidAt.After(now) {
+		return input, "", paymentcontract.ErrManualConfirmationInvalid
+	}
+	amount, err := decimal.NewFromString(input.Amount)
+	if err != nil || !amount.IsPositive() {
+		return input, "", paymentcontract.ErrManualConfirmationInvalid
+	}
+	input.Amount = amount.StringFixed(2)
+	if input.TransactionID == "" && input.EvidenceReference == "" {
+		return input, "", paymentcontract.ErrManualConfirmationInvalid
+	}
+	for _, field := range []struct {
+		value string
+		max   int
+	}{{input.TransactionID, 160}, {input.EvidenceReference, 240}, {input.Reason, 1000}} {
+		if !utf8.ValidString(field.value) || utf8.RuneCountInString(field.value) > field.max || strings.IndexFunc(field.value, unicode.IsControl) >= 0 {
+			return input, "", paymentcontract.ErrManualConfirmationInvalid
+		}
+	}
+	if input.Reason == "" {
+		return input, "", paymentcontract.ErrManualConfirmationInvalid
+	}
+	canonical := input
+	canonical.AdminID = 0
+	encoded, err := json.Marshal(canonical)
+	if err != nil {
+		return input, "", err
+	}
+	digest := sha256.Sum256(encoded)
+	return input, hex.EncodeToString(digest[:]), nil
+}
+
+// validateManualPayment 在锁内复核精确支付尝试、外部金额及可信付款时刻，错误时不写状态。
+func validateManualPayment(payment *paymentdomain.Payment, order *orderdomain.Order, input paymentcontract.ManualConfirmationInput, now time.Time) error {
+	if order.ParentID != nil || !manualOrderRecoverable(order, now) || payment.Status != input.ExpectedStatus || !manualAttemptRecoverable(payment, now) || (manualTimedOut(payment, order, now) && !input.ConfirmTimeout) {
+		return paymentcontract.ErrManualConfirmationConflict
+	}
+	if input.PaidAt.Before(payment.CreatedAt) || input.PaidAt.Before(order.CreatedAt) {
+		return paymentcontract.ErrManualConfirmationInvalid
+	}
+	amount, err := decimal.NewFromString(input.Amount)
+	if err != nil || !amount.Equal(payment.Amount.Decimal) {
+		return ErrPaymentAmountMismatch
+	}
+	if input.Currency != strings.ToUpper(payment.Currency) {
+		return ErrPaymentCurrencyMismatch
+	}
+	if payment.ProviderRef != "" && input.TransactionID != payment.ProviderRef {
+		return paymentcontract.ErrManualConfirmationConflict
+	}
+	required := normalizeOrderAmount(order.TotalAmount.Decimal.Sub(order.WalletPaidAmount.Decimal))
+	if !required.IsPositive() || !paymentCoveredOrderAmount(payment, amount).Equal(required) {
+		return ErrPaymentAmountMismatch
+	}
+	return nil
+}
+
+// claimManualEvidence 占用渠道内交易号/凭据唯一槽位；输入必须已校验并处于付款根事务锁内。
+func claimManualEvidence(repo paymentcontract.Store, store paymentcontract.ManualConfirmationStore, payment *paymentdomain.Payment, input paymentcontract.ManualConfirmationInput) error {
+	if input.TransactionID != "" {
+		existing, err := repo.GetLatestByProviderRef(input.TransactionID)
+		if err != nil {
+			return err
+		}
+		if existing != nil && existing.ID != payment.ID && existing.ChannelID == payment.ChannelID {
+			return paymentcontract.ErrManualConfirmationConflict
+		}
+		if err := store.ClaimEvidence(payment.ChannelID, "transaction:"+input.TransactionID, payment.ID); err != nil {
+			return err
+		}
+	}
+	if input.EvidenceReference != "" {
+		return store.ClaimEvidence(payment.ChannelID, "evidence:"+input.EvidenceReference, payment.ID)
+	}
+	return nil
+}
 
 // calculatePaymentAmounts 按创建时配置计算用户实付金额、渠道手续费及不可变策略快照。
 func calculatePaymentAmounts(baseAmount, feeRate, fixedFee decimal.Decimal, customerFeeEnabled bool) (paymentAmount, feeAmount decimal.Decimal, feePolicy string) {
@@ -55,43 +267,29 @@ func paymentExchangeRate(payment *paymentdomain.Payment) (decimal.Decimal, bool)
 	return rate, true
 }
 
-// paymentCoveredOrderAmount 推算一笔支付回调实际覆盖的订单在线应付额（订单币种口径）。
-//
-// callbackAmount 是本次回调携带的实际到账金额，仅在发生换汇的场景下使用（见下）。
-// Amount / FeeAmount / FeePolicy 均为创建时快照：用户承担手续费的策略下 Amount 含
-// 加收部分，必须扣除后才是订单侧的抵扣基数；商家承担或无手续费时 Amount 即基数。
-// 升级前未写入策略快照（FeePolicy 为空）且带正数手续费的历史记录，与 CreatePayment
-// 的 legacy 判定保持一致，按用户承担解释。
-//
-// 只有发生换汇的支付需要特殊处理：渠道按配置的汇率把订单原始币种（一般是 CNY）金额
-// 换算成结算币种（USD/GBP 等）下单（如 Stripe 配置 target_currency+exchange_rate），
-// applyProviderPayment 回写后 payment.Amount/Currency 变为结算币种；网关 webhook/回调
-// 本身直接返回结算币种数值，不会换算回订单币种。若直接用 payment.Amount 与订单原始
-// 币种总额比较，两个不同币种的数值硬比必然判定为金额不足。正确做法是用本次回调的
-// 实际到账金额（callbackAmount，结算币种）除以创建支付时存下的渠道汇率快照
-// ProviderPayload["exchange_rate"]，换算回订单币种。未发生换汇的渠道，回调金额本来
-// 就是订单币种，继续使用 payment.Amount 原值。
+// paymentCoveredOrderAmount 返回支付覆盖的订单币种金额。
+// callbackAmount 必须与建单外币金额精确相等，才可采用原价快照；不扩大金额容差。
+// 缺失快照的旧记录保留汇率反算，手续费仍按创建时策略从原币金额中扣除。
 func paymentCoveredOrderAmount(payment *paymentdomain.Payment, callbackAmount decimal.Decimal) decimal.Decimal {
 	if payment == nil {
 		return decimal.Zero
 	}
 	covered := payment.Amount.Decimal
-	if rate, ok := paymentExchangeRate(payment); ok {
-		source := callbackAmount
-		if source.IsZero() {
-			source = payment.Amount.Decimal
-		}
-		covered = source.Div(rate)
-	} else if payment.ProviderPayload != nil {
+	if !callbackAmount.IsZero() {
+		covered = callbackAmount
+	}
+	original := decimal.Zero
+	if payment.ProviderPayload != nil && callbackAmount.Equal(payment.Amount.Decimal) {
 		if raw, ok := payment.ProviderPayload["original_amount"]; ok {
-			// 缺少汇率快照（历史数据遗漏字段）时退回订单原价，保底不误判欠付，
-			// 但无法侦测网关实际少到账的情况。
-			if s := strings.TrimSpace(fmt.Sprint(raw)); s != "" {
-				if original, err := decimal.NewFromString(s); err == nil {
-					covered = original
-				}
+			if amount, err := decimal.NewFromString(strings.TrimSpace(fmt.Sprint(raw))); err == nil && amount.IsPositive() {
+				original = amount
 			}
 		}
+	}
+	if original.IsPositive() {
+		covered = original
+	} else if rate, ok := paymentExchangeRate(payment); ok {
+		covered = covered.Div(rate)
 	}
 	fee := payment.FeeAmount.Decimal
 	switch payment.FeePolicy {

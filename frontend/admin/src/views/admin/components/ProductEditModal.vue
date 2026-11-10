@@ -1,5 +1,8 @@
 <script setup lang="ts">
-import { computed, ref, reactive, watch } from 'vue'
+import ProductManualFields, { type ManualFormField } from './ProductManualFields.vue'
+import ProductCategoryField from './ProductCategoryField.vue'
+import { computed, ref, reactive, watch, onScopeDispose } from 'vue'
+import { useAdminAuthStore } from '@/stores/auth'
 import { useI18n } from 'vue-i18n'
 import { adminAPI } from '@/api/admin'
 import type { AdminProduct, AdminCategory, AdminProductSKU, AdminPaymentChannel, LocalizedText } from '@/api/types'
@@ -14,9 +17,11 @@ import { Switch } from '@/components/ui/switch'
 import { Textarea } from '@/components/ui/textarea'
 import { Dialog, DialogScrollContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { useProductSaveRecovery } from '@/composables/useProductSaveRecovery'
+import ProductSaveRecovery from './ProductSaveRecovery.vue'
 import { notifyError } from '@/utils/notify'
-import { getLocalizedText } from '@/utils/format'
-import { buildAdminCategoryPath, createAdminCategoryChildCountMap, createAdminCategoryMap, flattenAdminCategories, isAdminProductCategorySelectable } from '@/utils/category'
+import { parsePaymentChannelIDs } from '@/utils/paymentChannelDisplay'
+import { createAdminCategoryChildCountMap, createAdminCategoryMap, isAdminProductCategorySelectable } from '@/utils/category'
 
 const props = defineProps<{
   modelValue: boolean
@@ -32,6 +37,9 @@ const emit = defineEmits<{
 }>()
 
 const { t, locale } = useI18n()
+const auth = useAdminAuthStore()
+let productGeneration = 0
+const recovery = useProductSaveRecovery(false)
 const submitting = ref(false)
 const isEditing = ref(false)
 const originalManualStockTotal = ref<number | null>(null)
@@ -47,20 +55,10 @@ const languages = computed(() => [
   { code: 'en-US', name: t('admin.common.lang.enUS') },
 ])
 
-const categoryMap = computed(() => createAdminCategoryMap(props.categories))
-const categoryChildCountMap = computed(() => createAdminCategoryChildCountMap(props.categories))
-const categoryOptions = computed(() => flattenAdminCategories(props.categories).map((item) => ({
-  ...item,
-  selectable: isProductCategorySelectable(item.category.id),
-})))
-
-const getCategoryOptionLabel = (category: AdminCategory) => {
-  return buildAdminCategoryPath(category, categoryMap.value, (item) => getLocalizedText(item.name))
-}
-
-const getCategoryOptionName = (category: AdminCategory) => {
-  return getLocalizedText(category.name)
-}
+const localCategories = ref<AdminCategory[]>(props.categories)
+watch(() => props.categories, value => { localCategories.value = value })
+const categoryMap = computed(() => createAdminCategoryMap(localCategories.value))
+const categoryChildCountMap = computed(() => createAdminCategoryChildCountMap(localCategories.value))
 
 const getCategoryLeafTip = () => {
   if (locale.value === 'en-US') {
@@ -100,19 +98,6 @@ type SKUFormItem = {
   original_manual_stock_total: number | null
   is_active: boolean
   sort_order: number
-}
-
-type ManualFormField = {
-  key: string
-  type: string
-  required: boolean
-  label: LocalizedText
-  placeholder: LocalizedText
-  regex: string
-  min: string
-  max: string
-  max_len: string
-  options_text: string
 }
 
 const createEmptyLocaleText = () => ({
@@ -183,26 +168,14 @@ const form = reactive({
 })
 
 const loadPaymentChannels = async () => {
+  const request = productGeneration
   try {
     const res = await adminAPI.getPaymentChannels({ page: 1, page_size: 200 })
+    if (request !== productGeneration) return
     paymentChannels.value = (res.data?.data ?? []).filter((ch: AdminPaymentChannel) => ch.is_active)
   } catch {
     paymentChannels.value = []
   }
-}
-
-const parsePaymentChannelIDs = (raw: string | number[] | null | undefined): number[] => {
-  if (!raw) return []
-  if (Array.isArray(raw)) return raw.filter((id) => Number.isFinite(id) && id > 0)
-  if (typeof raw === 'string') {
-    const trimmed = raw.trim()
-    if (!trimmed || trimmed === '[]') return []
-    try {
-      const parsed = JSON.parse(trimmed)
-      if (Array.isArray(parsed)) return parsed.filter((id: unknown) => typeof id === 'number' && id > 0)
-    } catch { /* ignore */ }
-  }
-  return []
 }
 
 const togglePaymentChannel = (channelId: number) => {
@@ -492,10 +465,6 @@ const normalizeSKUsForSubmit = () => {
   return normalized
 }
 
-const isTextLikeField = (fieldType: string) => {
-  return fieldType === 'text' || fieldType === 'textarea' || fieldType === 'phone' || fieldType === 'email'
-}
-
 const resetForm = () => {
   initialCategoryID.value = null
   originalManualStockTotal.value = null
@@ -576,11 +545,17 @@ const populateForm = (product: AdminProduct) => {
   })
 }
 
-const closeModal = () => {
+/** @returns Explicit close completion; uncertain drafts stay in memory for reopening. */
+const closeModal = async () => {
+  if (submitting.value || !await recovery.allowClose()) return
   emit('update:modelValue', false)
 }
 
+/** @returns Save completion; preserves uncertain drafts and delegates existing SKU/category validation. */
 const handleSubmit = async () => {
+  if (recovery.unknown.value || submitting.value || !props.modelValue) return
+  const submittedID = isEditing.value ? form.id : undefined, submittedSlug = form.slug
+  const request = productGeneration
   submitting.value = true
   try {
     const normalizedCategoryID = Number(form.category_id)
@@ -655,10 +630,11 @@ const handleSubmit = async () => {
     } else {
       await adminAPI.createProduct(payload as unknown as Partial<AdminProduct>)
     }
-    closeModal()
+    if (request !== productGeneration) return
+    emit('update:modelValue', false)
     emit('success')
   } catch (err: any) {
-    if (isNotifiedError(err)) return
+    if (request !== productGeneration || recovery.capture(err, submittedID, submittedSlug) || isNotifiedError(err)) return
     notifyError(t('admin.products.errors.operationFailed', { message: err?.message || '' }))
   } finally {
     submitting.value = false
@@ -676,69 +652,40 @@ const removeTag = (index: number) => {
   form.tags.splice(index, 1)
 }
 
-// Watch productId to determine create vs edit mode and fetch product details
-watch(
-  () => props.productId,
-  async (newId) => {
-    if (!props.modelValue) return
-    currentLang.value = 'zh-CN'
-    if (newId != null && newId > 0) {
-      // Edit mode
-      isEditing.value = true
-      try {
-        const res = await adminAPI.getProduct(newId)
-        const product = res.data.data
-        editingIsMapped.value = Boolean(product.is_mapped)
-        populateForm(product)
-      } catch (err: any) {
-        if (isNotifiedError(err)) return
-        notifyError(t('admin.products.errors.operationFailed', { message: err?.message || '' }))
-        closeModal()
-      }
-    } else {
-      // Create mode
-      isEditing.value = false
-      editingIsMapped.value = false
-      resetForm()
-    }
+/** Load one product session; category refresh never changes this identity or resets its draft. @returns Completion promise. */
+async function loadProductSession() {
+  if (recovery.unknown.value || submitting.value) return
+  const request = ++productGeneration
+  if (!props.modelValue) return
+  currentLang.value = 'zh-CN'
+  if (!paymentChannels.value.length) void loadPaymentChannels()
+  isEditing.value = !!props.productId && props.productId > 0
+  if (!isEditing.value) { editingIsMapped.value = false; resetForm(); return }
+  try {
+    const response = await adminAPI.getProduct(props.productId!)
+    if (request !== productGeneration || !props.modelValue || recovery.unknown.value) return
+    editingIsMapped.value = Boolean(response.data.data.is_mapped)
+    populateForm(response.data.data)
+  } catch (error: any) {
+    if (request !== productGeneration) return
+    if (!isNotifiedError(error)) notifyError(t('admin.products.errors.operationFailed', { message: error?.message || '' }))
+    closeModal()
   }
-)
-
-// Also handle when modal opens
-watch(
-  () => props.modelValue,
-  (newVal) => {
-    if (!newVal) return
-    currentLang.value = 'zh-CN'
-    if (paymentChannels.value.length === 0) {
-      loadPaymentChannels()
-    }
-    if (props.productId != null && props.productId > 0) {
-      isEditing.value = true
-      adminAPI.getProduct(props.productId).then((res) => {
-        const product = res.data.data
-        editingIsMapped.value = Boolean(product.is_mapped)
-        populateForm(product)
-      }).catch((err: any) => {
-        if (isNotifiedError(err)) return
-        notifyError(t('admin.products.errors.operationFailed', { message: err?.message || '' }))
-        closeModal()
-      })
-    } else {
-      isEditing.value = false
-      editingIsMapped.value = false
-      resetForm()
-    }
-  }
-)
+}
+watch(() => [props.modelValue, props.productId], loadProductSession)
+watch(() => [auth.token, auth.isSuper, JSON.stringify(auth.permissions)], () => {
+  productGeneration++; recovery.reset(); submitting.value = false; resetForm(); localCategories.value = []; paymentChannels.value = []; closeModal()
+}, { flush: 'sync' })
+onScopeDispose(() => { productGeneration++ })
 </script>
 
 <template>
-  <Dialog :open="modelValue" @update:open="(value) => { if (!value) closeModal() }">
+  <Dialog scope="page" :open="modelValue" @update:open="(value) => { if (!value) closeModal() }">
     <DialogScrollContent class="w-[calc(100vw-1rem)] max-w-5xl p-4 sm:p-6" @interact-outside="(e) => e.preventDefault()">
       <DialogHeader>
         <DialogTitle>{{ isEditing ? t('admin.products.modal.editTitle') : t('admin.products.modal.createTitle') }}</DialogTitle>
       </DialogHeader>
+      <ProductSaveRecovery :recovery="recovery" />
       <form class="space-y-6" @submit.prevent="handleSubmit">
         <div class="border-b border-border">
           <div class="flex gap-2 overflow-x-auto pb-1 sm:gap-4">
@@ -780,27 +727,7 @@ watch(
           </div>
 
           <div class="col-span-1">
-            <label class="block text-xs font-medium text-muted-foreground mb-1.5">{{ t('admin.products.form.category') }}</label>
-            <Select
-              :model-value="form.category_id ? String(form.category_id) : '__none__'"
-              @update:modelValue="(value) => { form.category_id = value && value !== '__none__' ? Number(value) : null }"
-            >
-              <SelectTrigger class="h-9 w-full">
-                <SelectValue :placeholder="t('admin.products.form.categoryPlaceholder')" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="__none__">{{ t('admin.products.form.categoryPlaceholder') }}</SelectItem>
-                <SelectItem
-                  v-for="item in categoryOptions"
-                  :key="item.category.id"
-                  :value="String(item.category.id)"
-                  :disabled="!item.selectable"
-                  :class="item.depth > 0 ? 'pl-6' : ''"
-                >
-                  {{ item.depth > 0 ? getCategoryOptionName(item.category) : getCategoryOptionLabel(item.category) }}
-                </SelectItem>
-              </SelectContent>
-            </Select>
+            <ProductCategoryField :key="productId ?? 'new'" v-model="form.category_id" :categories="localCategories" :active="modelValue" :initial-category-i-d="initialCategoryID" @refreshed="value => localCategories = value" />
             <p class="mt-1 text-xs text-muted-foreground">{{ getCategoryLeafTip() }}</p>
           </div>
 
@@ -883,94 +810,7 @@ watch(
             <p v-else class="mt-1 text-xs text-muted-foreground">{{ t('admin.products.form.manualStockTotalTip') }}</p>
           </div>
 
-          <div v-if="form.fulfillment_type === 'manual' || editingIsMapped" class="col-span-1 md:col-span-2 rounded-xl border border-border bg-muted/20 p-4 space-y-4">
-            <div class="flex items-center justify-between">
-              <div>
-                <h3 class="text-sm font-semibold text-foreground">{{ t('admin.products.form.manualFormSchemaTitle') }}</h3>
-                <p class="text-xs text-muted-foreground mt-1">{{ t('admin.products.form.manualFormSchemaTip') }}</p>
-                <p v-if="editingIsMapped" class="mt-1 text-xs text-indigo-600">{{ t('admin.products.mappedFormSchemaLocked') }}</p>
-              </div>
-              <Button v-if="!editingIsMapped" type="button" size="sm" variant="outline" @click="addManualFormField">
-                {{ t('admin.products.form.manualFormAddField') }}
-              </Button>
-            </div>
-
-            <div v-if="!form.manual_form_schema.fields.length" class="rounded-lg border border-dashed border-border p-4 text-xs text-muted-foreground">
-              {{ t('admin.products.form.manualFormEmpty') }}
-            </div>
-
-            <div v-for="(field, index) in form.manual_form_schema.fields" :key="index" class="rounded-lg border border-border bg-background p-4 space-y-3">
-              <div class="flex items-center justify-between">
-                <div class="text-xs font-medium text-muted-foreground">{{ t('admin.products.form.manualFormFieldTitle', { index: index + 1 }) }}</div>
-                <Button v-if="!editingIsMapped" type="button" variant="destructive" size="sm" @click="removeManualFormField(index)">
-                  {{ t('admin.products.form.manualFormRemoveField') }}
-                </Button>
-              </div>
-
-              <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
-                <div>
-                  <label class="block text-xs font-medium text-muted-foreground mb-1.5">{{ t('admin.products.form.manualFormFieldKey') }}</label>
-                  <Input v-model="field.key" :placeholder="t('admin.products.form.manualFormFieldKeyPlaceholder')" :disabled="editingIsMapped" />
-                </div>
-                <div>
-                  <label class="block text-xs font-medium text-muted-foreground mb-1.5">{{ t('admin.products.form.manualFormFieldType') }}</label>
-                  <Select v-model="field.type" :disabled="editingIsMapped">
-                    <SelectTrigger class="h-9">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem v-for="typeItem in manualFieldTypeOptions" :key="typeItem.value" :value="typeItem.value">{{ typeItem.label }}</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div class="flex items-end">
-                  <div class="inline-flex items-center gap-2">
-                    <Switch v-model="field.required" :disabled="editingIsMapped" />
-                    <Label class="text-sm text-muted-foreground">{{ t('admin.products.form.manualFormFieldRequired') }}</Label>
-                  </div>
-                </div>
-              </div>
-
-              <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <div>
-                  <label class="block text-xs font-medium text-muted-foreground mb-1.5">{{ t('admin.products.form.manualFormFieldLabel', { lang: getCurrentLangName() }) }}</label>
-                  <Input v-model="field.label[currentLang]" :placeholder="t('admin.products.form.manualFormFieldLabelPlaceholder')" :disabled="editingIsMapped" />
-                </div>
-                <div>
-                  <label class="block text-xs font-medium text-muted-foreground mb-1.5">{{ t('admin.products.form.manualFormFieldPlaceholder', { lang: getCurrentLangName() }) }}</label>
-                  <Input v-model="field.placeholder[currentLang]" :placeholder="t('admin.products.form.manualFormFieldPlaceholderPlaceholder')" :disabled="editingIsMapped" />
-                </div>
-              </div>
-
-              <div v-if="isTextLikeField(field.type)" class="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <div>
-                  <label class="block text-xs font-medium text-muted-foreground mb-1.5">{{ t('admin.products.form.manualFormFieldRegex') }}</label>
-                  <Input v-model="field.regex" :placeholder="t('admin.products.form.manualFormFieldRegexPlaceholder')" :disabled="editingIsMapped" />
-                </div>
-                <div>
-                  <label class="block text-xs font-medium text-muted-foreground mb-1.5">{{ t('admin.products.form.manualFormFieldMaxLength') }}</label>
-                  <Input v-model="field.max_len" type="number" min="1" :placeholder="t('admin.products.form.manualFormFieldMaxLengthPlaceholder')" :disabled="editingIsMapped" />
-                </div>
-              </div>
-
-              <div v-if="field.type === 'number'" class="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <div>
-                  <label class="block text-xs font-medium text-muted-foreground mb-1.5">{{ t('admin.products.form.manualFormFieldMin') }}</label>
-                  <Input v-model="field.min" type="number" :placeholder="t('admin.products.form.manualFormFieldMinPlaceholder')" :disabled="editingIsMapped" />
-                </div>
-                <div>
-                  <label class="block text-xs font-medium text-muted-foreground mb-1.5">{{ t('admin.products.form.manualFormFieldMax') }}</label>
-                  <Input v-model="field.max" type="number" :placeholder="t('admin.products.form.manualFormFieldMaxPlaceholder')" :disabled="editingIsMapped" />
-                </div>
-              </div>
-
-              <div v-if="field.type === 'select' || field.type === 'radio' || field.type === 'checkbox'">
-                <label class="block text-xs font-medium text-muted-foreground mb-1.5">{{ t('admin.products.form.manualFormFieldOptions') }}</label>
-                <Textarea v-model="field.options_text" rows="4" :placeholder="t('admin.products.form.manualFormFieldOptionsPlaceholder')" :disabled="editingIsMapped" />
-                <p class="mt-1 text-xs text-muted-foreground">{{ t('admin.products.form.manualFormFieldOptionsTip') }}</p>
-              </div>
-            </div>
-          </div>
+          <ProductManualFields v-if="form.fulfillment_type === 'manual' || editingIsMapped" :fields="form.manual_form_schema.fields" :locked="editingIsMapped" :current-lang="currentLang" :language-name="getCurrentLangName()" :types="manualFieldTypeOptions" @add="addManualFormField" @remove="removeManualFormField" />
 
           <div class="col-span-1 md:col-span-2 rounded-xl border border-border bg-muted/20 p-4 space-y-4">
             <div class="flex items-center justify-between">
@@ -1139,7 +979,7 @@ watch(
 
         <div class="flex flex-col-reverse gap-3 border-t border-border pt-6 sm:flex-row sm:justify-end">
           <Button type="button" variant="outline" class="w-full sm:w-auto" @click="closeModal">{{ t('admin.common.cancel') }}</Button>
-          <Button type="submit" class="w-full sm:w-auto" :disabled="submitting">
+          <Button type="submit" class="w-full sm:w-auto" :disabled="submitting || recovery.unknown.value">
             {{ submitting ? t('admin.products.actions.submitting') : isEditing ? t('admin.products.actions.saveChanges') : t('admin.products.actions.createNow') }}
           </Button>
         </div>

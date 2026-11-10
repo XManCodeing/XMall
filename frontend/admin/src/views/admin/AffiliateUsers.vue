@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from 'vue'
-import { useDebounceFn } from '@vueuse/core'
 import { useI18n } from 'vue-i18n'
 import { adminAPI } from '@/api/admin'
 import { AFFILIATE_PROFILE_STATUS_ACTIVE, AFFILIATE_PROFILE_STATUS_DISABLED } from '@/constants/affiliate'
@@ -91,10 +90,18 @@ const fetchRows = async (page = 1, options: ListFetchOptions = {}) => {
   }
 }
 
-const handleSearch = () => {
-  fetchRows(1, { preserveRows: true })
+/** 按当前筛选查询第一页，加载期间忽略重复操作。@returns 查询完成。 */
+const handleSearch = async (): Promise<void> => {
+  if (loading.value || refreshing.value) return
+  pagination.value.page = 1
+  await fetchRows(1)
 }
-const debouncedSearch = useDebounceFn(handleSearch, 300)
+/** 恢复全部筛选默认值，保留分页尺寸。@returns 查询完成。 */
+const resetFilters = async (): Promise<void> => {
+  if (loading.value || refreshing.value) return
+  Object.assign(filters, { keyword: '', code: '', status: '__all__' })
+  await handleSearch()
+}
 
 const reloadCurrentPage = () => fetchRows(pagination.value.page, { preserveRows: true })
 
@@ -234,13 +241,13 @@ onMounted(() => {
     <div class="rounded-xl border border-border bg-card p-4 shadow-sm">
       <div class="flex flex-wrap items-center gap-3">
         <div class="w-full md:w-56">
-          <Input v-model="filters.keyword" :placeholder="t('admin.affiliatesUsers.filters.keyword')" @update:modelValue="debouncedSearch" />
+          <Input v-model="filters.keyword" :placeholder="t('admin.affiliatesUsers.filters.keyword')" @keydown.enter="handleSearch" />
         </div>
         <div class="w-full md:w-44">
-          <Input v-model="filters.code" :placeholder="t('admin.affiliatesUsers.filters.code')" @update:modelValue="debouncedSearch" />
+          <Input v-model="filters.code" :placeholder="t('admin.affiliatesUsers.filters.code')" @keydown.enter="handleSearch" />
         </div>
         <div class="w-full md:w-44">
-          <Select v-model="filters.status" @update:modelValue="handleSearch">
+          <Select v-model="filters.status">
             <SelectTrigger class="h-9 w-full">
               <SelectValue :placeholder="t('admin.affiliatesUsers.filters.statusAll')" />
             </SelectTrigger>
@@ -270,7 +277,9 @@ onMounted(() => {
             {{ t('admin.affiliatesUsers.batch.disable') }}
           </Button>
         </template>
-        <Button size="sm" variant="outline" :disabled="refreshing" @click="refreshCurrentPage">{{ t('admin.common.refresh') }}</Button>
+        <Button size="sm" variant="outline" :disabled="loading || refreshing" @click="handleSearch">{{ t('admin.common.search') }}</Button>
+        <Button size="sm" variant="outline" :disabled="loading || refreshing" @click="resetFilters">{{ t('admin.common.reset') }}</Button>
+        <Button size="sm" variant="outline" :disabled="loading || refreshing" @click="refreshCurrentPage">{{ t('admin.common.refresh') }}</Button>
       </div>
     </div>
 

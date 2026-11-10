@@ -1,7 +1,9 @@
 package productwrite
 
 import (
+	"context"
 	paymentdomain "github.com/XManCodeing/XMall/internal/modules/payment/domain"
+	membership "github.com/XManCodeing/XMall/internal/modules/telegram/membership/contract"
 
 	productdomain "github.com/XManCodeing/XMall/internal/modules/catalog/product/domain"
 
@@ -43,6 +45,7 @@ type CardSecretStockRepository interface {
 
 // TransactionRepositories 是一次商品写事务内绑定的仓储集合。
 type TransactionRepositories struct {
+	Membership  membership.AdminWriter
 	Products    ProductRepository
 	SKUs        SKURepository
 	CardSecrets CardSecretStockRepository
@@ -55,35 +58,40 @@ type UnitOfWork interface {
 
 // Options 描述商品写入应用服务依赖。
 type Options struct {
-	Products        ProductRepository
-	SKUs            SKURepository
-	Categories      CategoryRepository
-	PaymentChannels PaymentChannelStoresitory
-	Transactions    UnitOfWork
+	// EnforcePublicSale is enabled by the production composition root.
+	EnforcePublicSale bool
+	Products          ProductRepository
+	SKUs              SKURepository
+	Categories        CategoryRepository
+	PaymentChannels   PaymentChannelStoresitory
+	Transactions      UnitOfWork
 }
 
 // WriteService 编排商品创建、更新和 SKU 同步。
 type WriteService struct {
-	products        ProductRepository
-	skus            SKURepository
-	categories      CategoryRepository
-	paymentChannels PaymentChannelStoresitory
-	transactions    UnitOfWork
+	enforcePublicSale bool
+	products          ProductRepository
+	skus              SKURepository
+	categories        CategoryRepository
+	paymentChannels   PaymentChannelStoresitory
+	transactions      UnitOfWork
 }
 
 // NewWriteService 创建商品写入应用服务。
 func NewWriteService(options Options) *WriteService {
 	return &WriteService{
-		products:        options.Products,
-		skus:            options.SKUs,
-		categories:      options.Categories,
-		paymentChannels: options.PaymentChannels,
-		transactions:    options.Transactions,
+		enforcePublicSale: options.EnforcePublicSale,
+		products:          options.Products,
+		skus:              options.SKUs,
+		categories:        options.Categories,
+		paymentChannels:   options.PaymentChannels,
+		transactions:      options.Transactions,
 	}
 }
 
 // CreateProductInput 创建或完整更新商品的输入。
 type CreateProductInput struct {
+	Membership           *membership.AdminConfigInput
 	CategoryID           uint
 	Slug                 string
 	SeoMetaJSON          map[string]interface{}
@@ -123,6 +131,38 @@ type ProductSKUInput struct {
 	ManualStockTotal *int
 	IsActive         *bool
 	SortOrder        int
+}
+
+// prepareMembership 固定会员每单一份，创建只能下架；编辑的上架状态必须与配置一致。
+// input 是完整替换请求；实际状态迁移由专用状态接口及事务内配置 CAS 控制。
+func prepareMembership(input *CreateProductInput) error {
+	if input.Membership == nil {
+		return nil
+	}
+	if input.Membership.ExpectedVersion == 0 && input.Membership.Enabled {
+		return membership.ErrSalesClosed
+	}
+	if input.IsActive != nil && *input.IsActive != input.Membership.Enabled {
+		return membership.ErrConflict
+	}
+	if input.Membership.Quantity != 1 {
+		return membership.ErrInvalid
+	}
+	active, one := input.Membership.Enabled, 1
+	input.IsActive = &active
+	input.MinPurchaseQuantity, input.MaxPurchaseQuantity = &one, &one
+	return nil
+}
+
+// saveMembership 使用 repositories 的同事务扩展仓储保存整个配置，缺失装配时拒绝。
+func saveMembership(repositories TransactionRepositories, id uint, input *membership.AdminConfigInput) error {
+	if input == nil {
+		return nil
+	}
+	if repositories.Membership == nil {
+		return membership.ErrTransactionRequired
+	}
+	return repositories.Membership.SaveProductConfig(context.Background(), id, *input)
 }
 
 func (s *WriteService) filterAvailablePaymentChannelIDs(ids []uint) ([]uint, error) {

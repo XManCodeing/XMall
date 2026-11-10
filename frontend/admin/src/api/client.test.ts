@@ -12,7 +12,7 @@ beforeEach(() => {
   vi.stubGlobal('window', { location: { href: '' } })
   localStorage.setItem('admin_token', 'test-token')
 })
-afterEach(() => { vi.unstubAllGlobals(); localStorage.clear() })
+afterEach(() => { vi.useRealTimers(); vi.unstubAllGlobals(); localStorage.clear() })
 
 const response = (status: number, body: unknown) => ({
   ok: status >= 200 && status < 300,
@@ -23,6 +23,68 @@ const response = (status: number, body: unknown) => ({
 })
 
 describe('request-owned operation feedback', () => {
+  it.each(['network', 'http', 'json'])('keeps background GET failures silent: %s', async kind => {
+    if (kind === 'network') vi.mocked(fetch).mockRejectedValue(new Error('offline'))
+    else if (kind === 'json') vi.mocked(fetch).mockResolvedValue({ ...response(200, null), json: async () => { throw new SyntaxError('invalid') } } as unknown as Response)
+    else vi.mocked(fetch).mockResolvedValue(response(503, { msg: 'unavailable' }) as Response)
+    const { api } = await import('./client')
+    await expect(api.get('/admin/system/version/check', { silent: true })).rejects.toBeInstanceOf(Error)
+    expect(mocks.show).not.toHaveBeenCalled()
+  })
+  it('does not suppress write failures even when silent is passed', async () => {
+    vi.mocked(fetch).mockRejectedValue(new Error('offline'))
+    const { api } = await import('./client')
+    await expect(api.post('/admin/products', {}, { silent: true })).rejects.toBeInstanceOf(Error)
+    expect(mocks.show).toHaveBeenCalledOnce()
+  })
+  it.each(['headers', 'body'])('times out across %s and marks writes unknown', async phase => {
+    vi.useFakeTimers()
+    vi.mocked(fetch).mockImplementation(async () => phase === 'headers' ? await new Promise<Response>(() => {})
+      : { ...response(200, {}), json: () => new Promise(() => {}) } as Response)
+    const { api } = await import('./client')
+    const pending = api.post('/admin/products', {}).catch(error => error)
+    await vi.advanceTimersByTimeAsync(10000)
+    expect(await pending).toMatchObject({ kind: 'timeout', resultUnknown: true })
+    expect(mocks.show).toHaveBeenCalledTimes(1)
+  })
+  it('honors the 30-second save deadline without losing body timeout coverage', async () => {
+    vi.useFakeTimers()
+    vi.mocked(fetch).mockResolvedValue({ ...response(200, {}), json: () => new Promise(() => {}) } as Response)
+    const { api } = await import('./client')
+    let settled = false
+    const pending = api.put('/admin/products/7', {}, { timeoutMs: 30000 }).catch(error => { settled = true; return error })
+    await vi.advanceTimersByTimeAsync(10000); expect(settled).toBe(false)
+    await vi.advanceTimersByTimeAsync(20000)
+    expect(await pending).toMatchObject({ kind: 'timeout', resultUnknown: true })
+  })
+  it.each(['post', 'put', 'patch', 'delete'] as const)('marks %s network TypeError unknown without replay', async method => {
+    vi.mocked(fetch).mockRejectedValue(new TypeError('Failed to fetch'))
+    const { api } = await import('./client')
+    await expect(api[method]('/admin/products', {})).rejects.toMatchObject({ kind: 'network', resultUnknown: true })
+    expect(fetch).toHaveBeenCalledTimes(1)
+  })
+  it.each([200, 502])('marks invalid JSON with HTTP %s unknown on writes', async status => {
+    vi.mocked(fetch).mockResolvedValue({ ...response(status, null), json: async () => { throw new SyntaxError('bad JSON') } } as unknown as Response)
+    const { api } = await import('./client')
+    await expect(api.post('/admin/products', {})).rejects.toMatchObject({ resultUnknown: true, response: { status } })
+  })
+  it.each([422, 200])('preserves definite business message for HTTP %s', async status => {
+    vi.mocked(fetch).mockResolvedValue(response(status, { status_code: 422, msg: 'SKU编码重复' }) as Response)
+    const { api } = await import('./client')
+    await expect(api.post('/admin/products', {})).rejects.toMatchObject({ message: 'SKU编码重复', resultUnknown: false, response: { status: 422 } })
+  })
+  it('marks JSON 5xx unknown while preserving server message', async () => {
+    vi.mocked(fetch).mockResolvedValue(response(503, { msg: '保存后连接中断' }) as Response)
+    const { api } = await import('./client')
+    await expect(api.put('/admin/products/7', {})).rejects.toMatchObject({ message: '保存后连接中断', resultUnknown: true })
+  })
+  it('keeps GET transport failure read-only and accepts plain JSON', async () => {
+    const { api } = await import('./client')
+    vi.mocked(fetch).mockRejectedValueOnce(new TypeError('offline'))
+    await expect(api.get('/admin/products')).rejects.toMatchObject({ kind: 'network', resultUnknown: false })
+    vi.mocked(fetch).mockResolvedValue(response(200, { id: 7 }) as Response)
+    expect(await api.get('/admin/products/7')).toEqual({ data: { id: 7 } })
+  })
   it.each([
     ['network', () => Promise.reject(new Error('offline'))],
     ['HTTP', () => Promise.resolve(response(403, { msg: 'Forbidden' }))],

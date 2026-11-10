@@ -67,10 +67,5 @@ const loginReasonLabel = (reason?: string) => {
   return translated === key ? normalized : translated
 }
 
-const formatDate = (raw?: string | null) => {
-  if (!raw) return ''
-  const date = new Date(raw)
-  if (Number.isNaN(date.getTime())) return raw
-  return date.toLocaleString()
-}
+import { formatDate } from '@/utils/format'
 </script>

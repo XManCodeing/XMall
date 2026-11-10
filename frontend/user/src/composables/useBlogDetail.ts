@@ -1,3 +1,4 @@
+import { formatDate } from '../utils/format'
 import { ref, onMounted, onUnmounted, computed } from 'vue'
 import { useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
@@ -25,16 +26,6 @@ export function useBlogDetail() {
     if (!jsonData) return ''
     const locale = appStore.locale
     return jsonData[locale] || jsonData['zh-CN'] || jsonData['en-US'] || ''
-  }
-
-  const formatDate = (dateString: string) => {
-    if (!dateString) return ''
-    const date = new Date(dateString)
-    return date.toLocaleDateString(appStore.locale, {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-    })
   }
 
   usePageSeo({

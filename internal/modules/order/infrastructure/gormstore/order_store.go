@@ -13,7 +13,8 @@ import (
 	"time"
 
 	"github.com/XManCodeing/XMall/internal/constants"
-	externalidentitydomain "github.com/XManCodeing/XMall/internal/modules/identity/externalidentity/domain"
+	externalidentitycontract "github.com/XManCodeing/XMall/internal/modules/identity/externalidentity/contract"
+	externalidentitystore "github.com/XManCodeing/XMall/internal/modules/identity/externalidentity/infrastructure/gormstore"
 	userdomain "github.com/XManCodeing/XMall/internal/modules/identity/user/domain"
 	ordercontract "github.com/XManCodeing/XMall/internal/modules/order/contract"
 	orderdomain "github.com/XManCodeing/XMall/internal/modules/order/domain"
@@ -21,12 +22,14 @@ import (
 	delivery "github.com/XManCodeing/XMall/internal/modules/telegram/delivery/contract"
 	"github.com/XManCodeing/XMall/internal/persistence/gormutil"
 
+	"github.com/XManCodeing/XMall/internal/platform/database/dblock"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 )
 
 // Store 是订单与退款记录端口的 GORM 实现。
 type Store struct {
+	membershipOnly        bool
 	db                    *gorm.DB
 	guestCredentialSecret []byte
 	businessEventsEnabled bool
@@ -43,32 +46,15 @@ func (s *Store) LockTelegramIdentity(userID uint, source delivery.Source) error 
 	if userID == 0 || source.ExpectedIdentityID == 0 || source.Validate() != nil {
 		return delivery.ErrIdentityChanged
 	}
-	var identity externalidentitydomain.Identity
-	err := s.db.Clauses(clause.Locking{Strength: "UPDATE"}).
-		Where("provider = ? AND provider_user_id = ?", constants.UserOAuthProviderTelegram, strconv.FormatInt(source.TelegramID, 10)).
-		First(&identity).Error
-	if errors.Is(err, gorm.ErrRecordNotFound) {
-		return delivery.ErrIdentityChanged
-	}
-	if err != nil {
-		return err
-	}
-	if identity.ID != source.ExpectedIdentityID || identity.UserID != userID {
-		return delivery.ErrIdentityChanged
-	}
-	var user userdomain.User
-	err = s.db.Clauses(clause.Locking{Strength: "UPDATE"}).
-		Where("id = ? AND deleted_at IS NULL", userID).First(&user).Error
-	if errors.Is(err, gorm.ErrRecordNotFound) {
-		return delivery.ErrIdentityChanged
-	}
-	if err != nil {
-		return err
-	}
-	if strings.ToLower(strings.TrimSpace(user.Status)) != constants.UserStatusActive {
-		return delivery.ErrIdentityChanged
-	}
-	return nil
+	return s.LockTelegramBinding(userID, externalidentitycontract.TelegramBinding{
+		ID: source.ExpectedIdentityID, TelegramID: source.TelegramID,
+	})
+}
+
+// LockTelegramBinding 复用身份域事务锁，保护无需 Bot 私聊来源的网站购买。
+// userID 和 binding 必须来自服务端预检；返回身份变化或数据库错误。
+func (s *Store) LockTelegramBinding(userID uint, binding externalidentitycontract.TelegramBinding) error {
+	return externalidentitystore.New(s.db).LockTelegramBinding(userID, binding)
 }
 
 const guestCredentialHashPrefix = "hmac-sha256:"
@@ -241,10 +227,29 @@ func guestCredentialBackfillCandidateSQL(dialect string) (string, []interface{})
 	}
 }
 
+// MembershipOnly 返回仅按不可变订单项快照筛选的只读视图，包含父单及会员子单。
+func (r *Store) MembershipOnly() *Store {
+	clone := *r
+	clone.membershipOnly = true
+	return &clone
+}
+
+// membershipOrderPredicate 只读取不可变快照，覆盖订单自身及其存活会员子单。
+// 普通列表取反、会员列表正向使用同一谓词，避免父单预加载泄露会员项。
+const membershipOrderPredicate = "EXISTS (SELECT 1 FROM order_items mi JOIN telegram_membership_order_item_snapshots ms ON ms.order_item_id = mi.id JOIN orders mo ON mo.id = mi.order_id WHERE mi.deleted_at IS NULL AND mo.deleted_at IS NULL AND (mo.id = orders.id OR mo.parent_id = orders.id))"
+
+// membershipOrderScope 对 query 应用会员快照范围，返回筛选后的查询，不依赖商品当前配置。
+func membershipOrderScope(query *gorm.DB) *gorm.DB {
+	return query.Where(membershipOrderPredicate)
+}
+
 // GetByID 根据 ID 获取订单
 func (r *Store) GetByID(id uint) (*orderdomain.Order, error) {
 	var order orderdomain.Order
 	query := r.withChildren(r.db)
+	if r.membershipOnly {
+		query = membershipOrderScope(query)
+	}
 	if err := query.First(&order, id).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, nil
@@ -490,13 +495,26 @@ func (r *Store) ListChildren(parentID uint) ([]orderdomain.Order, error) {
 	return orders, nil
 }
 
-// ListAdmin 管理端订单列表
+// ListAdmin 按 filter 筛选、排序和分页，返回订单及筛选后的总数、查询错误。
+// 两类后台列表均只展示付款根订单，子单仍由详情加载。
 func (r *Store) ListAdmin(filter ordercontract.ListFilter) ([]orderdomain.Order, int64, error) {
 	var orders []orderdomain.Order
 	query := r.db.Model(&orderdomain.Order{}).Where("orders.deleted_at IS NULL AND parent_id IS NULL")
+	if filter.MembershipStateFiltered {
+		query = query.Where("EXISTS (SELECT 1 FROM order_items fi JOIN orders fo ON fo.id = fi.order_id WHERE fi.deleted_at IS NULL AND fo.deleted_at IS NULL AND (fo.id = orders.id OR fo.parent_id = orders.id) AND fi.id IN ?)", filter.MembershipItemIDs)
+	}
+	if r.membershipOnly {
+		query = membershipOrderScope(query)
+	} else {
+		query = query.Where("NOT " + membershipOrderPredicate)
+	}
 
 	if filter.UserID != 0 {
 		query = query.Where("user_id = ?", filter.UserID)
+	}
+	if r.membershipOnly && strings.TrimSpace(filter.UserKeyword) != "" {
+		query = membershipIdentitySearch(query, filter.UserKeyword)
+		filter.UserKeyword = ""
 	}
 	if keyword := strings.TrimSpace(filter.UserKeyword); keyword != "" {
 		like := "%" + keyword + "%"
@@ -536,7 +554,7 @@ func (r *Store) ListAdmin(filter ordercontract.ListFilter) ([]orderdomain.Order,
 			args1 := gormutil.RepeatLikeArgs(like, argCount1)
 			args2 := gormutil.RepeatLikeArgs(like, argCount2)
 			query = query.Where(
-				"id IN (SELECT DISTINCT oi.order_id FROM order_items oi WHERE oi.deleted_at IS NULL AND oi.order_id IN (SELECT o2.id FROM orders o2 WHERE o2.deleted_at IS NULL AND o2.parent_id IS NULL) AND ("+cond1+")) "+
+				"id IN (SELECT DISTINCT oi.order_id FROM order_items oi WHERE oi.deleted_at IS NULL AND ("+cond1+")) "+
 					"OR id IN (SELECT DISTINCT o3.parent_id FROM orders o3 WHERE o3.deleted_at IS NULL AND o3.parent_id IS NOT NULL AND o3.id IN (SELECT DISTINCT oi2.order_id FROM order_items oi2 WHERE oi2.deleted_at IS NULL AND "+cond2+"))",
 				append(args1, args2...)...,
 			)
@@ -562,6 +580,19 @@ func (r *Store) ListAdmin(filter ordercontract.ListFilter) ([]orderdomain.Order,
 		return nil, 0, err
 	}
 	return orders, total, nil
+}
+
+// membershipIdentitySearch filters before COUNT/LIMIT by immutable beneficiary identity.
+// Numeric IDs preserve history; usernames resolve Telegram identity, never the purchaser binding.
+func membershipIdentitySearch(query *gorm.DB, input string) *gorm.DB {
+	keyword := strings.TrimPrefix(strings.TrimSpace(input), "@")
+	condition := dblock.TextCast(query, "ms.beneficiary_telegram_id") + " IN (SELECT provider_user_id FROM user_oauth_identities WHERE provider = ? AND LOWER(username) = ?)"
+	args := []any{"telegram", strings.ToLower(keyword)}
+	if identity, err := strconv.ParseInt(keyword, 10, 64); err == nil && identity > 0 {
+		condition = "ms.beneficiary_telegram_id = ?"
+		args = []any{identity}
+	}
+	return query.Where("EXISTS (SELECT 1 FROM telegram_membership_order_item_snapshots ms JOIN order_items mi ON mi.id = ms.order_item_id AND mi.deleted_at IS NULL JOIN orders mo ON mo.id = mi.order_id AND mo.deleted_at IS NULL WHERE (mo.id = orders.id OR mo.parent_id = orders.id) AND "+condition+")", args...)
 }
 
 // resolveAdminOrderSort 解析排序参数，返回安全的 ORDER BY 子句。
@@ -921,8 +952,12 @@ func (r *Store) GetByIDForUpdateWithChildren(id uint) (*orderdomain.Order, error
 	err := r.db.Clauses(clause.Locking{Strength: "UPDATE"}).
 		Where("orders.deleted_at IS NULL").
 		Preload("Items", "deleted_at IS NULL").
-		Preload("Children", "deleted_at IS NULL").
+		Preload("Fulfillment").
+		Preload("Children", func(query *gorm.DB) *gorm.DB {
+			return query.Clauses(clause.Locking{Strength: "UPDATE"}).Where("deleted_at IS NULL").Order("id")
+		}).
 		Preload("Children.Items", "deleted_at IS NULL").
+		Preload("Children.Fulfillment").
 		First(&order, id).Error
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {

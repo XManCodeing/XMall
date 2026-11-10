@@ -1,6 +1,32 @@
 package contract
 
-import "context"
+import (
+	"context"
+	"time"
+)
+
+// PublicReplyRef identifies one exact persisted public shop response.
+type PublicReplyRef struct {
+	BotID      uint      `json:"bot_id"`
+	TelegramID int64     `json:"telegram_id"`
+	Generation string    `json:"generation"`
+	ExpiresAt  time.Time `json:"expires_at"`
+}
+
+// PublicReplyAuthorizer validates persisted content at enqueue, dequeue and send.
+type PublicReplyAuthorizer interface {
+	AuthorizePublicReply(context.Context, uint, Message) error
+}
+
+// ConfirmedPanelCleanup binds cleanup to a successful panel replacement receipt.
+type ConfirmedPanelCleanup struct {
+	SourceDeliveryID uint `json:"source_delivery_id"`
+}
+
+// PanelCleanupStore proves replacement and previous physical panel receipts.
+type PanelCleanupStore interface {
+	AuthorizePanelCleanup(context.Context, uint, int64, int64, ConfirmedPanelCleanup) error
+}
 
 // API decouples the runtime from the HTTP implementation and the test server.
 type API interface {
@@ -31,19 +57,6 @@ type BotIdentity struct {
 	ID       int64
 	Username string
 }
-type Update struct {
-	ID           int64  `json:"id"`
-	UserID       int64  `json:"user_id"`
-	ChatID       int64  `json:"chat_id"`
-	Private      bool   `json:"private"`
-	Text         string `json:"text"`
-	MessageID    int64  `json:"message_id,omitempty"`
-	MessageKind  string `json:"message_kind,omitempty"`
-	CallbackID   string `json:"callback_id,omitempty"`
-	CallbackData string `json:"callback_data,omitempty"`
-	Locale       string `json:"locale,omitempty"`
-	Username     string `json:"username,omitempty"`
-}
 type Button struct {
 	Text string `json:"text"`
 	Data string `json:"data,omitempty"`
@@ -52,24 +65,37 @@ type Button struct {
 	Style string `json:"style,omitempty"`
 }
 type Message struct {
-	Operation       string     `json:"operation,omitempty"`
-	Purpose         string     `json:"purpose,omitempty"`
-	TargetMessageID int64      `json:"target_message_id,omitempty"`
-	TargetKind      string     `json:"target_kind,omitempty"`
-	PanelRevision   uint64     `json:"panel_revision,omitempty"`
-	PanelEpoch      string     `json:"panel_epoch,omitempty"`
-	ParseMode       string     `json:"parse_mode,omitempty"`
-	FileID          string     `json:"file_id,omitempty"`
-	MediaName       string     `json:"media_name,omitempty"`
-	ForceDocument   bool       `json:"force_document,omitempty"`
-	ReplacePanel    bool       `json:"replace_panel,omitempty"`
-	OwnerUserID     uint       `json:"owner_user_id,omitempty"`
-	IdentityStamp   string     `json:"identity_stamp,omitempty"`
-	ChatID          int64      `json:"chat_id"`
-	Text            string     `json:"text"`
-	Buttons         [][]Button `json:"buttons,omitempty"`
-	Photo           []byte     `json:"photo,omitempty"`
-	PhotoURL        string     `json:"photo_url,omitempty"`
+	JoinAbuseDelivery *JoinAbuseDeliveryRef  `json:"join_abuse_delivery,omitempty"`
+	ProactiveDelivery *ProactiveDeliveryRef  `json:"proactive_delivery,omitempty"`
+	PanelCleanup      *ConfirmedPanelCleanup `json:"panel_cleanup,omitempty"`
+	// PublicReply is an exact, persisted shop reply capability, never an owner bypass.
+	PublicReply      *PublicReplyRef      `json:"public_reply,omitempty"`
+	ReminderDelivery *ReminderDeliveryRef `json:"reminder_delivery,omitempty"`
+	InviteDelivery   *InviteDeliveryRef   `json:"invite_delivery,omitempty"`
+	// Transfer is an encrypted support-only envelope; never mix with legacy content.
+	Transfer        *TransferRequest `json:"transfer,omitempty"`
+	TargetType      TargetType       `json:"target_type,omitempty"`
+	BusinessRef     string           `json:"business_ref,omitempty"`
+	RouteVersion    uint64           `json:"route_version,omitempty"`
+	ThreadID        int64            `json:"thread_id,omitempty"`
+	Operation       string           `json:"operation,omitempty"`
+	Purpose         string           `json:"purpose,omitempty"`
+	TargetMessageID int64            `json:"target_message_id,omitempty"`
+	TargetKind      string           `json:"target_kind,omitempty"`
+	PanelRevision   uint64           `json:"panel_revision,omitempty"`
+	PanelEpoch      string           `json:"panel_epoch,omitempty"`
+	ParseMode       string           `json:"parse_mode,omitempty"`
+	FileID          string           `json:"file_id,omitempty"`
+	MediaName       string           `json:"media_name,omitempty"`
+	ForceDocument   bool             `json:"force_document,omitempty"`
+	ReplacePanel    bool             `json:"replace_panel,omitempty"`
+	OwnerUserID     uint             `json:"owner_user_id,omitempty"`
+	IdentityStamp   string           `json:"identity_stamp,omitempty"`
+	ChatID          int64            `json:"chat_id"`
+	Text            string           `json:"text"`
+	Buttons         [][]Button       `json:"buttons,omitempty"`
+	Photo           []byte           `json:"photo,omitempty"`
+	PhotoURL        string           `json:"photo_url,omitempty"`
 }
 type DeliveryResult struct {
 	MessageID   int64

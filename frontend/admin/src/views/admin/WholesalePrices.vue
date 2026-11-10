@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from 'vue'
-import { useDebounceFn } from '@vueuse/core'
 import { useI18n } from 'vue-i18n'
 import { BadgePercent, CircleHelp, Search } from 'lucide-vue-next'
 import { adminAPI } from '@/api/admin'
@@ -255,23 +254,19 @@ const fetchProducts = async (options: ListFetchOptions = {}) => {
   }
 }
 
-const handleSearch = () => {
+/** 按当前筛选查询第一页，加载期间忽略重复操作。@returns 查询完成。 */
+const handleSearch = async (): Promise<void> => {
+  if (loading.value) return
   pagination.page = 1
-  fetchProducts()
+  await fetchProducts()
 }
 
-const debouncedSearch = useDebounceFn(handleSearch, 300)
-
-const handleStatusChange = () => {
-  pagination.page = 1
-  fetchProducts()
-}
-
-const resetFilters = () => {
+/** 恢复全部筛选默认值并保留分页尺寸。@returns 查询完成。 */
+const resetFilters = async (): Promise<void> => {
+  if (loading.value) return
   searchQuery.value = ''
   wholesaleStatus.value = 'all'
-  pagination.page = 1
-  fetchProducts({ preserveRows: true })
+  await handleSearch()
 }
 
 const changePage = (page: number) => {
@@ -345,12 +340,11 @@ onMounted(async () => {
             v-model="searchQuery"
             class="pl-9"
             :placeholder="t('admin.wholesalePrices.searchPlaceholder')"
-            @input="debouncedSearch"
             @keyup.enter="handleSearch"
           />
         </div>
         <div class="w-full lg:w-56">
-          <Select v-model="wholesaleStatus" @update:modelValue="handleStatusChange">
+          <Select v-model="wholesaleStatus">
             <SelectTrigger class="h-9 w-full">
               <SelectValue :placeholder="t('admin.wholesalePrices.statusFilter')" />
             </SelectTrigger>
@@ -361,7 +355,8 @@ onMounted(async () => {
             </SelectContent>
           </Select>
         </div>
-        <Button variant="outline" size="sm" class="h-9 w-full sm:w-auto" @click="resetFilters">
+        <Button variant="outline" size="sm" class="h-9 w-full sm:w-auto" :disabled="loading" @click="handleSearch">{{ t('admin.common.search') }}</Button>
+        <Button variant="outline" size="sm" class="h-9 w-full sm:w-auto" :disabled="loading" @click="resetFilters">
           {{ t('admin.common.reset') }}
         </Button>
       </div>
@@ -453,7 +448,7 @@ onMounted(async () => {
       />
     </div>
 
-    <Dialog v-model:open="showModal">
+    <Dialog scope="page" v-model:open="showModal">
       <DialogScrollContent class="max-w-2xl">
         <DialogHeader>
           <DialogTitle>{{ t('admin.wholesalePrices.modal.title') }}</DialogTitle>

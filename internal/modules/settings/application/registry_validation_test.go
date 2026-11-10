@@ -8,6 +8,20 @@ import (
 	"github.com/XManCodeing/XMall/internal/shared/jsonmap"
 )
 
+// TestRegistrationPatchStrictDTO checks explicit booleans and rejects ambiguous input.
+func TestRegistrationPatchStrictDTO(t *testing.T) {
+	for _, raw := range []string{`{}`, `{"Enabled":true}`, `{"enabled":false,"enabled":true}`, `null`, `{"enabled":null}`, `{"enabled":"true"}`, `{"enabled":1}`, `{"enabled":true,"other":1}`, `{"enabled":true} {}`} {
+		if _, err := decodeTelegramBotRegistrationPatch([]byte(raw)); err == nil {
+			t.Errorf("invalid patch accepted: %s", raw)
+		}
+	}
+	for _, raw := range []string{`{"enabled":true}`, `{"enabled":false}`} {
+		if _, err := decodeTelegramBotRegistrationPatch([]byte(raw)); err != nil {
+			t.Errorf("valid patch rejected: %s: %v", raw, err)
+		}
+	}
+}
+
 func TestRegistryNormalizesRegisteredKeysAndPassesUnknownValuesThrough(t *testing.T) {
 	registry, err := NewRegistry(
 		Definition{

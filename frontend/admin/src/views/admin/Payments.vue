@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { onMounted, reactive, ref, watch, computed } from 'vue'
-import { useDebounceFn } from '@vueuse/core'
 import { useRoute } from 'vue-router'
 import { notifyErrorOnce, notifySuccess } from '@/utils/notify'
 import { useI18n } from 'vue-i18n'
@@ -100,9 +99,9 @@ const availableChannelTypes = computed(() => {
     .map(type => ({ value: type, label: channelTypeLabel(type) }))
 })
 
-const handleProviderTypeChange = () => {
+/** 切换提供方时清空不再适用的渠道，等待手动搜索。@returns void */
+const handleProviderTypeChange = (): void => {
   filters.channelType = '__all__'
-  handleSearch()
 }
 
 const fetchPayments = async (page = 1, options: ListFetchOptions = {}) => {
@@ -129,10 +128,18 @@ const fetchPayments = async (page = 1, options: ListFetchOptions = {}) => {
   }
 }
 
-const handleSearch = () => {
-  fetchPayments(1)
+/** 按当前筛选查询第一页，加载期间忽略重复操作。@returns 查询完成。 */
+const handleSearch = async (): Promise<void> => {
+  if (loading.value || refreshing.value) return
+  pagination.value.page = 1
+  await fetchPayments(1)
 }
-const debouncedSearch = useDebounceFn(handleSearch, 300)
+/** 恢复全部筛选默认值，保留路由用户上下文及分页尺寸。@returns 查询完成。 */
+const resetFilters = async (): Promise<void> => {
+  if (loading.value || refreshing.value) return
+  Object.assign(filters, { userId: String(route.query.user_id || ''), orderId: '', channelId: '', channelType: '__all__', providerType: '__all__', createdFrom: '', createdTo: '', status: '__all__' })
+  await handleSearch()
+}
 
 const refresh = () => {
   refreshList(() => fetchPayments(pagination.value.page, { preserveRows: true }))
@@ -171,7 +178,7 @@ const handleExport = async () => {
     const blob = new Blob([response.data], { type: 'text/csv;charset=utf-8' })
     const url = URL.createObjectURL(blob)
     const link = document.createElement('a')
-    const timestamp = new Date().toISOString().replace(/[:.]/g, '-')
+    const timestamp = formatDate(new Date()).replace(/[ :]/g, '-')
     link.href = url
     link.download = `payments_${timestamp}.csv`
     document.body.appendChild(link)
@@ -372,13 +379,13 @@ watch(
     <div class="rounded-xl border border-border bg-card p-4 shadow-sm">
       <div class="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
         <div class="w-full md:w-32">
-          <Input v-model="filters.userId" :placeholder="t('admin.payments.filterUserId')" @update:modelValue="debouncedSearch" />
+          <Input v-model="filters.userId" :placeholder="t('admin.payments.filterUserId')" @keydown.enter="handleSearch" />
         </div>
         <div class="w-full md:w-48">
-          <Input v-model="filters.orderId" :placeholder="t('admin.payments.filterOrderId')" @update:modelValue="debouncedSearch" />
+          <Input v-model="filters.orderId" :placeholder="t('admin.payments.filterOrderId')" @keydown.enter="handleSearch" />
         </div>
         <div class="w-full md:w-48">
-          <Input v-model="filters.channelId" :placeholder="t('admin.payments.filterChannelId')" @update:modelValue="debouncedSearch" />
+          <Input v-model="filters.channelId" :placeholder="t('admin.payments.filterChannelId')" @keydown.enter="handleSearch" />
         </div>
         <div class="w-full md:w-40">
           <Select v-model="filters.providerType" @update:modelValue="handleProviderTypeChange">
@@ -394,7 +401,7 @@ watch(
           </Select>
         </div>
         <div class="w-full md:w-40">
-          <Select v-model="filters.channelType" @update:modelValue="handleSearch">
+          <Select v-model="filters.channelType" @keydown.enter="handleSearch">
             <SelectTrigger class="h-9 w-full">
               <SelectValue placeholder="全部支付方式" />
             </SelectTrigger>
@@ -413,7 +420,7 @@ watch(
             type="datetime-local"
             class="h-9 w-full md:w-auto"
             :placeholder="t('admin.payments.filterCreatedFrom')"
-            @update:modelValue="handleSearch"
+            @keydown.enter="handleSearch"
           />
           <span class="hidden text-muted-foreground md:inline">-</span>
           <Input
@@ -421,11 +428,11 @@ watch(
             type="datetime-local"
             class="h-9 w-full md:w-auto"
             :placeholder="t('admin.payments.filterCreatedTo')"
-            @update:modelValue="handleSearch"
+            @keydown.enter="handleSearch"
           />
         </div>
         <div class="w-full md:w-40">
-          <Select v-model="filters.status" @update:modelValue="handleSearch">
+          <Select v-model="filters.status" @keydown.enter="handleSearch">
             <SelectTrigger class="h-9 w-full">
             <SelectValue :placeholder="t('admin.payments.filterStatusAll')" />
           </SelectTrigger>
@@ -440,7 +447,9 @@ watch(
           </Select>
         </div>
         <div class="hidden flex-1 sm:block"></div>
-        <Button size="sm" variant="outline" class="w-full sm:w-auto" :disabled="refreshing" @click="refresh">{{ t('admin.common.refresh') }}</Button>
+        <Button size="sm" variant="outline" :disabled="loading || refreshing" @click="handleSearch">{{ t('admin.common.search') }}</Button>
+        <Button size="sm" variant="outline" :disabled="loading || refreshing" @click="resetFilters">{{ t('admin.common.reset') }}</Button>
+        <Button size="sm" variant="outline" class="w-full sm:w-auto" :disabled="loading || refreshing" @click="refresh">{{ t('admin.common.refresh') }}</Button>
         <Button size="sm" :disabled="exporting" @click="handleExport">
           {{ exporting ? t('admin.payments.exporting') : t('admin.payments.export') }}
         </Button>
@@ -529,7 +538,7 @@ watch(
         </TableBody>
       </Table>
 
-      <ListPagination
+      <ListPagination :loading="loading || refreshing"
         :page="pagination.page"
         :total-page="pagination.total_page"
         :total="pagination.total"

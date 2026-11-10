@@ -3,6 +3,7 @@ package gormstore
 import (
 	"context"
 	"errors"
+	"strconv"
 	"strings"
 	"time"
 
@@ -218,6 +219,29 @@ func (t *transaction) DeleteIdentityByID(identityID uint) error {
 		return nil
 	}
 	return t.db.Delete(&externalidentitydomain.Identity{}, identityID).Error
+}
+
+// TrustedTelegramHistoryBotIDs reads only server-persisted private-chat
+// provenance. A contact must still belong to B; an order source is immutable
+// evidence even if a later contact update replaced its owner. Missing tables or
+// query failures abort the transfer rather than dropping or broadening scopes.
+func (t *transaction) TrustedTelegramHistoryBotIDs(previousUserID uint, telegramUserID string) ([]uint, error) {
+	tg, err := strconv.ParseInt(telegramUserID, 10, 64)
+	if err != nil || tg <= 0 || strconv.FormatInt(tg, 10) != telegramUserID || previousUserID == 0 {
+		return nil, userauthapp.ErrUserOAuthIdentityExists
+	}
+	var ids []uint
+	err = t.db.Raw(`SELECT DISTINCT provenance.bot_id FROM (
+		SELECT bot_id FROM telegram_bot_contacts
+		WHERE user_id = ? AND telegram_user_id = ? AND chat_id = ?
+		UNION
+		SELECT bot_id FROM telegram_order_sources
+		WHERE user_id = ? AND telegram_id = ? AND private_chat_id = ?
+	) AS provenance
+	JOIN telegram_bot_instances AS bot ON bot.id = provenance.bot_id
+	WHERE provenance.bot_id > 0 AND bot.mode = ?
+	ORDER BY provenance.bot_id`, previousUserID, tg, tg, previousUserID, tg, tg, "internal").Scan(&ids).Error
+	return ids, err
 }
 
 func (t *transaction) CreateTelegramHistoryGrant(grant *userauthdomain.TelegramHistoryGrant) error {

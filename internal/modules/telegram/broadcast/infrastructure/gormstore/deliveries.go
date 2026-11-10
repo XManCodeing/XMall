@@ -20,6 +20,9 @@ func (s *Store) RetryBroadcastDelivery(ctx context.Context, bot, broadcast, deli
 		return app.ErrInvalid
 	}
 	return s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		if err := s.guardRecovery(tx, bot); err != nil {
+			return err
+		}
 		var job b.Broadcast
 		err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).Where("id = ? AND bot_id = ? AND deleted_at IS NULL", broadcast, bot).First(&job).Error
 		if errors.Is(err, gorm.ErrRecordNotFound) {

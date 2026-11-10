@@ -2,16 +2,20 @@ package settingsapp
 
 import (
 	"github.com/XManCodeing/XMall/internal/config"
+	"github.com/XManCodeing/XMall/internal/constants"
 	settingscontract "github.com/XManCodeing/XMall/internal/modules/settings/contract"
+	settingsmessaging "github.com/XManCodeing/XMall/internal/modules/settings/schema/messaging"
 	"github.com/XManCodeing/XMall/internal/shared/jsonmap"
 )
 
 // Service 是站点设置的核心用例入口：读写、Registry 归一化与声明式副作用。
 type Service struct {
-	repo                  settingscontract.Store
-	registry              Registry
-	defaultOrderConfig    config.OrderConfig
-	hasDefaultOrderConfig bool
+	repo                        settingscontract.Store
+	registry                    Registry
+	defaultOrderConfig          config.OrderConfig
+	hasDefaultOrderConfig       bool
+	defaultNotificationEmail    config.EmailConfig
+	defaultNotificationTelegram config.TelegramAuthConfig
 }
 
 // UpdateResult 包含持久化后的设置值及其声明式外部影响。
@@ -75,6 +79,13 @@ func (s *Service) UpdateWithEffects(key string, value map[string]interface{}) (U
 	normalized := s.registry.Normalize(key, jsonmap.JSON(value))
 	if err := s.registry.Validate(key, normalized); err != nil {
 		return UpdateResult{}, err
+	}
+
+	if key == constants.SettingKeyNotificationCenterConfig {
+		setting := settingsmessaging.DecodeNotificationCenterSetting(normalized, settingsmessaging.NotificationCenterDefaultSetting())
+		if err := s.validateNotificationPrerequisites(setting); err != nil {
+			return UpdateResult{}, err
+		}
 	}
 
 	stored, err := s.repo.Upsert(key, normalized)

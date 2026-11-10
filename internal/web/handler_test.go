@@ -2,14 +2,88 @@ package web
 
 import (
 	"io"
+	"io/fs"
 	"net/http"
 	"net/http/httptest"
+	"regexp"
 	"strings"
 	"testing"
 	"testing/fstest"
 
 	"github.com/gin-gonic/gin"
 )
+
+// TestFullstackBuiltAssets exercises the actual embedded bundles, not synthetic fixtures.
+// t reports missing assets, broken runtime admin bases or reserved-path fallbacks.
+// Non-fullstack runs explicitly skip because they contain no production SPA bundle.
+func TestFullstackBuiltAssets(t *testing.T) {
+	if !Enabled() {
+		t.Skip("fullstack assets are not embedded in this test binary")
+	}
+	gin.SetMode(gin.TestMode)
+	for _, prefix := range []string{"/admin", "/ops/private-console"} {
+		t.Run(prefix, func(t *testing.T) {
+			router := gin.New()
+			if err := RegisterAdmin(router, prefix, AdminFS()); err != nil {
+				t.Fatal(err)
+			}
+			if err := RegisterUser(router, UserFS()); err != nil {
+				t.Fatal(err)
+			}
+			adminIndex := assertBuiltIndex(t, router, prefix+"/telegram/recovery")
+			if !strings.Contains(adminIndex, `<base href="`+prefix+`/">`) || strings.Contains(adminIndex, adminBasePlaceholder) {
+				t.Fatal("built admin entry has an unresolved or incorrect runtime base")
+			}
+			assertBuiltAssetReferences(t, router, AdminFS(), adminIndex, prefix)
+			userIndex := assertBuiltIndex(t, router, "/products/synthetic-membership")
+			assertBuiltAssetReferences(t, router, UserFS(), userIndex, "")
+			for _, reserved := range []string{"/api/b8-missing", "/uploads/b8-missing", "/health/b8-missing"} {
+				response := httptest.NewRecorder()
+				router.ServeHTTP(response, httptest.NewRequest(http.MethodGet, reserved, nil))
+				if response.Code != http.StatusNotFound {
+					t.Fatalf("reserved path %s returned %d", reserved, response.Code)
+				}
+			}
+		})
+	}
+}
+
+// assertBuiltIndex requests path from router and returns its non-cacheable HTML.
+// t fails immediately if a real embedded SPA cannot serve a deep history route.
+func assertBuiltIndex(t *testing.T, router http.Handler, path string) string {
+	t.Helper()
+	response := httptest.NewRecorder()
+	router.ServeHTTP(response, httptest.NewRequest(http.MethodGet, path, nil))
+	if response.Code != http.StatusOK || response.Header().Get("Cache-Control") != indexCacheControl || !strings.HasPrefix(response.Header().Get("Content-Type"), "text/html") {
+		t.Fatalf("built entry %s: status=%d headers=%v", path, response.Code, response.Header())
+	}
+	return response.Body.String()
+}
+
+// assertBuiltAssetReferences checks every local script/style entry against its embedded FS.
+// t reports failures; router serves the real bundle at prefix. No network or config is used.
+func assertBuiltAssetReferences(t *testing.T, router http.Handler, bundle fs.FS, index, prefix string) {
+	t.Helper()
+	references := regexp.MustCompile(`(?:src|href)="((?:\./|/)?assets/[^"\s]+)"`).FindAllStringSubmatch(index, -1)
+	if len(references) == 0 {
+		t.Fatal("built entry contains no local asset references")
+	}
+	for _, reference := range references {
+		asset := strings.TrimPrefix(strings.TrimPrefix(reference[1], "./"), "/")
+		if prefix != "" && !strings.HasPrefix(reference[1], "./") {
+			t.Fatalf("admin asset bypasses runtime base: %s", reference[1])
+		}
+		expected, err := fs.ReadFile(bundle, asset)
+		if err != nil {
+			t.Fatalf("embedded asset %s: %v", asset, err)
+		}
+		response := httptest.NewRecorder()
+		router.ServeHTTP(response, httptest.NewRequest(http.MethodGet, prefix+"/"+asset, nil))
+		if response.Code != http.StatusOK || response.Header().Get("Cache-Control") != hashedAssetCacheControl || response.Body.String() != string(expected) {
+			t.Fatalf("embedded asset %s was not served intact with immutable cache", asset)
+		}
+	}
+}
 
 func TestValidateAdminPath(t *testing.T) {
 	cases := []struct {

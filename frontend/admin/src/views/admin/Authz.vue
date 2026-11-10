@@ -20,7 +20,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { notifyError, notifyErrorOnce, notifySuccess } from '@/utils/notify'
 import { confirmAction } from '@/utils/confirm'
 
-const { locale } = useI18n()
+const { locale, t } = useI18n()
 
 const textMap = {
   'zh-CN': {
@@ -328,16 +328,7 @@ const formatText = (template: string, payload: Record<string, string | number>) 
   return template.replace(/\{(\w+)\}/g, (_, key: string) => String(payload[key] ?? ''))
 }
 
-const formatDateTime = (value?: string) => {
-  if (!value) {
-    return text.value.unknown
-  }
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) {
-    return value
-  }
-  return date.toLocaleString()
-}
+import { formatDate as formatDateTime } from '@/utils/format'
 
 const loadingRoles = ref(false)
 const loadingPolicies = ref(false)
@@ -360,6 +351,8 @@ const authStore = useAdminAuthStore()
 const selectedAdminId = ref<number>(0)
 const selectedAdminRoles = ref<string[]>([])
 const adminKeyword = ref('')
+const appliedAdminKeyword = ref('')
+const appliedCatalogKeyword = ref('')
 
 const adminFormMode = ref<'create' | 'edit'>('create')
 const adminForm = reactive({
@@ -386,7 +379,7 @@ const adminFormTitle = computed(() => (adminFormMode.value === 'create' ? text.v
 const adminSubmitLabel = computed(() => (adminFormMode.value === 'create' ? text.value.adminSubmitCreate : text.value.adminSubmitUpdate))
 
 const filteredAdmins = computed(() => {
-  const keyword = adminKeyword.value.trim().toLowerCase()
+  const keyword = appliedAdminKeyword.value.trim().toLowerCase()
   if (!keyword) {
     return admins.value
   }
@@ -397,7 +390,7 @@ const filteredAdmins = computed(() => {
 })
 
 const filteredCatalog = computed(() => {
-  const keyword = catalogKeyword.value.trim().toLowerCase()
+  const keyword = appliedCatalogKeyword.value.trim().toLowerCase()
   if (!keyword) {
     return permissionCatalog.value
   }
@@ -839,9 +832,31 @@ watch(selectedAdminId, () => {
   fetchSelectedAdminRoles()
 })
 
-watch(catalogKeyword, () => {
+/** 手动应用管理员关键词并重新读取列表。@returns 查询完成。 */
+const searchAdmins = async (): Promise<void> => {
+  if (loadingAdmins.value) return
+  appliedAdminKeyword.value = adminKeyword.value
+  await fetchAdmins()
+}
+/** 清空管理员查询，不修改已选管理员和角色。@returns 查询完成。 */
+const resetAdminFilters = async (): Promise<void> => {
+  if (loadingAdmins.value) return
+  adminKeyword.value = ''
+  await searchAdmins()
+}
+/** 手动应用权限目录关键词。@returns 查询完成。 */
+const searchCatalog = async (): Promise<void> => {
+  if (loadingCatalog.value) return
+  appliedCatalogKeyword.value = catalogKeyword.value
+  await fetchPermissionCatalog()
   expandAllModules()
-})
+}
+/** 清空目录关键词，不修改授权状态。@returns 查询完成。 */
+const resetCatalogFilters = async (): Promise<void> => {
+  if (loadingCatalog.value) return
+  catalogKeyword.value = ''
+  await searchCatalog()
+}
 
 onMounted(async () => {
   await Promise.all([fetchRoles(), fetchAdmins(), fetchPermissionCatalog()])
@@ -869,7 +884,11 @@ onMounted(async () => {
 
       <div class="grid grid-cols-1 xl:grid-cols-[1fr_360px] gap-4">
         <div class="min-w-0 space-y-3">
-          <Input v-model="adminKeyword" :placeholder="text.adminSearchPlaceholder" class="h-9" />
+          <div class="flex items-center gap-2">
+            <Input v-model="adminKeyword" :placeholder="text.adminSearchPlaceholder" class="h-9" @keydown.enter="searchAdmins" />
+            <Button size="sm" variant="outline" :disabled="loadingAdmins" @click="searchAdmins">{{ t('admin.common.search') }}</Button>
+            <Button size="sm" variant="outline" :disabled="loadingAdmins" @click="resetAdminFilters">{{ t('admin.common.reset') }}</Button>
+          </div>
           <div class="rounded-lg border border-border overflow-x-auto">
             <Table class="min-w-[900px]">
               <TableHeader class="border-b border-border bg-muted/40 text-xs uppercase text-muted-foreground">
@@ -915,8 +934,8 @@ onMounted(async () => {
                   <TableCell class="min-w-[140px] px-4 py-3 text-xs text-muted-foreground">{{ formatDateTime(item.last_login_at) }}</TableCell>
                   <TableCell class="min-w-[160px] px-4 py-3">
                     <div class="flex flex-wrap items-center justify-end gap-2">
-                      <Button size="sm" variant="outline" @click="pickAdminForRoles(item)">
-                        {{ selectedAdminId === item.id ? text.adminRoleTargetSelected : text.adminSelectRoleTarget }}
+                      <Button size="sm" variant="outline" @click="pickAdminForRoles(item)" :title="selectedAdminId === item.id ? text.adminRoleTargetSelected : text.adminSelectRoleTarget" :aria-label="selectedAdminId === item.id ? text.adminRoleTargetSelected : text.adminSelectRoleTarget" :aria-pressed="selectedAdminId === item.id">
+                        {{ t('tableAction.roles') }}
                       </Button>
                       <Button size="sm" variant="outline" @click="openAdminEditForm(item)">
                         {{ text.edit }}
@@ -926,8 +945,10 @@ onMounted(async () => {
                         size="sm"
                         variant="outline"
                         @click="resetAdmin2FA(item)"
+                        :title="text.adminTotpReset"
+                        :aria-label="text.adminTotpReset"
                       >
-                        {{ text.adminTotpReset }}
+                        {{ t('admin.common.reset') }}
                       </Button>
                       <Button size="sm" variant="outline" class="text-destructive" @click="handleDeleteAdmin(item)">
                         {{ text.delete }}
@@ -1038,8 +1059,10 @@ onMounted(async () => {
               </div>
               <div class="text-xs text-muted-foreground">{{ filteredCatalog.length }}/{{ permissionCatalog.length }}</div>
             </div>
-            <div class="grid grid-cols-1 md:grid-cols-[1fr_auto_auto] gap-2">
-              <Input v-model="catalogKeyword" :placeholder="text.catalogSearch" class="h-9" />
+            <div class="flex flex-wrap items-center gap-2">
+              <Input v-model="catalogKeyword" :placeholder="text.catalogSearch" class="h-9 flex-1" @keydown.enter="searchCatalog" />
+              <Button size="sm" variant="outline" :disabled="loadingCatalog" @click="searchCatalog">{{ t('admin.common.search') }}</Button>
+              <Button size="sm" variant="outline" :disabled="loadingCatalog" @click="resetCatalogFilters">{{ t('admin.common.reset') }}</Button>
               <Button size="sm" variant="outline" @click="expandAllModules">{{ text.catalogExpandAll }}</Button>
               <Button size="sm" variant="outline" @click="collapseAllModules">{{ text.catalogCollapseAll }}</Button>
             </div>

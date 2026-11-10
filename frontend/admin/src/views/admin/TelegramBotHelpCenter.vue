@@ -21,7 +21,7 @@ const {
   moveHelpItem,
   removeHelpItem,
   saveConfig,
-  canSave, loadError, needsReload, loaded,
+  canSave, loadError, loadForbidden, needsReload, loaded,
   saving,
 } = useTelegramBotSettings(['help'])
 
@@ -32,7 +32,7 @@ onMounted(() => {
 
 <template>
   <div class="space-y-6">
-    <p v-if="loadError" role="alert" class="text-sm text-destructive">{{ loadError }}</p>
+    <p v-if="loadForbidden" role="alert" class="text-sm text-destructive">{{ t('telegramBot.instances.forbidden') }}</p>
     <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
       <div>
         <h2 class="text-2xl font-bold tracking-tight">{{ t('telegramBot.settings.helpTitle') }}</h2>
@@ -96,7 +96,7 @@ onMounted(() => {
           <Label>{{ t('telegramBot.settings.helpSupportHint') }}</Label>
           <Textarea v-model="form.help.support_hint[currentLang]" :placeholder="t('telegramBot.settings.helpSupportHintPlaceholder')" rows="2" />
         </div>
-        <div v-if="form.help.items.length === 0" class="rounded-lg border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
+        <div v-if="loaded && !loadError && form.help.items.length === 0" class="rounded-lg border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
           {{ t('telegramBot.settings.helpEmpty') }}
         </div>
         <div

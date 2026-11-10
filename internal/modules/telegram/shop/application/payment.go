@@ -21,6 +21,36 @@ import (
 	"github.com/shopspring/decimal"
 )
 
+// ResolvePaymentMedia resolves explicitly declared image media using fetch.
+// Invalid images fall back only to an independent checkout URL, or return an error.
+// Raw QR payloads never trigger a fetch; the caller supplies validated image I/O.
+func ResolvePaymentMedia(ctx context.Context, out *c.Payment, fetch func(context.Context, string) ([]byte, error)) (*c.Payment, error) {
+	p := *out
+	if p.InteractionMode != constants.PaymentInteractionRedirect && p.QRCodeKind == "image" {
+		raw := strings.TrimSpace(p.QRCode)
+		if raw == "" && p.InteractionMode == constants.PaymentInteractionQR {
+			raw = strings.TrimSpace(p.PayURL)
+		}
+		if parsed, err := url.Parse(raw); err == nil && (parsed.Scheme == "https" || parsed.Scheme == "http") {
+			photo, e := fetch(ctx, raw)
+			out.QRImage = photo
+			if e != nil || len(photo) == 0 {
+				// A separate checkout remains usable. Never turn an unverified
+				// image endpoint into QR text, or offer that same endpoint as checkout.
+				if strings.TrimSpace(p.PayURL) == "" || strings.TrimSpace(p.PayURL) == raw {
+					return nil, c.ErrUnavailable
+				}
+				out.QRCode = ""
+				out.InteractionMode = constants.PaymentInteractionRedirect
+			}
+			if len(out.QRImage) > 0 && strings.TrimSpace(out.PayURL) == raw {
+				out.PayURL = ""
+			}
+		}
+	}
+	return out, nil
+}
+
 // PaymentMedia performs no network I/O. QRImage is fetched and validated by
 // the infrastructure adapter; raw QR payloads are encoded locally.
 func PaymentMedia(p c.Payment) ([]byte, string, error) {
@@ -216,7 +246,13 @@ func (v *view) paymentKey(id, ch uint) string {
 	if op == "" {
 		op = fmt.Sprintf("order:%d", id)
 	}
-	return fmt.Sprintf("tgp:%d:%d:%d:%d:%s", v.actor.BotID, v.actor.UserID, id, ch, op)
+	key := fmt.Sprintf("tgp:%d:%d:%d:%d:%s", v.actor.BotID, v.actor.UserID, id, ch, op)
+	// Follow persisted successors after safe terminal failures. Button actions
+	// retain their original key, so duplicate updates cannot become new attempts.
+	for v.state.PaymentKeys[key] != "" {
+		key = v.state.PaymentKeys[key]
+	}
+	return key
 }
 func (v *view) paymentButtons(ctx context.Context, o *c.Order, chs []c.Channel) {
 	start := len(v.panel().Buttons)
@@ -280,6 +316,22 @@ func (v *view) pay(ctx context.Context, a action) error {
 		v.say(text(v.actor.Locale, "payment_uncertain"))
 		v.styled(text(v.actor.Locale, "refresh"), styleSuccess, action{Kind: "check_payment", ID: a.ID, Owner: v.actor.UserID})
 		v.homeButton()
+		return nil
+	}
+	var retry *c.PaymentRetryError
+	if errors.As(e, &retry) {
+		if retry.OperationKey == "" || retry.OperationKey == a.Value {
+			return c.ErrUnavailable
+		}
+		if v.state.PaymentKeys == nil {
+			v.state.PaymentKeys = map[string]string{}
+		}
+		v.state.PaymentKeys[a.Value] = retry.OperationKey
+		v.state.Payment = nil
+		v.say(text(v.actor.Locale, "payment_retry"))
+		v.styled(text(v.actor.Locale, "retry_payment"), stylePrimary, action{Kind: "pay", ID: a.ID, Owner: a.Owner, Value: retry.OperationKey})
+		v.button(text(v.actor.Locale, "change_payment"), action{Kind: "channels", ID: a.ID})
+		v.footer(a.ID)
 		return nil
 	}
 	if e != nil {
@@ -360,6 +412,13 @@ func (v *view) orderAction(ctx context.Context, a action) error {
 	switch a.Kind {
 	case "check_payment":
 		if o.Pending && (o.ExpiresAt == nil || o.ExpiresAt.After(v.service.now())) {
+			if v.state.UncertainOrders[a.ID] {
+				// 会话标记不是资金事实。刷新只重新展示渠道，不发起扣款；
+				// 下次显式支付仍由服务端锁内 unknown 守卫裁决，不能按超时放行。
+				delete(v.state.UncertainOrders, a.ID)
+				v.state.PaymentUncertain = false
+				return v.channels(ctx, a.ID, false)
+			}
 			rt.AnswerCallback(ctx, text(v.actor.Locale, "not_paid"))
 			return nil
 		}
@@ -371,10 +430,11 @@ func (v *view) orderAction(ctx context.Context, a action) error {
 		if _, ok := v.service.d.Orders.(c.OrdersCancel); !ok {
 			return c.ErrUnavailable
 		}
-		v.state.Current = action{Kind: "order", ID: a.ID, Owner: v.actor.UserID}
+		v.state.Current = action{Kind: "cancel_prompt", ID: a.ID, Owner: v.actor.UserID}
+		v.state.OrderID, v.state.OrderOwner = a.ID, v.actor.UserID
 		v.html("<b>" + html.EscapeString(text(v.actor.Locale, "cancel_title")) + "</b>")
 		v.say(text(v.actor.Locale, "cancel_warning"))
-		v.button(text(v.actor.Locale, "keep_order"), action{Kind: "order", ID: a.ID, Owner: v.actor.UserID})
+		v.button(text(v.actor.Locale, "keep_order"), action{Kind: "back"})
 		v.styled(text(v.actor.Locale, "cancel_confirm"), styleDanger, action{Kind: "cancel_confirm", ID: a.ID})
 		v.columns(2, 0)
 		return nil

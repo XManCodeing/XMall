@@ -15,7 +15,7 @@
 
           <h3 class="my-2.5 mt-4 text-sm font-bold">{{ t('orderDetail.childItemsTitle') }}</h3>
           <div v-if="child.items && child.items.length" class="grid">
-            <VaultOrderItem v-for="(item, cidx) in child.items" :key="cidx" :item="item" :currency="child.currency || order.currency" />
+            <VaultOrderItem v-for="(item, cidx) in child.items" :key="cidx" :item="item" :show-membership="variant === 'user'" :currency="child.currency || order.currency" />
           </div>
           <div v-else class="text-[13px] text-muted-foreground">{{ t('orderDetail.noItems') }}</div>
 
@@ -51,7 +51,7 @@
     <section class="rounded-xl border bg-card p-[22px]">
       <h2 class="mb-4 text-lg font-bold">{{ t('orderDetail.itemsTitle') }}</h2>
       <div v-if="order.items && order.items.length > 0" class="grid">
-        <VaultOrderItem v-for="(item, idx) in order.items" :key="idx" :item="item" :currency="order.currency" />
+        <VaultOrderItem v-for="(item, idx) in order.items" :key="idx" :item="item" :show-membership="variant === 'user'" :currency="order.currency" />
       </div>
       <div v-else class="text-[13px] text-muted-foreground">{{ t('orderDetail.noItems') }}</div>
     </section>

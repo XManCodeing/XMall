@@ -8,11 +8,187 @@ import (
 	"testing"
 	"time"
 
+	"github.com/XManCodeing/XMall/internal/constants"
 	"github.com/XManCodeing/XMall/internal/crypto"
 	rt "github.com/XManCodeing/XMall/internal/modules/telegram/runtime/contract"
 	rd "github.com/XManCodeing/XMall/internal/modules/telegram/runtime/domain"
 	c "github.com/XManCodeing/XMall/internal/modules/telegram/shop/contract"
 )
+
+// linkCatalogStub supplies public products and records link authorization without provisioning.
+type linkCatalogStub struct {
+	c.Catalog
+	product *c.Product
+	err     error
+	linkErr error
+	checks  int
+}
+
+// Product returns the configured product/error for the requested public read.
+func (stub *linkCatalogStub) Product(context.Context, c.Actor, uint) (*c.Product, error) {
+	return stub.product, stub.err
+}
+
+// AuthorizeProductLink records current relation checks and returns the configured authorization result.
+func (stub *linkCatalogStub) AuthorizeProductLink(context.Context, c.Actor, uint) error {
+	stub.checks++
+	return stub.linkErr
+}
+
+// ResolveProductLink simulates the persisted mapping without provisioning any identity.
+func (stub *linkCatalogStub) ResolveProductLink(_ context.Context, code string) (uint, error) {
+	if code != "K7m2Qx9Ba4Nz" {
+		return 0, c.ErrUnavailable
+	}
+	return 123, nil
+}
+
+// TestProductStartID rejects noncanonical, oversized and multiargument Telegram payloads.
+func TestProductStartID(t *testing.T) {
+	for _, input := range []string{"product_", "product_123", "product_0", "product_01", "product_-1", "product_+1", "product_1.0", "product_１", "product_1/2", "product_%31", "product_18446744073709551616", "product_" + strings.Repeat("1", 57), "Product_1", "hello"} {
+		if _, err := productStartID(context.Background(), &linkCatalogStub{}, []string{input}); !errors.Is(err, c.ErrDenied) {
+			t.Fatalf("accepted %q", input)
+		}
+	}
+	for _, input := range [][]string{nil, {"product_1", "extra"}} {
+		if _, err := productStartID(context.Background(), &linkCatalogStub{}, input); err == nil {
+			t.Fatal("accepted invalid arguments", input)
+		}
+	}
+	payload := productLinkPayload(t, "test-secret", 1)
+	if id, err := productStartID(context.Background(), &linkCatalogStub{}, []string{payload}); err != nil || id != 123 {
+		t.Fatal(id, err)
+	}
+	for _, invalid := range []string{"Z7m2Qx9Ba4Nz", "p1" + strings.Repeat("A", 49), payload[:11] + "_"} {
+		if _, err := productStartID(context.Background(), &linkCatalogStub{}, []string{invalid}); err == nil {
+			t.Fatal("accepted unknown or malformed code")
+		}
+	}
+}
+
+// productLinkPayload returns the stored fixture or an unknown code for invalid scope fixtures.
+func productLinkPayload(t *testing.T, secret string, botID uint) string {
+	t.Helper()
+	if botID != 1 || secret == "other-secret" {
+		return "Z7m2Qx9Ba4Nz"
+	}
+	return "K7m2Qx9Ba4Nz"
+}
+
+// TestProductStartGuestAndExistingUsers reuses SKU selection without creating accounts/orders/payments.
+func TestProductStartGuestAndExistingUsers(t *testing.T) {
+	for _, existing := range []bool{false, true} {
+		for _, multiple := range []bool{false, true} {
+			service, store, backend := guestSetup()
+			if existing {
+				backend.user = 7
+			}
+			product := &c.Product{ID: 123, Membership: true, Title: "Linked membership", Available: true, Min: 1, Max: 1,
+				SKUs: []c.SKU{{ID: 10, Name: "Monthly", Available: true}}}
+			if multiple {
+				product.SKUs = append(product.SKUs, c.SKU{ID: 20, Name: "Permanent", Available: true})
+			}
+			catalog := &linkCatalogStub{Catalog: service.d.Catalog, product: product}
+			service.d.Catalog, service.d.ProductLinks = catalog, catalog
+			messages := run(t, service, update(1, "/start@ShopBot "+productLinkPayload(t, service.d.Secret, 1)))
+			st := savedState(t, service, store)
+			if st.Current.Kind != "purchase" || st.Selection.ProductID != 123 || st.Selection.Quantity != 1 || (st.Selection.SKUID == 0) != multiple {
+				t.Fatalf("wrong selection %+v", st.Selection)
+			}
+			if backend.provisions != 0 || backend.creates != 0 || backend.payments != 0 || (!existing && backend.previews != 0) {
+				t.Fatal("deep link caused mutation")
+			}
+			if len(messages) == 0 || !strings.Contains(messages[0].Text, product.Title) {
+				t.Fatal(messages)
+			}
+		}
+	}
+}
+
+// TestProductStartUnavailableReturnsShop rejects deleted/inactive/unrelated products and missing wiring.
+func TestProductStartUnavailableReturnsShop(t *testing.T) {
+	for _, mode := range []string{"invalid", "legacy", "wrong_bot", "wrong_key", "tampered", "missing", "deleted", "down", "ordinary", "foreign", "nil_guard"} {
+		t.Run(mode, func(t *testing.T) {
+			service, store, backend := guestSetup()
+			catalog := &linkCatalogStub{Catalog: service.d.Catalog, product: &c.Product{ID: 123, Membership: true, Available: true}}
+			service.d.Catalog, service.d.ProductLinks = catalog, catalog
+			command := "/start " + productLinkPayload(t, service.d.Secret, 1)
+			switch mode {
+			case "invalid":
+				command = "/start product_01"
+			case "legacy":
+				command = "/start product_123"
+			case "wrong_bot":
+				command = "/start " + productLinkPayload(t, service.d.Secret, 2)
+			case "wrong_key":
+				command = "/start " + productLinkPayload(t, "other-secret", 1)
+			case "tampered":
+				command += "A"
+			case "missing":
+				catalog.product = nil
+			case "deleted":
+				catalog.err = c.ErrDenied
+			case "down":
+				catalog.product.Available = false
+			case "ordinary":
+				catalog.product.Membership = false
+			case "foreign":
+				catalog.linkErr = c.ErrUnavailable
+			case "nil_guard":
+				service.d.ProductLinks = nil
+			}
+			messages := run(t, service, update(1, command))
+			if !strings.Contains(messages[0].Text, "无法") || savedState(t, service, store).Selection.ProductID != 0 {
+				t.Fatal(messages)
+			}
+			button(t, messages, text("zh-CN", "catalog"))
+			if backend.provisions != 0 || backend.creates != 0 {
+				t.Fatal("invalid link caused mutation")
+			}
+		})
+	}
+}
+
+// TestProductStartRetiresOldCheckout fences old confirmation/payment callbacks and clears legacy input state.
+func TestProductStartRetiresOldCheckout(t *testing.T) {
+	service, store, backend := setup()
+	oldMessages := quoteFlow(t, service)
+	old := savedState(t, service, store)
+	oldCallback := button(t, oldMessages, text("zh-CN", "confirm"))
+	old.Step, old.Email, old.OrderID, old.OrderOwner = "code", "private@example.test", 8, 7
+	old.Payment, old.PaymentUncertain = &c.Payment{}, true
+	old.Pages = []pageState{{Kind: "payment", ID: 8, Owner: 7}}
+	setSavedState(t, service, store, old)
+	catalog := &linkCatalogStub{Catalog: service.d.Catalog, product: &c.Product{ID: 123, Membership: true, Available: true, Min: 1, Max: 1}}
+	service.d.Catalog, service.d.ProductLinks = catalog, catalog
+	run(t, service, update(100, "/start "+productLinkPayload(t, service.d.Secret, 1)))
+	current := savedState(t, service, store)
+	if current.Step != "" || current.Email != "" || current.OrderID != 0 || current.OrderOwner != 0 || current.Payment != nil || current.PaymentUncertain || current.Ref == old.Ref || current.PanelEpoch == old.PanelEpoch || current.Operation == old.Operation {
+		t.Fatal("old checkout state survived")
+	}
+	callback := update(101, "")
+	callback.CallbackData = oldCallback
+	run(t, service, callback)
+	if backend.creates != 0 || backend.payments != 0 || savedState(t, service, store).Selection.ProductID != 123 {
+		t.Fatal("old callback crossed checkout")
+	}
+	catalog.linkErr = c.ErrUnavailable
+	if _, err := (&view{service: service, state: &current, actor: c.Actor{BotID: 1}}).linkProduct(context.Background(), 123); !errors.Is(err, c.ErrUnavailable) {
+		t.Fatal("association not rechecked", err)
+	}
+}
+
+// TestClockUsesEastEightAcrossUTCDate 验证跨 UTC 年界展示且不修改原始绝对时刻。
+func TestClockUsesEastEightAcrossUTCDate(t *testing.T) {
+	instant := time.Date(2026, 12, 31, 20, 30, 0, 0, time.UTC)
+	viewer := &view{}
+	if actual := viewer.clock(instant); actual != "01-01 04:30" {
+		t.Fatalf("east-eight clock = %q", actual)
+	}
+	if instant.Location() != time.UTC || instant.Day() != 31 {
+		t.Fatalf("input instant changed: %v", instant)
+	}
+}
 
 type memoryStore struct {
 	sessions map[string]rd.Session
@@ -366,7 +542,7 @@ func TestPaymentMessageIncludesOrderAndDeadline(t *testing.T) {
 		if !strings.Contains(v.messages[0].Text, p.OrderNumber) {
 			t.Fatal("missing order number")
 		}
-		if !paid && !strings.Contains(v.messages[0].Text, deadline.In(time.Local).Format("01-02 15:04")) {
+		if !paid && !strings.Contains(v.messages[0].Text, constants.DisplayTime(deadline, "01-02 15:04")) {
 			t.Fatal("missing deadline")
 		}
 		p.Paid = false

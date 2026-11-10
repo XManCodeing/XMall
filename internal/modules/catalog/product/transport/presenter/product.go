@@ -53,6 +53,24 @@ type Product struct {
 	MemberPrices         []MemberLevelPrice `json:"member_prices,omitempty"`
 
 	RelatedPosts []RelatedPost `json:"related_posts,omitempty"`
+	Membership   *Membership   `json:"membership,omitempty"`
+}
+
+// Membership 是公开只读会员投影，销售状态固定关闭，不包含目标或内部路由。
+type Membership struct {
+	ConfigVersion uint64           `json:"config_version"`
+	Quantity      int              `json:"quantity"`
+	SalesOpen     bool             `json:"sales_open"`
+	GroupNames    []string         `json:"group_names"`
+	Terms         []MembershipTerm `json:"terms"`
+}
+
+// MembershipTerm 将期限绑定到已公开的 SKU；永久期限的 Months 为零。
+type MembershipTerm struct {
+	SKUID   uint   `json:"sku_id"`
+	SKUCode string `json:"sku_code"`
+	Kind    string `json:"kind"`
+	Months  int64  `json:"months"`
 }
 
 // RelatedPost 是商品详情中的关联文章轻量响应。

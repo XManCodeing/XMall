@@ -1,3 +1,4 @@
+import { formatDate } from '../utils/format'
 import { computed, ref, type Ref } from 'vue'
 import DOMPurify from 'dompurify'
 import { useI18n } from 'vue-i18n'
@@ -77,13 +78,6 @@ export function useOrderDisplayHelpers(order: Ref<any>) {
       return 'refunded'
     }
     return status
-  }
-
-  const formatDate = (raw?: string) => {
-    if (!raw) return ''
-    const date = new Date(raw)
-    if (Number.isNaN(date.getTime())) return raw
-    return date.toLocaleString()
   }
 
   const getLocalizedText = (jsonData: any) => {

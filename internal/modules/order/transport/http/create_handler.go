@@ -3,6 +3,10 @@ package orderhttp
 import (
 	"context"
 	"errors"
+	"net/http"
+
+	payment "github.com/XManCodeing/XMall/internal/modules/payment/contract"
+	wallet "github.com/XManCodeing/XMall/internal/modules/wallet/contract"
 
 	paymentpresenter "github.com/XManCodeing/XMall/internal/modules/payment/transport/presenter"
 
@@ -263,6 +267,27 @@ func (h *CreateHandler) verifyGuestCreateCaptcha(c *gin.Context, payload captcha
 	return true
 }
 
+// respondWalletPaymentError maps known wallet failures while retaining the created order.
+// It returns false for uncertain or unrelated failures, leaving their existing handling intact.
+func respondWalletPaymentError(ctx *gin.Context, err error, order orderpresenter.OrderDetail) bool {
+	if errors.Is(err, payment.ErrPaymentCreationUncertain) {
+		return false
+	}
+	key := ""
+	switch {
+	case errors.Is(err, wallet.ErrOnlyPaymentRequired):
+		key = "error.wallet_only_payment_required"
+	case errors.Is(err, wallet.ErrInsufficientBalance):
+		key = "error.wallet_insufficient_balance"
+	default:
+		return false
+	}
+	message := i18n.T(i18n.ResolveLocale(ctx), key)
+	ctx.JSON(http.StatusOK, response.Response{StatusCode: response.CodeBadRequest, Msg: message,
+		Data: gin.H{"order": order, "order_no": order.OrderNo, "payment_error": message}})
+	return true
+}
+
 func (h *CreateHandler) respondCreateAndPay(c *gin.Context, order *orderdomain.Order, orderResp orderpresenter.OrderDetail, channelID uint, useBalance bool) {
 	if h.pay == nil {
 		response.Success(c, gin.H{
@@ -281,6 +306,9 @@ func (h *CreateHandler) respondCreateAndPay(c *gin.Context, order *orderdomain.O
 		RequestScheme: ginutil.RequestScheme(c),
 	})
 	if err != nil {
+		if respondWalletPaymentError(c, err, orderResp) {
+			return
+		}
 		response.Success(c, gin.H{
 			"order":         orderResp,
 			"order_no":      order.OrderNo,

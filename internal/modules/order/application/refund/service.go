@@ -25,6 +25,8 @@ import (
 
 // AdminManualRefundInput 管理员手动退款输入（不处理钱包/支付渠道）
 type AdminManualRefundInput struct {
+	// MembershipRequest binds the explicit termination intent in this money transaction.
+	MembershipRequest  *ordercontract.MembershipRefundRequest
 	OrderID            uint
 	Amount             money.Amount
 	Remark             string
@@ -296,6 +298,9 @@ func (s *Service) AdminManualRefund(input AdminManualRefundInput) (*orderdomain.
 		if err := guard.LockRefundScope(input.OrderID); err != nil {
 			return err
 		}
+		if err := beginMembershipRefund(orders, input.MembershipRequest); err != nil {
+			return err
+		}
 		locked, err := orders.GetByIDForUpdate(input.OrderID)
 		if err != nil {
 			return err
@@ -372,6 +377,9 @@ func (s *Service) AdminManualRefund(input AdminManualRefundInput) (*orderdomain.
 			now,
 		)
 		if err != nil {
+			return err
+		}
+		if err := bindMembershipRefund(orders, input.MembershipRequest, record.ID); err != nil {
 			return err
 		}
 		createdRecord = record

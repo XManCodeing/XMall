@@ -42,26 +42,41 @@ func (s *AdminService) Delete(id string) error {
 	}
 
 	return s.transactions.WithinTransaction(func(repositories DeleteRepositories) error {
-		if err := repositories.CardSecrets.DeleteByProduct(product.ID); err != nil {
-			return err
+		if s.enforcePublicSale {
+			if err := productcontract.RequireOrdinaryWrite(repositories.Products, []uint{product.ID}); err != nil {
+				return err
+			}
 		}
-		if err := repositories.CardSecretBatches.DeleteByProduct(product.ID); err != nil {
-			return err
-		}
-		if err := repositories.SKUs.DeleteByProduct(product.ID); err != nil {
-			return err
-		}
-		if err := repositories.MemberLevelPrices.DeleteByProduct(product.ID); err != nil {
-			return err
-		}
-		if err := repositories.Carts.DeleteByProduct(product.ID); err != nil {
-			return err
-		}
-		if err := repositories.ProductMappings.DeleteByLocalProduct(product.ID); err != nil {
-			return err
-		}
-		return repositories.Products.Delete(id)
+		return deleteProductRelations(repositories, product.ID, id)
 	})
+}
+
+// deleteProductRelations 复用原商品级联清理；repositories 必须属于同一事务，任一失败整体回滚。
+func deleteProductRelations(repositories DeleteRepositories, productID uint, id string) error {
+	if repositories.CardSecrets == nil || repositories.CardSecretBatches == nil || repositories.SKUs == nil || repositories.MemberLevelPrices == nil || repositories.Carts == nil || repositories.Products == nil {
+		return productcontract.ErrSalePolicyUnavailable
+	}
+	if err := repositories.CardSecrets.DeleteByProduct(productID); err != nil {
+		return err
+	}
+	if err := repositories.CardSecretBatches.DeleteByProduct(productID); err != nil {
+		return err
+	}
+	if err := repositories.SKUs.DeleteByProduct(productID); err != nil {
+		return err
+	}
+	if err := repositories.MemberLevelPrices.DeleteByProduct(productID); err != nil {
+		return err
+	}
+	if err := repositories.Carts.DeleteByProduct(productID); err != nil {
+		return err
+	}
+	if repositories.ProductMappings != nil {
+		if err := repositories.ProductMappings.DeleteByLocalProduct(productID); err != nil {
+			return err
+		}
+	}
+	return repositories.Products.Delete(id)
 }
 
 // QuickUpdate 快速更新商品部分字段（如 is_active、sort_order）。
@@ -86,6 +101,16 @@ func (s *AdminService) QuickUpdate(id string, fields map[string]interface{}) (*p
 			return nil, err
 		}
 	}
+	if s.enforcePublicSale {
+		updater, ok := s.products.(productcontract.AtomicPublicSaleUpdater)
+		if !ok {
+			return nil, productcontract.ErrSalePolicyUnavailable
+		}
+		if err := updater.QuickUpdatePublicSale(id, fields); err != nil {
+			return nil, err
+		}
+		return s.products.GetByID(id)
+	}
 	if err := s.products.QuickUpdate(id, fields); err != nil {
 		return nil, err
 	}
@@ -105,6 +130,16 @@ func (s *AdminService) UpdateWholesalePrices(id string, inputs []productdomain.W
 	wholesalePrices, err := productdomain.NormalizeWholesalePricesForSKUs(inputs, product.SKUs)
 	if err != nil {
 		return nil, err
+	}
+	if s.enforcePublicSale {
+		updater, ok := s.products.(productcontract.AtomicPublicSaleUpdater)
+		if !ok {
+			return nil, productcontract.ErrSalePolicyUnavailable
+		}
+		if err := updater.QuickUpdatePublicSale(id, map[string]interface{}{"wholesale_prices": wholesalePrices}); err != nil {
+			return nil, err
+		}
+		return s.products.GetAdminByID(id)
 	}
 	if err := s.products.QuickUpdate(id, map[string]interface{}{"wholesale_prices": wholesalePrices}); err != nil {
 		return nil, err

@@ -5,8 +5,11 @@ import (
 	"fmt"
 	"time"
 
+	product "github.com/XManCodeing/XMall/internal/modules/catalog/product/contract"
+	ei "github.com/XManCodeing/XMall/internal/modules/identity/externalidentity/contract"
 	paymentapp "github.com/XManCodeing/XMall/internal/modules/payment/application"
 	paymentcontract "github.com/XManCodeing/XMall/internal/modules/payment/contract"
+	membership "github.com/XManCodeing/XMall/internal/modules/telegram/membership/contract"
 
 	paymentdomain "github.com/XManCodeing/XMall/internal/modules/payment/domain"
 
@@ -99,10 +102,24 @@ func mapTransportError(err error) error {
 	if err == nil {
 		return nil
 	}
+	if errors.Is(err, paymentcontract.ErrPaymentCreationUncertain) {
+		return paymentcontract.ErrPaymentCreationUncertain
+	}
 	for _, mapping := range []struct {
 		source error
 		target error
 	}{
+		{membership.ErrPermanentFullyCovered, paymenttransport.ErrMembershipPermanentCovered},
+		{membership.ErrPermanentPartiallyCovered, paymenttransport.ErrMembershipPermanentPartial},
+		{membership.ErrInvalid, paymenttransport.ErrMembershipInvalid},
+		{membership.ErrUntrustedIdentity, paymenttransport.ErrMembershipBindingRequired},
+		{membership.ErrConflict, paymenttransport.ErrMembershipPurchaseChanged},
+		{membership.ErrProbeRetry, paymenttransport.ErrMembershipUnavailable},
+		{membership.ErrCapability, paymenttransport.ErrMembershipUnavailable},
+		{membership.ErrOverlapUnavailable, paymenttransport.ErrMembershipUnavailable},
+		{membership.ErrSalesClosed, paymenttransport.ErrMembershipSalesClosed},
+		{ei.ErrTelegramIdentityChanged, paymenttransport.ErrMembershipBindingRequired},
+		{product.ErrMembershipSaleClosed, paymenttransport.ErrMembershipSalesClosed},
 		{orderapp.ErrOrderNotFound, paymenttransport.ErrOrderNotFound},
 		{orderapp.ErrGuestOrderNotFound, paymenttransport.ErrGuestOrderNotFound},
 		{orderapp.ErrOrderStatusInvalid, paymenttransport.ErrOrderStatusInvalid},
@@ -119,6 +136,7 @@ func mapTransportError(err error) error {
 		{paymentapp.ErrPaymentChannelNotAllowedForProduct, paymenttransport.ErrPaymentChannelNotAllowedForProduct},
 		{paymentapp.ErrPaymentChannelNotAllowedForRecharge, paymenttransport.ErrPaymentChannelNotAllowedForRecharge},
 		{walletcontract.ErrOnlyPaymentRequired, paymenttransport.ErrWalletOnlyPaymentRequired},
+		{walletcontract.ErrInsufficientBalance, paymenttransport.ErrWalletInsufficientBalance},
 		{paymentapp.ErrPaymentStatusInvalid, paymenttransport.ErrPaymentStatusInvalid},
 		{paymentapp.ErrPaymentAmountMismatch, paymenttransport.ErrPaymentAmountMismatch},
 	} {

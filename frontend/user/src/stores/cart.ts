@@ -1,7 +1,9 @@
+import type { MembershipPurchase } from '../utils/membershipPurchase'
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 
 export interface CartItem {
+    membership?: MembershipPurchase
     productId: number
     skuId?: number
     skuCode?: string
@@ -156,6 +158,8 @@ export const useCartStore = defineStore('cart', () => {
         const identity = cartIdentity(normalizedItem)
         const existing = items.value.find((entry) => cartIdentity(entry) === identity)
         if (existing) {
+            // 同一 SKU 再次加入时采用最新公开会员投影，避免保留旧销售状态。
+            existing.membership = normalizedItem.membership
             existing.quantity = clampCartQuantity(existing.quantity + qty, normalizedItem.maxPurchaseQuantity, normalizedItem.minPurchaseQuantity)
             existing.slug = normalizedItem.slug
             existing.title = normalizedItem.title

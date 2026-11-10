@@ -116,6 +116,7 @@
                         <div class="text-xs text-muted-foreground mt-1">
                           {{ t('orderDetail.itemFulfillmentLabel') }}：{{ fulfillmentTypeLabelText(item.fulfillment_type) }}
                         </div>
+                        <MembershipOrderSnapshot :snapshot="item.membership_snapshot" />
                         <div v-if="item.tags && item.tags.length" class="mt-2 flex flex-wrap gap-2">
                           <Badge v-for="(tag, index) in item.tags" :key="index" variant="neutral" size="sm" class="rounded-full">{{ tag }}</Badge>
                         </div>
@@ -289,6 +290,7 @@
                   <div class="text-xs text-muted-foreground mt-1">
                     {{ t('orderDetail.itemFulfillmentLabel') }}：{{ fulfillmentTypeLabelText(item.fulfillment_type) }}
                   </div>
+                  <MembershipOrderSnapshot :snapshot="item.membership_snapshot" />
                   <div v-if="item.tags && item.tags.length" class="mt-2 flex flex-wrap gap-2">
                     <Badge v-for="(tag, index) in item.tags" :key="index" variant="neutral" size="sm" class="rounded-full">{{ tag }}</Badge>
                   </div>
@@ -442,6 +444,7 @@ import { Button } from '@/components/ui/button'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import EmptyState from '../components/EmptyState.vue'
 import BreadcrumbNav from '../components/BreadcrumbNav.vue'
+import MembershipOrderSnapshot from '../components/MembershipOrderSnapshot.vue'
 import SmartImage from '../components/SmartImage.vue'
 import { useOrderDetail } from '../composables/useOrderDetail.ts'
 

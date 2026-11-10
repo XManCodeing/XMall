@@ -14,6 +14,8 @@ backups/
 *.sqlite3
 *.sql
 *.sql.gz
+# 迁移测试依赖的合成 SQLite 夹具（由 generate_v9.py 生成，不含真实数据）
+!internal/bootstrap/database/migrations/testdata/*.sql
 *.key
 *.p12
 *.pfx
@@ -36,6 +38,12 @@ frontend/*/*.local
 
 # Fullstack 嵌入产物：由前端构建拷贝而来，不进 git 历史
 internal/web/dist/
+
+# 本地验收产物与内部缺陷记录
+b8verify-*/
+internal/web/b8verify-*/
+等待修复的bug.md
+frontend/*/*.png
 
 # Agents 配置
 .agents/

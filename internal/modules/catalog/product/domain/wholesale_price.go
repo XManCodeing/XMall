@@ -3,6 +3,7 @@ package productdomain
 import (
 	"database/sql/driver"
 	"encoding/json"
+	"fmt"
 
 	"github.com/XManCodeing/XMall/internal/shared/money"
 )
@@ -34,10 +35,14 @@ func (w *WholesalePriceTiers) Scan(value interface{}) error {
 		*w = WholesalePriceTiers{}
 		return nil
 	}
-	bytes, ok := value.([]byte)
-	if !ok {
-		*w = WholesalePriceTiers{}
-		return nil
+	var bytes []byte
+	switch encoded := value.(type) {
+	case []byte:
+		bytes = encoded
+	case string:
+		bytes = []byte(encoded)
+	default:
+		return fmt.Errorf("wholesale prices: unsupported database value type %T", value)
 	}
 	if len(bytes) == 0 {
 		*w = WholesalePriceTiers{}

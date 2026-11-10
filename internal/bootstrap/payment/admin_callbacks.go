@@ -2,8 +2,10 @@ package paymentbootstrap
 
 import (
 	"context"
+	"errors"
 	"time"
 
+	orderapp "github.com/XManCodeing/XMall/internal/modules/order/application"
 	paymentapp "github.com/XManCodeing/XMall/internal/modules/payment/application"
 	paymentcontract "github.com/XManCodeing/XMall/internal/modules/payment/contract"
 
@@ -20,6 +22,29 @@ import (
 	walletdomain "github.com/XManCodeing/XMall/internal/modules/wallet/domain"
 	"github.com/XManCodeing/XMall/internal/shared/jsonmap"
 )
+
+// manualConfirmationAdapter translates owned application errors at the bootstrap boundary.
+type manualConfirmationAdapter struct{ payments *paymentapp.PaymentService }
+
+// GetManualConfirmation returns safe evidence for id, mapping absent records to transport errors.
+func (adapter manualConfirmationAdapter) GetManualConfirmation(id uint) (*paymentcontract.ManualConfirmationReview, error) {
+	result, err := adapter.payments.GetManualConfirmation(id)
+	return result, mapManualConfirmationError(err)
+}
+
+// ConfirmManually forwards authenticated input for id; validation errors remain actionable, not server failures.
+func (adapter manualConfirmationAdapter) ConfirmManually(id uint, input paymentcontract.ManualConfirmationInput) (*paymentcontract.ManualConfirmationReview, error) {
+	result, err := adapter.payments.ConfirmManually(id, input)
+	return result, mapManualConfirmationError(err)
+}
+
+// mapManualConfirmationError preserves failures while exposing only stable boundary error classes.
+func mapManualConfirmationError(err error) error {
+	if errors.Is(err, paymentapp.ErrPaymentAmountMismatch) || errors.Is(err, paymentapp.ErrPaymentCurrencyMismatch) || errors.Is(err, orderapp.ErrManualStockInsufficient) || errors.Is(err, orderapp.ErrCardSecretInsufficient) || errors.Is(err, orderapp.ErrOrderCancelNotAllowed) {
+		return paymentcontract.ErrManualConfirmationConflict
+	}
+	return mapTransportError(err)
+}
 
 type adminQueryAdapter struct {
 	payments *paymentapp.PaymentService
@@ -180,7 +205,7 @@ func (a exceptionAlerterAdapter) EnqueuePaymentExceptionAlert(method, path, clie
 		"method":      method,
 		"path":        path,
 		"client_ip":   clientIP,
-		"occurred_at": time.Now().Format("2006-01-02 15:04:05"),
+		"occurred_at": constants.DisplayTime(time.Now(), "2006-01-02 15:04:05"),
 	}
 	for key, value := range data {
 		payload[key] = value

@@ -259,7 +259,7 @@ const blogEnabled = computed(() => navBuiltin.value?.blog !== false)
 const noticeEnabled = computed(() => navBuiltin.value?.notice !== false)
 const latestVisible = computed(() => blogEnabled.value || noticeEnabled.value)
 
-const formatDate = (value: string) => (value ? new Date(value).toLocaleDateString() : '')
+import { formatDate } from '@/utils/format'
 
 // ==================== 公告弹窗（版本化可关闭，两种模式共用） ====================
 const { shouldShow } = useAnnouncement()

@@ -320,7 +320,7 @@ onMounted(() => {
       </Table>
     </div>
 
-    <Dialog v-model:open="showModal" @update:open="(value: boolean) => { if (!value) closeModal() }">
+    <Dialog scope="page" v-model:open="showModal" @update:open="(value: boolean) => { if (!value) closeModal() }">
       <DialogScrollContent class="w-[calc(100vw-1rem)] max-w-3xl p-4 sm:p-6" @interact-outside="(e: Event) => e.preventDefault()">
         <DialogHeader>
           <DialogTitle>

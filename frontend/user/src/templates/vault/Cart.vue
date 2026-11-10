@@ -46,8 +46,9 @@
               </button>
             </div>
 
+            <MembershipPurchaseInfo :product="item" :sku-id="item.skuId" :items="cartItems" return-path="/cart" />
             <div class="mt-3.5 flex flex-wrap items-center justify-between gap-3 border-t pt-3.5">
-              <div class="inline-flex items-center overflow-hidden rounded-full border-2 border-hairline-strong">
+              <div v-if="!item.membership" class="inline-flex items-center overflow-hidden rounded-full border-2 border-hairline-strong">
                 <button type="button" class="grid h-10 w-[38px] place-items-center bg-card text-foreground disabled:opacity-35" :aria-label="t('cart.remove')" :disabled="item.quantity <= itemPurchaseMin(item)" @click="updateQty(item, item.quantity - 1)"><Minus class="h-4 w-4" /></button>
                 <input
                   type="number"
@@ -97,6 +98,7 @@ import { ArrowRight, ChevronRight, Minus, Package, Plus, ShoppingCart, Trash2 } 
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import VaultCheckoutSteps from './components/VaultCheckoutSteps.vue'
+import MembershipPurchaseInfo from '@/components/product/MembershipPurchaseInfo.vue'
 import { useCart } from '../../composables/useCart.ts'
 
 const { t } = useI18n()

@@ -288,6 +288,28 @@ func TestBootstrapBuiltinRolesRemovesStaleImmutableWildcard(t *testing.T) {
 	}
 }
 
+// TestManualPaymentConfirmationRequiresFinance checks exact action policies.
+// t supplies an isolated policy store; no live administrator permissions change.
+func TestManualPaymentConfirmationRequiresFinance(t *testing.T) {
+	svc := setupAuthzServiceTest(t)
+	if err := svc.BootstrapBuiltinRoles(); err != nil {
+		t.Fatal(err)
+	}
+	for index, role := range []string{"finance", "support", "operations", "integration", "system_admin", "readonly_auditor"} {
+		adminID := uint(index + 20)
+		if err := svc.SetAdminRoles(adminID, []string{role}); err != nil {
+			t.Fatal(err)
+		}
+		for _, method := range []string{"GET", "POST", "PUT", "DELETE"} {
+			allowed, err := svc.EnforceAdmin(adminID, "/api/v1/admin/payments/42/manual-confirmation", method)
+			want := role == "finance" && (method == "GET" || method == "POST")
+			if err != nil || allowed != want {
+				t.Fatalf("role=%s method=%s allowed=%v want=%v err=%v", role, method, allowed, want, err)
+			}
+		}
+	}
+}
+
 func TestImmutableBuiltinRoleRejectsPolicyMutationAndDeletion(t *testing.T) {
 	svc := setupAuthzServiceTest(t)
 	if err := svc.BootstrapBuiltinRoles(); err != nil {

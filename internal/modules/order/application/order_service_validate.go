@@ -7,6 +7,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/XManCodeing/XMall/internal/logger"
+	productcontract "github.com/XManCodeing/XMall/internal/modules/catalog/product/contract"
 	orderdomain "github.com/XManCodeing/XMall/internal/modules/order/domain"
 
 	"github.com/XManCodeing/XMall/internal/constants"
@@ -24,7 +26,27 @@ import (
 	"github.com/shopspring/decimal"
 )
 
+// checkPublicSale 检查创建/预览全部商品；repository 绑定当前事务，items 为输入商品。
+// 返回会员拒绝或存储错误；仅旧的独立 fixture 可不装配。
+func (s *OrderService) checkPublicSale(repository productcontract.Repository, items []CreateOrderItem) error {
+	if !s.enforcePublicSale {
+		return nil
+	}
+	ids := make([]uint, 0, len(items))
+	for _, item := range items {
+		ids = append(ids, item.ProductID)
+	}
+	if err := productcontract.RequirePublicSale(repository, ids); err != nil {
+		logger.Warnw("order_public_sale_rejected", "product_ids", ids, "error", err)
+		return err
+	}
+	return nil
+}
+
 func (s *OrderService) buildOrderResult(input orderCreateParams) (*orderBuildResult, error) {
+	if err := s.checkPublicSale(s.productRepo, input.Items); err != nil {
+		return nil, err
+	}
 	if len(input.Items) == 0 {
 		return nil, ErrInvalidOrderItem
 	}

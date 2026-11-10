@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { useDebounceFn } from '@vueuse/core'
 import { adminAPI, type AdminAuthzAuditLog } from '@/api/admin'
 import IdCell from '@/components/IdCell.vue'
 import { Button } from '@/components/ui/button'
@@ -188,12 +187,16 @@ const fetchLogs = async (page = 1, options: ListFetchOptions = {}) => {
   }
 }
 
-const handleSearch = () => {
-  fetchLogs(1, { preserveRows: true })
+/** 按当前筛选查询第一页，加载期间忽略重复操作。@returns 查询完成。 */
+const handleSearch = async (): Promise<void> => {
+  if (loading.value || refreshing.value) return
+  pagination.value.page = 1
+  await fetchLogs(1)
 }
-const debouncedSearch = useDebounceFn(handleSearch, 300)
 
-const handleReset = () => {
+/** 恢复全部筛选默认值并保留分页尺寸。@returns 查询完成。 */
+const handleReset = async (): Promise<void> => {
+  if (loading.value || refreshing.value) return
   filters.operator_admin_id = ''
   filters.target_admin_id = ''
   filters.action = '__all__'
@@ -202,7 +205,7 @@ const handleReset = () => {
   filters.method = '__all__'
   filters.created_from = ''
   filters.created_to = ''
-  fetchLogs(1, { preserveRows: true })
+  await handleSearch()
 }
 
 const refresh = () => {
@@ -228,8 +231,8 @@ onMounted(() => {
 
     <section class="rounded-xl border border-border bg-card p-4 space-y-3">
       <div class="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-        <Input v-model="filters.operator_admin_id" type="number" min="1" :placeholder="text.filters.operator" class="h-9" @update:modelValue="debouncedSearch" />
-        <Input v-model="filters.target_admin_id" type="number" min="1" :placeholder="text.filters.target" class="h-9" @update:modelValue="debouncedSearch" />
+        <Input v-model="filters.operator_admin_id" type="number" min="1" :placeholder="text.filters.operator" class="h-9" @keydown.enter="handleSearch" />
+        <Input v-model="filters.target_admin_id" type="number" min="1" :placeholder="text.filters.target" class="h-9" @keydown.enter="handleSearch" />
         <Select v-model="filters.action">
           <SelectTrigger class="h-9">
             <SelectValue :placeholder="text.filters.allActions" />
@@ -239,11 +242,11 @@ onMounted(() => {
             <SelectItem v-for="item in actionOptions" :key="item" :value="item">{{ item }}</SelectItem>
           </SelectContent>
         </Select>
-        <Input v-model="filters.role" type="text" :placeholder="text.filters.role" class="h-9" @update:modelValue="debouncedSearch" />
+        <Input v-model="filters.role" type="text" :placeholder="text.filters.role" class="h-9" @keydown.enter="handleSearch" />
       </div>
 
       <div class="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-        <Input v-model="filters.object" type="text" :placeholder="text.filters.object" class="h-9" @update:modelValue="debouncedSearch" />
+        <Input v-model="filters.object" type="text" :placeholder="text.filters.object" class="h-9" @keydown.enter="handleSearch" />
         <Select v-model="filters.method">
           <SelectTrigger class="h-9">
             <SelectValue :placeholder="text.filters.allMethods" />
@@ -253,14 +256,14 @@ onMounted(() => {
             <SelectItem v-for="item in methodOptions" :key="item" :value="item">{{ item }}</SelectItem>
           </SelectContent>
         </Select>
-        <Input v-model="filters.created_from" type="datetime-local" class="h-9" :placeholder="text.filters.createdFrom" />
-        <Input v-model="filters.created_to" type="datetime-local" class="h-9" :placeholder="text.filters.createdTo" />
+        <Input v-model="filters.created_from" type="datetime-local" class="h-9" :placeholder="text.filters.createdFrom" @keydown.enter="handleSearch" />
+        <Input v-model="filters.created_to" type="datetime-local" class="h-9" :placeholder="text.filters.createdTo" @keydown.enter="handleSearch" />
       </div>
 
       <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-end">
-        <Button size="sm" variant="outline" class="w-full sm:w-auto" @click="handleReset">{{ text.actions.reset }}</Button>
+        <Button size="sm" variant="outline" class="w-full sm:w-auto" :disabled="loading || refreshing" @click="handleReset">{{ text.actions.reset }}</Button>
         <Button size="sm" variant="outline" class="w-full sm:w-auto" :disabled="refreshing" @click="refresh">{{ text.actions.refresh }}</Button>
-        <Button size="sm" class="w-full sm:w-auto" @click="handleSearch">{{ text.actions.search }}</Button>
+        <Button size="sm" class="w-full sm:w-auto" :disabled="loading || refreshing" @click="handleSearch">{{ text.actions.search }}</Button>
       </div>
     </section>
 

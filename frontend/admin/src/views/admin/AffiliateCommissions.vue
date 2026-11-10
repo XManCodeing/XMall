@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { onMounted, reactive, ref } from 'vue'
-import { useDebounceFn } from '@vueuse/core'
 import { useI18n } from 'vue-i18n'
 import { adminAPI } from '@/api/admin'
 import type { AdminAffiliateCommission } from '@/api/types'
@@ -63,10 +62,18 @@ const fetchRows = async (page = 1, options: ListFetchOptions = {}) => {
   }
 }
 
-const handleSearch = () => {
-  fetchRows(1, { preserveRows: true })
+/** 按当前筛选查询第一页，加载期间忽略重复操作。@returns 查询完成。 */
+const handleSearch = async (): Promise<void> => {
+  if (loading.value || refreshing.value) return
+  pagination.value.page = 1
+  await fetchRows(1)
 }
-const debouncedSearch = useDebounceFn(handleSearch, 300)
+/** 恢复全部筛选默认值，保留分页尺寸。@returns 查询完成。 */
+const resetFilters = async (): Promise<void> => {
+  if (loading.value || refreshing.value) return
+  Object.assign(filters, { keyword: '', orderNo: '', affiliateProfileId: '', status: '__all__' })
+  await handleSearch()
+}
 
 const refreshCurrentPage = () => {
   refreshList(() => fetchRows(pagination.value.page, { preserveRows: true }))
@@ -116,16 +123,16 @@ onMounted(() => {
     <div class="rounded-xl border border-border bg-card p-4 shadow-sm">
       <div class="flex flex-wrap items-center gap-3">
         <div class="w-full md:w-56">
-          <Input v-model="filters.keyword" :placeholder="t('admin.affiliatesCommissions.filters.keyword')" @update:modelValue="debouncedSearch" />
+          <Input v-model="filters.keyword" :placeholder="t('admin.affiliatesCommissions.filters.keyword')" @keydown.enter="handleSearch" />
         </div>
         <div class="w-full md:w-52">
-          <Input v-model="filters.orderNo" :placeholder="t('admin.affiliatesCommissions.filters.orderNo')" @update:modelValue="debouncedSearch" />
+          <Input v-model="filters.orderNo" :placeholder="t('admin.affiliatesCommissions.filters.orderNo')" @keydown.enter="handleSearch" />
         </div>
         <div class="w-full md:w-44">
-          <Input v-model="filters.affiliateProfileId" :placeholder="t('admin.affiliatesCommissions.filters.profileId')" @update:modelValue="debouncedSearch" />
+          <Input v-model="filters.affiliateProfileId" :placeholder="t('admin.affiliatesCommissions.filters.profileId')" @keydown.enter="handleSearch" />
         </div>
         <div class="w-full md:w-48">
-          <Select v-model="filters.status" @update:modelValue="handleSearch">
+          <Select v-model="filters.status">
             <SelectTrigger class="h-9 w-full">
               <SelectValue :placeholder="t('admin.affiliatesCommissions.filters.statusAll')" />
             </SelectTrigger>
@@ -139,7 +146,9 @@ onMounted(() => {
           </Select>
         </div>
         <div class="flex-1"></div>
-        <Button size="sm" variant="outline" :disabled="refreshing" @click="refreshCurrentPage">{{ t('admin.common.refresh') }}</Button>
+        <Button size="sm" variant="outline" :disabled="loading || refreshing" @click="handleSearch">{{ t('admin.common.search') }}</Button>
+        <Button size="sm" variant="outline" :disabled="loading || refreshing" @click="resetFilters">{{ t('admin.common.reset') }}</Button>
+        <Button size="sm" variant="outline" :disabled="loading || refreshing" @click="refreshCurrentPage">{{ t('admin.common.refresh') }}</Button>
       </div>
     </div>
 
@@ -209,7 +218,7 @@ onMounted(() => {
         </TableBody>
       </Table>
 
-      <ListPagination
+      <ListPagination :loading="loading || refreshing"
         :page="pagination.page"
         :total-page="pagination.total_page"
         :total="pagination.total"

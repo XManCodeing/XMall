@@ -2,7 +2,6 @@
 import { computed, onMounted, reactive, ref } from 'vue'
 import { RouterLink } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import { useDebounceFn } from '@vueuse/core'
 import { adminAPI, type AdminCardSecretQueryPayload } from '@/api/admin'
 import type { AdminProduct, AdminProductSKU, AdminCardSecret, AdminCardSecretBatch } from '@/api/types'
 import { Upload, PackagePlus } from 'lucide-vue-next'
@@ -471,7 +470,7 @@ const refreshAll = async (options: ListFetchOptions = {}) => {
   batches.value = []
   batchPagination.value = {
     page: 1,
-    page_size: 10,
+    page_size: batchPagination.value.page_size,
     total: 0,
     total_page: 1,
   }
@@ -486,35 +485,59 @@ const refreshAfterMutations = async () => {
   }
 }
 
-const handleSearchProducts = async () => {
+/** 手动搜索商品选项，不自动触发表格请求。@returns 选项读取完成。 */
+const handleSearchProducts = async (): Promise<void> => {
+  if (productOptionsLoading.value) return
   await loadProductOptions()
 }
 
-const debouncedSearchProducts = useDebounceFn(handleSearchProducts, 300)
-
-const handleProductSelectionChange = async () => {
+/** 商品变化仅清理依赖筛选，表格由搜索按钮统一读取。@returns void */
+const handleProductSelectionChange = async (): Promise<void> => {
   skuFilterValue.value = '__all__'
   clearBatchFilter()
-  await refreshAll()
+  await loadProductInfo()
 }
 
-const handleSkuSelectionChange = async () => {
+/** SKU 变化仅清理不适用的批次。@returns void */
+const handleSkuSelectionChange = (): void => {
   clearBatchFilter()
+}
+
+/** 按商品和 SKU 查询所有关联表格的第一页。@returns 查询完成。 */
+const searchTables = async (): Promise<void> => {
+  if (cardSecretsLoading.value || batchesLoading.value || refreshing.value) return
+  cardSecretPagination.value.page = 1
+  batchPagination.value.page = 1
   await refreshAll()
 }
 
-const applyListFilters = async () => {
-  scopeValidationError.value = ''
-  await fetchCardSecrets(1, { preserveRows: true })
+/** 清空所有查询条件，保留两个表格的分页尺寸。@returns 查询完成。 */
+const resetTableFilters = async (): Promise<void> => {
+  if (cardSecretsLoading.value || batchesLoading.value || refreshing.value) return
+  productKeyword.value = ''
+  selectedProductValue.value = '__all__'
+  skuFilterValue.value = '__all__'
+  Object.assign(filters, { status: '__all__', secret: '', batchNo: '' })
+  clearBatchFilter()
+  await searchTables()
 }
 
-const resetListFilters = async () => {
+/** 按卡密筛选查询第一页。@returns 查询完成。 */
+const applyListFilters = async (): Promise<void> => {
+  if (cardSecretsLoading.value || refreshing.value) return
+  scopeValidationError.value = ''
+  cardSecretPagination.value.page = 1
+  await fetchCardSecrets(1)
+}
+
+/** 清空卡密子表筛选，不改变商品业务上下文。@returns 查询完成。 */
+const resetListFilters = async (): Promise<void> => {
+  if (cardSecretsLoading.value || refreshing.value) return
   filters.status = '__all__'
   filters.secret = ''
   filters.batchNo = ''
   clearBatchFilter()
-  scopeValidationError.value = ''
-  await fetchCardSecrets(1, { preserveRows: true })
+  await applyListFilters()
 }
 
 const refreshCurrentList = () => {
@@ -669,7 +692,7 @@ const exportSecretsInScope = async (format: 'txt' | 'csv') => {
 const downloadExportFile = (response: any, format: 'txt' | 'csv') => {
   const contentDisposition = String(response?.headers?.['content-disposition'] || '')
   const filenameMatch = contentDisposition.match(/filename=\"?([^\";]+)\"?/i)
-  const fallbackName = `card-secrets-${new Date().toISOString().replace(/[:.]/g, '-')}.${format}`
+  const fallbackName = `card-secrets-${formatDate(new Date()).replace(/[ :]/g, '-')}.${format}`
   const filename = filenameMatch?.[1] || fallbackName
 
   const contentType = format === 'csv' ? 'text/csv;charset=utf-8' : 'text/plain;charset=utf-8'
@@ -780,7 +803,6 @@ onMounted(async () => {
           <Input
             v-model="productKeyword"
             :placeholder="t('admin.cardSecrets.productSearchPlaceholder')"
-            @update:modelValue="debouncedSearchProducts"
             @keyup.enter="handleSearchProducts"
           />
           <Button
@@ -823,7 +845,9 @@ onMounted(async () => {
         </div>
 
         <div class="md:col-span-2">
-          <Button class="w-full" variant="outline" :disabled="refreshing" @click="refreshCurrentList">{{ t('admin.common.refresh') }}</Button>
+          <Button class="w-full" variant="outline" :disabled="cardSecretsLoading || batchesLoading || refreshing" @click="searchTables">{{ t('admin.common.search') }}</Button>
+          <Button class="w-full" variant="outline" :disabled="cardSecretsLoading || batchesLoading || refreshing" @click="resetTableFilters">{{ t('admin.common.reset') }}</Button>
+          <Button class="w-full" variant="outline" :disabled="cardSecretsLoading || batchesLoading || refreshing" @click="refreshCurrentList">{{ t('admin.common.refresh') }}</Button>
         </div>
       </div>
 
@@ -985,8 +1009,8 @@ onMounted(async () => {
                 </SelectContent>
               </Select>
               <div class="flex gap-2">
-                <Button class="flex-1" variant="outline" @click="applyListFilters">{{ t('admin.common.search') }}</Button>
-                <Button class="flex-1" variant="outline" @click="resetListFilters">{{ t('admin.common.reset') }}</Button>
+                <Button class="flex-1" variant="outline" :disabled="cardSecretsLoading || refreshing" @click="applyListFilters">{{ t('admin.common.search') }}</Button>
+                <Button class="flex-1" variant="outline" :disabled="cardSecretsLoading || refreshing" @click="resetListFilters">{{ t('admin.common.reset') }}</Button>
               </div>
             </div>
           </div>

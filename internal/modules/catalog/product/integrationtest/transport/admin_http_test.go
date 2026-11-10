@@ -20,6 +20,7 @@ import (
 	mappingdomain "github.com/XManCodeing/XMall/internal/modules/catalog/mapping/domain"
 
 	productdomain "github.com/XManCodeing/XMall/internal/modules/catalog/product/domain"
+	membershipdomain "github.com/XManCodeing/XMall/internal/modules/telegram/membership/domain"
 
 	categorydomain "github.com/XManCodeing/XMall/internal/modules/catalog/category/domain"
 
@@ -127,6 +128,7 @@ func setupAdminProductHandlerTest(t *testing.T) (*producthttp.AdminProductHandle
 		&categorydomain.Category{},
 		&productdomain.Product{},
 		&productdomain.ProductSKU{},
+		&membershipdomain.ProductConfig{},
 		&cardsecretdomain.Secret{},
 		&cardsecretdomain.Batch{},
 		&memberleveldomain.MemberLevelPrice{},

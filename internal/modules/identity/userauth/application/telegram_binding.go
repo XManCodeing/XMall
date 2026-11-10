@@ -2,7 +2,6 @@ package application
 
 import (
 	"context"
-	"time"
 
 	"github.com/XManCodeing/XMall/internal/constants"
 	externalidentitydomain "github.com/XManCodeing/XMall/internal/modules/identity/externalidentity/domain"
@@ -68,64 +67,14 @@ func (s *Service) BindTelegramMiniApp(input BindTelegramMiniAppInput) (*external
 }
 
 func (s *Service) bindVerifiedTelegram(userID uint, verified *telegramauthapp.IdentityVerified) (*externalidentitydomain.Identity, error) {
-	if _, err := s.getActiveUserByID(userID); err != nil {
-		return nil, err
-	}
-
-	occupied, err := s.getTelegramIdentityByVerifiedID(verified)
+	// userID is supplied by the authenticated website session, never by the
+	// Telegram payload. All three verification entry points converge here.
+	target, err := s.getActiveUserByID(userID)
 	if err != nil {
 		return nil, err
 	}
-	if occupied != nil && occupied.UserID != userID {
-		return nil, ErrUserOAuthIdentityExists
-	}
-
-	current, err := s.userOAuthIdentityRepo.GetByUserProvider(userID, verified.Provider)
-	if err != nil {
-		return nil, err
-	}
-	if current != nil && !telegramProviderUserIDMatchesVerified(current.ProviderUserID, verified) {
-		return nil, ErrUserOAuthAlreadyBound
-	}
-	if current == nil {
-		current = &externalidentitydomain.Identity{
-			UserID:         userID,
-			Provider:       verified.Provider,
-			ProviderUserID: verified.ProviderUserID,
-			Username:       verified.Username,
-			AvatarURL:      verified.AvatarURL,
-			AuthAt:         &verified.AuthAt,
-			CreatedAt:      time.Now(),
-			UpdatedAt:      time.Now(),
-		}
-		if err := s.userOAuthIdentityRepo.Create(current); err != nil {
-			occupied, occupiedErr := s.getTelegramIdentityByVerifiedID(verified)
-			if occupiedErr == nil && occupied != nil && occupied.UserID != userID {
-				return nil, ErrUserOAuthIdentityExists
-			}
-			latest, latestErr := s.userOAuthIdentityRepo.GetByUserProvider(userID, verified.Provider)
-			if latestErr == nil && latest != nil {
-				if !telegramProviderUserIDMatchesVerified(latest.ProviderUserID, verified) {
-					return nil, ErrUserOAuthAlreadyBound
-				}
-				return latest, nil
-			}
-			return nil, err
-		}
-		return current, nil
-	}
-
-	identityChanged, err := s.canonicalizeTelegramProviderUserID(verified, current)
-	if err != nil {
-		return nil, err
-	}
-	if applyTelegramIdentity(verified, current) || identityChanged {
-		current.UpdatedAt = time.Now()
-		if err := s.updateTelegramIdentity(current); err != nil {
-			return nil, err
-		}
-	}
-	return current, nil
+	_, identity, _, err := s.bindTelegramIdentityToUser(0, target, verified, true)
+	return identity, err
 }
 
 // UnbindTelegram 解绑 Telegram

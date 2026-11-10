@@ -9,6 +9,10 @@ import (
 type ListFilter struct {
 	Page     int
 	PageSize int
+	// ActiveOnly selects pending/running work through the existing status index.
+	ActiveOnly bool
+	AfterID    uint
+	Keyset     bool
 }
 
 type Store interface {

@@ -169,7 +169,8 @@ const moreOpen = ref(false)
 const langEl = ref<HTMLElement | null>(null)
 const moreEl = ref<HTMLElement | null>(null)
 
-const year = new Date().getFullYear()
+import { businessDateKey } from '@/utils/format'
+const year = businessDateKey().slice(0, 4)
 
 const brandName = computed(() => appStore.brandSiteName)
 const brandLogo = computed(() => {

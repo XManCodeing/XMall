@@ -20,6 +20,7 @@ const auth = useAdminAuthStore()
 const error = ref('')
 let requestID = 0
 const broadcastId = computed(() => Number(route.params.id))
+const canRead = computed(() => auth.hasPermission(`GET:/admin/telegram-bot/broadcasts/${broadcastId.value}`))
 
 const loading = ref(false)
 const broadcast = ref<AdminTelegramBroadcast | null>(null)
@@ -29,7 +30,7 @@ const fetchBroadcast = async (options: { silent?: boolean } = {}) => {
   const silent = options.silent === true && broadcast.value !== null
   const request = ++requestID
   error.value = ''
-  if (!auth.hasPermission(`GET:/admin/telegram-bot/broadcasts/${broadcastId.value}`)) {
+  if (!canRead.value) {
     broadcast.value = null
     error.value = t('telegramBot.instances.forbidden')
     return
@@ -37,7 +38,9 @@ const fetchBroadcast = async (options: { silent?: boolean } = {}) => {
   if (!silent) loading.value = true
   try {
     const res = await adminAPI.getTelegramBroadcast(broadcastId.value)
-    if (request === requestID) broadcast.value = res.data?.data || null
+    if (request !== requestID) return
+    if (!res.data?.data || typeof res.data.data !== 'object') throw new Error(t('common.api.responseMissing'))
+    broadcast.value = res.data.data
   } catch (err) {
     if (request === requestID) {
       if (!silent) broadcast.value = null
@@ -106,7 +109,7 @@ watch(broadcastId, () => {
       </Button>
     </div>
 
-    <p v-if="error" role="alert" class="text-sm text-destructive">{{ error }}</p>
+    <p v-if="!canRead" role="alert" class="text-sm text-destructive">{{ t('telegramBot.instances.forbidden') }}</p>
     <Button variant="outline" :disabled="loading || retrying !== null" @click="fetchBroadcast({ silent: !!broadcast })">{{ t('telegramBot.instances.reload') }}</Button>
     <div v-if="loading && !broadcast" class="flex justify-center py-20">
       <Loader2 class="h-6 w-6 animate-spin text-muted-foreground" />
@@ -144,6 +147,7 @@ watch(broadcastId, () => {
       <Card>
         <CardHeader>
           <CardTitle>{{ t('telegramBot.broadcasts.detailExecution') }}</CardTitle>
+          <p class="text-sm text-muted-foreground">{{ t('telegramBot.broadcasts.reconcileHint') }}</p>
         </CardHeader>
         <CardContent>
           <dl class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -191,35 +195,40 @@ watch(broadcastId, () => {
           <template v-else>
             <div class="flex items-center justify-between gap-3">
               <p class="text-sm text-muted-foreground">{{ t('telegramBot.instances.retryHint') }}</p>
-              <Button variant="outline" size="sm" :disabled="deliveriesLoading || retrying !== null" @click="fetchDeliveries(deliveryPagination.page, { silent: deliveries.length > 0 })">{{ t('telegramBot.instances.reload') }}</Button>
+              <Button variant="outline" size="sm" :disabled="deliveriesLoading || retrying !== null" @click="fetchDeliveries(1)">{{ t('admin.common.search') }}</Button>
             </div>
-            <p v-if="deliveryError" role="alert" class="text-sm text-destructive">{{ deliveryError }}</p>
-            <Table>
-              <TableHeader><TableRow>
-                <TableHead>ID</TableHead>
-                <TableHead>{{ t('telegramBot.instances.recipientUser') }}</TableHead>
-                <TableHead>{{ t('telegramBot.instances.state') }}</TableHead>
-                <TableHead>{{ t('telegramBot.instances.attempts') }}</TableHead>
-                <TableHead>{{ t('telegramBot.instances.messageID') }}</TableHead>
-                <TableHead>{{ t('telegramBot.instances.error') }}</TableHead>
-                <TableHead>{{ t('telegramBot.instances.updatedAt') }}</TableHead>
-                <TableHead class="text-right">{{ t('telegramBot.instances.actions') }}</TableHead>
-              </TableRow></TableHeader>
-              <TableBody>
-                <TableRow v-if="deliveriesLoading && !deliveries.length"><TableCell :colspan="8" class="py-8 text-center"><Loader2 class="mx-auto h-5 w-5 animate-spin text-muted-foreground" /></TableCell></TableRow>
-                <TableRow v-else-if="!deliveries.length"><TableCell :colspan="8" class="py-8 text-center text-muted-foreground">{{ deliveryError || t('telegramBot.instances.empty') }}</TableCell></TableRow>
-                <TableRow v-for="item in deliveries" :key="item.id">
-                  <TableCell>{{ item.id }}</TableCell>
-                  <TableCell><p>{{ item.user_id }}</p><p class="text-xs text-muted-foreground">Telegram: {{ item.telegram_user_id }}</p></TableCell>
-                  <TableCell>{{ formatStatus(item.status) }}</TableCell>
-                  <TableCell>{{ item.attempts }}</TableCell>
-                  <TableCell>{{ item.message_id || '-' }}</TableCell>
-                  <TableCell class="max-w-64 break-words text-xs">{{ item.last_error || '-' }}</TableCell>
-                  <TableCell>{{ formatDate(item.updated_at) || '-' }}</TableCell>
-                  <TableCell class="text-right"><Button v-if="canRetry(item)" variant="outline" size="sm" :disabled="retrying !== null" @click="retry(item)">{{ t('telegramBot.instances.retryRecipient') }}</Button></TableCell>
-                </TableRow>
-              </TableBody>
-            </Table>
+            <div class="rounded-xl border border-border bg-card overflow-x-auto">
+              <Table>
+                <TableHeader class="border-b border-border bg-muted/40 text-xs uppercase text-muted-foreground"><TableRow>
+                  <TableHead class="px-6 py-3">ID</TableHead>
+                  <TableHead class="px-6 py-3">{{ t('telegramBot.instances.recipientUser') }}</TableHead>
+                  <TableHead class="px-6 py-3">{{ t('telegramBot.instances.state') }}</TableHead>
+                  <TableHead class="px-6 py-3">{{ t('telegramBot.instances.attempts') }}</TableHead>
+                  <TableHead class="px-6 py-3">{{ t('telegramBot.instances.messageID') }}</TableHead>
+                  <TableHead class="px-6 py-3">{{ t('telegramBot.instances.error') }}</TableHead>
+                  <TableHead class="px-6 py-3">{{ t('telegramBot.instances.updatedAt') }}</TableHead>
+                  <TableHead class="px-6 py-3 text-right">{{ t('telegramBot.instances.actions') }}</TableHead>
+                </TableRow></TableHeader>
+                <TableBody class="divide-y divide-border">
+                  <TableRow v-if="deliveriesLoading && !deliveries.length"><TableCell :colspan="8" class="px-6 py-8 text-center"><Loader2 class="mx-auto h-5 w-5 animate-spin text-muted-foreground" /></TableCell></TableRow>
+                  <TableRow v-else-if="!deliveries.length && !deliveryError"><TableCell :colspan="8" class="px-6 py-8 text-center text-muted-foreground">{{ t('telegramBot.instances.empty') }}</TableCell></TableRow>
+                  <TableRow v-for="item in deliveries" :key="item.id" class="hover:bg-muted/30">
+                    <TableCell class="px-6 py-4">{{ item.id }}</TableCell>
+                    <TableCell class="px-6 py-4"><p>{{ item.user_id }}</p><p class="text-xs text-muted-foreground">Telegram: {{ item.telegram_user_id }}</p></TableCell>
+                    <TableCell class="px-6 py-4">{{ formatStatus(item.status) }}</TableCell>
+                    <TableCell class="px-6 py-4">{{ item.attempts }}</TableCell>
+                    <TableCell class="px-6 py-4">{{ item.message_id || '-' }}</TableCell>
+                    <TableCell class="max-w-64 break-words text-xs px-6 py-4">{{ item.last_error || '-' }}</TableCell>
+                    <TableCell class="px-6 py-4">{{ formatDate(item.updated_at) || '-' }}</TableCell>
+                    <TableCell class="px-6 py-4 text-right">
+                      <div class="flex flex-wrap items-center justify-end gap-2">
+                        <Button v-if="canRetry(item)" variant="outline" size="sm" :disabled="retrying !== null" @click="retry(item)" :title="t('telegramBot.instances.retryRecipient')" :aria-label="t('telegramBot.instances.retryRecipient')">{{ t('tableAction.retry') }}</Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                </TableBody>
+              </Table>
+            </div>
             <div class="flex items-center justify-end gap-3">
               <Button variant="outline" size="sm" :disabled="deliveriesLoading || retrying !== null || deliveryPagination.page <= 1" @click="fetchDeliveries(deliveryPagination.page - 1, { silent: deliveries.length > 0 })">{{ t('telegramBot.instances.previous') }}</Button>
               <span class="text-sm text-muted-foreground">{{ t('telegramBot.broadcasts.pageSummary', { page: deliveryPagination.page, total: Math.max(1, deliveryPagination.total_page) }) }}</span>

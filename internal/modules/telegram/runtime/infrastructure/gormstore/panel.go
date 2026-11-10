@@ -5,10 +5,18 @@ import (
 	c "github.com/XManCodeing/XMall/internal/modules/telegram/runtime/contract"
 	d "github.com/XManCodeing/XMall/internal/modules/telegram/runtime/domain"
 	"gorm.io/gorm"
+	"strings"
 	"time"
 )
 
 var _ c.PanelStore = (*Store)(nil)
+
+// membershipPanelEditOnly recognizes runtime-owned completion keys; these never
+// acquire a new physical panel or retry an invalid edit as a send.
+func membershipPanelEditOnly(key string) bool {
+	parts := strings.Split(key, ":")
+	return strings.HasPrefix(key, "membership-panel:") || (len(parts) == 5 && parts[0] == "membership-invite" && parts[2] == "panel")
+}
 
 func (s *Store) PreparePanel(ctx context.Context, item *d.Delivery, message *c.Message) error {
 	return s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
@@ -24,6 +32,11 @@ func (s *Store) PreparePanel(ctx context.Context, item *d.Delivery, message *c.M
 			return err
 		}
 		if session.PanelEpoch != message.PanelEpoch || session.PanelRevision > message.PanelRevision {
+			return c.ErrConflict
+		}
+		// Background membership completion is strictly edit-only. A missing,
+		// unknown or replaced physical panel must never fall back to a send.
+		if membershipPanelEditOnly(delivery.Key) && (session.PanelRevision != message.PanelRevision || session.PanelState != "ready" || session.PanelKind != "text" || session.PanelMessageEpoch != message.PanelEpoch || session.PanelMessageID != delivery.TargetMessageID || delivery.TargetMessageID <= 0 || message.ReplacePanel) {
 			return c.ErrConflict
 		}
 		// A persisted target is authoritative. Callback data alone cannot redirect
@@ -101,7 +114,7 @@ func (s *Store) FinishPanel(ctx context.Context, item *d.Delivery, status string
 		if current.Status != "processing" || current.Claim != item.Claim {
 			return c.ErrStale
 		}
-		if err := result(tx.Model(&d.Delivery{}).Where("id = ? AND status = ? AND claim = ?", item.ID, "processing", item.Claim).Updates(map[string]interface{}{"status": status, "message_id": delivered.MessageID, "claim": "", "claimed_until": nil, "last_error": safeError(detail), "available_at": readyAt(available)}), c.ErrStale); err != nil {
+		if err := New(tx).FinishDelivery(ctx, item.ID, item.Claim, status, delivered.MessageID, detail, available); err != nil {
 			return err
 		}
 		changes := map[string]interface{}{}
@@ -129,6 +142,9 @@ func (s *Store) FinishPanel(ctx context.Context, item *d.Delivery, status string
 // ReplacePanel only permits a definite invalid-target response to transition an
 // edit to a fresh send; arbitrary API errors must not invoke this transition.
 func (s *Store) ReplacePanel(ctx context.Context, item *d.Delivery) error {
+	if membershipPanelEditOnly(item.Key) {
+		return c.ErrConflict
+	}
 	return s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		if err := lockBot(tx, item.BotID); err != nil {
 			return err

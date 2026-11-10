@@ -2,6 +2,7 @@ package catalogproductbootstrap
 
 import (
 	"errors"
+	membershipstore "github.com/XManCodeing/XMall/internal/modules/telegram/membership/infrastructure/gormstore"
 
 	paymentcontract "github.com/XManCodeing/XMall/internal/modules/payment/contract"
 
@@ -60,6 +61,7 @@ type OrderReader interface {
 
 // Dependencies 是 Product 三组应用用例的装配依赖。
 type Dependencies struct {
+	EnforcePublicSale bool
 	Products          ProductStore
 	SKUs              SKUStore
 	CardSecrets       CardSecretStore
@@ -114,7 +116,12 @@ func (unit *productWriteUnitOfWork) WithinTransaction(fn func(repositories produ
 		if unit.cardSecrets != nil {
 			cardSecrets = unit.cardSecrets.BindTx(tx)
 		}
+		memberships, err := membershipstore.InTransaction(tx)
+		if err != nil {
+			return err
+		}
 		return fn(productwrite.TransactionRepositories{
+			Membership:  memberships,
 			Products:    unit.products.BindTx(tx),
 			SKUs:        skus,
 			CardSecrets: cardSecrets,
@@ -161,13 +168,33 @@ func (unit *productAdminUnitOfWork) WithinTransaction(fn func(productadmin.Delet
 		return errors.New("product transaction repository is nil")
 	}
 	return unit.products.Transaction(func(tx *gorm.DB) error {
+		memberships, err := membershipstore.InTransaction(tx)
+		if err != nil {
+			return err
+		}
+		var secrets productadmin.CardSecretDeleteRepository
+		var stock productadmin.CardSecretStockRepository
+		if unit.cardSecrets != nil {
+			bound := unit.cardSecrets.BindTx(tx)
+			secrets, stock = bound, bound
+		}
+		var batches productadmin.CardSecretBatchDeleteRepository
+		if unit.cardSecretBatches != nil {
+			batches = unit.cardSecretBatches.BindTx(tx)
+		}
+		var carts productadmin.CartDeleteRepository
+		if unit.carts != nil {
+			carts = unit.carts.WithTx(tx)
+		}
 		return fn(productadmin.DeleteRepositories{
+			Membership:        memberships,
+			Stock:             stock,
 			Products:          unit.products.BindTx(tx),
-			CardSecrets:       unit.cardSecrets.BindTx(tx),
-			CardSecretBatches: unit.cardSecretBatches.BindTx(tx),
+			CardSecrets:       secrets,
+			CardSecretBatches: batches,
 			SKUs:              unit.productSKUs.BindTx(tx),
 			MemberLevelPrices: memberLevelPriceDeleteAdapter{tx: tx, cleaner: unit.memberLevelPrices},
-			Carts:             unit.carts.WithTx(tx),
+			Carts:             carts,
 			ProductMappings:   bindMappingDeleteTx(unit.productMappings, tx),
 		})
 	})
@@ -186,6 +213,9 @@ type memberLevelPriceDeleteAdapter struct {
 }
 
 func (adapter memberLevelPriceDeleteAdapter) DeleteByProduct(productID uint) error {
+	if adapter.cleaner == nil {
+		return productcontract.ErrSalePolicyUnavailable
+	}
 	return adapter.cleaner.DeleteByProductInTx(adapter.tx, productID)
 }
 
@@ -197,18 +227,20 @@ func New(dependencies Dependencies) Services {
 		Stock:      dependencies.CardSecrets,
 	})
 	admin := productadmin.NewAdminService(productadmin.Options{
-		Products:     dependencies.Products,
-		Categories:   dependencies.Categories,
-		CardSecrets:  dependencies.CardSecrets,
-		Orders:       dependencies.Orders,
-		Transactions: newProductAdminUnitOfWork(dependencies.Products, dependencies.SKUs, dependencies.CardSecrets, dependencies.CardSecretBatches, dependencies.MemberLevelPrices, dependencies.Carts, dependencies.ProductMappings),
+		EnforcePublicSale: dependencies.EnforcePublicSale,
+		Products:          dependencies.Products,
+		Categories:        dependencies.Categories,
+		CardSecrets:       dependencies.CardSecrets,
+		Orders:            dependencies.Orders,
+		Transactions:      newProductAdminUnitOfWork(dependencies.Products, dependencies.SKUs, dependencies.CardSecrets, dependencies.CardSecretBatches, dependencies.MemberLevelPrices, dependencies.Carts, dependencies.ProductMappings),
 	})
 	write := productwrite.NewWriteService(productwrite.Options{
-		Products:        dependencies.Products,
-		SKUs:            dependencies.SKUs,
-		Categories:      dependencies.Categories,
-		PaymentChannels: dependencies.PaymentChannels,
-		Transactions:    newProductWriteUnitOfWork(dependencies.Products, dependencies.SKUs, dependencies.CardSecrets),
+		EnforcePublicSale: dependencies.EnforcePublicSale,
+		Products:          dependencies.Products,
+		SKUs:              dependencies.SKUs,
+		Categories:        dependencies.Categories,
+		PaymentChannels:   dependencies.PaymentChannels,
+		Transactions:      newProductWriteUnitOfWork(dependencies.Products, dependencies.SKUs, dependencies.CardSecrets),
 	})
 	return Services{Read: read, Admin: admin, Write: write}
 }

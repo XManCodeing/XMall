@@ -3,7 +3,13 @@ package upstreamhttp
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
+	"strings"
+
 	"fmt"
+	"github.com/XManCodeing/XMall/internal/logger"
+	"go.uber.org/zap"
+	"go.uber.org/zap/zaptest/observer"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -20,6 +26,81 @@ import (
 
 	"github.com/gin-gonic/gin"
 )
+
+type failingCallbackConnections struct{}
+
+// GetByApiKey returns a synthetic storage failure embedding key to test indirect credential leakage.
+func (failingCallbackConnections) GetByApiKey(key string) (*siteconnectiondomain.Connection, error) {
+	return nil, errors.New(key)
+}
+
+type failingCallbackSecrets struct{}
+
+// DecryptSecret returns a synthetic failure embedding secret to verify safe logging.
+func (failingCallbackSecrets) DecryptSecret(secret string) (string, error) {
+	return "", errors.New(secret)
+}
+
+// TestCallbackLogsExcludeAPIKey checks all credential-sensitive denial branches using an in-memory logger.
+// t owns synthetic credentials and fake services; no real upstream or database is used.
+func TestCallbackLogsExcludeAPIKey(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	const key = "synthetic-private-api-key"
+	const secret = "synthetic-private-api-secret"
+	for _, scenario := range []struct{ name, event string }{
+		{"lookup", "upstream_callback_lookup_connection_failed"},
+		{"decrypt", "upstream_callback_secret_decrypt_failed"},
+		{"signature", "upstream_callback_signature_invalid"},
+		{"ownership", "upstream_callback_ownership_mismatch"},
+	} {
+		t.Run(scenario.name, func(t *testing.T) {
+			core, logs := observer.New(zap.DebugLevel)
+			previous := logger.L
+			logger.L = zap.New(core)
+			t.Cleanup(func() { logger.L = previous })
+			procurements := &stubProcurements{order: &procurementdomain.Order{ID: 1, ConnectionID: 2, UpstreamOrderID: 3}}
+			handler := &Handler{Dependencies: Dependencies{
+				Connections:       stubConnections{conn: &siteconnectiondomain.Connection{ID: 1, ApiKey: key, ApiSecret: secret, Status: "active"}},
+				ConnectionSecrets: stubSecrets{}, Procurements: procurements,
+			}}
+			if scenario.name == "lookup" {
+				handler.Connections = failingCallbackConnections{}
+			}
+			if scenario.name == "decrypt" {
+				handler.ConnectionSecrets = failingCallbackSecrets{}
+			}
+			body := `{"downstream_order_no":"local-1","status":"delivered","order_id":3}`
+			timestamp := time.Now().Unix()
+			request := httptest.NewRequest(http.MethodPost, "/api/v1/upstream/callback", strings.NewReader(body))
+			request.Header.Set("Content-Type", "application/json")
+			request.Header.Set(upstreamadapter.HeaderApiKey, key)
+			request.Header.Set(upstreamadapter.HeaderTimestamp, fmt.Sprint(timestamp))
+			signature := upstreamadapter.Sign(secret, http.MethodPost, "/api/v1/upstream/callback", timestamp, []byte(body))
+			if scenario.name == "signature" {
+				signature = "invalid"
+			}
+			request.Header.Set(upstreamadapter.HeaderSignature, signature)
+			recorder := httptest.NewRecorder()
+			ctx, _ := gin.CreateTestContext(recorder)
+			ctx.Request = request
+			handler.HandleCallback(ctx)
+			if procurements.handled || !strings.Contains(recorder.Body.String(), `"ok":false`) {
+				t.Fatal("denied callback was accepted")
+			}
+			entries := logs.All()
+			if len(entries) != 1 || entries[0].Message != scenario.event {
+				t.Fatalf("unexpected diagnostic: %v", entries)
+			}
+			output := fmt.Sprint(entries[0].ContextMap()) + recorder.Body.String()
+			if strings.Contains(output, key) || strings.Contains(output, secret) {
+				t.Fatal("credential leaked")
+			}
+			if _, exists := entries[0].ContextMap()["api_key"]; exists {
+				t.Fatal("api_key field must not be logged")
+			}
+		})
+	}
+}
 
 func TestMapCallbackStatus(t *testing.T) {
 	tests := []struct {

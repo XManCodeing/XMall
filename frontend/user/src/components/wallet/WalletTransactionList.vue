@@ -100,12 +100,7 @@ const formatMoney = (amount?: string, currency?: string) => {
   return `${amount} ${currency}`
 }
 
-const formatDate = (raw?: string) => {
-  if (!raw) return '-'
-  const date = new Date(raw)
-  if (Number.isNaN(date.getTime())) return raw
-  return date.toLocaleString()
-}
+import { formatDate } from '@/utils/format'
 
 const directionLabel = (direction?: string) => {
   if (direction === 'in') return t('personalCenter.wallet.directionIn')

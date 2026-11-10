@@ -170,6 +170,7 @@
         <div v-else class="min-w-0">
           <ProfilePanel v-if="currentSection === 'profile'" />
           <SecurityPanel v-else-if="currentSection === 'security'" />
+          <MembershipGroupsPanel v-else-if="currentSection === 'membershipGroups'" />
           <OrdersPanel v-else-if="currentSection === 'orders'" />
           <WalletPanel v-else-if="currentSection === 'wallet'" />
           <AffiliatePanel v-else-if="currentSection === 'affiliate'" />
@@ -195,6 +196,7 @@ import { Button } from '@/components/ui/button'
 import { getImageUrl } from '../../utils/image.ts'
 import ProfilePanel from '../../views/personal/ProfilePanel.vue'
 import SecurityPanel from '../../views/personal/SecurityPanel.vue'
+import MembershipGroupsPanel from '../../views/personal/MembershipGroupsPanel.vue'
 import OrdersPanel from '../../views/personal/OrdersPanel.vue'
 import WalletPanel from '../../views/personal/WalletPanel.vue'
 import GiftCardPanel from '../../views/personal/GiftCardPanel.vue'

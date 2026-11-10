@@ -5,6 +5,7 @@
 
 @layer base {
   :root {
+    --overlay: 0 0% 0%;
     --background: 0 0% 100%;
     --foreground: 240 10% 3.9%;
     --card: 0 0% 100%;
@@ -20,6 +21,8 @@
     --accent: 240 4.8% 95.9%;
     --accent-foreground: 240 5.9% 10%;
     --destructive: 0 84.2% 60.2%;
+    --warning: 32 94% 36%;
+    --info: 215 80% 42%;
     --success: 161 94% 30%;
     --success-foreground: 0 0% 100%;
     --destructive-foreground: 0 0% 98%;
@@ -34,6 +37,7 @@
     --chart-5: 195 65% 42%;
   }
   .dark {
+    --overlay: 0 0% 0%;
     --background: 240 10% 3.9%;
     --foreground: 0 0% 98%;
     --card: 240 10% 3.9%;
@@ -49,6 +53,8 @@
     --accent: 240 3.7% 15.9%;
     --accent-foreground: 0 0% 98%;
     --destructive: 0 62.8% 30.6%;
+    --warning: 40 96% 64%;
+    --info: 213 94% 68%;
     --success: 158 64% 52%;
     --success-foreground: 164 86% 16%;
     --destructive-foreground: 0 0% 98%;
@@ -64,6 +70,7 @@
 }
 
 @theme inline {
+  --color-overlay: hsl(var(--overlay));
   --color-background: hsl(var(--background));
   --color-foreground: hsl(var(--foreground));
   --color-card: hsl(var(--card));
@@ -78,6 +85,8 @@
   --color-muted-foreground: hsl(var(--muted-foreground));
   --color-accent: hsl(var(--accent));
   --color-accent-foreground: hsl(var(--accent-foreground));
+  --color-warning: hsl(var(--warning));
+  --color-info: hsl(var(--info));
   --color-success: hsl(var(--success));
   --color-success-foreground: hsl(var(--success-foreground));
   --color-destructive: hsl(var(--destructive));

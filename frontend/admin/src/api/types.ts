@@ -59,6 +59,7 @@ export interface AdminProduct {
   title: LocalizedText
   description: LocalizedText
   content: LocalizedText
+  instructions?: LocalizedText | null
   price_amount: number
   cost_price_amount: number
   wholesale_prices?: AdminWholesalePrice[]
@@ -376,9 +377,6 @@ export interface AdminTelegramBotRuntimeStatus {
   last_seen_at?: string
   bot_version?: string
   webhook_status?: string
-  machine_code?: string
-  license_status?: string
-  license_expires_at?: string
   warnings?: string[]
   config_version: number
   last_config_sync_at?: string

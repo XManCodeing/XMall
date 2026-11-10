@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted, watch, nextTick } from 'vue'
-import { useDebounceFn } from '@vueuse/core'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { adminAPI } from '@/api/admin'
@@ -286,11 +285,12 @@ const fetchSiteCurrency = async () => {
   }
 }
 
-const handleSearch = () => {
+/** 按当前筛选查询第一页，加载期间忽略重复操作。@returns 查询完成。 */
+const handleSearch = async (): Promise<void> => {
+  if (loading.value) return
   pagination.page = 1
-  fetchProducts()
+  await fetchProducts()
 }
-const debouncedSearch = useDebounceFn(handleSearch, 300)
 
 // 上架状态三态：'all' 不下发参数，'active' → is_active=1，'inactive' → is_active=0
 const statusQueryValue = () => {
@@ -311,39 +311,18 @@ const syncWholesaleStatusFromRoute = (value: unknown) => {
   }
 }
 
-const wholesaleQueryValue = () => {
-  if (wholesaleStatus.value === 'enabled') return '1'
-  if (wholesaleStatus.value === 'disabled') return '0'
-  return undefined
-}
-
-const handleWholesaleStatusChange = () => {
-  pagination.page = 1
-  const current = Array.isArray(route.query.wholesale) ? route.query.wholesale[0] : route.query.wholesale
-  const nextWholesale = wholesaleQueryValue()
-  if ((current || undefined) !== nextWholesale) {
-    router.replace({ query: { ...route.query, wholesale: nextWholesale } })
-    return
-  }
-  fetchProducts()
-}
-
-const resetFilters = () => {
+/** 恢复查询默认值，保留路由批发上下文及分页尺寸。@returns 查询完成。 */
+const resetFilters = async (): Promise<void> => {
+  if (loading.value) return
   searchQuery.value = ''
   stockStatus.value = 'all'
   statusFilter.value = 'all'
-  wholesaleStatus.value = 'all'
+  syncWholesaleStatusFromRoute(route.query.wholesale)
   categoryFilter.value = 'all'
-  pagination.page = 1
-  if (route.query.wholesale !== undefined) {
-    router.replace({ query: { ...route.query, wholesale: undefined } })
-  } else {
-    fetchProducts({ preserveRows: true })
-  }
-  nextTick(() => {
-    const input = document.getElementById('admin-products-search') as HTMLInputElement | null
-    input?.focus()
-  })
+  await handleSearch()
+  await nextTick()
+  const input = document.getElementById('admin-products-search') as HTMLInputElement | null
+  input?.focus()
 }
 
 const changePage = (page: number) => {
@@ -506,12 +485,11 @@ watch(
             v-model="searchQuery"
             class="pl-9"
             :placeholder="t('admin.products.searchPlaceholder')"
-            @update:modelValue="debouncedSearch"
             @keydown.enter="handleSearch"
           />
         </div>
         <div class="w-full md:w-56">
-          <Select v-model="stockStatus" @update:modelValue="handleSearch">
+          <Select v-model="stockStatus">
             <SelectTrigger class="h-9 w-full">
               <SelectValue :placeholder="t('admin.products.filters.stockStatusPlaceholder')" />
             </SelectTrigger>
@@ -524,7 +502,7 @@ watch(
           </Select>
         </div>
         <div class="w-full md:w-56">
-          <Select v-model="categoryFilter" @update:modelValue="handleSearch">
+          <Select v-model="categoryFilter">
             <SelectTrigger class="h-9 w-full">
               <SelectValue :placeholder="t('admin.products.filters.categoryPlaceholder')" />
             </SelectTrigger>
@@ -543,7 +521,7 @@ watch(
           </Select>
         </div>
         <div class="w-full md:w-48">
-          <Select v-model="statusFilter" @update:modelValue="handleSearch">
+          <Select v-model="statusFilter">
             <SelectTrigger class="h-9 w-full">
               <SelectValue :placeholder="t('admin.products.filters.statusPlaceholder')" />
             </SelectTrigger>
@@ -555,7 +533,7 @@ watch(
           </Select>
         </div>
         <div class="w-full md:w-48">
-          <Select v-model="wholesaleStatus" @update:modelValue="handleWholesaleStatusChange">
+          <Select v-model="wholesaleStatus">
             <SelectTrigger class="h-9 w-full">
               <SelectValue :placeholder="t('admin.products.filters.wholesalePlaceholder')" />
             </SelectTrigger>
@@ -566,7 +544,8 @@ watch(
             </SelectContent>
           </Select>
         </div>
-        <Button variant="outline" size="sm" class="h-9 w-full sm:w-auto" @click="resetFilters">
+        <Button variant="outline" size="sm" class="h-9 w-full sm:w-auto" :disabled="loading" @click="handleSearch">{{ t('admin.common.search') }}</Button>
+        <Button variant="outline" size="sm" class="h-9 w-full sm:w-auto" :disabled="loading" @click="resetFilters">
           {{ t('admin.common.reset') }}
         </Button>
       </div>

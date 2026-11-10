@@ -1,0 +1,40 @@
+/* 会员业务页内导航共用容器底边；颜色由全局主题控制。 */
+.membership-subtabs {
+  display: flex;
+  align-items: center;
+  padding-block: 0;
+  border-bottom: 1px solid hsl(var(--border));
+}
+
+.membership-subtabs :deep([data-slot='tabs-list']) {
+  height: 34px;
+  width: 100%;
+  max-width: none;
+  justify-content: flex-start;
+  gap: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.membership-subtabs :deep([data-slot='tabs-trigger']) {
+  height: 34px;
+  flex: 0 1 220px;
+  padding-block: 0;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
+  background: transparent;
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  font-weight: 400;
+  box-shadow: none;
+}
+
+.membership-subtabs :deep([data-slot='tabs-trigger'][data-state='active']) {
+  border-bottom-color: hsl(var(--primary));
+  color: hsl(var(--foreground));
+  font-weight: 500;
+}

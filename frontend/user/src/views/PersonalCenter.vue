@@ -61,7 +61,7 @@
                   :key="item.key"
                   type="button"
                   @click="switchSection(item.key)"
-                  class="shrink-0 rounded-lg px-3.5 py-2 text-xs font-semibold transition-colors"
+                  class="min-h-11 shrink-0 rounded-lg px-3.5 py-2 text-xs font-semibold transition-colors"
                   :class="currentSection === item.key
                     ? 'bg-primary/10 text-primary'
                     : 'text-muted-foreground hover:bg-accent hover:text-foreground'"
@@ -264,6 +264,7 @@
 
           <ProfilePanel v-else-if="currentSection === 'profile'" />
           <SecurityPanel v-else-if="currentSection === 'security'" />
+          <MembershipGroupsPanel v-else-if="currentSection === 'membershipGroups'" />
           <OrdersPanel v-else-if="currentSection === 'orders'" />
           <WalletPanel v-else-if="currentSection === 'wallet'" />
           <AffiliatePanel v-else-if="currentSection === 'affiliate'" />
@@ -294,6 +295,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import ProfilePanel from './personal/ProfilePanel.vue'
 import SecurityPanel from './personal/SecurityPanel.vue'
+import MembershipGroupsPanel from './personal/MembershipGroupsPanel.vue'
 import OrdersPanel from './personal/OrdersPanel.vue'
 import WalletPanel from './personal/WalletPanel.vue'
 import GiftCardPanel from './personal/GiftCardPanel.vue'

@@ -62,6 +62,9 @@ func (m *Manager) Configure(ctx context.Context, id uint, version uint64, enable
 	if err != nil {
 		return err
 	}
+	if instance.RecoveryTaskID != 0 {
+		return c.ErrRecoveryBlocked
+	}
 	if instance.Version != version {
 		return c.ErrConflict
 	}

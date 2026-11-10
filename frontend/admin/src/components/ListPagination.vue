@@ -7,8 +7,15 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 
 const props = defineProps<{
   page: number
-  totalPage: number
-  total: number
+  totalPage?: number
+  total?: number
+  /** Cursor mode has no authoritative total or arbitrary page jump. */
+  mode?: 'page' | 'cursor'
+  hasNext?: boolean
+  hasPrevious?: boolean
+  loading?: boolean
+  disabled?: boolean
+  alwaysShow?: boolean
   pageSize?: number
   pageSizeOptions?: number[]
 }>()
@@ -32,24 +39,33 @@ const pageSizeValue = computed(() => {
   if (!Number.isFinite(raw) || raw <= 0) return ''
   return String(Math.floor(raw))
 })
-const shouldShow = computed(() => {
-  if (props.total <= 0) return false
-  return props.totalPage > 1 || normalizedPageSizeOptions.value.length > 0
-})
+const cursorMode = computed(() => props.mode === 'cursor')
+const blocked = computed(() => props.loading || props.disabled)
+const lastPage = computed(() => Math.max(1, props.totalPage || 1))
+const previousAllowed = computed(() => !blocked.value && (cursorMode.value ? (props.hasPrevious ?? props.page > 1) : props.page > 1))
+const nextAllowed = computed(() => !blocked.value && (cursorMode.value ? props.hasNext === true : props.page < lastPage.value))
+const shouldShow = computed(() => props.alwaysShow || cursorMode.value || ((props.total || 0) > 0 && (lastPage.value > 1 || normalizedPageSizeOptions.value.length > 0)))
 
+/** Emit only permitted navigation. @param target Requested page. @returns Nothing. */
+function changePage(target: number) {
+  if (blocked.value || !Number.isSafeInteger(target) || target < 1 || target === props.page) return
+  if (cursorMode.value) {
+    if (target === props.page - 1 && previousAllowed.value || target === props.page + 1 && nextAllowed.value) emit('changePage', target)
+  } else if (target <= lastPage.value) emit('changePage', target)
+}
+/** Clamp a numeric jump to known pages. @returns Nothing. */
 const jumpToPage = () => {
-  if (!jumpPage.value) return
+  if (!jumpPage.value || cursorMode.value || blocked.value) return
   const raw = Number(jumpPage.value)
-  if (Number.isNaN(raw)) return
-  const target = Math.min(Math.max(Math.floor(raw), 1), props.totalPage)
-  if (target === props.page) return
-  emit('changePage', target)
+  if (!Number.isFinite(raw)) return
+  changePage(Math.min(Math.max(Math.floor(raw), 1), lastPage.value))
 }
 
+/** Validate page size selection. @param value Selected size. @returns Nothing. */
 const changePageSize = (value: unknown) => {
   const parsed = Number(value)
-  if (!Number.isFinite(parsed) || parsed <= 0) return
-  emit('changePageSize', Math.floor(parsed))
+  if (blocked.value || !Number.isSafeInteger(parsed) || !normalizedPageSizeOptions.value.includes(parsed)) return
+  emit('changePageSize', parsed)
 }
 </script>
 
@@ -60,14 +76,14 @@ const changePageSize = (value: unknown) => {
   >
     <div class="flex items-center gap-3">
       <span class="text-xs text-muted-foreground">
-        {{ t('admin.common.pageInfo', { total, page, totalPage }) }}
+        {{ cursorMode ? t('telegramRecovery.page', { page }) : t('admin.common.pageInfo', { total: total ?? 0, page, totalPage: lastPage }) }}
       </span>
       <slot name="actions" />
     </div>
     <div class="flex flex-wrap items-center gap-2">
       <div v-if="normalizedPageSizeOptions.length > 0" class="flex items-center gap-2">
         <span class="text-xs text-muted-foreground">{{ t('admin.common.pageSize') }}</span>
-        <Select :model-value="pageSizeValue" @update:modelValue="changePageSize">
+        <Select :disabled="blocked" :model-value="pageSizeValue" @update:modelValue="changePageSize">
           <SelectTrigger class="h-8 w-[92px] text-xs">
             <SelectValue />
           </SelectTrigger>
@@ -78,8 +94,9 @@ const changePageSize = (value: unknown) => {
           </SelectContent>
         </Select>
       </div>
-      <div class="flex items-center gap-2">
+      <div v-if="!cursorMode" class="flex items-center gap-2">
         <Input
+          :disabled="blocked || lastPage <= 1"
           v-model="jumpPage"
           type="number"
           min="1"
@@ -87,7 +104,7 @@ const changePageSize = (value: unknown) => {
           class="h-8 w-20"
           :placeholder="t('admin.common.jumpPlaceholder')"
         />
-        <Button variant="outline" size="sm" class="h-8" @click="jumpToPage">
+        <Button variant="outline" size="sm" class="h-8" :disabled="blocked || lastPage <= 1" @click="jumpToPage">
           {{ t('admin.common.jumpTo') }}
         </Button>
       </div>
@@ -96,8 +113,8 @@ const changePageSize = (value: unknown) => {
           variant="outline"
           size="sm"
           class="h-8"
-          :disabled="page <= 1 || totalPage <= 1"
-          @click="emit('changePage', page - 1)"
+          :disabled="!previousAllowed"
+          @click="changePage(page - 1)"
         >
           {{ t('admin.common.prevPage') }}
         </Button>
@@ -105,8 +122,8 @@ const changePageSize = (value: unknown) => {
           variant="outline"
           size="sm"
           class="h-8"
-          :disabled="page >= totalPage || totalPage <= 1"
-          @click="emit('changePage', page + 1)"
+          :disabled="!nextAllowed"
+          @click="changePage(page + 1)"
         >
           {{ t('admin.common.nextPage') }}
         </Button>

@@ -2,6 +2,8 @@ package httpserver
 
 import (
 	"fmt"
+	membershipstore "github.com/XManCodeing/XMall/internal/modules/telegram/membership/infrastructure/gormstore"
+	"github.com/XManCodeing/XMall/internal/platform/database/gormdb"
 	"net"
 	"net/http"
 	"path"
@@ -100,6 +102,7 @@ func SetupRouter(cfg *config.Config, c *container.Container) *gin.Engine {
 		c.ContentBannerService,
 	)
 	publicCatalogHandler := catalogproductbootstrap.NewPublicHTTP(catalogproductbootstrap.PublicHTTPDependencies{
+		Membership:   membershipstore.New(gormdb.DB),
 		Products:     c.ProductReadService,
 		Hidden:       c.ResellerStore,
 		Pricer:       c.ResellerPricingResolver,
@@ -147,7 +150,7 @@ func SetupRouter(cfg *config.Config, c *container.Container) *gin.Engine {
 		c.SettingService,
 		c.ProductMappingRepo,
 		c.SKUMappingRepo,
-	)
+	).WithMembership(membershipstore.New(gormdb.DB), c.ProductRepo).WithMembershipShare(membershipstore.New(gormdb.DB), membershipstore.New(gormdb.DB))
 	adminCatalogProductMappingHandler := mappinghttp.NewAdminHandler(c.ProductMappingService)
 	userAuditLogHandler := auditlogtransport.NewUserHandler(c.UserLoginLogService)
 	adminCouponHandler := coupontransport.NewAdminHandler(c.CouponAdminService)
@@ -267,7 +270,7 @@ func SetupRouter(cfg *config.Config, c *container.Container) *gin.Engine {
 	registerUpstreamRoutes(apiV1, c, upstreamHandler, redisClient, upstreamAPIRule, callbackRule)
 	registerChannelRoutes(apiV1, c, channelHandler, channelMemberLevelHandler, channelGiftCardHandler, channelAffiliateHandler, channelTelegramBotHandler, channelWalletHandler, redisClient, channelAPIRule)
 	registerPaymentCallbackRoutes(apiV1, paymentCallbackHandler, paymentWebhookHandler, paymentEpayRedirectHandler, redisClient, callbackRule)
-	registerAdminRoutes(r, apiV1, cfg, c, adminLoginHandler, admin2FAHandler, adminUser2FAHandler, adminUserHandler, adminAuthzHandler, adminFulfillmentHandler, adminOrderHandler, adminOrderRefundHandler, adminContentHandler, adminDashboardHandler, adminMemberLevelHandler, adminApiCredentialHandler, adminAuditLogHandler, adminCardSecretHandler, adminCatalogCategoryHandler, adminCatalogProductHandler, adminCatalogProductMappingHandler, adminCouponHandler, adminGiftCardHandler, adminPromotionHandler, adminNotificationHandler, adminProcurementHandler, adminResellerManagementHandler, adminResellerProfileDetailHandler, adminResellerSiteConfigHandler, adminResellerProductSettingHandler, adminResellerOperationsHandler, adminResellerFinanceHandler, adminSettingsHandler, adminWalletHandler, adminPaymentHandler, adminPaymentChannelHandler, redisClient, adminLoginRule)
+	registerAdminRoutes(r, apiV1, cfg, c, adminLoginHandler, admin2FAHandler, adminUser2FAHandler, adminUserHandler, adminAuthzHandler, adminFulfillmentHandler, adminOrderHandler, adminOrderRefundHandler, adminContentHandler, adminDashboardHandler, adminMemberLevelHandler, adminApiCredentialHandler, adminAuditLogHandler, adminCardSecretHandler, adminCatalogCategoryHandler, adminCatalogProductHandler, adminCatalogProductMappingHandler, adminCouponHandler, adminGiftCardHandler, adminPromotionHandler, adminNotificationHandler, adminProcurementHandler, adminResellerManagementHandler, adminResellerProfileDetailHandler, adminResellerSiteConfigHandler, adminResellerProductSettingHandler, adminResellerOperationsHandler, adminResellerFinanceHandler, adminSettingsHandler, adminWalletHandler, adminPaymentHandler, paymentHandlers.ManualConfirmation, adminPaymentChannelHandler, redisClient, adminLoginRule)
 
 	// 健康检查
 	r.GET("/health", func(c *gin.Context) {

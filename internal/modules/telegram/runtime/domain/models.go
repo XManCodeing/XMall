@@ -14,8 +14,12 @@ type Instance struct {
 	AppliedVersion uint64 `json:"applied_version"`
 	Generation     uint64 `gorm:"not null;default:0" json:"-"`
 	Offset         int64  `json:"-"`
-	State          string `gorm:"size:32;not null;default:'stopped'" json:"state"`
-	LastError      string `gorm:"size:300" json:"last_error"`
+	// Recovery ownership is independent of ordinary enable/disable configuration.
+	RecoveryTaskID     uint   `gorm:"not null;default:0" json:"-"`
+	RecoveryVersion    uint64 `gorm:"not null;default:0" json:"-"`
+	RecoveryGeneration uint64 `gorm:"not null;default:0" json:"-"`
+	State              string `gorm:"size:32;not null;default:'stopped'" json:"state"`
+	LastError          string `gorm:"size:300" json:"last_error"`
 	// Profile* fields are Telegram Bot identity (setMyName / description / photo),
 	// scoped to this instance only. They are not shop panel content.
 	ProfileName        string     `gorm:"size:64" json:"-"`
@@ -47,18 +51,20 @@ type Contact struct {
 func (Contact) TableName() string { return "telegram_bot_contacts" }
 
 type Inbox struct {
-	ID            uint   `gorm:"primarykey"`
-	BotID         uint   `gorm:"uniqueIndex:idx_bot_update;not null;index"`
-	UpdateID      int64  `gorm:"uniqueIndex:idx_bot_update;not null"`
-	PayloadCipher string `gorm:"type:text;not null"`
-	Status        string `gorm:"size:24;index;not null"`
-	Attempts      int
-	AvailableAt   time.Time `gorm:"index"`
-	ClaimedUntil  *time.Time
-	Claim         string `gorm:"size:64"`
-	LastError     string `gorm:"size:300"`
-	CreatedAt     time.Time
-	UpdatedAt     time.Time
+	ID                 uint   `gorm:"primarykey"`
+	BotID              uint   `gorm:"uniqueIndex:idx_bot_update;not null;index"`
+	UpdateID           int64  `gorm:"uniqueIndex:idx_bot_update;not null"`
+	PayloadCipher      string `gorm:"type:text;not null"`
+	PayloadHeld        bool   `gorm:"not null;default:false"`
+	PayloadRetainUntil *time.Time
+	Status             string `gorm:"size:24;index;not null"`
+	Attempts           int
+	AvailableAt        time.Time `gorm:"index"`
+	ClaimedUntil       *time.Time
+	Claim              string `gorm:"size:64"`
+	LastError          string `gorm:"size:300"`
+	CreatedAt          time.Time
+	UpdatedAt          time.Time
 }
 
 func (Inbox) TableName() string { return "telegram_bot_inbox" }
@@ -87,31 +93,37 @@ func (Session) TableName() string { return "telegram_bot_sessions" }
 
 // Delivery stores a message request, not a second business ledger.
 type Delivery struct {
-	ID                uint       `gorm:"primarykey" json:"id"`
-	BotID             uint       `gorm:"uniqueIndex:idx_bot_delivery_key;not null;index" json:"bot_id"`
-	Key               string     `gorm:"size:191;uniqueIndex:idx_bot_delivery_key;not null" json:"key"`
-	ChatID            int64      `gorm:"index" json:"chat_id"`
-	TelegramUserID    int64      `json:"-"`
-	UserID            uint       `json:"-"`
-	BroadcastID       uint       `gorm:"index" json:"broadcast_id,omitempty"`
-	PayloadCipher     string     `gorm:"type:text" json:"-"`
-	Priority          int        `gorm:"index" json:"priority"`
-	Status            string     `gorm:"size:24;index" json:"status"`
-	Attempts          int        `json:"attempts"`
-	AvailableAt       time.Time  `gorm:"index" json:"available_at"`
-	ClaimedUntil      *time.Time `json:"-"`
-	Claim             string     `gorm:"size:64" json:"-"`
-	Purpose           string     `gorm:"size:24;index" json:"purpose,omitempty"`
-	Operation         string     `gorm:"size:24" json:"operation,omitempty"`
-	PanelEpoch        string     `gorm:"size:64;index" json:"-"`
-	PanelRevision     uint64     `gorm:"not null;default:0" json:"-"`
-	TargetMessageID   int64      `gorm:"not null;default:0" json:"-"`
-	PreviousMessageID int64      `gorm:"not null;default:0" json:"-"`
-	MessageKind       string     `gorm:"size:24" json:"-"`
-	MessageID         int64      `json:"message_id,omitempty"`
-	LastError         string     `gorm:"size:300" json:"last_error"`
-	CreatedAt         time.Time  `json:"created_at"`
-	UpdatedAt         time.Time  `json:"updated_at"`
+	ID                 uint       `gorm:"primarykey" json:"id"`
+	BotID              uint       `gorm:"uniqueIndex:idx_bot_delivery_key;not null;index" json:"bot_id"`
+	Key                string     `gorm:"size:191;uniqueIndex:idx_bot_delivery_key;not null" json:"key"`
+	ChatID             int64      `gorm:"index" json:"chat_id"`
+	TelegramUserID     int64      `json:"-"`
+	UserID             uint       `json:"-"`
+	BroadcastID        uint       `gorm:"index" json:"broadcast_id,omitempty"`
+	PayloadCipher      string     `gorm:"type:text" json:"-"`
+	TargetType         string     `gorm:"size:32;not null;default:'shop_private'" json:"target_type"`
+	PayloadHeld        bool       `gorm:"not null;default:false" json:"-"`
+	PayloadRetainUntil *time.Time `json:"-"`
+	Priority           int        `gorm:"index" json:"priority"`
+	Status             string     `gorm:"size:24;index" json:"status"`
+	Attempts           int        `json:"attempts"`
+	AvailableAt        time.Time  `gorm:"index" json:"available_at"`
+	ClaimedUntil       *time.Time `json:"-"`
+	Claim              string     `gorm:"size:64" json:"-"`
+	Purpose            string     `gorm:"size:24;index" json:"purpose,omitempty"`
+	Operation          string     `gorm:"size:24" json:"operation,omitempty"`
+	PanelEpoch         string     `gorm:"size:64;index" json:"-"`
+	PanelRevision      uint64     `gorm:"not null;default:0" json:"-"`
+	TargetMessageID    int64      `gorm:"not null;default:0" json:"-"`
+	PreviousMessageID  int64      `gorm:"not null;default:0" json:"-"`
+	MessageKind        string     `gorm:"size:24" json:"-"`
+	ReceiptClaim       string     `gorm:"size:64" json:"-"`
+	// MessageIDs stores ordered platform observations only, never content or file IDs.
+	MessageIDs []int64   `gorm:"serializer:json;type:text" json:"message_ids,omitempty"`
+	MessageID  int64     `json:"message_id,omitempty"`
+	LastError  string    `gorm:"size:300" json:"last_error"`
+	CreatedAt  time.Time `json:"created_at"`
+	UpdatedAt  time.Time `json:"updated_at"`
 }
 
 func (Delivery) TableName() string { return "telegram_bot_deliveries" }

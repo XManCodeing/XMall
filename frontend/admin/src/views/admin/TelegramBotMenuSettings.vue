@@ -27,7 +27,7 @@ const {
   moveMenuItem,
   removeMenuItem,
   saveConfig,
-  canSave, loadError, needsReload, loaded,
+  canSave, loadError, loadForbidden, needsReload, loaded,
   menuDroppedUnsupported,
   saving,
 } = useTelegramBotSettings(['menu'])
@@ -39,7 +39,7 @@ onMounted(() => {
 
 <template>
   <div class="space-y-6">
-    <p v-if="loadError" role="alert" class="text-sm text-destructive">{{ loadError }}</p>
+    <p v-if="loadForbidden" role="alert" class="text-sm text-destructive">{{ t('telegramBot.instances.forbidden') }}</p>
     <p v-if="menuDroppedUnsupported" class="text-sm text-muted-foreground">{{ t('telegramBot.settings.menuDroppedUnsupported') }}</p>
     <p v-if="menuValidationError" role="alert" class="text-sm text-destructive">{{ menuValidationError }}</p>
     <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -87,7 +87,7 @@ onMounted(() => {
         </div>
       </CardHeader>
       <CardContent class="space-y-3">
-        <div v-if="form.menu.items.length === 0" class="rounded-lg border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
+        <div v-if="loaded && !loadError && form.menu.items.length === 0" class="rounded-lg border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
           {{ t('telegramBot.settings.menuEmpty') }}
         </div>
         <div

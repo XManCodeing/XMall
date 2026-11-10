@@ -1,5 +1,9 @@
 <script setup lang="ts">
-import { ref, watch, onBeforeUnmount } from 'vue'
+import { ref, watch, onBeforeUnmount, useId } from 'vue'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import { useEditor, EditorContent, VueNodeViewRenderer } from '@tiptap/vue-3'
 import StarterKit from '@tiptap/starter-kit'
 import Image from '@tiptap/extension-image'
@@ -166,11 +170,28 @@ const handleSourceInput = (event: Event) => {
   emit('update:modelValue', target.value)
 }
 
+const linkOpen = ref(false)
+const linkUrl = ref('')
+const linkInvalid = ref(false)
+const linkInputId = useId()
+const linkSelection = ref<{ from: number; to: number } | null>(null)
+/** 保存编辑器选区并打开链接表单。@returns void */
 const addLink = () => {
-  const url = window.prompt(t('admin.richEditor.enterLinkUrl'))
-  if (url && editor.value) {
-    editor.value.chain().focus().setLink({ href: url }).run()
-  }
+  if (!editor.value) return
+  const { from, to } = editor.value.state.selection
+  linkSelection.value = { from, to }
+  linkUrl.value = editor.value.getAttributes('link').href || ''
+  linkInvalid.value = false
+  linkOpen.value = true
+}
+
+/** 使用 Tiptap 自带链接校验，在保存的选区插入链接；取消不改变正文。@returns void */
+const submitLink = () => {
+  const url = linkUrl.value.trim()
+  if (!url || !editor.value || !linkSelection.value) return
+  const applied = editor.value.chain().focus().setTextSelection(linkSelection.value).setLink({ href: url }).run()
+  linkInvalid.value = !applied
+  if (applied) linkOpen.value = false
 }
 
 const setColor = (color: string) => {
@@ -205,6 +226,23 @@ onBeforeUnmount(() => {
 
 <template>
   <div class="rich-editor">
+    <Dialog v-model:open="linkOpen">
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>{{ t('admin.richEditor.insertLink') }}</DialogTitle>
+          <DialogDescription>{{ t('admin.richEditor.enterLinkUrl') }}</DialogDescription>
+        </DialogHeader>
+        <form class="space-y-4" @submit.prevent="submitLink">
+          <Label :for="linkInputId">{{ t('admin.richEditor.enterLinkUrl') }}</Label>
+          <Input :id="linkInputId" v-model="linkUrl" required :aria-invalid="linkInvalid" @update:model-value="linkInvalid = false" />
+          <p v-if="linkInvalid" role="alert" class="text-sm text-destructive">{{ t('admin.richEditor.enterLinkUrl') }}</p>
+          <DialogFooter>
+            <Button type="button" variant="outline" @click="linkOpen = false">{{ t('admin.common.cancel') }}</Button>
+            <Button type="submit" :disabled="!linkUrl.trim()">{{ t('admin.common.confirm') }}</Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
     <div v-if="editor" class="editor-toolbar" :class="{ 'is-source-mode': isSourceMode }">
       <button type="button" class="toolbar-btn" :title="t('admin.richEditor.bold')" :class="{ 'is-active': editor.isActive('bold') }" @click="editor.chain().focus().toggleBold().run()">
         <svg class="h-4 w-4" fill="currentColor" viewBox="0 0 20 20">

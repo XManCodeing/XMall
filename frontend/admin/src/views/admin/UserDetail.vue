@@ -86,6 +86,7 @@ const walletAdjustForm = reactive({
 })
 const siteCurrency = ref('CNY')
 
+/** 读取用户资料，失败状态控制内容显示，错误仅通知一次。@returns 查询完成。 */
 const fetchUser = async () => {
   if (!Number.isFinite(userId.value) || userId.value <= 0) return
   userError.value = ''
@@ -94,6 +95,7 @@ const fetchUser = async () => {
     user.value = response.data.data
   } catch (err: any) {
     userError.value = err?.message || t('admin.userDetail.fetchFailed')
+    notifyErrorOnce(err, t('admin.userDetail.fetchFailed'))
   }
 }
 
@@ -210,6 +212,7 @@ const fetchWalletTransactions = async (page = 1) => {
   }
 }
 
+/** 加载钱包账户及流水，保留失败状态以免误显空态。@param page 流水页码。@returns 查询完成。 */
 const loadWalletData = async (page = walletPagination.value.page) => {
   walletLoadError.value = ''
   try {
@@ -219,6 +222,7 @@ const loadWalletData = async (page = walletPagination.value.page) => {
     ])
   } catch (err: any) {
     walletLoadError.value = err?.message || t('admin.userDetail.wallet.errors.loadFailed')
+    notifyErrorOnce(err, t('admin.userDetail.wallet.errors.loadFailed'))
   }
 }
 
@@ -337,6 +341,7 @@ const walletTypeLabel = (type?: string) => {
 
 const walletBalanceDisplay = computed(() => formatMoney(walletAccount.value?.balance, siteCurrency.value))
 
+/** 校验并调整钱包，区分提交结果与后续刷新失败。@returns 调整及刷新完成。 */
 const submitWalletAdjust = async () => {
   if (!Number.isFinite(userId.value) || userId.value <= 0) return
   walletValidationError.value = ''
@@ -367,6 +372,7 @@ const submitWalletAdjust = async () => {
       fetchWalletTransactions(1),
     ]).catch((err: unknown) => {
       walletLoadError.value = (err as Error)?.message || t('admin.userDetail.wallet.errors.loadFailed')
+      notifyErrorOnce(err, t('admin.userDetail.wallet.errors.loadFailed'))
     })
     notifySuccess(t('admin.userDetail.wallet.adjustSuccess'))
   } catch (err: any) {
@@ -415,7 +421,7 @@ const handleResetUser2FA = async () => {
   if (!Number.isFinite(userId.value) || userId.value <= 0) return
   if (!twofaEnabled.value) return
   const email = user.value?.email || `#${userId.value}`
-  if (!confirm(t('admin.userDetail.twofa.confirmReset', { email }))) return
+  if (!await confirmAction({ description: t('admin.userDetail.twofa.confirmReset', { email }), variant: 'destructive' })) return
   twofaResetting.value = true
   try {
     await adminAPI.resetUser2FA(userId.value)
@@ -500,11 +506,7 @@ watch(
       </div>
     </div>
 
-    <div v-if="userError" class="rounded-lg border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
-      {{ userError }}
-    </div>
-
-    <div v-else class="grid grid-cols-1 md:grid-cols-3 gap-4">
+    <div v-if="!userError" class="grid grid-cols-1 md:grid-cols-3 gap-4">
       <Card class="rounded-lg border-border bg-background shadow-none">
         <CardContent class="p-3">
           <div class="text-xs text-muted-foreground">{{ t('admin.userDetail.fields.id') }}</div>
@@ -959,9 +961,6 @@ watch(
         <div v-if="walletValidationError" class="mt-3 rounded-lg border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
           {{ walletValidationError }}
         </div>
-        <div v-if="walletLoadError" class="mt-3 rounded-lg border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
-          {{ walletLoadError }}
-        </div>
       </div>
 
       <div class="rounded-xl border border-border bg-card overflow-x-auto">
@@ -981,7 +980,7 @@ watch(
             <TableRow v-if="walletLoading">
               <TableCell colspan="7" class="px-6 py-8 text-center text-muted-foreground">{{ t('admin.common.loading') }}</TableCell>
             </TableRow>
-            <TableRow v-else-if="walletTransactions.length === 0">
+            <TableRow v-else-if="!walletLoadError && walletTransactions.length === 0">
               <TableCell colspan="7" class="px-6 py-8 text-center text-muted-foreground">{{ t('admin.userDetail.empty') }}</TableCell>
             </TableRow>
             <TableRow v-for="item in walletTransactions" :key="item.id" class="hover:bg-muted/30">

@@ -9,11 +9,54 @@ import (
 	"testing"
 	"time"
 
+	"github.com/XManCodeing/XMall/internal/config"
 	"github.com/XManCodeing/XMall/internal/modules/notification/contract"
 	"github.com/XManCodeing/XMall/internal/modules/notification/domain"
+	settingsapp "github.com/XManCodeing/XMall/internal/modules/settings/application"
+	"github.com/XManCodeing/XMall/internal/testkit/memorysettings"
 
 	"github.com/gin-gonic/gin"
 )
+
+// TestNotificationPrerequisitesHTTP 验证管理接口只返回前提布尔值，不泄露 Token，且保存不能绕过检查。
+func TestNotificationPrerequisitesHTTP(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	settings := settingsapp.NewService(memorysettings.New()).WithNotificationDefaults(config.EmailConfig{}, config.TelegramAuthConfig{
+		Enabled: false, BotToken: "test-only-notification-token",
+	})
+	handler := NewAdminHandler(settings, notificationLogServiceStub{}, &notificationTestSenderStub{})
+	router := gin.New()
+	RegisterAdminRoutes(router.Group("/admin"), handler)
+
+	recorder := httptest.NewRecorder()
+	router.ServeHTTP(recorder, httptest.NewRequest(http.MethodGet, "/admin/settings/notification-center", nil))
+	if recorder.Code != http.StatusOK || strings.Contains(recorder.Body.String(), "test-only-notification-token") {
+		t.Fatalf("unsafe or failed response: %s", recorder.Body.String())
+	}
+	var payload struct {
+		Data struct {
+			Prerequisites map[string]bool `json:"prerequisites"`
+		} `json:"data"`
+	}
+	if err := json.Unmarshal(recorder.Body.Bytes(), &payload); err != nil {
+		t.Fatal(err)
+	}
+	if !payload.Data.Prerequisites["telegram"] || payload.Data.Prerequisites["email"] {
+		t.Fatalf("unexpected prerequisites: %v", payload.Data.Prerequisites)
+	}
+
+	request := httptest.NewRequest(http.MethodPut, "/admin/settings/notification-center", strings.NewReader(`{"channels":{"email":{"enabled":true,"recipients":["admin@example.com"]}}}`))
+	request.Header.Set("Content-Type", "application/json")
+	recorder = httptest.NewRecorder()
+	router.ServeHTTP(recorder, request)
+	if !strings.Contains(recorder.Body.String(), "SMTP") {
+		t.Fatalf("expected actionable SMTP rejection: %s", recorder.Body.String())
+	}
+	stored, err := settings.GetNotificationCenterSetting()
+	if err != nil || stored.Channels.Email.Enabled {
+		t.Fatalf("invalid channel persisted: enabled=%v, error=%v", stored.Channels.Email.Enabled, err)
+	}
+}
 
 type notificationLogServiceStub struct {
 	items []domain.NotificationLog

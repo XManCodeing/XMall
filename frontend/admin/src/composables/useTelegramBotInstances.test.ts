@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest'
-import { effectScope } from 'vue'
+import { createApp, defineComponent, effectScope, h, KeepAlive, nextTick, onMounted, ref } from 'vue'
 import { botState, botStateVariant, useTelegramBotInstances, type BotInstance } from './useTelegramBotInstances'
 const mocks = vi.hoisted(() => ({ get: vi.fn(), patch: vi.fn(), create: vi.fn(), status: vi.fn(), test: vi.fn(), success: vi.fn(), info: vi.fn(), error: vi.fn(), allowed: true }))
 vi.mock('@/utils/notify', () => ({
@@ -126,6 +126,44 @@ describe('managed bot instances', () => {
     document.dispatchEvent(new Event('visibilitychange'))
     await vi.advanceTimersByTimeAsync(10000)
     expect(mocks.get).toHaveBeenCalledTimes(2)
+    expect(vi.getTimerCount()).toBe(0)
+  })
+  it('suspends cached-page polling and resumes exactly one timer without losing the draft', async () => {
+    vi.useFakeTimers()
+    vi.spyOn(document, 'hidden', 'get').mockReturnValue(false)
+    const visible = ref(true)
+    const draft = ref('unsaved token')
+    let model!: ReturnType<typeof useTelegramBotInstances>
+    const Page = defineComponent({
+      setup() {
+        model = useTelegramBotInstances()
+        onMounted(model.startPolling)
+        return () => h('input', { value: draft.value })
+      },
+    })
+    const app = createApp({ render: () => h(KeepAlive, null, { default: () => visible.value ? h(Page) : null }) })
+    app.mount(document.createElement('div'))
+    try {
+      await model.refresh()
+      expect(mocks.get).toHaveBeenCalledTimes(1)
+      expect(vi.getTimerCount()).toBe(1)
+      const snapshot = model.instances.value
+      visible.value = false
+      await nextTick()
+      expect(vi.getTimerCount()).toBe(0)
+      document.dispatchEvent(new Event('visibilitychange'))
+      await vi.advanceTimersByTimeAsync(30000)
+      expect(mocks.get).toHaveBeenCalledTimes(1)
+      expect(model.instances.value).toBe(snapshot)
+      visible.value = true
+      await nextTick()
+      await model.refresh()
+      expect(mocks.get).toHaveBeenCalledTimes(2)
+      expect(vi.getTimerCount()).toBe(1)
+      expect(draft.value).toBe('unsaved token')
+      await vi.advanceTimersByTimeAsync(10000)
+      expect(mocks.get).toHaveBeenCalledTimes(3)
+    } finally { app.unmount() }
     expect(vi.getTimerCount()).toBe(0)
   })
   it('retains initial loading feedback when retrying a failed first request', async () => {

@@ -6,6 +6,8 @@ import (
 	ordercontract "github.com/XManCodeing/XMall/internal/modules/order/contract"
 	ordergormstore "github.com/XManCodeing/XMall/internal/modules/order/infrastructure/gormstore"
 	paymentcontract "github.com/XManCodeing/XMall/internal/modules/payment/contract"
+	membership "github.com/XManCodeing/XMall/internal/modules/telegram/membership/contract"
+	membershipstore "github.com/XManCodeing/XMall/internal/modules/telegram/membership/infrastructure/gormstore"
 
 	"gorm.io/gorm"
 )
@@ -32,6 +34,21 @@ func UseTransaction(tx *gorm.DB, guestCredentialSecret string) paymentcontract.T
 		db:                    tx,
 		guestCredentialSecret: secret,
 	}
+}
+
+// MembershipPaymentPreflight 转发底层订单事务的历史快照复核，不能使用全局连接。
+func (tx transaction) MembershipPaymentPreflight() (membership.PaymentPreflight, error) {
+	provider, ok := tx.Transaction.(membership.PaymentPreflightProvider)
+	if !ok {
+		return nil, membership.ErrTransactionRequired
+	}
+	return provider.MembershipPaymentPreflight()
+}
+
+// MembershipPaidEvents 返回同一支付事务绑定的权益 outbox；不能使用全局连接。
+// 无外部调用，返回事务校验失败供支付整体回滚。
+func (tx transaction) MembershipPaidEvents() (membership.PaidEventAppender, error) {
+	return membershipstore.InTransaction(tx.db)
 }
 
 func (tx transaction) Payments() paymentcontract.Store {

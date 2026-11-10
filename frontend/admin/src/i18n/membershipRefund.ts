@@ -1,0 +1,32 @@
+export const membershipRefundMessages = {
+  'zh-CN': {
+    manualConfirm: '我确认已通过支付渠道或其他方式完成退款', confirmTitle: '再次确认退款与权益终止', previewHint: '以下为服务端当前测算；后续续费可能改变结果。群号来自本单购买快照，移出成员与邀请回收需分别核实。', previewUnavailable: '无法取得权威预览，暂不可提交。', observedAt: '预览时间', group: '订单项 / 目标 / 购买时群号 / 受益人', afterRights: '撤权后剩余资格', permanent: '永久', noRights: '当前无有效资格', cancel: '返回修改', removalUnconfirmed: '移出成员：尚未确认，请查看生命周期任务结果。', cleanupUnconfirmed: '邀请回收：尚未确认，请查看邀请清理结果。',
+    title: '退款并终止本单权益', hint: '仅终止勾选订单项的全部会员权益，不按退款金额比例撤权，其他订单权益保留。',
+    wallet: '退至账户余额', manual: '登记已线下退款', existing: '关联已有退款（不再退钱）',
+    defaultRemark: '用户主动申请退款', walletWarningTitle: '确认退款至站内账户余额', walletAccept: '我已了解，选择余额退款',
+    walletWarning: '退款将增加用户的站内可用余额，不会退回原支付账户。商户仍需承担该余额后续消费的履约成本；若已通过支付渠道退款，再退余额会造成重复赔付。',
+    manualHint: '请先在支付渠道人工完成退款；此处仅登记已退款事实，不会自动原路退款，也不会增加站内余额。', amount: '退款金额', refundID: '已有退款记录 ID', remark: '退款说明',
+    item: '终止权益的订单项', submit: '确认退款并终止', retry: '恢复权益处理', funds: '资金步骤已完成', queued: '本单所选权益已终止', pending: '资金已完成，权益待恢复；重试不会再次退款。',
+    unknown: '请求结果待确认。请保留当前请求并重试，不要另建退款。', remaining: '本单剩余可退', required: '请选择订单项并填写有效金额或已有退款 ID。', noItems: '未找到可选择的会员订单项。',
+  },
+  'zh-TW': {
+    manualConfirm: '我確認已透過支付管道或其他方式完成退款', confirmTitle: '再次確認退款與權益終止', previewHint: '以下為伺服器目前測算；後續續費可能改變結果。群號來自本單購買快照，移出成員與邀請回收需分別核實。', previewUnavailable: '無法取得權威預覽，暫不可提交。', observedAt: '預覽時間', group: '訂單項 / 目標 / 購買時群號 / 受益人', afterRights: '撤權後剩餘資格', permanent: '永久', noRights: '目前無有效資格', cancel: '返回修改', removalUnconfirmed: '移出成員：尚未確認，請查看生命週期任務結果。', cleanupUnconfirmed: '邀請回收：尚未確認，請查看邀請清理結果。',
+    title: '退款並終止本單權益', hint: '僅終止勾選訂單項的全部會員權益，不按退款金額比例撤權，其他訂單權益保留。',
+    wallet: '退至帳戶餘額', manual: '登記已線下退款', existing: '關聯已有退款（不再退錢）',
+    defaultRemark: '用戶主動申請退款', walletWarningTitle: '確認退款至站內帳戶餘額', walletAccept: '我已了解，選擇餘額退款',
+    walletWarning: '退款將增加用戶的站內可用餘額，不會退回原支付帳戶。商戶仍需承擔該餘額後續消費的履約成本；若已透過支付管道退款，再退餘額會造成重複賠付。',
+    manualHint: '請先在支付管道人工完成退款；此處僅登記已退款事實，不會自動原路退款，也不會增加站內餘額。', amount: '退款金額', refundID: '已有退款紀錄 ID', remark: '退款說明',
+    item: '終止權益的訂單項', submit: '確認退款並終止', retry: '恢復權益處理', funds: '資金步驟已完成', queued: '本單所選權益已終止', pending: '資金已完成，權益待恢復；重試不會再次退款。',
+    unknown: '請求結果待確認。請保留目前請求並重試，不要另建退款。', remaining: '本單剩餘可退', required: '請選擇訂單項並填寫有效金額或已有退款 ID。', noItems: '未找到可選擇的會員訂單項。',
+  },
+  'en-US': {
+    manualConfirm: 'I confirm the refund has been completed through the payment provider or another method', confirmTitle: 'Confirm refund and rights termination again', previewHint: 'Server-calculated snapshot; later renewals may change the outcome. Chat IDs are from the purchase snapshot. Member removal and invitation cleanup require separate verification.', previewUnavailable: 'Authoritative preview unavailable. Submission is blocked.', observedAt: 'Preview time', group: 'Item / target / purchased chat / beneficiary', afterRights: 'Remaining rights after termination', permanent: 'Permanent', noRights: 'No currently active rights', cancel: 'Back to edit', removalUnconfirmed: 'Member removal: unconfirmed. Check lifecycle task results.', cleanupUnconfirmed: 'Invitation cleanup: unconfirmed. Check cleanup results.',
+    title: 'Refund and terminate this purchase', hint: 'Terminate all membership rights of selected items only, never in proportion to the refund. Other purchases remain valid.',
+    wallet: 'Credit account balance', manual: 'Record completed offline refund', existing: 'Link existing refund (no new payment)',
+    defaultRemark: 'Refund requested by the customer', walletWarningTitle: 'Confirm refund to store account balance', walletAccept: 'I understand, select balance refund',
+    walletWarning: 'This credits the customer’s spendable store balance, not their original payment account. The merchant remains responsible for fulfilling purchases made with this balance. If a payment-provider refund has already been made, crediting the balance would compensate the customer twice.',
+    manualHint: 'Complete the refund manually through the payment provider first. This only records the completed refund; it does not issue a payment-provider refund or credit the store balance.', amount: 'Refund amount', refundID: 'Existing refund record ID', remark: 'Refund note',
+    item: 'Purchase items to terminate', submit: 'Confirm refund and termination', retry: 'Resume rights processing', funds: 'Funds step completed', queued: 'Selected purchase rights terminated', pending: 'Funds completed; rights processing pending. Retrying will not refund again.',
+    unknown: 'Result not confirmed. Retry this same request; do not start another refund.', remaining: 'Remaining refundable amount', required: 'Select purchase items and enter a valid amount or existing refund ID.', noItems: 'No membership purchase items available.',
+  },
+}

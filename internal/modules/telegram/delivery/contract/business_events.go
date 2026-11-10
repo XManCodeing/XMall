@@ -3,6 +3,7 @@ package contract
 import (
 	"errors"
 	"fmt"
+	identitycontract "github.com/XManCodeing/XMall/internal/modules/identity/externalidentity/contract"
 	"github.com/XManCodeing/XMall/internal/modules/telegram/delivery/domain"
 	"time"
 )
@@ -27,7 +28,8 @@ type Source struct {
 	ExpectedIdentityID uint
 }
 
-var ErrIdentityChanged = errors.New("telegram transaction identity changed or unavailable")
+// ErrIdentityChanged 保留既有错误身份，网站与 Bot 交易共用同一绑定锁错误。
+var ErrIdentityChanged = identitycontract.ErrTelegramIdentityChanged
 
 // TransactionIdentityGuard must use the caller's transaction and retain identity
 // and active-user locks until commit, mutually excluding bind/unbind.

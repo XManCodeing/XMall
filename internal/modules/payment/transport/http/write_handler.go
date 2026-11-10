@@ -7,6 +7,7 @@ import (
 	"strconv"
 
 	paymentpresenter "github.com/XManCodeing/XMall/internal/modules/payment/transport/presenter"
+	walletcontract "github.com/XManCodeing/XMall/internal/modules/wallet/contract"
 
 	paymentdomain "github.com/XManCodeing/XMall/internal/modules/payment/domain"
 
@@ -20,6 +21,13 @@ import (
 )
 
 var (
+	ErrMembershipPermanentCovered          = errors.New("membership permanently covered")
+	ErrMembershipPermanentPartial          = errors.New("membership partially permanently covered")
+	ErrMembershipSalesClosed               = errors.New("membership sales closed")
+	ErrMembershipBindingRequired           = errors.New("membership binding required")
+	ErrMembershipPurchaseChanged           = errors.New("membership purchase changed")
+	ErrMembershipUnavailable               = errors.New("membership purchase unavailable")
+	ErrMembershipInvalid                   = errors.New("membership purchase invalid")
 	ErrPaymentInvalid                      = errors.New("payment invalid")
 	ErrPaymentNotFound                     = errors.New("payment not found")
 	ErrOrderStatusInvalid                  = errors.New("order status invalid")
@@ -34,6 +42,7 @@ var (
 	ErrPaymentChannelNotAllowedForProduct  = errors.New("payment channel not allowed for product")
 	ErrPaymentChannelNotAllowedForRecharge = errors.New("payment channel not allowed for wallet recharge")
 	ErrWalletOnlyPaymentRequired           = errors.New("wallet only payment required")
+	ErrWalletInsufficientBalance           = walletcontract.ErrInsufficientBalance
 	ErrPaymentStatusInvalid                = errors.New("payment status invalid")
 	ErrPaymentAmountMismatch               = errors.New("payment amount mismatch")
 )
@@ -286,7 +295,24 @@ type mappedError struct {
 	logErr bool
 }
 
+// membershipPaymentErrorRules keeps active payment failures actionable without exposing internal routes.
+var membershipPaymentErrorRules = []mappedError{
+	{target: ErrMembershipPermanentCovered, code: response.CodeBadRequest, key: "error.membership_permanent_covered"},
+	{target: ErrMembershipPermanentPartial, code: response.CodeBadRequest, key: "error.membership_permanent_partial"},
+	{target: ErrMembershipSalesClosed, code: response.CodeBadRequest, key: "error.membership_sales_closed"},
+	{target: ErrMembershipBindingRequired, code: response.CodeBadRequest, key: "error.membership_binding_required"},
+	{target: ErrMembershipPurchaseChanged, code: response.CodeBadRequest, key: "error.membership_purchase_changed"},
+	{target: ErrMembershipUnavailable, code: response.CodeBadRequest, key: "error.membership_purchase_unavailable"},
+	{target: ErrMembershipInvalid, code: response.CodeBadRequest, key: "error.membership_purchase_invalid"},
+}
+
 func respondWithMappedError(c *gin.Context, err error, rules []mappedError, fallbackCode int, fallbackKey string) {
+	for _, rule := range membershipPaymentErrorRules {
+		if errors.Is(err, rule.target) {
+			ginutil.RespondError(c, rule.code, rule.key, nil)
+			return
+		}
+	}
 	if retryAfter := retryAfterSeconds(err); retryAfter > 0 {
 		c.Header("Retry-After", strconv.FormatInt(retryAfter, 10))
 		locale := i18n.ResolveLocale(c)
@@ -349,6 +375,7 @@ var paymentCreateErrorRules = concatMappedErrors(
 		{target: ErrPaymentChannelNotAllowedForProduct, code: response.CodeBadRequest, key: "error.payment_channel_not_allowed_for_product"},
 		{target: ErrPaymentChannelNotAllowedForRecharge, code: response.CodeBadRequest, key: "error.payment_channel_not_allowed_for_recharge"},
 		{target: ErrWalletOnlyPaymentRequired, code: response.CodeBadRequest, key: "error.wallet_only_payment_required"},
+		{target: ErrWalletInsufficientBalance, code: response.CodeBadRequest, key: "error.wallet_insufficient_balance"},
 	},
 )
 

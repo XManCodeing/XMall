@@ -11,6 +11,49 @@ import (
 	"github.com/shopspring/decimal"
 )
 
+// membershipSaleRepo 为管理用例测试提供明确销售检查结果。
+type membershipSaleRepo struct {
+	*productRepositoryStub
+	saleError error
+}
+
+// CheckPublicSale 返回测试配置的销售结果，ids 为待检查商品集合。
+func (repository membershipSaleRepo) CheckPublicSale(ids []uint) error { return repository.saleError }
+
+// QuickUpdatePublicSale 模拟原子检查更新端口，拒绝时不记录写入。
+func (repository membershipSaleRepo) QuickUpdatePublicSale(id string, fields map[string]interface{}) error {
+	if repository.saleError != nil {
+		return repository.saleError
+	}
+	return repository.productRepositoryStub.QuickUpdate(id, fields)
+}
+
+// TestMembershipActivationIsBlocked 验证通用快速/批量修改拒绝会员，普通商品可正常修改。
+func TestMembershipActivationIsBlocked(t *testing.T) {
+	products := &productRepositoryStub{product: &productdomain.Product{ID: 11, CategoryID: 5}}
+	guard := &membershipSaleRepo{productRepositoryStub: products, saleError: productcontract.ErrMembershipSaleClosed}
+	service := NewAdminService(Options{
+		EnforcePublicSale: true,
+		Products:          guard,
+		Categories:        categoryRepositoryStub{categories: map[string]*categorydomain.Category{"5": {ID: 5, IsActive: true}}},
+	})
+	if _, err := service.QuickUpdate("11", map[string]interface{}{"is_active": true}); !errors.Is(err, productcontract.ErrMembershipSaleClosed) {
+		t.Fatalf("membership activation must fail: %v", err)
+	}
+	if products.quickUpdates != 0 {
+		t.Fatal("blocked activation persisted")
+	}
+	for _, fields := range []map[string]interface{}{{"is_active": false}, {"sort_order": 3}} {
+		if _, err := service.QuickUpdate("11", fields); !errors.Is(err, productcontract.ErrMembershipSaleClosed) {
+			t.Fatalf("generic member edit bypass: %v", err)
+		}
+	}
+	guard.saleError = nil
+	if _, err := service.QuickUpdate("11", map[string]interface{}{"is_active": true}); err != nil {
+		t.Fatalf("ordinary activation: %v", err)
+	}
+}
+
 func TestAdminServiceDeleteStopsBeforeTransactionWhenStockExists(t *testing.T) {
 	transactions := &unitOfWorkStub{}
 	service := NewAdminService(Options{

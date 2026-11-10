@@ -43,6 +43,22 @@ async function mount(component: typeof UserDetail | typeof Users) {
 afterEach(() => { app?.unmount(); root?.remove(); vi.resetAllMocks() })
 
 describe('user operation feedback', () => {
+  it('keeps request failure state without rendering duplicate user or wallet errors', async () => {
+    const state = await mount(UserDetail)
+    const failure = Object.assign(new Error('request failure marker'), { __notified: true })
+    vi.mocked(adminAPI.getUser).mockRejectedValueOnce(failure)
+    await state.fetchUser(); await flush()
+    expect(state.userError).toBe(failure.message)
+    expect(notifyErrorOnce).toHaveBeenCalledWith(failure, 'admin.userDetail.fetchFailed')
+    expect(root?.textContent).not.toContain(failure.message)
+    state.activeTab = 'wallet'
+    vi.mocked(adminAPI.getUserWallet).mockRejectedValueOnce(failure)
+    await state.loadWalletData(); await flush()
+    expect(state.walletLoadError).toBe(failure.message)
+    expect(root?.textContent).not.toContain(failure.message)
+    await state.submitWalletAdjust(); await flush()
+    expect(root?.textContent).toContain('admin.userDetail.wallet.errors.invalidAmount')
+  })
   it('keeps wallet load errors separate from validation and adjustment failures', async () => {
     const state = await mount(UserDetail)
     vi.mocked(adminAPI.getUserWallet).mockRejectedValueOnce(new Error('wallet load failed'))
@@ -72,7 +88,8 @@ describe('user operation feedback', () => {
     await state.submitWalletAdjust()
     expect(adminAPI.adjustUserWallet).toHaveBeenCalledWith(1, { operation: 'add', amount: '12.50', remark: 'adjustment' })
     expect(notifySuccess).toHaveBeenCalledWith('admin.userDetail.wallet.adjustSuccess')
-    expect(notifyErrorOnce).not.toHaveBeenCalled()
+    expect(notifyErrorOnce).toHaveBeenCalledWith(expect.any(Error), 'admin.userDetail.wallet.errors.loadFailed')
+    expect(notifyErrorOnce).not.toHaveBeenCalledWith(expect.anything(), 'admin.userDetail.wallet.errors.adjustFailed')
     expect(state.walletLoadError).toBe('refresh failed')
   })
 

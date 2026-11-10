@@ -2,11 +2,12 @@
 import { computed, onMounted, reactive, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { adminAPI } from '@/api/admin'
+import { notifyErrorOnce } from '@/utils/notify'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { formatMoney, getLocalizedText } from '@/utils/format'
+import { BUSINESS_TIME_ZONE, businessDateKey, toRFC3339, formatMoney, getLocalizedText } from '@/utils/format'
 import { formatSkuDisplayLabel } from '@/utils/sku'
 import type { AdminDashboardInventoryAlert } from '@/api/types'
 interface DashboardAlertItem {
@@ -186,25 +187,19 @@ const paymentSuccessHeight = (value: number) => `${Math.max(4, Math.round((value
 const paymentFailedHeight = (value: number) => `${Math.max(4, Math.round((value / maxPaymentTrend.value) * 100))}%`
 const funnelWidth = (value: number) => `${Math.max(4, Math.round((value / maxFunnelValue.value) * 100))}%`
 
-const shortDate = (value?: string) => {
-  if (!value) return '-'
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) return value
-  return date.toLocaleDateString(undefined, { month: '2-digit', day: '2-digit' })
-}
+/** Format chart calendar labels in UTC+08. @param value Calendar date or instant. @returns MM-DD or placeholder. */
+const shortDate = (value?: string) => businessDateKey(value || '').slice(5) || '—'
 
+/** Build inclusive UTC+08 day boundaries. @param raw Calendar day. @param endOfDay End boundary. @returns RFC3339. */
 const makeRangeDate = (raw: string, endOfDay: boolean) => {
   if (!raw) return undefined
-  const suffix = endOfDay ? 'T23:59:59' : 'T00:00:00'
-  const date = new Date(`${raw}${suffix}`)
-  if (Number.isNaN(date.getTime())) return undefined
-  return date.toISOString()
+  return toRFC3339(`${raw}${endOfDay ? 'T23:59:59' : 'T00:00:00'}`)
 }
 
 const buildQuery = (forceRefresh = false) => {
   const params: Record<string, any> = {
     range: filters.range,
-    tz: Intl.DateTimeFormat().resolvedOptions().timeZone,
+    tz: BUSINESS_TIME_ZONE,
   }
 
   if (isCustomRange.value) {
@@ -282,12 +277,14 @@ const loadInventoryAlerts = async () => {
   }
 }
 
+/** 加载概览并统一通知请求失败，保留本地筛选校验。@param forceRefresh 是否强制刷新缓存。@returns 所有概览请求完成。 */
 const loadDashboard = async (forceRefresh = false) => {
   dashboardError.value = ''
   try {
     await Promise.all([loadOverview(forceRefresh), loadTrends(forceRefresh), loadRankings(forceRefresh), loadInventoryAlerts()])
-  } catch (error: any) {
-    dashboardError.value = error?.message || t('admin.dashboard.errors.fetchFailed')
+  } catch (error: unknown) {
+    // 请求错误统一走右上角通知；日期必填等本地校验仍留在筛选区。
+    notifyErrorOnce(error, t('admin.dashboard.errors.fetchFailed'))
   }
 }
 
@@ -301,11 +298,9 @@ const handleRangeChange = (value: unknown) => {
     return
   }
 
-  const today = new Date()
-  const start = new Date(today)
-  start.setDate(start.getDate() - 6)
-  filters.from = start.toISOString().slice(0, 10)
-  filters.to = today.toISOString().slice(0, 10)
+  const now = Date.now()
+  filters.from = businessDateKey(now - 6 * 24 * 60 * 60 * 1000)
+  filters.to = businessDateKey(now)
   loadDashboard()
 }
 

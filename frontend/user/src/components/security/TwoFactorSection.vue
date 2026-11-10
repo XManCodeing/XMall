@@ -218,12 +218,7 @@ const disableCode = ref('')
 const disableRecovery = ref('')
 const regenerateCode = ref('')
 
-const formatDate = (raw?: string | null) => {
-  if (!raw) return '-'
-  const date = new Date(raw)
-  if (Number.isNaN(date.getTime())) return raw
-  return date.toLocaleString()
-}
+import { formatDate } from '@/utils/format'
 
 const refreshStatus = async () => {
   try {
