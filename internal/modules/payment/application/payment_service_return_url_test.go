@@ -19,6 +19,66 @@ import (
 	"github.com/XManCodeing/XMall/internal/shared/jsonmap"
 )
 
+// TestPaymentGatewayClientIPPrivacy checks the shared outbound privacy policy.
+// Synthetic IPv4/IPv6 and absent IPs must all become loopback for orders and recharges;
+// internal order addresses remain unchanged for risk control and auditing.
+func TestPaymentGatewayClientIPPrivacy(t *testing.T) {
+	for _, providerCase := range []struct{ providerType, channelType string }{
+		{constants.PaymentProviderEpay, constants.PaymentChannelTypeAlipay},
+		{constants.PaymentProviderOfficial, constants.PaymentChannelTypeWechat},
+	} {
+		for _, business := range []string{"guest", "member", "recharge"} {
+			for _, clientIP := range []string{"", "198.51.100.42", "2001:db8::42"} {
+				t.Run(providerCase.providerType+"/"+business+"/"+clientIP, func(t *testing.T) {
+					service, db := setupPaymentServiceWalletTest(t)
+					channel, order := createFeePolicyOrderFixture(t, db, "Privacy gateway", "IP-PRIVACY")
+					channel.ProviderType, channel.ChannelType = providerCase.providerType, providerCase.channelType
+					if err := db.Save(channel).Error; err != nil {
+						t.Fatal(err)
+					}
+					customer := userdomain.User{Email: "privacy@example.test", PasswordHash: "test", Status: constants.UserStatusActive}
+					if err := db.Create(&customer).Error; err != nil {
+						t.Fatal(err)
+					}
+					order.ClientIP = clientIP
+					if business != "guest" {
+						order.UserID = customer.ID
+					}
+					if err := db.Save(order).Error; err != nil {
+						t.Fatal(err)
+					}
+					calls := 0
+					registerTestGateway(t, service, channel.ProviderType, channel.ChannelType, emptyProviderRefProvider{onCreate: func(input paymentcontract.GatewayCreateInput) {
+						calls++
+						if input.ClientIP != "127.0.0.1" {
+							t.Errorf("gateway client IP = %q, want privacy placeholder", input.ClientIP)
+						}
+					}})
+					if business == "recharge" {
+						if _, err := service.CreateWalletRechargePayment(CreateWalletRechargePaymentInput{UserID: customer.ID, ChannelID: channel.ID, Amount: order.TotalAmount, Currency: "CNY", ClientIP: clientIP, Context: context.Background()}); err != nil {
+							t.Fatalf("create recharge: %v", err)
+						}
+					} else {
+						if _, err := service.CreatePayment(CreatePaymentInput{OrderID: order.ID, ChannelID: channel.ID, ClientIP: clientIP, Context: context.Background()}); err != nil {
+							t.Fatalf("create order payment: %v", err)
+						}
+					}
+					if calls != 1 {
+						t.Fatalf("gateway calls = %d, want 1", calls)
+					}
+					var saved orderdomain.Order
+					if err := db.First(&saved, order.ID).Error; err != nil {
+						t.Fatal(err)
+					}
+					if saved.ClientIP != clientIP {
+						t.Fatal("outbound privacy policy changed internal order IP")
+					}
+				})
+			}
+		}
+	}
+}
+
 func TestCalculatePaymentAmountsKeepsChannelFeeOutOfUserPayment(t *testing.T) {
 	tests := []struct {
 		name        string

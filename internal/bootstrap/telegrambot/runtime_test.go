@@ -1,14 +1,36 @@
 package telegrambot
 
 import (
+	"bytes"
 	"context"
 	"errors"
+	"fmt"
+	"image/png"
+	"net/http"
+	"net/http/httptest"
+	"sync/atomic"
+
+	"github.com/XManCodeing/XMall/internal/config"
 	"github.com/XManCodeing/XMall/internal/constants"
 	productcontract "github.com/XManCodeing/XMall/internal/modules/catalog/product/contract"
 	product "github.com/XManCodeing/XMall/internal/modules/catalog/product/domain"
+	productgorm "github.com/XManCodeing/XMall/internal/modules/catalog/product/store/gormstore"
 	fulfillment "github.com/XManCodeing/XMall/internal/modules/fulfillment/domain"
+	externalidentity "github.com/XManCodeing/XMall/internal/modules/identity/externalidentity/domain"
+	identitygorm "github.com/XManCodeing/XMall/internal/modules/identity/externalidentity/infrastructure/gormstore"
+	user "github.com/XManCodeing/XMall/internal/modules/identity/user/domain"
+	usergorm "github.com/XManCodeing/XMall/internal/modules/identity/user/infrastructure/gormstore"
+	userauth "github.com/XManCodeing/XMall/internal/modules/identity/userauth/application"
+	userauthgorm "github.com/XManCodeing/XMall/internal/modules/identity/userauth/infrastructure/gormstore"
+	orderapp "github.com/XManCodeing/XMall/internal/modules/order/application"
 	order "github.com/XManCodeing/XMall/internal/modules/order/domain"
+	ordergorm "github.com/XManCodeing/XMall/internal/modules/order/infrastructure/gormstore"
+	paymentapp "github.com/XManCodeing/XMall/internal/modules/payment/application"
 	paymentcontract "github.com/XManCodeing/XMall/internal/modules/payment/contract"
+	paymentdomain "github.com/XManCodeing/XMall/internal/modules/payment/domain"
+	epayadapter "github.com/XManCodeing/XMall/internal/modules/payment/infrastructure/gateway/adapters/epay"
+	"github.com/XManCodeing/XMall/internal/modules/payment/infrastructure/gateway/provider"
+	paymentgorm "github.com/XManCodeing/XMall/internal/modules/payment/infrastructure/gormstore"
 	settingsapp "github.com/XManCodeing/XMall/internal/modules/settings/application"
 	delivery "github.com/XManCodeing/XMall/internal/modules/telegram/delivery/contract"
 	groups "github.com/XManCodeing/XMall/internal/modules/telegram/groups/contract"
@@ -16,14 +38,213 @@ import (
 	membership "github.com/XManCodeing/XMall/internal/modules/telegram/membership/contract"
 	memberdomain "github.com/XManCodeing/XMall/internal/modules/telegram/membership/domain"
 	rt "github.com/XManCodeing/XMall/internal/modules/telegram/runtime/contract"
+	shopapp "github.com/XManCodeing/XMall/internal/modules/telegram/shop/application"
 	c "github.com/XManCodeing/XMall/internal/modules/telegram/shop/contract"
+	walletapp "github.com/XManCodeing/XMall/internal/modules/wallet/application"
 	walletcontract "github.com/XManCodeing/XMall/internal/modules/wallet/contract"
+	walletdomain "github.com/XManCodeing/XMall/internal/modules/wallet/domain"
+	walletgorm "github.com/XManCodeing/XMall/internal/modules/wallet/infrastructure/gormstore"
 	"github.com/XManCodeing/XMall/internal/shared/jsonmap"
+	"github.com/XManCodeing/XMall/internal/shared/money"
+	"github.com/glebarez/sqlite"
+	"github.com/shopspring/decimal"
+	"gorm.io/gorm"
 	"reflect"
 	"strings"
 	"testing"
 	"time"
 )
+
+// newShopEpayFixture creates an isolated SQLite shop using the real epay adapter.
+// gatewayURL must be the test HTTP server; gatewayOverride optionally wraps the real adapter.
+// Returns the adapter, actor, order and channel IDs; all records are synthetic and cleaned up.
+func newShopEpayFixture(t *testing.T, gatewayURL string, gatewayOverride ...paymentcontract.GatewayProvider) (*shopAdapter, c.Actor, uint, uint) {
+	t.Helper()
+	db, err := gorm.Open(sqlite.Open(fmt.Sprintf("file:shop-epay-%d?mode=memory&cache=shared", time.Now().UnixNano())), &gorm.Config{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	pool, err := db.DB()
+	if err != nil {
+		t.Fatal(err)
+	}
+	pool.SetMaxOpenConns(1)
+	t.Cleanup(func() {
+		if err := pool.Close(); err != nil {
+			t.Errorf("close payment fixture: %v", err)
+		}
+	})
+	if err := db.AutoMigrate(&user.User{}, &externalidentity.Identity{}, &order.Order{}, &order.OrderItem{}, &fulfillment.Fulfillment{}, &product.Product{}, &product.ProductSKU{}, &walletdomain.Account{}, &walletdomain.Transaction{}, &paymentdomain.Payment{}, &paymentdomain.PaymentChannel{}); err != nil {
+		t.Fatal(err)
+	}
+	customer := user.User{Email: "epay@example.test", PasswordHash: "test", Status: "active"}
+	if err := db.Create(&customer).Error; err != nil {
+		t.Fatal(err)
+	}
+	identity := externalidentity.Identity{UserID: customer.ID, Provider: "telegram", ProviderUserID: "123"}
+	if err := db.Create(&identity).Error; err != nil {
+		t.Fatal(err)
+	}
+	goods := product.Product{Slug: "epay-test", TitleJSON: jsonmap.JSON{"en-US": "Payment test"}, IsActive: true}
+	if err := db.Create(&goods).Error; err != nil {
+		t.Fatal(err)
+	}
+	deadline := time.Now().Add(time.Hour)
+	purchase := order.Order{UserID: customer.ID, OrderNo: "BOT-EPAY", Status: constants.OrderStatusPendingPayment, Currency: "CNY", TotalAmount: money.FromDecimal(decimal.NewFromInt(10)), ExpiresAt: &deadline}
+	if err := db.Create(&purchase).Error; err != nil {
+		t.Fatal(err)
+	}
+	if err := db.Create(&order.OrderItem{OrderID: purchase.ID, ProductID: goods.ID, Quantity: 1, TitleJSON: goods.TitleJSON}).Error; err != nil {
+		t.Fatal(err)
+	}
+	channel := paymentdomain.PaymentChannel{Name: "Test epay", ProviderType: constants.PaymentProviderEpay, ChannelType: constants.PaymentChannelTypeAlipay, InteractionMode: constants.PaymentInteractionQR, IsActive: true, ConfigJSON: jsonmap.JSON{
+		"gateway_url": gatewayURL, "epay_version": "v1", "merchant_id": "test", "merchant_key": "test",
+		"notify_url": "https://shop.example.test/notify", "return_url": "https://shop.example.test/pay", "sign_type": "MD5",
+	}}
+	if err := db.Create(&channel).Error; err != nil {
+		t.Fatal(err)
+	}
+	users, products, orders := usergorm.New(db), productgorm.NewProductStore(db), ordergorm.New(db, "test")
+	walletRepo := walletgorm.New(db)
+	wallet := walletapp.NewService(walletapp.Options{Repository: walletRepo, Transactions: walletRepo})
+	registry := provider.NewRegistry()
+	registry.Register(constants.PaymentProviderEpay, "", epayadapter.NewEpayAdapter())
+	if len(gatewayOverride) > 0 {
+		registry.Register(constants.PaymentProviderEpay, "", gatewayOverride[0])
+	}
+	payments := paymentapp.NewPaymentService(paymentapp.PaymentServiceOptions{OrderStore: orders, ProductRepo: products, ProductSKURepo: productgorm.NewSKUStore(db), PaymentStore: paymentgorm.New(db, "test"), ChannelStore: paymentgorm.NewChannelStore(db), WalletRepo: walletRepo, WalletService: wallet, UserStore: users, PaymentProviderRegistry: registry})
+	auth := userauth.NewService(&config.Config{}, users, identitygorm.New(db), nil, nil, nil, nil)
+	auth.SetAuthUnitOfWork(userauthgorm.New(db))
+	adapter := &shopAdapter{d: ShopDependencies{Auth: auth, Users: users, ProductRepo: products, Orders: orderapp.NewOrderService(orderapp.OrderServiceOptions{OrderStore: orders}), Wallet: wallet, Payments: payments}}
+	actor := c.Actor{BotID: 7, TelegramID: 123, UserID: customer.ID, Locale: "en-US"}
+	actor.Generation, err = adapter.Generation(context.Background(), actor)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return adapter, actor, purchase.ID, channel.ID
+}
+
+// TestShopEpayCreatesQRAndReplays guards the Bot -> payment -> epay -> QR chain.
+// Both payurl-only and qrcode responses must render; duplicate operations must not resubmit.
+func TestShopEpayCreatesQRAndReplays(t *testing.T) {
+	for _, responseField := range []string{"payurl", "qrcode"} {
+		t.Run(responseField, func(t *testing.T) {
+			var calls atomic.Int32
+			server := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+				calls.Add(1)
+				if err := request.ParseForm(); err != nil {
+					t.Errorf("parse gateway request: %v", err)
+					http.Error(writer, "invalid form", http.StatusBadRequest)
+					return
+				}
+				if request.Form.Get("clientip") != "127.0.0.1" || request.Form.Get("money") != "10" || request.Form.Get("type") != "alipay" {
+					t.Error("Bot request lost its local-origin placeholder, amount or channel")
+				}
+				writer.Header().Set("Content-Type", "application/json")
+				if _, err := fmt.Fprintf(writer, `{"code":1,"trade_no":"TEST-EPAY","%s":"https://pay.example.test/checkout"}`, responseField); err != nil {
+					t.Errorf("write gateway response: %v", err)
+				}
+			}))
+			defer server.Close()
+			adapter, actor, orderID, channelID := newShopEpayFixture(t, server.URL)
+			channels, err := adapter.Channels(context.Background(), actor, orderID)
+			if err != nil || len(channels) != 1 || channels[0].ID != channelID {
+				t.Fatalf("external channel missing: %+v, %v", channels, err)
+			}
+			payment, err := adapter.Pay(context.Background(), actor, orderID, channelID, "bot-epay-operation")
+			if err != nil || payment == nil || payment.Paid {
+				t.Fatalf("Bot external payment failed: %v", err)
+			}
+			photo, link, err := shopapp.PaymentMedia(*payment)
+			if err != nil || len(photo) == 0 || (responseField == "payurl" && link != "https://pay.example.test/checkout") {
+				t.Fatalf("payment media missing: photo=%d link=%q err=%v", len(photo), link, err)
+			}
+			if _, err := png.DecodeConfig(bytes.NewReader(photo)); err != nil {
+				t.Fatalf("invalid QR image: %v", err)
+			}
+			replay, err := adapter.Pay(context.Background(), actor, orderID, channelID, "bot-epay-operation")
+			if err != nil || replay == nil || replay.PayURL != payment.PayURL || replay.QRCode != payment.QRCode || calls.Load() != 1 {
+				t.Fatalf("payment replay changed or resubmitted: calls=%d err=%v", calls.Load(), err)
+			}
+		})
+	}
+}
+
+// legacyShopEpayInput reproduces the old empty-IP gateway input only in this fixture.
+// The embedded real adapter still classifies the failure before any network dispatch.
+type legacyShopEpayInput struct {
+	paymentcontract.GatewayProvider
+	omitIP bool
+}
+
+// CreatePayment forwards ctx/config with the selected input and returns the real adapter result.
+func (legacy *legacyShopEpayInput) CreatePayment(ctx context.Context, config jsonmap.JSON, input paymentcontract.GatewayCreateInput) (*paymentcontract.GatewayCreateResult, error) {
+	if legacy.omitIP {
+		input.ClientIP = ""
+	}
+	return legacy.GatewayProvider.CreatePayment(ctx, config, input)
+}
+
+// TestShopEpayRetriesPreviouslyUnsubmittedAttempt reproduces a pre-fix persisted failure.
+// The old operation stays terminal; only its authorized successor may submit after the fix.
+func TestShopEpayRetriesPreviouslyUnsubmittedAttempt(t *testing.T) {
+	var calls atomic.Int32
+	server := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+		calls.Add(1)
+		writer.Header().Set("Content-Type", "application/json")
+		if _, err := writer.Write([]byte(`{"code":1,"trade_no":"TEST-RETRY","payurl":"https://pay.example.test/retry"}`)); err != nil {
+			t.Errorf("write retry gateway reply: %v", err)
+		}
+	}))
+	defer server.Close()
+	legacy := &legacyShopEpayInput{GatewayProvider: epayadapter.NewEpayAdapter(), omitIP: true}
+	adapter, actor, orderID, channelID := newShopEpayFixture(t, server.URL, legacy)
+	source, err := shopTransactionSource(actor)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Preserve the historical missing-IP input rather than mutating database state.
+	_, err = adapter.d.Payments.CreatePayment(paymentapp.CreatePaymentInput{
+		OperationKey: "pre-fix-operation", OrderID: orderID, ChannelID: channelID,
+		Context: context.Background(), UserID: actor.UserID, Source: source,
+	})
+	var originalRetry *paymentcontract.PaymentAttemptRetryError
+	if !errors.As(err, &originalRetry) || calls.Load() != 0 {
+		t.Fatalf("historical failure was not locally rejected: calls=%d err=%v", calls.Load(), err)
+	}
+	legacy.omitIP = false // Switch to the current shared privacy boundary after the persisted failure.
+	_, err = adapter.Pay(context.Background(), actor, orderID, channelID, "pre-fix-operation")
+	var retry *c.PaymentRetryError
+	if !errors.As(err, &retry) || retry.OperationKey != originalRetry.OperationKey || calls.Load() != 0 {
+		t.Fatalf("old operation resubmitted or successor changed: calls=%d err=%v", calls.Load(), err)
+	}
+	payment, err := adapter.Pay(context.Background(), actor, orderID, channelID, retry.OperationKey)
+	if err != nil || payment == nil || payment.PayURL != "https://pay.example.test/retry" || calls.Load() != 1 {
+		t.Fatalf("authorized retry failed: calls=%d err=%v", calls.Load(), err)
+	}
+}
+
+// TestShopEpayUnknownOutcomeStillBlocks verifies the IP fix does not weaken dispatch safety.
+// An invalid reply after the gateway receives a request must block retries across operation keys.
+func TestShopEpayUnknownOutcomeStillBlocks(t *testing.T) {
+	var calls atomic.Int32
+	server := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+		calls.Add(1)
+		if _, err := writer.Write([]byte("not-json")); err != nil {
+			t.Errorf("write invalid gateway reply: %v", err)
+		}
+	}))
+	defer server.Close()
+	adapter, actor, orderID, channelID := newShopEpayFixture(t, server.URL)
+	for _, key := range []string{"bot-unknown", "bot-unknown", "bot-another-operation"} {
+		if _, err := adapter.Pay(context.Background(), actor, orderID, channelID, key); !errors.Is(err, c.ErrPaymentUncertain) {
+			t.Fatalf("unknown outcome became retryable: %v", err)
+		}
+	}
+	if calls.Load() != 1 {
+		t.Fatalf("unknown payment resubmitted %d times", calls.Load())
+	}
+}
 
 // TestShopPaymentErrorFeedback verifies direct/wrapped wallet failures reuse safe shop feedback.
 // Uncertain outcomes must retain their blocking classification; unrelated failures remain diagnostic.

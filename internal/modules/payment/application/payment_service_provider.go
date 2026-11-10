@@ -164,6 +164,9 @@ func (s *PaymentService) applyProviderPayment(input CreatePaymentInput, order *o
 	// customerEmail 用于渠道预填邮箱（如 Stripe customer_email），来自会员邮箱或游客下单邮箱。
 	customerEmail, _, _ := s.resolveNotificationCustomer(order)
 
+	// All payment entrances (web, guest, Bot and recharge) share this privacy boundary.
+	// Loopback is a protocol placeholder, never the buyer's or server's public IP.
+	// Keep internal request/order IPs intact for risk control; do not forward them.
 	createInput := paymentcontract.GatewayCreateInput{
 		PaymentID:      payment.ID,
 		OrderID:        order.ID,
@@ -172,7 +175,7 @@ func (s *PaymentService) applyProviderPayment(input CreatePaymentInput, order *o
 		Amount:         payment.Amount,
 		Currency:       payment.Currency,
 		Email:          strings.TrimSpace(customerEmail),
-		ClientIP:       strings.TrimSpace(input.ClientIP),
+		ClientIP:       "127.0.0.1",
 		ChannelType:    channel.ChannelType,
 		Extra:          extra,
 		ReturnURLQuery: returnURLQuery,

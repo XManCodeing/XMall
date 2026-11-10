@@ -31,7 +31,7 @@ type CreateWalletRechargePaymentInput struct {
 	Amount        money.Amount
 	Currency      string
 	Remark        string
-	ClientIP      string
+	ClientIP      string // Compatibility input; never forwarded as the gateway's payer IP.
 	Context       context.Context
 	RequestScheme string
 }

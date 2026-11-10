@@ -29,7 +29,7 @@ type CreatePaymentInput struct {
 	OrderID          uint
 	ChannelID        uint
 	UseBalance       bool
-	ClientIP         string
+	ClientIP         string // Compatibility input; the gateway boundary replaces it with a privacy placeholder.
 	Context          context.Context
 	Source           *delivery.Source // optional transaction-bound identity guard
 	UserID           uint             // expected order owner when Source is supplied

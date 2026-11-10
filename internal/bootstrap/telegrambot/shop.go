@@ -813,6 +813,10 @@ func (a *shopAdapter) Channels(ctx context.Context, x c.Actor, id uint) ([]c.Cha
 	}
 	return out, nil
 }
+
+// Pay creates or replays payment for the authorized actor x and order id.
+// ctx carries mutation guards; channel selects the method and key identifies the attempt.
+// Returns paid state or renderable payment media, preserving retry/uncertain errors.
 func (a *shopAdapter) Pay(ctx context.Context, x c.Actor, id, channel uint, key string) (*c.Payment, error) {
 	if x.Generation == "" || key == "" {
 		return nil, c.ErrDenied
@@ -869,6 +873,8 @@ func (a *shopAdapter) Pay(ctx context.Context, x c.Actor, id, channel uint, key 
 	if e != nil {
 		return nil, e
 	}
+	// Telegram has no buyer IP; the shared payment gateway boundary supplies
+	// the privacy placeholder for every entrance, not the webhook/proxy address.
 	result, e := a.d.Payments.CreatePayment(paymentapp.CreatePaymentInput{OperationKey: key, OrderID: id, ChannelID: channel, UseBalance: useBalance, Context: ctx, UserID: x.UserID, Source: source})
 	if err := shopPaymentError(e); err != nil {
 		return nil, err
